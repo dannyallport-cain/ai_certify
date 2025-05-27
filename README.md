@@ -42,8 +42,8 @@ A comprehensive Next.js application for managing fire safety certificates and in
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/fire-certify.git
-   cd fire-certify
+   git clone https://github.com/yourusername/ai-certify.git
+   cd ai-certify
    ```
 
 2. **Install dependencies**

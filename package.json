@@ -1,4 +1,7 @@
 {
+  "name": "ai_certify",
+  "version": "1.0.0",
+  "description": "Fire safety certificate management system",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
