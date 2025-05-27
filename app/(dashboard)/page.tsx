@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, Award, Users, FileText, Calendar, TrendingUp, AlertTriangle } from 'lucide-react';
+import { ArrowRight, Award, Users, FileText, Calendar, TrendingUp, AlertTriangle, Database, CreditCard } from 'lucide-react';
 import { getCertificatesForTeam, getCustomersForTeam } from '@/lib/db/queries';
 import Link from 'next/link';
 

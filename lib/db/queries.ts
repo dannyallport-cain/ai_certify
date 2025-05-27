@@ -1,8 +1,9 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users, customers, certificates, certificateItems } from './schema';
+import { activityLogs, teamMembers, teams, users, customers, certificates, certificateItems, ActivityType } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
+import { NewActivityLog } from './schema';
 
 export async function getUser() {
   const sessionCookie = (await cookies()).get('session');
@@ -245,4 +246,22 @@ export async function getCertificatesByCustomer(customerId: number) {
     .from(certificates)
     .where(and(eq(certificates.customerId, customerId), eq(certificates.teamId, team.id)))
     .orderBy(desc(certificates.createdAt));
+}
+
+export async function logActivity(
+  teamId: number | null | undefined,
+  userId: number,
+  type: ActivityType,
+  ipAddress?: string
+) {
+  if (teamId === null || teamId === undefined) {
+    return;
+  }
+  const newActivity: NewActivityLog = {
+    teamId,
+    userId,
+    action: type,
+    ipAddress: ipAddress || ''
+  };
+  await db.insert(activityLogs).values(newActivity);
 }

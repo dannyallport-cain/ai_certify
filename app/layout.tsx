@@ -5,8 +5,8 @@ import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
-  title: 'Next.js SaaS Starter',
-  description: 'Get started quickly with Next.js, Postgres, and Stripe.'
+  title: 'AI Certify - Fire Safety Certificate Management',
+  description: 'Comprehensive fire safety certificate management system for BS5839-1, BS5839-6, BS5266, fire extinguisher, and dry riser inspections.'
 };
 
 export const viewport: Viewport = {
