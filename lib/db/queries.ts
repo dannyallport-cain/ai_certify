@@ -265,3 +265,74 @@ export async function logActivity(
   };
   await db.insert(activityLogs).values(newActivity);
 }
+
+/**
+ * Fetch all non-deleted users for administrative management
+ */
+export async function getAllUsers() {
+  return await db
+    .select({ id: users.id, name: users.name, email: users.email, role: users.role, createdAt: users.createdAt })
+    .from(users)
+    .where(isNull(users.deletedAt));
+}
+
+/**
+ * Soft-delete a user by ID
+ */
+export async function deactivateUserById(userId: number) {
+  await db
+    .update(users)
+    .set({ deletedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * Fetch all activity logs across all teams for admin reporting
+ */
+export async function getAllActivityLogs() {
+  return await db
+    .select({
+      id: activityLogs.id,
+      teamId: activityLogs.teamId,
+      userId: activityLogs.userId,
+      action: activityLogs.action,
+      timestamp: activityLogs.timestamp,
+      ipAddress: activityLogs.ipAddress,
+      userName: users.name,
+      teamName: teams.name,
+    })
+    .from(activityLogs)
+    .leftJoin(users, eq(activityLogs.userId, users.id))
+    .leftJoin(teams, eq(activityLogs.teamId, teams.id))
+    .orderBy(activityLogs.timestamp.desc);
+}
+
+/**
+ * Create a new user
+ */
+export async function createUser(data: { name: string; email: string; role: string; }) {
+  const [user] = await db
+    .insert(users)
+    .values({
+      name: data.name,
+      email: data.email,
+      role: data.role,
+      passwordHash: '', // TODO: Set a proper initial password
+    })
+    .returning();
+  return user;
+}
+
+/**
+ * Update an existing user
+ */
+export async function updateUserById(userId: number, data: { name?: string; role?: string; }) {
+  const [user] = await db
+    .update(users)
+    .set({
+      ...data,
+    })
+    .where(eq(users.id, userId))
+    .returning();
+  return user;
+}

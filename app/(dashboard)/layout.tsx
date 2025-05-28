@@ -97,6 +97,15 @@ function UserMenu() {
 }
 
 function Header() {
+  const router = useRouter();
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+
+  async function handleLogout() {
+    await signOut();
+    router.refresh();
+    router.push('/');
+  }
+
   return (
     <header className="border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -125,6 +134,11 @@ function Header() {
           </Link>
         </div>
         <div className="flex items-center space-x-4">
+          {user && (
+            <Button variant="outline" onClick={handleLogout}>
+              Logout
+            </Button>
+          )}
           <Suspense fallback={<div className="h-9" />}>
             <UserMenu />
           </Suspense>

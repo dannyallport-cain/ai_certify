@@ -9,6 +9,10 @@ import {
   UserMinus,
   Mail,
   CheckCircle,
+  FileText,
+  Edit,
+  Trash2,
+  Award,
   type LucideIcon,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
@@ -25,6 +29,13 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.REMOVE_TEAM_MEMBER]: UserMinus,
   [ActivityType.INVITE_TEAM_MEMBER]: Mail,
   [ActivityType.ACCEPT_INVITATION]: CheckCircle,
+  [ActivityType.CREATE_CUSTOMER]: UserPlus,
+  [ActivityType.UPDATE_CUSTOMER]: Edit,
+  [ActivityType.DELETE_CUSTOMER]: Trash2,
+  [ActivityType.CREATE_CERTIFICATE]: FileText,
+  [ActivityType.UPDATE_CERTIFICATE]: Edit,
+  [ActivityType.DELETE_CERTIFICATE]: Trash2,
+  [ActivityType.ISSUE_CERTIFICATE]: Award,
 };
 
 function getRelativeTime(date: Date) {
@@ -63,6 +74,20 @@ function formatAction(action: ActivityType): string {
       return 'You invited a team member';
     case ActivityType.ACCEPT_INVITATION:
       return 'You accepted an invitation';
+    case ActivityType.CREATE_CUSTOMER:
+      return 'You created a new customer';
+    case ActivityType.UPDATE_CUSTOMER:
+      return 'You updated a customer';
+    case ActivityType.DELETE_CUSTOMER:
+      return 'You deleted a customer';
+    case ActivityType.CREATE_CERTIFICATE:
+      return 'You created a new certificate';
+    case ActivityType.UPDATE_CERTIFICATE:
+      return 'You updated a certificate';
+    case ActivityType.DELETE_CERTIFICATE:
+      return 'You deleted a certificate';
+    case ActivityType.ISSUE_CERTIFICATE:
+      return 'You issued a certificate';
     default:
       return 'Unknown action occurred';
   }

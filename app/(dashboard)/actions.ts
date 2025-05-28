@@ -2,9 +2,9 @@
 
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { customers, certificates, certificateItems } from '@/lib/db/schema';
-import { getUser, getTeamForUser, logActivity } from '@/lib/db/queries';
-import { ActivityType } from '@/lib/db/schema';
+import { customers, certificates, certificateItems, ActivityType, NewCertificate } from '@/lib/db/schema';
+import { getUser, getTeamForUser } from '@/lib/db/queries'; // Keep other imports from @/lib/db/queries
+import { logActivity } from '../../lib/db/queries'; // Use relative path for logActivity
 import { redirect } from 'next/navigation';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { eq } from 'drizzle-orm';
@@ -87,7 +87,7 @@ export const updateCustomer = validatedActionWithUser(
 
 // Certificate schemas and actions
 const createCertificateSchema = z.object({
-  customerId: z.number(),
+  customerId: z.string().transform((val) => parseInt(val, 10)),
   certificateType: z.string(),
   certificateNumber: z.string().min(1, 'Certificate number is required'),
   siteName: z.string().optional().or(z.literal('')),
@@ -106,19 +106,23 @@ export const createCertificate = validatedActionWithUser(
       throw new Error('User not part of a team');
     }
 
+    const newCertificateData: NewCertificate = {
+      customerId: data.customerId,
+      certificateType: data.certificateType,
+      certificateNumber: data.certificateNumber,
+      siteName: data.siteName || null,
+      siteAddress: data.siteAddress || null,
+      inspectionDate: data.inspectionDate || null, // Pass string directly
+      nextInspectionDate: data.nextInspectionDate || null, // Pass string directly
+      inspectorName: data.inspectorName || null,
+      formData: data.formData || {},
+      teamId: team.id,
+      status: 'draft'
+    };
+
     const [certificate] = await db
       .insert(certificates)
-      .values({
-        ...data,
-        teamId: team.id,
-        siteName: data.siteName || null,
-        siteAddress: data.siteAddress || null,
-        inspectionDate: data.inspectionDate ? new Date(data.inspectionDate) : null,
-        nextInspectionDate: data.nextInspectionDate ? new Date(data.nextInspectionDate) : null,
-        inspectorName: data.inspectorName || null,
-        formData: data.formData || {},
-        status: 'draft'
-      })
+      .values(newCertificateData)
       .returning();
 
     await logActivity(team.id, user.id, ActivityType.CREATE_CERTIFICATE);
@@ -155,8 +159,8 @@ export const updateCertificate = validatedActionWithUser(
         ...updateData,
         siteName: updateData.siteName || null,
         siteAddress: updateData.siteAddress || null,
-        inspectionDate: updateData.inspectionDate ? new Date(updateData.inspectionDate) : null,
-        nextInspectionDate: updateData.nextInspectionDate ? new Date(updateData.nextInspectionDate) : null,
+        inspectionDate: updateData.inspectionDate || null,
+        nextInspectionDate: updateData.nextInspectionDate || null,
         inspectorName: updateData.inspectorName || null,
         formData: updateData.formData || {},
         updatedAt: new Date()

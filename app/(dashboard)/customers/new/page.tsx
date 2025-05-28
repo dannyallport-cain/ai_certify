@@ -4,13 +4,29 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createCustomer } from '../actions';
+import { createCustomer } from '../../actions';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function NewCustomerPage() {
-  const [state, formAction] = useActionState(createCustomer, null);
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (formData: FormData) => {
+    setIsSubmitting(true);
+    try {
+      const result = await createCustomer({}, formData);
+      if (result?.error) {
+        console.error('Error creating customer:', result.error);
+      }
+      // If no error, the action will redirect automatically
+    } catch (error) {
+      console.error('Error creating customer:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -36,7 +52,7 @@ export default function NewCustomerPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-4">
+          <form action={handleSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Company Name *</Label>
@@ -96,15 +112,9 @@ export default function NewCustomerPage() {
               />
             </div>
 
-            {state?.error && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
-                {state.error}
-              </div>
-            )}
-
             <div className="flex gap-2">
-              <Button type="submit">
-                Create Customer
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Creating Customer..." : "Create Customer"}
               </Button>
               <Button type="button" variant="outline" asChild>
                 <Link href="/customers">Cancel</Link>

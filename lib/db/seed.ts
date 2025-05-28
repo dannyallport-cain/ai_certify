@@ -64,7 +64,7 @@ async function createStripeProducts() {
 
     console.log('Stripe products and prices setup completed.');
   } catch (error) {
-    console.warn('Stripe product creation failed (this is normal if Stripe is not configured):', error.message);
+    console.warn('Stripe product creation failed (this is normal if Stripe is not configured):', error instanceof Error ? error.message : 'Unknown error');
   }
 }
 
@@ -103,7 +103,7 @@ async function createSampleUsers() {
   return createdUsers;
 }
 
-async function createSampleTeams(users) {
+async function createSampleTeams(users: any[]) {
   const sampleTeams = [
     { 
       name: 'Fire Safety Pro Ltd',
@@ -137,7 +137,7 @@ async function createSampleTeams(users) {
   return createdTeams;
 }
 
-async function createTeamMembers(users, teams) {
+async function createTeamMembers(users: any[], teams: any[]) {
   const membershipData = [
     { teamId: teams[0].id, userId: users[0].id, role: 'owner' },
     { teamId: teams[0].id, userId: users[1].id, role: 'manager' },
@@ -155,7 +155,7 @@ async function createTeamMembers(users, teams) {
   }
 }
 
-async function createSampleCustomers(teams) {
+async function createSampleCustomers(teams: any[]) {
   const customerData = [
     {
       teamId: teams[0].id,
@@ -201,7 +201,7 @@ async function createSampleCustomers(teams) {
   return createdCustomers;
 }
 
-async function createSampleCertificates(teams, customers) {
+async function createSampleCertificates(teams: any[], customers: any[]) {
   const certificateData = [
     // BS5839-1 Fire Detection and Alarm System
     {
@@ -322,7 +322,7 @@ async function createSampleCertificates(teams, customers) {
   return createdCertificates;
 }
 
-async function createSampleCertificateItems(certificates) {
+async function createSampleCertificateItems(certificates: any[]) {
   const itemsData = [
     // BS5839-1 Items
     {
@@ -472,7 +472,7 @@ async function createSampleCertificateItems(certificates) {
   }
 }
 
-async function createSampleActivityLogs(teams, users) {
+async function createSampleActivityLogs(teams: any[], users: any[]) {
   const activityData = [
     {
       teamId: teams[0].id,
@@ -503,7 +503,7 @@ async function createSampleActivityLogs(teams, users) {
   }
 }
 
-async function createSampleInvitations(teams, users) {
+async function createSampleInvitations(teams: any[], users: any[]) {
   const invitationData = [
     {
       teamId: teams[0].id,
