@@ -72,7 +72,7 @@ export default async function HomePage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card-back">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Draft Certificates</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -85,7 +85,7 @@ export default async function HomePage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card-back">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-500" />
@@ -101,7 +101,7 @@ export default async function HomePage() {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer">
           <Link href="/certificates/new/bs5839-1">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
@@ -114,7 +114,7 @@ export default async function HomePage() {
           </Link>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer">
           <Link href="/certificates/new/bs5266">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
@@ -127,7 +127,7 @@ export default async function HomePage() {
           </Link>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer">
           <Link href="/certificates/new/fire-extinguisher">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
@@ -143,7 +143,7 @@ export default async function HomePage() {
 
       {/* Recent Activity */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="bg-card-front">
           <CardHeader>
             <CardTitle>Recent Certificates</CardTitle>
             <CardDescription>

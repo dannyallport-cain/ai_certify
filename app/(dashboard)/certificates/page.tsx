@@ -73,7 +73,7 @@ export default async function CertificatesPage() {
         </Card>
 
         {certificates.map((cert) => (
-          <Card key={cert.certificate.id} className="hover:shadow-md transition-shadow cursor-pointer">
+          <Card key={cert.certificate.id} className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer">
             <Link href={`/certificates/${cert.certificate.id}`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">

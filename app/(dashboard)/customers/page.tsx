@@ -43,7 +43,7 @@ export default async function CustomersPage() {
         </Card>
 
         {customers.map((customer) => (
-          <Card key={customer.id} className="hover:shadow-md transition-shadow cursor-pointer">
+          <Card key={customer.id} className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer">
             <Link href={`/customers/${customer.id}`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">

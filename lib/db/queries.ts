@@ -304,7 +304,7 @@ export async function getAllActivityLogs() {
     .from(activityLogs)
     .leftJoin(users, eq(activityLogs.userId, users.id))
     .leftJoin(teams, eq(activityLogs.teamId, teams.id))
-    .orderBy(activityLogs.timestamp.desc);
+    .orderBy(desc(activityLogs.timestamp));
 }
 
 /**

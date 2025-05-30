@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AdminLayout from '../layout';
+import AdminLayout from '../../layout';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -44,7 +44,13 @@ export default function NewUserPage() {
           <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
         </div>
         <div>
-          <Label htmlFor="role">Role</n        Input id="role" value={role} onChange={(e) => setRole(e.target.value)} required />
+          <Label htmlFor="role">Role</Label>
+          <select id="role" aria-label="Role" value={role} onChange={(e) => setRole(e.target.value)} required className="block w-full mt-1 border rounded-md px-3 py-2">
+            <option value="member">Member</option>
+            <option value="manager">Manager</option>
+            <option value="inspector">Inspector</option>
+            <option value="owner">Owner</option>
+          </select>
         </div>
         <div className="flex space-x-2">
           <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Create User'}</Button>

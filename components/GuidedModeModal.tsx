@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-interface Step {
+export interface Step {
   name: string;
   label: string;
   type: 'text' | 'number' | 'textarea';
@@ -57,7 +57,7 @@ export default function GuidedModeModal({ open, steps, onClose, onComplete }: Gu
       `Please enter ${step.label}.`,
       `Could you provide the ${step.label}?`,
       `Next, what is the ${step.label}?`,
-      `Let’s fill in the ${step.label}.`
+      `Let's fill in the ${step.label}.`
     ];
     const prompt = templates[Math.floor(Math.random() * templates.length)];
     setMessages((prev) => [...prev, { role: 'bot', text: prompt }]);

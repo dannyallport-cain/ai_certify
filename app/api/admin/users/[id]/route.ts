@@ -2,12 +2,8 @@
 import { NextResponse } from 'next/server';
 import { deactivateUserById } from '@/lib/db/queries';
 
-interface Params {
-  params: { id: string };
-}
-
-export async function DELETE(_request: Request, { params }: Params) {
-  const id = parseInt(params.id, 10);
+export async function DELETE(_request: Request, context: any) {
+  const id = parseInt(context.params.id, 10);
   if (isNaN(id)) {
     return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
   }

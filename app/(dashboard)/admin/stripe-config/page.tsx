@@ -1,3 +1,4 @@
+'use client';
 // filepath: app/(dashboard)/admin/stripe-config/page.tsx
 import AdminLayout from '../layout';
 import { useEffect, useState } from 'react';

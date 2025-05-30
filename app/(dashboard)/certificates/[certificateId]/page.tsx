@@ -6,17 +6,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-interface CertificatePageProps {
-  params: { certificateId: string };
-}
-
-export default async function CertificatePage({ params }: CertificatePageProps) {
+export default async function CertificatePage({ params }: any) {
   const id = parseInt(params.certificateId, 10);
   const data = await getCertificateById(id);
   if (!data) {
     notFound();
   }
-  const { certificate, customer, items } = data;
+  const { customer, items, ...certificate } = data;
 
   const statusColor = {
     [CertificateStatus.DRAFT]: 'bg-gray-100 text-gray-800',
@@ -45,8 +41,8 @@ export default async function CertificatePage({ params }: CertificatePageProps) 
           <p><strong>Type:</strong> {certificate.certificateType}</p>
           <p><strong>Customer:</strong> {customer?.name}</p>
           <p><strong>Site:</strong> {certificate.siteName} ({certificate.siteAddress})</p>
-          <p><strong>Inspection Date:</strong> {certificate.inspectionDate?.toLocaleDateString()}</p>
-          <p><strong>Next Inspection:</strong> {certificate.nextInspectionDate?.toLocaleDateString()}</p>
+          <p><strong>Inspection Date:</strong> {certificate.inspectionDate ? new Date(certificate.inspectionDate).toLocaleDateString() : ''}</p>
+          <p><strong>Next Inspection:</strong> {certificate.nextInspectionDate ? new Date(certificate.nextInspectionDate).toLocaleDateString() : ''}</p>
           <p><strong>Inspector:</strong> {certificate.inspectorName}</p>
         </CardContent>
       </Card>
