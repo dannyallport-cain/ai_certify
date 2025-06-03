@@ -112,7 +112,7 @@ export default function GuidedModeModal({ open, steps, onClose, onComplete }: Gu
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Type your response..."
           />
-          <button onClick={handleSend} className="bg-blue-600 text-white px-4 py-2 rounded">
+          <button onClick={handleSend} className="bg-primary text-white px-4 py-2 rounded">
             Send
           </button>
         </div>

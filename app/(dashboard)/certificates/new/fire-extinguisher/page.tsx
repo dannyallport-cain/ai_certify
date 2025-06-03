@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,12 +13,25 @@ import { createCertificate } from "../../../actions"
 import { ArrowLeft, Flame, Shield, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import GuidedModeModal, { Step } from "@/components/GuidedModeModal"
+import { CertificateNumberField } from '@/components/CertificateNumberField'
+import { NextVisitField } from '@/components/NextVisitField'
+import useSWR from 'swr'
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function FireExtinguisherCertificatePage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [customers, setCustomers] = useState<Array<{id: number, name: string}>>([])
+  const [selectedCustomer, setSelectedCustomer] = useState('')
+  const { data: customers = [] } = useSWR('/api/customers', fetcher)
   const [guidedOpen, setGuidedOpen] = useState(false)
+  const [certificateNumber, setCertificateNumber] = useState('')
+  const [selectedCustomerName, setSelectedCustomerName] = useState('')
+  const [siteName, setSiteName] = useState('')
+  const [inspectionDate, setInspectionDate] = useState('')
+  const [nextInspectionDate, setNextInspectionDate] = useState('')
+  const [visitDate, setVisitDate] = useState('')
+  const [nextVisitDate, setNextVisitDate] = useState('')
 
   const guidedSteps: Step[] = [
     { name: 'certificateNumber', label: 'Certificate Number', type: 'text' },
@@ -27,14 +40,6 @@ export default function FireExtinguisherCertificatePage() {
     { name: 'siteAddress', label: 'Site Address', type: 'text' },
     { name: 'inventory', label: 'Extinguisher Inventory Details', type: 'textarea' }
   ];
-
-  // Load customers on component mount
-  useEffect(() => {
-    fetch('/api/customers')
-      .then(res => res.json())
-      .then(data => setCustomers(data))
-      .catch(console.error)
-  }, [])
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true)
@@ -98,18 +103,25 @@ export default function FireExtinguisherCertificatePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="certificateNumber">Certificate Number *</Label>
-                <Input
-                  id="certificateNumber"
-                  name="certificateNumber"
-                  placeholder="e.g., FE-2025-001"
-                  required
-                />
-              </div>
+              <CertificateNumberField
+                value={certificateNumber}
+                onChange={setCertificateNumber}
+                certificateType="Fire Extinguisher"
+                customerName={selectedCustomerName}
+                siteName={siteName}
+              />
               <div>
                 <Label htmlFor="customerId">Customer *</Label>
-                <Select name="customerId" required>
+                <Select 
+                  name="customerId" 
+                  required
+                  value={selectedCustomer}
+                  onValueChange={(value) => {
+                    setSelectedCustomer(value);
+                    const customer = customers.find((c: any) => c.id.toString() === value);
+                    setSelectedCustomerName(customer?.name || '');
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a customer" />
                   </SelectTrigger>
@@ -139,6 +151,8 @@ export default function FireExtinguisherCertificatePage() {
                     name="siteName"
                     placeholder="Building name and address"
                     required
+                    value={siteName}
+                    onChange={(e) => setSiteName(e.target.value)}
                   />
                 </div>
                 <div>
@@ -269,15 +283,24 @@ export default function FireExtinguisherCertificatePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="inspectionDate">Inspection Date *</Label>
                   <Input
                     id="inspectionDate"
                     name="inspectionDate"
                     type="date"
-                    required
+                    value={inspectionDate}
+                    onChange={(e) => setInspectionDate(e.target.value)}
                   />
                 </div>
+                <NextVisitField
+                  visitDate={inspectionDate}
+                  value={nextVisitDate}
+                  onChange={setNextVisitDate}
+                  required
+                  label="Next Visit Due"
+                  months={[6, 12]}
+                />
                 <div>
                   <Label htmlFor="inspectionType">Inspection Type *</Label>
                   <Select name="inspectionType" required>
@@ -292,14 +315,6 @@ export default function FireExtinguisherCertificatePage() {
                       <SelectItem value="commissioning">Commissioning</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div>
-                  <Label htmlFor="nextInspectionDate">Next Inspection Due</Label>
-                  <Input
-                    id="nextInspectionDate"
-                    name="nextInspectionDate"
-                    type="date"
-                  />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

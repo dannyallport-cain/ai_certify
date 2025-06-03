@@ -30,7 +30,7 @@ const certificateTypes = [
     title: 'Fire Extinguisher Certificate',
     description: 'Inspection and maintenance certificate for portable fire extinguishers',
     icon: '🧯',
-    color: 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+    color: 'bg-gray-50 border-gray-200 hover:bg-gray-100'
   },
   {
     type: CertificateType.DRY_RISER,

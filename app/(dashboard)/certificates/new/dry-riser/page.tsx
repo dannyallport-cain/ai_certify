@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,12 +13,25 @@ import { createCertificate } from "../../../actions"
 import { ArrowLeft, Droplets, Building, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import GuidedModeModal, { Step } from "@/components/GuidedModeModal"
+import { CertificateNumberField } from '@/components/CertificateNumberField'
+import { NextVisitField } from '@/components/NextVisitField'
+import useSWR from 'swr'
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function DryRiserCertificatePage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [customers, setCustomers] = useState<Array<{id: number, name: string}>>([])
+  const [selectedCustomer, setSelectedCustomer] = useState('')
+  const { data: customers = [] } = useSWR('/api/customers', fetcher)
   const [guidedOpen, setGuidedOpen] = useState(false)
+  const [certificateNumber, setCertificateNumber] = useState('')
+  const [selectedCustomerName, setSelectedCustomerName] = useState('')
+  const [siteName, setSiteName] = useState('')
+  const [inspectionDate, setInspectionDate] = useState('')
+  const [nextInspectionDate, setNextInspectionDate] = useState('')
+  const [visitDate, setVisitDate] = useState('')
+  const [nextVisitDate, setNextVisitDate] = useState('')
 
   const guidedSteps: Step[] = [
     { name: 'certificateNumber', label: 'Certificate Number', type: 'text' },
@@ -27,14 +40,6 @@ export default function DryRiserCertificatePage() {
     { name: 'siteAddress', label: 'Site Address', type: 'text' },
     // Add relevant riser-specific fields here
   ]
-
-  // Load customers on component mount
-  useEffect(() => {
-    fetch('/api/customers')
-      .then(res => res.json())
-      .then(data => setCustomers(data))
-      .catch(console.error)
-  }, [])
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true)
@@ -97,18 +102,24 @@ export default function DryRiserCertificatePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="certificateNumber">Certificate Number *</Label>
-                <Input
-                  id="certificateNumber"
-                  name="certificateNumber"
-                  placeholder="e.g., DR-2025-001"
-                  required
-                />
-              </div>
+              <CertificateNumberField
+                value={certificateNumber}
+                onChange={setCertificateNumber}
+                certificateType="Dry Riser"
+                customerName={selectedCustomerName}
+                siteName={siteName}
+              />
               <div>
                 <Label htmlFor="customerId">Customer *</Label>
-                <Select name="customerId" required>
+                <Select 
+                  name="customerId" 
+                  value={selectedCustomer}
+                  onValueChange={(value) => {
+                    setSelectedCustomer(value);
+                    const customer = customers.find((c: any) => c.id.toString() === value);
+                    setSelectedCustomerName(customer?.name || '');
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a customer" />
                   </SelectTrigger>
@@ -140,7 +151,8 @@ export default function DryRiserCertificatePage() {
                     id="siteName"
                     name="siteName"
                     placeholder="Building name and address"
-                    required
+                    value={siteName}
+                    onChange={(e) => setSiteName(e.target.value)}
                   />
                 </div>
                 <div>
@@ -167,7 +179,7 @@ export default function DryRiserCertificatePage() {
                 </div>
                 <div>
                   <Label htmlFor="buildingUse">Building Use *</Label>
-                  <Select name="buildingUse" required>
+                  <Select name="buildingUse">
                     <SelectTrigger>
                       <SelectValue placeholder="Select building use" />
                     </SelectTrigger>
@@ -207,7 +219,7 @@ export default function DryRiserCertificatePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="riserType">Riser Type *</Label>
-                  <Select name="riserType" required>
+                  <Select name="riserType">
                     <SelectTrigger>
                       <SelectValue placeholder="Select riser type" />
                     </SelectTrigger>
@@ -220,7 +232,7 @@ export default function DryRiserCertificatePage() {
                 </div>
                 <div>
                   <Label htmlFor="pipeSize">Main Pipe Size (mm) *</Label>
-                  <Select name="pipeSize" required>
+                  <Select name="pipeSize">
                     <SelectTrigger>
                       <SelectValue placeholder="Select pipe size" />
                     </SelectTrigger>
@@ -305,12 +317,13 @@ export default function DryRiserCertificatePage() {
                     id="inspectionDate"
                     name="inspectionDate"
                     type="date"
-                    required
+                    value={inspectionDate}
+                    onChange={(e) => setInspectionDate(e.target.value)}
                   />
                 </div>
                 <div>
                   <Label htmlFor="inspectionType">Inspection Type *</Label>
-                  <Select name="inspectionType" required>
+                  <Select name="inspectionType">
                     <SelectTrigger>
                       <SelectValue placeholder="Select inspection type" />
                     </SelectTrigger>
@@ -325,10 +338,13 @@ export default function DryRiserCertificatePage() {
                 </div>
                 <div>
                   <Label htmlFor="nextInspectionDate">Next Inspection Due</Label>
-                  <Input
-                    id="nextInspectionDate"
-                    name="nextInspectionDate"
-                    type="date"
+                  <NextVisitField
+                    visitDate={inspectionDate}
+                    value={nextInspectionDate}
+                    onChange={setNextInspectionDate}
+                    required
+                    label="Next Inspection Due"
+                    months={[6, 12]}
                   />
                 </div>
               </div>
@@ -339,7 +355,6 @@ export default function DryRiserCertificatePage() {
                     id="inspectorName"
                     name="inspectorName"
                     placeholder="Inspector name"
-                    required
                   />
                 </div>
                 <div>
@@ -437,7 +452,7 @@ export default function DryRiserCertificatePage() {
             <CardContent className="space-y-4">
               <div>
                 <Label>Overall System Condition *</Label>
-                <RadioGroup name="overallCondition" required className="mt-2">
+                <RadioGroup name="overallCondition" className="mt-2">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="satisfactory" id="satisfactory" />
                     <Label htmlFor="satisfactory">Satisfactory</Label>
@@ -518,7 +533,6 @@ export default function DryRiserCertificatePage() {
                   id="certifierSignature"
                   name="certifierSignature"
                   placeholder="Name of person issuing certificate"
-                  required
                 />
               </div>
             </CardContent>

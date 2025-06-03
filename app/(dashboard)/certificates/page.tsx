@@ -13,9 +13,9 @@ export default async function CertificatesPage() {
       case CertificateStatus.DRAFT:
         return 'bg-gray-100 text-gray-800';
       case CertificateStatus.COMPLETED:
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-gray-100 text-gray-800';
       case CertificateStatus.ISSUED:
-        return 'bg-green-100 text-green-800';
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

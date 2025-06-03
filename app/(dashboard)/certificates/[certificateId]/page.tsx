@@ -16,7 +16,7 @@ export default async function CertificatePage({ params }: any) {
 
   const statusColor = {
     [CertificateStatus.DRAFT]: 'bg-gray-100 text-gray-800',
-    [CertificateStatus.COMPLETED]: 'bg-blue-100 text-blue-800',
+    [CertificateStatus.COMPLETED]: 'bg-gray-100 text-gray-800',
     [CertificateStatus.ISSUED]: 'bg-green-100 text-green-800',
   }[certificate.status] || 'bg-gray-100 text-gray-800';
 

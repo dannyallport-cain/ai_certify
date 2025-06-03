@@ -80,19 +80,19 @@
     font-family: "Manrope", Arial, Helvetica, sans-serif;
   }
   .bg-card {
-    background-color: var(--color-card, #3b82f6) !important;
+    background-color: #fff !important;
   }
   .text-card-foreground {
     color: var(--color-card-foreground, #fff) !important;
   }
   .bg-card-back {
-    background-color: var(--color-card-back, #dbeafe) !important;
+    background-color: var(--color-card-back, #f3f4f6) !important;
   }
   .bg-card-mid {
-    background-color: var(--color-card-mid, #60a5fa) !important;
+    background-color: var(--color-card-mid, #e5e7eb) !important;
   }
   .bg-card-front {
-    background-color: var(--color-card-front, #1e40af) !important;
+    background-color: var(--color-card-front, #d1d5db) !important;
   }
 }
 
@@ -133,12 +133,12 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-    --card-bg-back: 210 100% 99%;   /* almost white, hint of blue */
-    --card-bg-mid: 210 100% 98%;    /* very pale blue */
-    --card-bg-front: 210 100% 96%;  /* still very light */
     --color-card-back: hsl(var(--card-bg-back));
     --color-card-mid: hsl(var(--card-bg-mid));
     --color-card-front: hsl(var(--card-bg-front));
+    --card-bg-back: 0 0% 98%;   /* very light gray */
+    --card-bg-mid: 0 0% 95%;    /* light gray */
+    --card-bg-front: 0 0% 90%;  /* medium gray */
   }
 
   .dark {
@@ -176,9 +176,7 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-    --card-bg-back: 217 91% 44%;   /* lighter blue for dark mode */
-    --card-bg-mid: 217 91% 36%;    /* medium blue for dark mode */
-    --card-bg-front: 217 91% 28%;  /* darker blue for dark mode */
+
     --color-card-back: hsl(var(--card-bg-back));
     --color-card-mid: hsl(var(--card-bg-mid));
     --color-card-front: hsl(var(--card-bg-front));

@@ -11,6 +11,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
 import GuidedModeModal, { Step } from '@/components/GuidedModeModal';
+import { CertificateNumberField } from '@/components/CertificateNumberField';
+import { NextVisitField } from '@/components/NextVisitField';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -20,6 +22,13 @@ export default function BS5839_1CertificatePage() {
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const { data: customers = [] } = useSWR('/api/customers', fetcher);
   const [guidedOpen, setGuidedOpen] = useState(false);
+  const [certificateNumber, setCertificateNumber] = useState('');
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [siteName, setSiteName] = useState('');
+  const [inspectionDate, setInspectionDate] = useState('');
+  const [nextInspectionDate, setNextInspectionDate] = useState('');
+  const [visitDate, setVisitDate] = useState('');
+  const [nextVisitDate, setNextVisitDate] = useState('');
 
   const generateCertificateNumber = () => {
     const date = new Date();
@@ -29,8 +38,6 @@ export default function BS5839_1CertificatePage() {
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     return `BS5839-1-${year}${month}${day}-${random}`;
   };
-
-  const [certificateNumber, setCertificateNumber] = useState('');
 
   useEffect(() => {
     setCertificateNumber(generateCertificateNumber());
@@ -108,35 +115,33 @@ export default function BS5839_1CertificatePage() {
                 <CardDescription>Certificate and customer details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="certificateNumber">Certificate Number</Label>
-                    <Input
-                      id="certificateNumber"
-                      name="certificateNumber"
-                      value={certificateNumber}
-                      onChange={(e) => setCertificateNumber(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="customerId">Customer</Label>
-                    <select
-                      id="customerId"
-                      name="customerId"
-                      value={selectedCustomer}
-                      onChange={(e) => setSelectedCustomer(e.target.value)}
-                      required
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">Select a customer</option>
-                      {customers.map((customer: any) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="space-y-2">
+                  <CertificateNumberField
+                    value={certificateNumber}
+                    onChange={setCertificateNumber}
+                    certificateType="BS5839-1"
+                    customerName={selectedCustomerName}
+                    siteName={siteName}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customerId">Customer</Label>
+                  <select
+                    id="customerId"
+                    name="customerId"
+                    value={selectedCustomer}
+                    onChange={(e) => setSelectedCustomer(e.target.value)}
+                    required
+                    aria-label="Select a customer"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Select a customer</option>
+                    {customers.map((customer: any) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </CardContent>
             </Card>
@@ -176,23 +181,26 @@ export default function BS5839_1CertificatePage() {
                 <CardDescription>Inspection dates and inspector information</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="inspectionDate">Inspection Date</Label>
+                    <Label htmlFor="inspectionDate">Inspection Date *</Label>
                     <Input
                       id="inspectionDate"
                       name="inspectionDate"
                       type="date"
+                      value={inspectionDate}
+                      onChange={(e) => setInspectionDate(e.target.value)}
+                      required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="nextInspectionDate">Next Inspection Due</Label>
-                    <Input
-                      id="nextInspectionDate"
-                      name="nextInspectionDate"
-                      type="date"
-                    />
-                  </div>
+                  <NextVisitField
+                    visitDate={inspectionDate}
+                    value={nextVisitDate}
+                    onChange={setNextVisitDate}
+                    required
+                    label="Next Visit Due"
+                    months={[6, 12]}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="inspectorName">Inspector Name</Label>

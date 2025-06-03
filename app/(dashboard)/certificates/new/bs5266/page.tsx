@@ -14,20 +14,25 @@ import { createCertificate } from "@/app/(dashboard)/actions"
 import { ArrowLeft, Lightbulb, Battery, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import GuidedModeModal, { Step } from '@/components/GuidedModeModal';
+import { CertificateNumberField } from '@/components/CertificateNumberField';
+import { NextVisitField } from '@/components/NextVisitField';
+import useSWR from 'swr';
+
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function BS5266CertificatePage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [customers, setCustomers] = useState<Array<{id: number, name: string}>>([])
+  const [selectedCustomer, setSelectedCustomer] = useState('');
+  const { data: customers = [] } = useSWR('/api/customers', fetcher);
   const [guidedOpen, setGuidedOpen] = useState(false);
-
-  // Load customers on component mount
-  useEffect(() => {
-    fetch('/api/customers')
-      .then(res => res.json())
-      .then(data => setCustomers(data))
-      .catch(console.error)
-  }, [])
+  const [certificateNumber, setCertificateNumber] = useState('');
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [siteName, setSiteName] = useState('');
+  const [inspectionDate, setInspectionDate] = useState('');
+  const [nextInspectionDate, setNextInspectionDate] = useState('');
+  const [visitDate, setVisitDate] = useState('');
+  const [nextVisitDate, setNextVisitDate] = useState('');
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true)
@@ -121,18 +126,25 @@ export default function BS5266CertificatePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="certificateNumber">Certificate Number *</Label>
-                <Input
-                  id="certificateNumber"
-                  name="certificateNumber"
-                  placeholder="e.g., EL-2025-001"
-                  required
-                />
-              </div>
+              <CertificateNumberField
+                value={certificateNumber}
+                onChange={setCertificateNumber}
+                certificateType="BS5266"
+                customerName={selectedCustomerName}
+                siteName={siteName}
+              />
               <div>
                 <Label htmlFor="customerId">Customer *</Label>
-                <Select name="customerId" required>
+                <Select 
+                  name="customerId" 
+                  required
+                  value={selectedCustomer}
+                  onValueChange={(value) => {
+                    setSelectedCustomer(value);
+                    const customer = customers.find((c: any) => c.id.toString() === value);
+                    setSelectedCustomerName(customer?.name || '');
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a customer" />
                   </SelectTrigger>
@@ -162,6 +174,8 @@ export default function BS5266CertificatePage() {
                     name="siteName"
                     placeholder="Building or site name"
                     required
+                    value={siteName}
+                    onChange={(e) => setSiteName(e.target.value)}
                   />
                 </div>
                 <div>
@@ -334,16 +348,35 @@ export default function BS5266CertificatePage() {
               <CardTitle>Inspection Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
                   <Label htmlFor="inspectionDate">Inspection Date *</Label>
                   <Input
                     id="inspectionDate"
                     name="inspectionDate"
                     type="date"
-                    required
+                    value={inspectionDate}
+                    onChange={(e) => setInspectionDate(e.target.value)}
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="visitDate">Visit Date *</Label>
+                  <Input
+                    id="visitDate"
+                    name="visitDate"
+                    type="date"
+                    value={visitDate}
+                    onChange={(e) => setVisitDate(e.target.value)}
+                  />
+                </div>
+                <NextVisitField
+                  visitDate={inspectionDate}
+                  value={nextVisitDate}
+                  onChange={setNextVisitDate}
+                  required
+                  label="Next Visit Due"
+                  months={[6, 12]}
+                />
                 <div>
                   <Label htmlFor="lastFullDurationTest">Last Full Duration Test</Label>
                   <Input
@@ -352,16 +385,6 @@ export default function BS5266CertificatePage() {
                     type="date"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="nextInspectionDate">Next Inspection Due</Label>
-                  <Input
-                    id="nextInspectionDate"
-                    name="nextInspectionDate"
-                    type="date"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="inspectorName">Inspector Name *</Label>
                   <Input
