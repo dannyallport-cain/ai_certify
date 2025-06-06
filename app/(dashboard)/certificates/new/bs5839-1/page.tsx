@@ -69,7 +69,12 @@ export default function BS5839_1CertificatePage() {
     { name: 'inspectionDate', label: 'Inspection Date', type: 'text' },
     { name: 'nextInspectionDate', label: 'Next Inspection Due', type: 'text' },
     { name: 'inspectorName', label: 'Inspector Name', type: 'text' },
-    { name: 'systemType', label: 'System Type (L1, L2, L3)', type: 'text' }
+    { name: 'inspectorQualification', label: 'Inspector Qualification', type: 'text' },
+    { name: 'systemType', label: 'System Type (L1, L2, L3)', type: 'text' },
+    { name: 'numberOfZones', label: 'Number of Zones', type: 'text' },
+    { name: 'numberOfDevices', label: 'Total Devices', type: 'text' },
+    { name: 'controlPanelMake', label: 'Control Panel Make', type: 'text' },
+    { name: 'controlPanelModel', label: 'Control Panel Model', type: 'text' }
   ];
 
   const handleGuidedComplete = (values: Record<string, string>) => {
@@ -202,13 +207,39 @@ export default function BS5839_1CertificatePage() {
                     months={[6, 12]}
                   />
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="inspectorName">Inspector Name</Label>
+                    <Input
+                      id="inspectorName"
+                      name="inspectorName"
+                      placeholder="Enter inspector name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="inspectorQualification">Inspector Qualification</Label>
+                    <Input
+                      id="inspectorQualification"
+                      name="inspectorQualification"
+                      placeholder="e.g., FIA Certified, BAFE Registered"
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="inspectorName">Inspector Name</Label>
-                  <Input
-                    id="inspectorName"
-                    name="inspectorName"
-                    placeholder="Enter inspector name"
-                  />
+                  <Label htmlFor="inspectionType">Inspection Type</Label>
+                  <select
+                    id="inspectionType"
+                    name="inspectionType"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">Select inspection type</option>
+                    <option value="Routine Service">Routine Service</option>
+                    <option value="Commissioning">Commissioning</option>
+                    <option value="Annual Test">Annual Test</option>
+                    <option value="Quarterly Test">Quarterly Test</option>
+                    <option value="Monthly Test">Monthly Test</option>
+                    <option value="Weekly Test">Weekly Test</option>
+                  </select>
                 </div>
               </CardContent>
             </Card>
@@ -267,6 +298,24 @@ export default function BS5839_1CertificatePage() {
 
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
+                    <Label htmlFor="numberOfZones">Number of Zones</Label>
+                    <Input
+                      id="numberOfZones"
+                      name="numberOfZones"
+                      type="number"
+                      placeholder="e.g., 8"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="numberOfDevices">Total Devices</Label>
+                    <Input
+                      id="numberOfDevices"
+                      name="numberOfDevices"
+                      type="number"
+                      placeholder="e.g., 45"
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="totalDetectors">Total Detectors</Label>
                     <Input
                       id="totalDetectors"
@@ -275,6 +324,9 @@ export default function BS5839_1CertificatePage() {
                       placeholder="0"
                     />
                   </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
                     <Label htmlFor="totalCallPoints">Total Call Points</Label>
                     <Input
@@ -291,6 +343,38 @@ export default function BS5839_1CertificatePage() {
                       name="totalSounders"
                       type="number"
                       placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="serviceInterval">Service Interval</Label>
+                    <select
+                      id="serviceInterval"
+                      name="serviceInterval"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Select interval</option>
+                      <option value="3 Months">3 Months</option>
+                      <option value="6 Months">6 Months</option>
+                      <option value="12 Months">12 Months</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="installationDate">Installation Date</Label>
+                    <Input
+                      id="installationDate"
+                      name="installationDate"
+                      type="date"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastServiceDate">Last Service Date</Label>
+                    <Input
+                      id="lastServiceDate"
+                      name="lastServiceDate"
+                      type="date"
                     />
                   </div>
                 </div>

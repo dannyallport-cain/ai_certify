@@ -78,12 +78,11 @@ export default function NewCertificatePage() {
                 <div className="flex items-center space-x-2">
                   <span className="text-2xl">{certType.icon}</span>
                   <div>
-                    <CardTitle className="text-lg">{certType.type}</CardTitle>
+                    <CardTitle className="text-lg">{certType.title}</CardTitle>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <h3 className="font-semibold text-sm mb-2">{certType.title}</h3>
                 <CardDescription className="text-sm">
                   {certType.description}
                 </CardDescription>

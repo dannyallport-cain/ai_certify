@@ -5,6 +5,7 @@ import { CertificateStatus, CertificateType } from '@/lib/db/schema';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { DownloadPDFButton } from '@/components/DownloadPDFButton';
 
 export default async function CertificatePage({ params }: any) {
   const id = parseInt(params.certificateId, 10);
@@ -24,9 +25,12 @@ export default async function CertificatePage({ params }: any) {
     <div className="flex-1 p-6">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Certificate {certificate.certificateNumber}</h1>
-        <Link href="/certificates">
-          <Button variant="outline">Back to List</Button>
-        </Link>
+        <div className="flex gap-2">
+          <DownloadPDFButton certificateId={certificate.id} />
+          <Link href="/certificates">
+            <Button variant="outline">Back to List</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6">

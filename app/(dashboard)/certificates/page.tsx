@@ -4,6 +4,7 @@ import { getCertificatesForTeam } from '@/lib/db/queries';
 import { FileText, Plus, Calendar, User, Award } from 'lucide-react';
 import Link from 'next/link';
 import { CertificateType, CertificateStatus } from '@/lib/db/schema';
+import { DownloadPDFButton } from '@/components/DownloadPDFButton';
 
 export default async function CertificatesPage() {
   const certificates = await getCertificatesForTeam();
@@ -73,18 +74,18 @@ export default async function CertificatesPage() {
         </Card>
 
         {certificates.map((cert) => (
-          <Card key={cert.certificate.id} className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer">
-            <Link href={`/certificates/${cert.certificate.id}`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  <span className="mr-2">{getCertificateIcon(cert.certificate.certificateType)}</span>
-                  {cert.certificate.certificateType}
-                </CardTitle>
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(cert.certificate.status)}`}>
-                  {cert.certificate.status}
-                </span>
-              </CardHeader>
-              <CardContent>
+          <Card key={cert.certificate.id} className="bg-card-mid hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                <span className="mr-2">{getCertificateIcon(cert.certificate.certificateType)}</span>
+                {cert.certificate.certificateType}
+              </CardTitle>
+              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(cert.certificate.status)}`}>
+                {cert.certificate.status}
+              </span>
+            </CardHeader>
+            <CardContent>
+              <Link href={`/certificates/${cert.certificate.id}`} className="block">
                 <div className="text-lg font-bold text-primary">
                   {cert.certificate.certificateNumber}
                 </div>
@@ -107,8 +108,23 @@ export default async function CertificatesPage() {
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Link>
+              </Link>
+              <div className="mt-3 pt-3 border-t flex justify-between items-center">
+                <Link href={`/certificates/${cert.certificate.id}`}>
+                  <Button variant="ghost" size="sm">
+                    <FileText className="mr-2 h-4 w-4" />
+                    View Details
+                  </Button>
+                </Link>
+                <DownloadPDFButton
+                  certificateId={cert.certificate.id}
+                  certificateNumber={cert.certificate.certificateNumber}
+                  variant="outline"
+                  size="sm"
+                  showText={false}
+                />
+              </div>
+            </CardContent>
           </Card>
         ))}
       </div>
