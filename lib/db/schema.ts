@@ -129,12 +129,37 @@ export const certificateItems = pgTable('certificate_items', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+export const certificateTemplates = pgTable('certificate_templates', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  certificateType: varchar('certificate_type', { length: 50 }).notNull(), // BS5839-1, BS5839-6, BS5266, FIRE_EXTINGUISHER, DRY_RISER
+  isDefault: boolean('is_default').default(false),
+  isActive: boolean('is_active').default(true),
+  
+  // Template design configuration stored as JSON
+  template: json('template').notNull(), // Contains sections, styles, layout configuration
+  
+  // Metadata
+  description: text('description'),
+  version: integer('version').default(1),
+  
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+});
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
   invitations: many(invitations),
   customers: many(customers),
   certificates: many(certificates),
+  certificateTemplates: many(certificateTemplates),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -202,6 +227,17 @@ export const certificateItemsRelations = relations(certificateItems, ({ one }) =
   }),
 }));
 
+export const certificateTemplatesRelations = relations(certificateTemplates, ({ one }) => ({
+  team: one(teams, {
+    fields: [certificateTemplates.teamId],
+    references: [teams.id],
+  }),
+  createdBy: one(users, {
+    fields: [certificateTemplates.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Team = typeof teams.$inferSelect;
@@ -218,6 +254,8 @@ export type Certificate = typeof certificates.$inferSelect;
 export type NewCertificate = typeof certificates.$inferInsert;
 export type CertificateItem = typeof certificateItems.$inferSelect;
 export type NewCertificateItem = typeof certificateItems.$inferInsert;
+export type CertificateTemplate = typeof certificateTemplates.$inferSelect;
+export type NewCertificateTemplate = typeof certificateTemplates.$inferInsert;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {

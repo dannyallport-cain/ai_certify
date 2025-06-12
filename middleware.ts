@@ -3,11 +3,15 @@ import type { NextRequest } from 'next/server';
 import { signToken, verifyToken } from '@/lib/auth/session';
 
 const protectedRoutes = ['/dashboard', '/'];
+const adminRoutes = ['/dashboard/admin'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('session');
   const isProtectedRoute = protectedRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
+  const isAdminRoute = adminRoutes.some(route => 
     pathname === route || pathname.startsWith(route + '/')
   );
 
@@ -26,6 +30,12 @@ export async function middleware(request: NextRequest) {
     try {
       const parsed = await verifyToken(sessionCookie.value);
       const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Check admin access for admin routes
+      if (isAdminRoute) {
+        // We'll need to check user role from database here
+        // For now, let the admin layout handle the check
+      }
 
       res.cookies.set({
         name: 'session',

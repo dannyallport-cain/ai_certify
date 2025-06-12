@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { use, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { CircleIcon, Home, LogOut, FileText, Users, Award, Settings } from 'lucide-react';
+import { CircleIcon, Home, LogOut, FileText, Users, Award, Settings, Shield } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +83,14 @@ function UserMenu() {
             <span>Settings</span>
           </Link>
         </DropdownMenuItem>
+        {(user.role === 'admin' || user.role === 'owner') && (
+          <DropdownMenuItem className="cursor-pointer">
+            <Link href="/dashboard/admin" className="flex w-full items-center">
+              <Shield className="mr-2 h-4 w-4" />
+              <span>Admin</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
         <form action={handleSignOut} className="w-full">
           <button type="submit" className="flex w-full">
             <DropdownMenuItem className="w-full flex-1 cursor-pointer">
@@ -132,6 +140,14 @@ function Header() {
           >
             Customers
           </Link>
+          {(user?.role === 'admin' || user?.role === 'owner') && (
+            <Link
+              href="/dashboard/admin"
+              className="text-sm font-medium text-gray-700 hover:text-gray-900"
+            >
+              Admin
+            </Link>
+          )}
         </div>
         <div className="flex items-center space-x-4">
           {user && (

@@ -17,13 +17,18 @@ import { CertificateNumberField } from '@/components/CertificateNumberField'
 import { NextVisitField } from '@/components/NextVisitField'
 import useSWR from 'swr'
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) {
+    throw new Error('Failed to fetch');
+  }
+  return res.json();
+});
 
 export default function FireExtinguisherCertificatePage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
-  const { data: customers = [] } = useSWR('/api/customers', fetcher)
+  const { data: customers = [], error } = useSWR('/api/customers', fetcher)
   const [guidedOpen, setGuidedOpen] = useState(false)
   const [certificateNumber, setCertificateNumber] = useState('')
   const [selectedCustomerName, setSelectedCustomerName] = useState('')
@@ -126,11 +131,15 @@ export default function FireExtinguisherCertificatePage() {
                     <SelectValue placeholder="Select a customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map((customer) => (
+                    {Array.isArray(customers) ? customers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id.toString()}>
                         {customer.name}
                       </SelectItem>
-                    ))}
+                    )) : (
+                      <SelectItem value="" disabled>
+                        {error ? 'Error loading customers' : 'Loading customers...'}
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -299,7 +308,7 @@ export default function FireExtinguisherCertificatePage() {
                   onChange={setNextVisitDate}
                   required
                   label="Next Visit Due"
-                  months={[6, 12]}
+
                 />
                 <div>
                   <Label htmlFor="inspectionType">Inspection Type *</Label>

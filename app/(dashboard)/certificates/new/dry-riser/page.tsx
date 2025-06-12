@@ -17,13 +17,18 @@ import { CertificateNumberField } from '@/components/CertificateNumberField'
 import { NextVisitField } from '@/components/NextVisitField'
 import useSWR from 'swr'
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) {
+    throw new Error('Failed to fetch');
+  }
+  return res.json();
+});
 
 export default function DryRiserCertificatePage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
-  const { data: customers = [] } = useSWR('/api/customers', fetcher)
+  const { data: customers = [], error } = useSWR('/api/customers', fetcher)
   const [guidedOpen, setGuidedOpen] = useState(false)
   const [certificateNumber, setCertificateNumber] = useState('')
   const [selectedCustomerName, setSelectedCustomerName] = useState('')
@@ -102,17 +107,20 @@ export default function DryRiserCertificatePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CertificateNumberField
-                value={certificateNumber}
-                onChange={setCertificateNumber}
-                certificateType="Dry Riser"
-                customerName={selectedCustomerName}
-                siteName={siteName}
-              />
+              <div>
+                <input type="hidden" name="certificateNumber" value={certificateNumber} />
+                <CertificateNumberField
+                  value={certificateNumber}
+                  onChange={setCertificateNumber}
+                  certificateType="Dry Riser"
+                  customerName={selectedCustomerName}
+                  siteName={siteName}
+                />
+              </div>
               <div>
                 <Label htmlFor="customerId">Customer *</Label>
+                <input type="hidden" name="customerId" value={selectedCustomer} />
                 <Select 
-                  name="customerId" 
                   value={selectedCustomer}
                   onValueChange={(value) => {
                     setSelectedCustomer(value);
@@ -124,11 +132,15 @@ export default function DryRiserCertificatePage() {
                     <SelectValue placeholder="Select a customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map((customer) => (
+                    {Array.isArray(customers) ? customers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id.toString()}>
                         {customer.name}
                       </SelectItem>
-                    ))}
+                    )) : (
+                      <SelectItem value="" disabled>
+                        {error ? 'Error loading customers' : 'Loading customers...'}
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -179,21 +191,23 @@ export default function DryRiserCertificatePage() {
                 </div>
                 <div>
                   <Label htmlFor="buildingUse">Building Use *</Label>
-                  <Select name="buildingUse">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select building use" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="residential">Residential</SelectItem>
-                      <SelectItem value="office">Office</SelectItem>
-                      <SelectItem value="retail">Retail</SelectItem>
-                      <SelectItem value="industrial">Industrial</SelectItem>
-                      <SelectItem value="hospital">Hospital</SelectItem>
-                      <SelectItem value="school">School</SelectItem>
-                      <SelectItem value="hotel">Hotel</SelectItem>
-                      <SelectItem value="mixed">Mixed Use</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select 
+                    id="buildingUse"
+                    name="buildingUse" 
+                    title="Select building use"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    required
+                  >
+                    <option value="">Select building use</option>
+                    <option value="residential">Residential</option>
+                    <option value="office">Office</option>
+                    <option value="retail">Retail</option>
+                    <option value="industrial">Industrial</option>
+                    <option value="hospital">Hospital</option>
+                    <option value="school">School</option>
+                    <option value="hotel">Hotel</option>
+                    <option value="mixed">Mixed Use</option>
+                  </select>
                 </div>
                 <div>
                   <Label htmlFor="constructionYear">Year of Construction</Label>
@@ -344,7 +358,7 @@ export default function DryRiserCertificatePage() {
                     onChange={setNextInspectionDate}
                     required
                     label="Next Inspection Due"
-                    months={[6, 12]}
+  
                   />
                 </div>
               </div>

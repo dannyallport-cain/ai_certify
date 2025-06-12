@@ -329,7 +329,7 @@ export default function BS5839_6CertificatePage() {
                   onChange={setNextVisitDate}
                   required
                   label="Next Visit Due"
-                  months={[6, 12]}
+
                 />
                 <div>
                   <Label htmlFor="inspectorName">Inspector Name *</Label>

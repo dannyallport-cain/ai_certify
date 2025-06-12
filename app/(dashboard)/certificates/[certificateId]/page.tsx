@@ -8,7 +8,8 @@ import Link from 'next/link';
 import { DownloadPDFButton } from '@/components/DownloadPDFButton';
 
 export default async function CertificatePage({ params }: any) {
-  const id = parseInt(params.certificateId, 10);
+  const resolvedParams = await params;
+  const id = parseInt(resolvedParams.certificateId, 10);
   const data = await getCertificateById(id);
   if (!data) {
     notFound();
@@ -26,7 +27,7 @@ export default async function CertificatePage({ params }: any) {
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Certificate {certificate.certificateNumber}</h1>
         <div className="flex gap-2">
-          <DownloadPDFButton certificateId={certificate.id} />
+          <DownloadPDFButton certificateId={certificate.id} certificateNumber={certificate.certificateNumber} />
           <Link href="/certificates">
             <Button variant="outline">Back to List</Button>
           </Link>

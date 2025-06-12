@@ -204,7 +204,7 @@ export default function BS5839_1CertificatePage() {
                     onChange={setNextVisitDate}
                     required
                     label="Next Visit Due"
-                    months={[6, 12]}
+
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

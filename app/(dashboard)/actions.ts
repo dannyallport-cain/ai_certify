@@ -43,7 +43,7 @@ export const createCustomer = validatedActionWithUser(
 
     await logActivity(team.id, user.id, ActivityType.CREATE_CUSTOMER);
 
-    redirect(`/customers/${customer.id}`);
+    redirect('/customers');
   }
 );
 
@@ -284,7 +284,7 @@ async function getCertificateForPDF(certificateId: number): Promise<CertificateD
       nextInspectionDate: certificate.nextInspectionDate,
       inspectorName: certificate.inspectorName,
       status: certificate.status,
-      formData: certificate.formData,
+      formData: certificate.formData as Record<string, any> | undefined,
       customer: {
         name: customer.name,
         email: customer.email,

@@ -7,7 +7,7 @@ import { generateCertificatePDF, CertificateData } from '@/lib/pdf/generator';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication
@@ -16,7 +16,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const certificateId = parseInt(params.id);
+    const resolvedParams = await params;
+    const certificateId = parseInt(resolvedParams.id);
     if (isNaN(certificateId)) {
       return NextResponse.json({ error: 'Invalid certificate ID' }, { status: 400 });
     }

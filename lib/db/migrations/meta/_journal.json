@@ -15,6 +15,13 @@
       "when": 1748372313339,
       "tag": "0001_peaceful_veda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1749710429951,
+      "tag": "0002_amusing_morlocks",
+      "breakpoints": true
     }
   ]
 }
