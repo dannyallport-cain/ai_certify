@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { requireAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
-import { users, teams, certificates, customers } from '@/lib/db/schema';
+import { users, teams, customers } from '@/lib/db/schema';
 import { count, eq, sql } from 'drizzle-orm';
 import { 
   Users, 
@@ -16,7 +16,15 @@ import {
   Settings,
   BarChart3,
   CreditCard,
-  Eye
+  Eye,
+  LayoutTemplate,
+  Copy,
+  Globe,
+  Database,
+  Server,
+  AlertCircle,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 
 async function getSystemStats() {
@@ -24,36 +32,36 @@ async function getSystemStats() {
     const [
       userCount,
       teamCount,
-      certificateCount,
       customerCount,
       adminCount,
-      activeTeams
+      activeTeams,
+      activeSubscriptions
     ] = await Promise.all([
       db.select({ count: count() }).from(users),
       db.select({ count: count() }).from(teams),
-      db.select({ count: count() }).from(certificates),
       db.select({ count: count() }).from(customers),
       db.select({ count: count() }).from(users).where(sql`role IN ('admin', 'owner')`),
-      db.select({ count: count() }).from(teams).where(eq(teams.subscriptionStatus, 'active'))
+      db.select({ count: count() }).from(teams).where(eq(teams.subscriptionStatus, 'active')),
+      db.select({ count: count() }).from(teams).where(sql`subscription_status = 'active' OR subscription_status = 'trialing'`)
     ]);
 
     return {
       users: userCount[0]?.count || 0,
       teams: teamCount[0]?.count || 0,
-      certificates: certificateCount[0]?.count || 0,
       customers: customerCount[0]?.count || 0,
       admins: adminCount[0]?.count || 0,
       activeTeams: activeTeams[0]?.count || 0,
+      activeSubscriptions: activeSubscriptions[0]?.count || 0,
     };
   } catch (error) {
     console.error('Error fetching system stats:', error);
     return {
       users: 0,
       teams: 0,
-      certificates: 0,
       customers: 0,
       admins: 0,
       activeTeams: 0,
+      activeSubscriptions: 0,
     };
   }
 }
@@ -80,20 +88,12 @@ async function AdminDashboardContent() {
       href: '/dashboard/admin/users'
     },
     {
-      title: 'Certificates',
-      value: stats.certificates,
-      icon: FileText,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      href: '/dashboard/admin/reports'
-    },
-    {
-      title: 'Customers',
-      value: stats.customers,
-      icon: Users,
+      title: 'Active Subscriptions',
+      value: stats.activeSubscriptions,
+      icon: CreditCard,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
-      href: '/dashboard/admin/reports'
+      href: '/dashboard/admin/subscriptions'
     },
     {
       title: 'Administrators',
@@ -107,20 +107,20 @@ async function AdminDashboardContent() {
 
   const quickActions = [
     {
+      title: 'Template Management',
+      description: 'Create and manage certificate templates with WYSIWYG editor',
+      icon: LayoutTemplate,
+      href: '/dashboard/admin/templates',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    },
+    {
       title: 'User Management',
       description: 'View, edit, and manage user accounts',
       icon: Users,
       href: '/dashboard/admin/users',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50'
-    },
-    {
-      title: 'Template Management',
-      description: 'Configure certificate templates',
-      icon: FileText,
-      href: '/dashboard/admin/templates',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
     },
     {
       title: 'Subscription Plans',
@@ -151,18 +151,139 @@ async function AdminDashboardContent() {
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Welcome to Admin Dashboard</h1>
-            <p className="text-blue-100">Manage your AI Certify system efficiently</p>
+            <p className="text-purple-100">Manage your AI Certify system efficiently</p>
           </div>
-          <Shield className="h-16 w-16 text-blue-200" />
+          <Shield className="h-16 w-16 text-purple-200" />
+        </div>
+      </div>
+
+      {/* System Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Globe className="h-5 w-5" />
+              <span>Site Status</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Domain</span>
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                fire-call.com
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">SSL Certificate</span>
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                Active
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">CDN Status</span>
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                Enabled
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Server className="h-5 w-5" />
+              <span>System Health</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Database</span>
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-green-600">Healthy</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">API Services</span>
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-green-600">Operational</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Storage</span>
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-sm text-green-600">Normal</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Template Management Section */}
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Template Management</h2>
+            <p className="text-gray-600 mt-1">Create and customize certificate templates</p>
+          </div>
+          <Link href="/dashboard/admin/templates">
+            <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2">
+              <LayoutTemplate className="h-5 w-5" />
+              Manage Templates
+            </button>
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-purple-50 border-purple-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-purple-100 p-2 rounded-lg">
+                  <FileText className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">WYSIWYG Editor</h3>
+                  <p className="text-sm text-gray-600">Visual template editor</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <Eye className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Live Preview</h3>
+                  <p className="text-sm text-gray-600">Real-time template preview</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-green-50 border-green-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-100 p-2 rounded-lg">
+                  <Copy className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Template Duplication</h3>
+                  <p className="text-sm text-gray-600">Clone and customize templates</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsCards.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -212,73 +333,30 @@ async function AdminDashboardContent() {
         </div>
       </div>
 
-      {/* System Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="h-5 w-5" />
-              <span>System Status</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Database</span>
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                Connected
-              </Badge>
+      {/* Recent Activity */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Activity className="h-5 w-5" />
+            <span>Recent Activity</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Admin dashboard accessed</span>
+              <span className="text-gray-400">Just now</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Authentication</span>
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                Active
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">PDF Generation</span>
-              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                Available
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Eye className="h-5 w-5" />
-              <span>Recent Activity</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                <span className="text-sm">System initialized</span>
-                <span className="text-xs text-gray-500">Just now</span>
-              </div>
-              <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                <span className="text-sm">Admin dashboard accessed</span>
-                <span className="text-xs text-gray-500">1 min ago</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm">Database connected</span>
-                <span className="text-xs text-gray-500">2 min ago</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
 export default function AdminHomePage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    }>
+    <Suspense fallback={<div>Loading...</div>}>
       <AdminDashboardContent />
     </Suspense>
   );

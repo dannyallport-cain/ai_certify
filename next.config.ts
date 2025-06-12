@@ -1,16 +1,14 @@
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   experimental: {
     ppr: true,
-    clientSegmentCache: true,
-    nodeMiddleware: true
+    clientSegmentCache: true
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: true
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: true
   },
   async headers() {
     return [
@@ -23,8 +21,8 @@ const nextConfig: NextConfig = {
           }
         ]
       }
-    ];
+    ]
   }
-};
+}
 
-export default nextConfig;
+export default nextConfig
