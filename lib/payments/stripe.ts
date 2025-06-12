@@ -7,7 +7,7 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
   apiVersion: '2025-04-30.basil'
 });
 
@@ -147,6 +147,28 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
+  // Return mock data if no valid Stripe key is set
+  if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('placeholder') || process.env.STRIPE_SECRET_KEY.includes('here')) {
+    return [
+      {
+        id: 'price_base_mock',
+        productId: 'prod_base_mock',
+        unitAmount: 800,
+        currency: 'usd',
+        interval: 'month',
+        trialPeriodDays: 7
+      },
+      {
+        id: 'price_plus_mock',
+        productId: 'prod_plus_mock',
+        unitAmount: 1200,
+        currency: 'usd',
+        interval: 'month',
+        trialPeriodDays: 7
+      }
+    ];
+  }
+
   const prices = await stripe.prices.list({
     expand: ['data.product'],
     active: true,
@@ -165,6 +187,24 @@ export async function getStripePrices() {
 }
 
 export async function getStripeProducts() {
+  // Return mock data if no valid Stripe key is set
+  if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('placeholder') || process.env.STRIPE_SECRET_KEY.includes('here')) {
+    return [
+      {
+        id: 'prod_base_mock',
+        name: 'Base',
+        description: 'Base subscription plan',
+        defaultPriceId: 'price_base_mock'
+      },
+      {
+        id: 'prod_plus_mock',
+        name: 'Plus',
+        description: 'Plus subscription plan',
+        defaultPriceId: 'price_plus_mock'
+      }
+    ];
+  }
+
   const products = await stripe.products.list({
     active: true,
     expand: ['data.default_price']
