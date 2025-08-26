@@ -97,7 +97,12 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     return createCheckoutSession({ team: foundTeam, priceId });
   }
 
-  redirect('/dashboard');
+  // Role-based redirect
+  if (foundUser.role === 'admin' || foundUser.role === 'owner') {
+    redirect('/dashboard/admin');
+  } else {
+    redirect('/dashboard');
+  }
 });
 
 const signUpSchema = z.object({

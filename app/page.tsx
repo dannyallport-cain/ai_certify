@@ -30,6 +30,11 @@ export default function LandingPage() {
                     Contact Sales
                   </Button>
                 </Link>
+                <Link href="/login">
+                  <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10">
+                    Login
+                  </Button>
+                </Link>
               </div>
             </div>
             <div className="flex-1 relative">
@@ -229,4 +234,4 @@ const pricingPlans = [
       'Dedicated account manager'
     ]
   }
-]; 
+];

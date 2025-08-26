@@ -1,0 +1,8 @@
+# Test Users and Passwords
+
+sysadmin@riskassessorpro.com	Verify123!!!
+owner@test.com	admin123
+pending@test.com	(pending invitation)
+accepted@test.com	(member, password unknown)
+
+# Add more users as needed

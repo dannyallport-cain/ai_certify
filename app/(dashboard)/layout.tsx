@@ -20,7 +20,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data, error } = useSWR<User>('/api/user', fetcher);
   const router = useRouter();
 
   async function handleSignOut() {
@@ -29,7 +29,11 @@ function UserMenu() {
     router.push('/');
   }
 
-  if (!user) {
+  if (error) {
+    return <div className="text-red-500 text-sm">Error loading user menu.</div>;
+  }
+
+  if (!data || !data.email) {
     return (
       <>
         <Link
@@ -45,6 +49,7 @@ function UserMenu() {
     );
   }
 
+  const user = data;
   return (
     <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
       <DropdownMenuTrigger>
@@ -52,9 +57,8 @@ function UserMenu() {
           <AvatarImage alt={user.name || ''} />
           <AvatarFallback>
             {user.email
-              .split(' ')
-              .map((n) => n[0])
-              .join('')}
+              ? user.email.split(' ').map((n) => n[0]).join('')
+              : '?'}
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
