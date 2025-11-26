@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { Header } from '@/components/landing/Header';
 import { Footer } from '@/components/landing/Footer';
 
@@ -20,65 +20,16 @@ export default function ContactPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-              {/* Contact Information */}
-              <div className="space-y-8">
+              {/* Info Section */}
+              <div className="space-y-8 flex flex-col justify-center">
                 <div>
-                  <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-6">Get in Touch</h2>
-                  <div className="space-y-6">
-                    <div className="flex items-start space-x-4">
-                      <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
-                        <Mail className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-slate-900 dark:text-white">Email</h3>
-                        <p className="text-slate-600 dark:text-slate-400">support@ai-certificates.com</p>
-                        <p className="text-slate-600 dark:text-slate-400">sales@ai-certificates.com</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-4">
-                      <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
-                        <Phone className="h-6 w-6 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-slate-900 dark:text-white">Phone</h3>
-                        <p className="text-slate-600 dark:text-slate-400">+1 (555) 123-4567</p>
-                        <p className="text-slate-600 dark:text-slate-400">Mon-Fri 9am-6pm EST</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-4">
-                      <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-lg">
-                        <MapPin className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-slate-900 dark:text-white">Office</h3>
-                        <p className="text-slate-600 dark:text-slate-400">
-                          123 Innovation Street<br />
-                          Tech Hub, Suite 456<br />
-                          San Francisco, CA 94107
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Business Hours</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600 dark:text-slate-400">Monday - Friday</span>
-                      <span className="text-slate-900 dark:text-white">9:00 AM - 6:00 PM</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600 dark:text-slate-400">Saturday</span>
-                      <span className="text-slate-900 dark:text-white">10:00 AM - 4:00 PM</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600 dark:text-slate-400">Sunday</span>
-                      <span className="text-slate-900 dark:text-white">Closed</span>
-                    </div>
-                  </div>
+                  <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-6">We're Here to Help</h2>
+                  <p className="text-slate-600 dark:text-slate-400 mb-4">
+                    We appreciate your interest in AI Certify. Please use the contact form to send us your message, and we'll get back to you as soon as possible.
+                  </p>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    All inquiries submitted through the form below are our preferred method of communication.
+                  </p>
                 </div>
               </div>
 
@@ -166,7 +117,3 @@ export default function ContactPage() {
     </div>
   );
 }
-      </div>
-    </div>
-  );
-} 
