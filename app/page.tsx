@@ -24,7 +24,7 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 overflow-hidden bg-slate-950">
-        <div className="absolute inset-0 bg-[url('https://placehold.co/1920x1080/0f172a/1e293b.png?text=')] opacity-20 bg-cover bg-center" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-950 opacity-20" />
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-950/80 to-slate-950" />
         
         {/* Animated background blobs */}
@@ -83,14 +83,11 @@ export default function LandingPage() {
             <div className="flex-1 relative w-full max-w-xl lg:max-w-none">
               <div className="relative w-full aspect-square lg:aspect-[4/3] animate-float">
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-cyan-400 rounded-2xl blur-2xl opacity-30 transform rotate-6 scale-95" />
-                <div className="relative h-full w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-                  <Image
-                    src="https://placehold.co/800x600/1e293b/ffffff?text=Dashboard+Preview"
-                    alt="Platform Dashboard"
-                    fill
-                    className="object-cover"
-                    priority
-                  />
+                <div className="relative h-full w-full bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-6xl font-bold text-slate-600 mb-2">📊</div>
+                    <p className="text-slate-400 font-medium">Dashboard Preview</p>
+                  </div>
                   
                   {/* Floating Elements */}
                   <div className="absolute -right-4 top-10 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 animate-float" style={{ animationDelay: '1s' }}>
@@ -259,7 +256,7 @@ export default function LandingPage() {
 
       {/* CTA Section */}
       <section className="py-24 bg-blue-600 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://placehold.co/1920x600/2563eb/1d4ed8.png?text=')] opacity-10 bg-cover bg-center" />
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-800 opacity-10" />
         <div className="container relative mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
             Ready to transform your workflow?
