@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Fire safety certificate management system",
   "private": true,
+  "packageManager": "pnpm@10.8.1",
   "scripts": {
     "dev": "next dev --turbopack -p 4000",
     "build": "next build",
