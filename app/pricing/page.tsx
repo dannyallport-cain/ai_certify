@@ -3,6 +3,7 @@ import { Footer } from '@/components/landing/Footer';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function PricingPage() {
   return (
@@ -10,7 +11,15 @@ export default function PricingPage() {
       <Header />
       
       <section className="py-20 bg-slate-950 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-950 opacity-20" />
+        <div className="absolute inset-0 opacity-20">
+          <Image
+            src="https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?auto=format&fit=crop&q=80&w=2070"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
         <div className="container relative mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
             Simple, Transparent Pricing

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/landing/Header';
 import { Footer } from '@/components/landing/Footer';
@@ -10,7 +11,15 @@ export default function FeaturesPage() {
       
       {/* Hero Section */}
       <section className="relative py-20 overflow-hidden bg-slate-950">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-950 opacity-20" />
+        <div className="absolute inset-0 opacity-20">
+          <Image
+            src="https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?auto=format&fit=crop&q=80&w=2070"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-950/80 to-slate-950" />
         
         <div className="container relative mx-auto px-4 text-center">
@@ -36,7 +45,8 @@ export default function FeaturesPage() {
               benefits: ["99% faster than manual creation", "Automatic regulation compliance checks", "Smart error detection"],
               icon: Zap,
               color: "text-amber-500",
-              bg: "bg-amber-50 dark:bg-amber-900/20"
+              bg: "bg-amber-50 dark:bg-amber-900/20",
+              image: "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?auto=format&fit=crop&q=80&w=2070"
             },
             {
               title: "Secure Cloud Storage",
@@ -44,7 +54,8 @@ export default function FeaturesPage() {
               benefits: ["AES-256 encryption", "Automatic backups", "Role-based access control"],
               icon: Lock,
               color: "text-emerald-500",
-              bg: "bg-emerald-50 dark:bg-emerald-900/20"
+              bg: "bg-emerald-50 dark:bg-emerald-900/20",
+              image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=2070"
             },
             {
               title: "Real-time Analytics",
@@ -52,7 +63,8 @@ export default function FeaturesPage() {
               benefits: ["Customizable dashboards", "Exportable reports", "Trend analysis"],
               icon: BarChart3,
               color: "text-purple-500",
-              bg: "bg-purple-50 dark:bg-purple-900/20"
+              bg: "bg-purple-50 dark:bg-purple-900/20",
+              image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2070"
             }
           ].map((feature, index) => (
             <div key={index} className={`flex flex-col lg:flex-row items-center gap-16 mb-32 ${
@@ -78,15 +90,14 @@ export default function FeaturesPage() {
                 </ul>
               </div>
               <div className="flex-1 relative w-full">
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-                  <div className="text-center text-slate-400">
-                    <div className="text-5xl mb-2">
-                      {feature.title === "AI-Powered Generation" && "⚡"}
-                      {feature.title === "Secure Cloud Storage" && "🔒"}
-                      {feature.title === "Real-time Analytics" && "📊"}
-                    </div>
-                    <p className="text-sm">{feature.title}</p>
-                  </div>
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800">
+                  <Image
+                    src={feature.image}
+                    alt={feature.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
                 </div>
               </div>
             </div>
