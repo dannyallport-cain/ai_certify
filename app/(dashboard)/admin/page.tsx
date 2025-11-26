@@ -155,7 +155,7 @@ async function AdminDashboardContent() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">Welcome to Admin Dashboard</h1>
-            <p className="text-purple-100">Manage your AI Certify system efficiently</p>
+            <p className="text-purple-100">Manage your AI-Certificates system efficiently</p>
           </div>
           <Shield className="h-16 w-16 text-purple-200" />
         </div>

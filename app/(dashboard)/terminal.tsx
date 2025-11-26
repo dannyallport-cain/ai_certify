@@ -7,7 +7,7 @@ export function Terminal() {
   const [terminalStep, setTerminalStep] = useState(0);
   const [copied, setCopied] = useState(false);
   const terminalSteps = [
-    'git clone https://github.com/yourusername/ai-certify',
+    'git clone https://github.com/yourusername/ai-certificates',
     'pnpm install',
     'pnpm db:setup',
     'pnpm db:migrate',
