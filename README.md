@@ -1,4 +1,4 @@
-# Fire Certify - Fire Safety Certificate Management System
+# AI Certifi - Safety Certificate Management System
 
 A comprehensive Next.js application for managing fire safety certificates and inspections, built for fire safety professionals and compliance managers.
 
@@ -244,7 +244,7 @@ For support and questions:
 
 ---
 
-**Fire Certify** - Streamlining fire safety compliance, one certificate at a time. 🔥🛡️
+**AI Certifi** - Streamlining fire safety compliance, one certificate at a time. 🔥🛡️
 3. Follow the Vercel deployment process, which will guide you through setting up your project.
 
 ### Add environment variables
@@ -257,12 +257,3 @@ In your Vercel project settings (or during deployment), add all the necessary en
 4. `POSTGRES_URL`: Set this to your production database URL.
 5. `AUTH_SECRET`: Set this to a random string. `openssl rand -base64 32` will generate one.
 
-## Other Templates
-
-While this template is intentionally minimal and to be used as a learning resource, there are other paid versions in the community which are more full-featured:
-
-- https://achromatic.dev
-- https://shipfa.st
-- https://makerkit.dev
-- https://zerotoshipped.com
-- https://turbostarter.dev
