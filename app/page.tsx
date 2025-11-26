@@ -24,7 +24,15 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 overflow-hidden bg-slate-950">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-950 opacity-20" />
+        <div className="absolute inset-0 opacity-20">
+          <Image
+            src="https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?auto=format&fit=crop&q=80&w=2070"
+            alt="Background"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-950/80 to-slate-950" />
         
         {/* Animated background blobs */}
@@ -83,11 +91,15 @@ export default function LandingPage() {
             <div className="flex-1 relative w-full max-w-xl lg:max-w-none">
               <div className="relative w-full aspect-square lg:aspect-[4/3] animate-float">
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-cyan-400 rounded-2xl blur-2xl opacity-30 transform rotate-6 scale-95" />
-                <div className="relative h-full w-full bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-6xl font-bold text-slate-600 mb-2">📊</div>
-                    <p className="text-slate-400 font-medium">Dashboard Preview</p>
-                  </div>
+                <div className="relative h-full w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+                  <Image
+                    src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2070"
+                    alt="Platform Dashboard"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    priority
+                  />
                   
                   {/* Floating Elements */}
                   <div className="absolute -right-4 top-10 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 animate-float" style={{ animationDelay: '1s' }}>
