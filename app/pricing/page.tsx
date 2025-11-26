@@ -10,7 +10,7 @@ export default function PricingPage() {
       <Header />
       
       <section className="py-20 bg-slate-950 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://placehold.co/1920x1080/0f172a/1e293b.png?text=')] opacity-20 bg-cover bg-center" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-950 opacity-20" />
         <div className="container relative mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
             Simple, Transparent Pricing
