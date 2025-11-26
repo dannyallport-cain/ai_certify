@@ -1,4 +1,4 @@
-# AI Certifi - Safety Certificate Management System
+# AI-Certificates - Safety Certificate Management System
 
 A comprehensive Next.js application for managing fire safety certificates and inspections, built for fire safety professionals and compliance managers.
 
@@ -42,8 +42,8 @@ A comprehensive Next.js application for managing fire safety certificates and in
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ai-certify.git
-   cd ai-certify
+   git clone https://github.com/yourusername/ai-certificates.git
+   cd ai-certificates
    ```
 
 2. **Install dependencies**
@@ -244,7 +244,7 @@ For support and questions:
 
 ---
 
-**AI Certifi** - Streamlining fire safety compliance, one certificate at a time. 🔥🛡️
+**AI-Certificates** - Streamlining fire safety compliance, one certificate at a time. 🔥🛡️
 3. Follow the Vercel deployment process, which will guide you through setting up your project.
 
 ### Add environment variables

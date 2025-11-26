@@ -1,5 +1,5 @@
 {
-  "name": "ai_certify",
+  "name": "ai-certificates",
   "version": "1.0.0",
   "description": "Fire safety certificate management system",
   "private": true,
@@ -12,7 +12,8 @@
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "backup:env": "bash scripts/backup-env.sh"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
