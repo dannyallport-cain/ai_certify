@@ -40,3 +40,10 @@ next-env.d.ts
 # Docker
 postgres_data/
 .env*.local
+
+# Agent tooling
+.agent/
+.agents/
+.claude/
+.cursor/
+.windsurf/
