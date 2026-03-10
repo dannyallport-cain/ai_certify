@@ -17,7 +17,7 @@ export async function requireAdmin() {
     .where(eq(users.id, session.user.id))
     .limit(1);
 
-  if (!user || (user.role !== 'admin' && user.role !== 'owner')) {
+  if (!user || (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner')) {
     redirect('/dashboard');
   }
 
@@ -38,7 +38,7 @@ export async function isAdmin(): Promise<boolean> {
       .where(eq(users.id, session.user.id))
       .limit(1);
 
-    return user && (user.role === 'admin' || user.role === 'owner');
+    return user && (user.role === 'supersystemAdmin' || user.role === 'systemAdmin' || user.role === 'owner');
   } catch {
     return false;
   }

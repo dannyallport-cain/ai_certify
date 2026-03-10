@@ -64,7 +64,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role !== 'admin' && user.role !== 'owner') {
+    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -103,7 +103,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role !== 'admin' && user.role !== 'owner') {
+    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -174,7 +174,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role !== 'admin' && user.role !== 'owner') {
+    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

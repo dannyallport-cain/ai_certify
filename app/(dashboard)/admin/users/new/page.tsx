@@ -25,7 +25,7 @@ export default function NewUserPage() {
     });
     setSaving(false);
     if (res.ok) {
-      router.push('/dashboard/admin/users');
+      router.push('/admin/users');
     } else {
       alert('Failed to create user');
     }

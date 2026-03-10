@@ -31,6 +31,11 @@ export interface CertificateData {
 }
 
 export function generateCertificatePDF(certificate: CertificateData): Uint8Array {
+  // Route EICR to a dedicated generator matching the BS 7671 form structure
+  if (certificate.certificateType === 'EICR') {
+    return generateEICRPDF(certificate);
+  }
+
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -508,7 +513,8 @@ function getCertificateTypeDisplayName(type: string): string {
     'BS5839-6': 'BS5839-6 FIRE DETECTION AND ALARM SYSTEM',
     BS5266: 'BS5266 EMERGENCY LIGHTING SYSTEM',
     FIRE_EXTINGUISHER: 'PORTABLE FIRE EXTINGUISHER INSPECTION',
-    DRY_RISER: 'DRY RISER SYSTEM TESTING'
+    DRY_RISER: 'DRY RISER SYSTEM TESTING',
+    EICR: 'ELECTRICAL INSTALLATION CONDITION REPORT',
   };
   
   return typeMap[type] || type.toUpperCase();
@@ -522,7 +528,8 @@ function getStandardsText(type: string): string {
     'BS5839-6': 'In accordance with BS 5839-6: Fire detection and fire alarm systems for buildings - Part 6: Code of practice for the design, installation, commissioning and maintenance of fire detection and fire alarm systems in domestic premises',
     BS5266: 'In accordance with BS 5266: Emergency lighting - Part 1: Code of practice for the emergency lighting of premises',
     FIRE_EXTINGUISHER: 'In accordance with BS 5306-3: Fire extinguishing installations and equipment on premises - Code of practice for selection, installation and maintenance of portable fire extinguishers',
-    DRY_RISER: 'In accordance with BS 9990: Code of practice for non-automatic fire fighting systems in buildings'
+    DRY_RISER: 'In accordance with BS 9990: Code of practice for non-automatic fire fighting systems in buildings',
+    EICR: 'Requirements For Electrical Installations - BS 7671 IET Wiring Regulations',
   };
   
   return standardsMap[type] || 'In accordance with relevant British Standards and fire safety regulations';
@@ -582,6 +589,17 @@ function getSystemDetails(certificate: CertificateData): string[][] {
       ['Outlet Type:', safeString(formData.outletType) || 'Landing valve'],
       ['Test Pressure Result:', safeString(formData.pressureTestResult) || 'Not specified']
     ];
+  } else if (type === 'EICR') {
+    return [
+      ['Earthing Arrangement:', safeString(formData.earthingArrangements) || 'TN-C-S'],
+      ['Nominal Voltage (U/Uo):', `${safeString(formData.nominalVoltageU) || '400'} V / ${safeString(formData.nominalVoltageUo) || '230'} V`],
+      ['Nominal Frequency:', safeString(formData.nominalFrequency) || '50 Hz'],
+      ['Prospective Fault Current:', safeString(formData.prospectiveFaultCurrent) || 'Not specified'],
+      ['External Earth Fault Loop Impedance (Ze):', safeString(formData.externalEarthFaultLoopImpedance) || 'Not specified'],
+      ['Supply Protective Device:', `${safeString(formData.supplyProtectiveDeviceType) || ''} ${safeString(formData.supplyProtectiveDeviceRating) || ''}A`.trim()],
+      ['Means of Earthing:', safeString(formData.meansOfEarthing) || "Distributor's facility"],
+      ['Maximum Demand:', safeString(formData.maximumDemand) || 'Not specified'],
+    ];
   }
   
   return [['System Type:', 'Not specified']];
@@ -595,7 +613,8 @@ function getCertificationStatement(type: string): string {
     'BS5839-6': 'I certify that the domestic fire detection and alarm system detailed above has been inspected and tested in accordance with BS 5839-6. The system is functioning correctly and complies with the relevant standards, subject to any defects or recommendations noted above.',
     BS5266: 'I certify that the emergency lighting system detailed above has been inspected and tested in accordance with BS 5266. The system is functioning correctly and provides adequate emergency illumination, subject to any defects or recommendations noted above.',
     FIRE_EXTINGUISHER: 'I certify that the portable fire extinguishers detailed above have been inspected and tested in accordance with BS 5306-3. All extinguishers are in serviceable condition and positioned correctly, subject to any defects or recommendations noted above.',
-    DRY_RISER: 'I certify that the dry riser system detailed above has been tested in accordance with BS 9990. The system has been tested to the required pressure and is in serviceable condition, subject to any defects or recommendations noted above.'
+    DRY_RISER: 'I certify that the dry riser system detailed above has been tested in accordance with BS 9990. The system has been tested to the required pressure and is in serviceable condition, subject to any defects or recommendations noted above.',
+    EICR: 'I/We, being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our signatures below), having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, including the observations and the attached schedules, provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations.',
   };
   
   return statements[type] || 'I certify that the equipment/system detailed above has been inspected in accordance with relevant standards and is in serviceable condition, subject to any defects or recommendations noted above.';
@@ -609,7 +628,8 @@ function getDefaultInspectionType(type: string): string {
     'BS5839-6': 'Annual Inspection',
     BS5266: 'Annual Service',
     FIRE_EXTINGUISHER: 'Annual Service',
-    DRY_RISER: 'Six Monthly Test'
+    DRY_RISER: 'Six Monthly Test',
+    EICR: 'Condition Report',
   };
   
   return types[type] || 'Inspection';
@@ -628,4 +648,369 @@ function formatDate(dateString: string | null): string {
 function safeString(value: any): string {
   if (value === null || value === undefined) return '';
   return String(value);
+}
+
+// ─── EICR (BS 7671) dedicated PDF generator ─────────────────────────────────
+
+function generateEICRPDF(certificate: CertificateData): Uint8Array {
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 15;
+  let y = margin;
+
+  const fd = (certificate.formData || {}) as Record<string, any>;
+  const ss = safeString;
+
+  // ── Colour palette (matches the Cain Enabled EICR style) ──
+  const navy  = [26,  58, 92]  as [number, number, number];
+  const light = [235, 242, 250] as [number, number, number];
+  const gold  = [255, 193, 7]  as [number, number, number];
+  const green = [40,  167, 69] as [number, number, number];
+  const red   = [220, 53,  69] as [number, number, number];
+
+  // ── Helpers ──────────────────────────────────────────────
+  const W = pageWidth - 2 * margin;
+
+  const text = (t: string, x: number, yy: number, opts?: any) =>
+    pdf.text(ss(t), x, yy, opts);
+
+  const checkPage = (space: number) => {
+    if (y + space > pageHeight - margin) {
+      pdf.addPage();
+      y = margin;
+      addPageHeader();
+    }
+  };
+
+  const filledRect = (x: number, yy: number, w: number, h: number, rgb: [number,number,number]) => {
+    pdf.setFillColor(rgb[0], rgb[1], rgb[2]);
+    pdf.rect(x, yy, w, h, 'F');
+  };
+
+  const borderedRect = (x: number, yy: number, w: number, h: number, rgb: [number,number,number]) => {
+    pdf.setDrawColor(rgb[0], rgb[1], rgb[2]);
+    pdf.setLineWidth(0.5);
+    pdf.rect(x, yy, w, h);
+    pdf.setDrawColor(0, 0, 0);
+  };
+
+  // Section header bar (navy with white text)
+  const sectionHeader = (num: string, title: string) => {
+    checkPage(12);
+    filledRect(margin, y, W, 10, navy);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    text(`${num}  ${title.toUpperCase()}`, margin + 3, y + 7);
+    pdf.setTextColor(0, 0, 0);
+    y += 10;
+  };
+
+  // Two-column label: value row
+  const row = (label: string, value: string, labelW = 65) => {
+    const valueW = W - labelW;
+    const lines = pdf.splitTextToSize(ss(value), valueW - 4);
+    const h = Math.max(7, lines.length * 4 + 3);
+    checkPage(h);
+    filledRect(margin, y, W, h, light);
+    borderedRect(margin, y, W, h, [200, 210, 225]);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    text(label, margin + 2, y + 5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(lines, margin + labelW, y + 5);
+    y += h;
+  };
+
+  // Checkbox-style tick row
+  const checkRow = (label: string, checked: boolean) => {
+    checkPage(6);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    const mark = checked ? '☑' : '☐';
+    text(`${mark}  ${label}`, margin + 3, y + 4);
+    y += 6;
+  };
+
+  // Page header (every page)
+  const addPageHeader = () => {
+    filledRect(margin, y, W, 14, navy);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    text(ss(fd.tradingTitle) || 'Cain Enabled Engineering Ltd', margin + 4, y + 9);
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    const contact = [ss(fd.companyTelephone) || '', ss(fd.companyEmail) || ''].filter(Boolean).join('  |  ');
+    if (contact) text(contact, pageWidth - margin - 4, y + 9, { align: 'right' });
+    pdf.setTextColor(0, 0, 0);
+    y += 14;
+  };
+
+  // ── PAGE 1 ───────────────────────────────────────────────
+
+  // Company header
+  addPageHeader();
+  y += 2;
+
+  // Report title block (gold bar)
+  filledRect(margin, y, W, 20, navy);
+  filledRect(margin + 2, y + 2, W - 4, 16, gold);
+  pdf.setFontSize(13);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(0, 0, 0);
+  text('ELECTRICAL INSTALLATION CONDITION REPORT', pageWidth / 2, y + 10, { align: 'center' });
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'italic');
+  text('Requirements For Electrical Installations - BS 7671 IET Wiring Regulations', pageWidth / 2, y + 16, { align: 'center' });
+  y += 24;
+
+  // Report reference box
+  filledRect(margin, y, W, 9, navy);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(255, 255, 255);
+  text(`Report Reference:  ${ss(certificate.certificateNumber)}`, margin + 4, y + 6.5);
+  pdf.setTextColor(0, 0, 0);
+  y += 11;
+
+  // Section 1 – Client / Person ordering the report
+  sectionHeader('1', 'Details of the Person Ordering the Report');
+  row('Client:', ss(certificate.customer.name));
+  row('Address:', ss(certificate.customer.address || fd.clientAddress));
+  y += 2;
+
+  // Section 2 – Reason for report
+  sectionHeader('2', 'Reason for Producing This Report');
+  row('Reason:', ss(fd.reasonForReport) || 'Safety assessment requested by client. To assess compliance with BS 7671.');
+  row('Date(s) of Inspection:', formatDate(certificate.inspectionDate));
+  y += 2;
+
+  // Section 3 – Installation details
+  sectionHeader('3', 'Details of the Installation');
+  row('Installation Address:', ss(fd.installationAddress) || ss(certificate.siteAddress) || 'Same as Client Address');
+  row('Description of Premises:', ss(fd.premisesType) || 'Commercial');
+  row('Estimated Age of Wiring (years):', ss(fd.estimatedAgeOfWiring));
+  row('Evidence of Additions/Alterations:', ss(fd.evidenceOfAdditions) || 'No');
+  if (ss(fd.evidenceOfAdditions).toLowerCase() === 'yes') {
+    row('Estimated Age of Additions (years):', ss(fd.estimatedAgeOfAdditions));
+  }
+  row('Installation Records Available? (Reg 651.1):', ss(fd.installationRecordsAvailable) || 'No');
+  row('Date of Last Inspection:', formatDate(ss(fd.dateOfLastInspection) || null));
+  y += 2;
+
+  // Section 4 – Extent and limitations
+  sectionHeader('4', 'Extent and Limitations of Inspection and Testing');
+  row('Extent of Installation Covered:', ss(fd.extentOfInspection) || '100% of the installation.');
+  row('Agreed Limitations:', ss(fd.agreedLimitations) || 'N/A');
+  row('Agreed With:', ss(fd.agreedLimitationsWith));
+  row('Operational Limitations:', ss(fd.operationalLimitations) || 'N/A');
+  y += 2;
+
+  // Section 5 – Overall assessment
+  checkPage(22);
+  sectionHeader('5', 'Summary of the Condition of the Installation');
+  const isSatisfactory = (ss(fd.overallAssessment) || 'SATISFACTORY').toUpperCase() === 'SATISFACTORY';
+  const assessColour = isSatisfactory ? green : red;
+  filledRect(margin, y, W, 14, assessColour);
+  pdf.setFontSize(14);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(255, 255, 255);
+  const assessLabel = isSatisfactory ? 'SATISFACTORY' : 'UNSATISFACTORY';
+  text(`Overall Assessment:  ${assessLabel}`, pageWidth / 2, y + 10, { align: 'center' });
+  pdf.setTextColor(0, 0, 0);
+  y += 16;
+
+  // Section 6 – Recommendations
+  sectionHeader('6', 'Recommendations');
+  row('Next Inspection Due In:', ss(fd.nextInspectionPeriod) || '3 Years');
+  row('Next Inspection Date:', formatDate(certificate.nextInspectionDate));
+  y += 4;
+
+  // ── PAGE 2 – Observations ──────────────────────────────
+  pdf.addPage();
+  y = margin;
+  addPageHeader();
+  y += 2;
+
+  // Section 7 – Observations
+  sectionHeader('7', 'Observations and Recommendations for Actions to Be Taken');
+
+  const observations = certificate.items?.filter(i => i.description) || [];
+
+  if (observations.length === 0) {
+    checkPage(10);
+    filledRect(margin, y, W, 8, green);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    text('There are no items adversely affecting electrical safety', margin + 4, y + 5.5);
+    pdf.setTextColor(0, 0, 0);
+    y += 10;
+  } else {
+    // Observation table header
+    filledRect(margin, y, W, 8, navy);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    text('Item No', margin + 2, y + 5.5);
+    text('Observation', margin + 20, y + 5.5);
+    text('Code', margin + W - 18, y + 5.5);
+    pdf.setTextColor(0, 0, 0);
+    y += 8;
+
+    observations.forEach((obs, idx) => {
+      const code = ss(obs.defects) || 'C3';
+      const codeClr: Record<string, [number,number,number]> = {
+        C1: red, C2: [255, 140, 0], C3: navy, FI: [100, 55, 155]
+      };
+      const clr = codeClr[code] || navy;
+      const descLines = pdf.splitTextToSize(ss(obs.description), W - 40);
+      const h = Math.max(8, descLines.length * 4 + 4);
+      checkPage(h);
+
+      if (idx % 2 === 1) filledRect(margin, y, W, h, [245, 248, 252]);
+      borderedRect(margin, y, W, h, [200, 210, 225]);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      text(String(idx + 1), margin + 6, y + 5.5);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(descLines, margin + 20, y + 5.5);
+      filledRect(margin + W - 18, y, 16, h, clr);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      text(code, margin + W - 12, y + 5.5, { align: 'center' });
+      pdf.setTextColor(0, 0, 0);
+      y += h;
+    });
+  }
+
+  y += 4;
+
+  // Classification key
+  checkPage(28);
+  sectionHeader('', 'Classification of Observation Codes');
+  const codes = [
+    { code: 'C1', label: 'Danger Present', detail: 'Risk of injury. Immediate remedial action required', clr: red },
+    { code: 'C2', label: 'Potentially Dangerous', detail: 'Urgent remedial action required', clr: [255, 140, 0] as [number,number,number] },
+    { code: 'C3', label: 'Improvement Recommended', detail: 'Should be given due consideration', clr: navy },
+    { code: 'FI', label: 'Further Investigation Required', detail: 'Without delay', clr: [100, 55, 155] as [number,number,number] },
+  ];
+  const cW = W / 4;
+  codes.forEach((c, i) => {
+    const x = margin + i * cW;
+    filledRect(x, y, cW - 1, 8, c.clr);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    text(c.code, x + cW / 2, y + 6, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFont('helvetica', 'bold');
+    text(c.label, x + 2, y + 14);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    const dl = pdf.splitTextToSize(c.detail, cW - 4);
+    pdf.text(dl, x + 2, y + 19);
+  });
+  y += 30;
+
+  // ── PAGE 3 – Declaration & Supply ─────────────────────
+  pdf.addPage();
+  y = margin;
+  addPageHeader();
+  y += 2;
+
+  // Section 8 – General condition
+  sectionHeader('8', 'General Condition of the Installation');
+  row('General Condition:', ss(fd.generalCondition) || 'Adequate as per BS 7671');
+  y += 2;
+
+  // Section 9 – Declaration
+  sectionHeader('9', 'Declaration');
+  const declarationText =
+    'I/We, being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our signatures below), having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, including the observations and the attached schedules, provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations in section 4 of this report.';
+  checkPage(16);
+  filledRect(margin, y, W, 14, light);
+  borderedRect(margin, y, W, 14, [200, 210, 225]);
+  pdf.setFontSize(7.5);
+  pdf.setFont('helvetica', 'italic');
+  const declLines = pdf.splitTextToSize(declarationText, W - 4);
+  pdf.text(declLines, margin + 2, y + 5);
+  y += 16;
+
+  row('Trading Title:', ss(fd.tradingTitle) || '');
+  row('Address:', ss(fd.companyAddress) || '');
+  row('Registration Number:', ss(fd.registrationNumber) || '');
+  row('Telephone:', ss(fd.companyTelephone) || '');
+  row('For Inspection, Testing and Assessment:', '');
+  row('Name:', ss(certificate.inspectorName));
+  row('Position:', ss(fd.inspectorPosition) || 'Qualified Supervisor');
+  row('Signature:', '');
+  row('Date:', formatDate(certificate.inspectionDate));
+  y += 4;
+
+  // Section 10 – Supply characteristics
+  sectionHeader('10', 'Supply Characteristics and Earthing Arrangements');
+  row('Earthing Arrangement:', ss(fd.earthingArrangements) || 'TN-C-S');
+  row('Nature of Supply:', ss(fd.natureOfSupply) || '1-phase (2 wire) ac');
+  row('Nominal Voltage U / Uo:', `${ss(fd.nominalVoltageU) || '400'} V / ${ss(fd.nominalVoltageUo) || '230'} V`);
+  row('Nominal Frequency:', ss(fd.nominalFrequency) || '50 Hz');
+  row('Prospective Fault Current (Ipf):', ss(fd.prospectiveFaultCurrent) || 'Not measured');
+  row('External Earth Fault Loop Impedance (Ze):', ss(fd.externalEarthFaultLoopImpedance) || 'Not measured');
+  row('Supply Protective Device (BS EN / Type / Rating):', `${ss(fd.supplyProtectiveDeviceStandard) || ''} ${ss(fd.supplyProtectiveDeviceType) || ''} ${ss(fd.supplyProtectiveDeviceRating) || ''}A`.trim());
+  row('Short-Circuit Capacity:', ss(fd.shortCircuitCapacity) || '');
+  row('Number of Supplies:', ss(fd.numberOfSupplies) || '1');
+  row('Confirmation of Supply Polarity:', ss(fd.supplyPolarityConfirmed) || 'Yes');
+  y += 2;
+
+  // Section 11 – Means of earthing
+  sectionHeader('11', 'Means of Earthing / Particulars of Installation');
+  row('Means of Earthing:', ss(fd.meansOfEarthing) || "Distributor's facility");
+  row('Maximum Demand (Load):', ss(fd.maximumDemand) || 'Not specified');
+  row('Protective Measures Against Electric Shock:', ss(fd.protectiveMeasures) || 'ADS');
+  y += 4;
+
+  // Signature boxes
+  checkPage(38);
+  const boxW = (W - 6) / 2;
+  const boxH = 32;
+
+  // Inspector box
+  filledRect(margin, y, boxW, boxH, light);
+  borderedRect(margin, y, boxW, boxH, [200, 210, 225]);
+  filledRect(margin + 1, y + 1, boxW - 2, 9, navy);
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  text('INSPECTOR SIGNATURE:', margin + 3, y + 7);
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'normal');
+  text('Name:', margin + 3, y + 16);
+  text(ss(certificate.inspectorName), margin + 25, y + 16);
+  text('Date:', margin + 3, y + 23);
+  text(formatDate(certificate.inspectionDate), margin + 25, y + 23);
+
+  // Client box
+  const cx = margin + boxW + 6;
+  filledRect(cx, y, boxW, boxH, light);
+  borderedRect(cx, y, boxW, boxH, [200, 210, 225]);
+  filledRect(cx + 1, y + 1, boxW - 2, 9, navy);
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFont('helvetica', 'bold');
+  text('CLIENT SIGNATURE:', cx + 3, y + 7);
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'normal');
+  text('Name:', cx + 3, y + 16);
+  text('Date:', cx + 3, y + 23);
+  y += boxH + 4;
+
+  // Footer
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setTextColor(120, 120, 120);
+  text('This form is based on the model shown in Appendix 6 of BS 7671:2018.', pageWidth / 2, pageHeight - 8, { align: 'center' });
+  pdf.setTextColor(0, 0, 0);
+
+  return pdf.output('arraybuffer') as Uint8Array;
 }

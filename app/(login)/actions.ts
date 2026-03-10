@@ -98,8 +98,8 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   }
 
   // Role-based redirect
-  if (foundUser.role === 'admin' || foundUser.role === 'owner') {
-    redirect('/dashboard/admin');
+  if (foundUser.role === 'supersystemAdmin' || foundUser.role === 'systemAdmin' || foundUser.role === 'owner') {
+    redirect('/admin');
   } else {
     redirect('/dashboard');
   }

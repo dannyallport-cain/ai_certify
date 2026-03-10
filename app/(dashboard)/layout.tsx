@@ -87,9 +87,9 @@ function UserMenu() {
             <span>Settings</span>
           </Link>
         </DropdownMenuItem>
-        {(user.role === 'admin' || user.role === 'owner') && (
+        {(user.role === 'supersystemAdmin' || user.role === 'systemAdmin' || user.role === 'owner') && (
           <DropdownMenuItem className="cursor-pointer">
-            <Link href="/dashboard/admin" className="flex w-full items-center">
+            <Link href="/admin" className="flex w-full items-center">
               <Shield className="mr-2 h-4 w-4" />
               <span>Admin</span>
             </Link>
@@ -144,9 +144,9 @@ function Header() {
           >
             Customers
           </Link>
-          {(user?.role === 'admin' || user?.role === 'owner') && (
+          {(user?.role === 'supersystemAdmin' || user?.role === 'systemAdmin' || user?.role === 'owner') && (
             <Link
-              href="/dashboard/admin"
+              href="/admin"
               className="text-sm font-medium text-gray-700 hover:text-gray-900"
             >
               Admin

@@ -78,8 +78,8 @@ async function createStripeProducts() {
 async function createSampleUsers() {
   const sampleUsers = [
     { email: 'owner@test.com', name: 'John Owner', role: 'owner', password: 'admin123' },
-    { email: 'manager@test.com', name: 'Sarah Manager', role: 'manager', password: 'manager123' },
-    { email: 'inspector@test.com', name: 'Mike Inspector', role: 'inspector', password: 'inspector123' },
+    { email: 'manager@test.com', name: 'Sarah Manager', role: 'owner', password: 'manager123' },
+    { email: 'inspector@test.com', name: 'Mike Inspector', role: 'member', password: 'inspector123' },
     { email: 'member@test.com', name: 'Lisa Member', role: 'member', password: 'member123' }
   ];
 
@@ -114,17 +114,17 @@ async function createSampleTeams(users: any[]) {
   const sampleTeams = [
     { 
       name: 'Fire Safety Pro Ltd',
-      planName: 'Plus',
+      planName: 'Professional',
       subscriptionStatus: 'active'
     },
     { 
       name: 'Safe Buildings Co',
-      planName: 'Base',
+      planName: 'Starter',
       subscriptionStatus: 'active'
     },
     { 
       name: 'City Inspectors Group',
-      planName: 'Plus',
+      planName: 'Professional',
       subscriptionStatus: 'trial'
     }
   ];
@@ -564,7 +564,11 @@ async function seed() {
   await createSampleActivityLogs(teams, users);
   
   console.log('Creating invitations...');
-  await createSampleInvitations(teams, users);
+  try {
+    await createSampleInvitations(teams, users);
+  } catch (err) {
+    console.warn('Skipping invitations (already exist or schema mismatch):', err instanceof Error ? err.message : err);
+  }
 
   console.log('Seed process completed successfully!');
 }
