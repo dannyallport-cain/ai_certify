@@ -7,23 +7,17 @@ import { z } from 'zod';
 
 const createTemplateSchema = z.object({
   name: z.string().min(1, 'Template name is required'),
-  certificateType: z.enum(['BS5839-1', 'BS5839-6', 'BS5266', 'FIRE_EXTINGUISHER', 'DRY_RISER']),
+  certificateType: z.enum(['BS5839-1', 'BS5839-6', 'BS5266', 'FIRE_EXTINGUISHER', 'DRY_RISER', 'EICR']),
   description: z.string().optional(),
   template: z.object({
-    sections: z.array(z.object({
-      id: z.string(),
-      type: z.string(),
-      title: z.string(),
-      order: z.number(),
-      visible: z.boolean(),
-      style: z.object({
-        backgroundColor: z.string().optional(),
-        textColor: z.string().optional(),
-        fontSize: z.number().optional(),
-        padding: z.number().optional(),
-        margin: z.number().optional(),
-      }).optional(),
-    })),
+    sections: z.array(
+      z.object({
+        id: z.string(),
+        type: z.string(),
+        order: z.number(),
+        visible: z.boolean(),
+      }).passthrough()
+    ),
     colors: z.object({
       primary: z.string(),
       secondary: z.string(),

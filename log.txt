@@ -1,0 +1,100 @@
+import { jsPDF } from 'jspdf';
+
+export interface TemplateConfig {
+  colors: {
+    primary: string;   // hex e.g. '#1a3a5c'
+    secondary: string;
+    accent: string;
+    background: string;
+    text: string;
+  };
+  fonts?: {
+    heading: string;
+    body: string;
+    size: { small: number; medium: number; large: number };
+  };
+  layout?: {
+    margins: { top: number; right: number; bottom: number; left: number };
+    spacing: number;
+  };
+}
+
+export interface CertificateData {
+  id: number;
+  certificateNumber: string;
+  certificateType: string;
+  siteName?: string | null;
+  siteAddress?: string | null;
+  inspectionDate?: string | null;
+  nextInspectionDate?: string | null;
+  inspectorName?: string | null;
+  status: string;
+  formData?: Record<string, any>;
+  templateConfig?: TemplateConfig;
+  customer: {
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    postcode?: string | null;
+    contactPerson?: string | null;
+  };
+  items?: Array<{
+    id: number;
+    itemType: string;
+    location?: string | null;
+    description?: string | null;
+    status: string;
+    defects?: string | null;
+    recommendations?: string | null;
+  }>;
+}
+
+/** Convert hex colour string to [r, g, b] tuple */
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace(/^#/, '');
+  const num = parseInt(h, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+/** Lighten an RGB colour towards white by a given factor (0 = original, 1 = white) */
+function lighten(rgb: [number, number, number], factor: number): [number, number, number] {
+  return [
+    Math.round(rgb[0] + (255 - rgb[0]) * factor),
+    Math.round(rgb[1] + (255 - rgb[1]) * factor),
+    Math.round(rgb[2] + (255 - rgb[2]) * factor),
+  ];
+}
+
+export function generateCertificatePDF(certificate: CertificateData): Uint8Array {
+  // Route EICR to a dedicated generator matching the BS 7671 form structure
+  if (certificate.certificateType === 'EICR') {
+    return generateEICRPDF(certificate);
+  }
+
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 20;
+  let yPosition = margin;
+
+  // Helper functions
+  const safeString = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    return String(value);
+  };
+
+  const addText = (text: string, x: number, y: number, options?: any) => {
+    pdf.text(safeString(text), x, y, options);
+  };
+
+  const addMultiLineText = (text: string, x: number, y: number, maxWidth: number, fontSize = 10) => {
+    pdf.setFontSize(fontSize);
+    const lines = pdf.splitTextToSize(safeString(text), maxWidth);
+    pdf.text(lines, x, y);
+    return y + (lines.length * fontSize * 0.35);
+  };
+
+  const addLine = (x1: number, y1: number, x2: number, y2: number, lineWidth = 0.5) => {
+    pdf.setLineWidth(lineWidth);
+    pdf.line(x1, y1, x2, y2);

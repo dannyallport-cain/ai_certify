@@ -233,6 +233,11 @@ export default function TemplatePreviewPage() {
         nextInspectionDate: '2027-03-15',
         inspectorName: 'Daniel Allport',
         status: 'completed',
+        templateConfig: template!.template ? {
+          colors: template!.template.colors,
+          fonts: template!.template.fonts,
+          layout: template!.template.layout,
+        } : undefined,
         formData: {
           tradingTitle: 'Cain Enabled Engineering Ltd',
           companyAddress: 'Piccadilly Business Centre, Manchester, M12 6AE',
