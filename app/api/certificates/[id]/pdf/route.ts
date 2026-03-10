@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/db/queries';
 import { db } from '@/lib/db/drizzle';
-import { certificates, customers, certificateItems } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import { generateCertificatePDF, CertificateData } from '@/lib/pdf/generator';
+import { certificates, customers, certificateItems, certificateTemplates } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { generateCertificatePDF, CertificateData, TemplateConfig } from '@/lib/pdf/generator';
 
 export async function GET(
   request: NextRequest,
@@ -50,6 +50,36 @@ export async function GET(
       .where(eq(certificateItems.certificateId, certificateId))
       .orderBy(certificateItems.sortOrder);
 
+    // Fetch the default template for this certificate type (if one exists)
+    let templateConfig: TemplateConfig | undefined;
+    try {
+      const templates = await db
+        .select()
+        .from(certificateTemplates)
+        .where(
+          and(
+            eq(certificateTemplates.certificateType, certificate.certificateType),
+            eq(certificateTemplates.isActive, true)
+          )
+        )
+        .orderBy(certificateTemplates.createdAt)
+        .limit(1);
+
+      if (templates.length > 0 && templates[0].template) {
+        const tpl = templates[0].template as Record<string, any>;
+        if (tpl.colors) {
+          templateConfig = {
+            colors: tpl.colors,
+            fonts: tpl.fonts,
+            layout: tpl.layout,
+          };
+        }
+      }
+    } catch (err) {
+      // Template lookup is non-critical – fall back to hardcoded palette
+      console.warn('Could not load template config for PDF:', err);
+    }
+
     // Prepare certificate data for PDF generation
     const certificateData: CertificateData = {
       id: certificate.id,
@@ -61,7 +91,8 @@ export async function GET(
       nextInspectionDate: certificate.nextInspectionDate,
       inspectorName: certificate.inspectorName,
       status: certificate.status,
-      formData: certificate.formData,
+      formData: certificate.formData as Record<string, any> | undefined,
+      templateConfig,
       customer: {
         name: customer.name,
         email: customer.email,

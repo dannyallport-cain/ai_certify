@@ -1,0 +1,48 @@
+
+> ai-certificates@1.0.0 dev /Users/admin/development/ai_certify
+> next dev --turbopack -p 4000
+
+   ▲ Next.js 15.4.0-canary.47 (Turbopack)
+   - Local:        http://localhost:4000
+   - Network:      http://192.168.1.108:4000
+   - Environments: .env
+   - Experiments (use with caution):
+     ✓ ppr
+     ✓ clientSegmentCache
+
+ ✓ Starting...
+ ✓ Ready in 1297ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 979ms
+ GET /favicon.ico 200 in 1349ms
+ ○ Compiling /admin/templates/[id] ...
+ ✓ Compiled /admin/templates/[id] in 4.8s
+ ⨯ JWSInvalid: Invalid Compact JWS
+    at verifyToken (lib/auth/session.ts:34:38)
+    at getUser (lib/db/queries.ts:14:40)
+  32 |
+  33 | export async function verifyToken(input: string) {
+> 34 |   const { payload } = await jwtVerify(input, key, {
+     |                                      ^
+  35 |     algorithms: ['HS256'],
+  36 |   });
+  37 |   return payload as SessionData; {
+  code: 'ERR_JWS_INVALID',
+  digest: '1825084504'
+}
+ ⨯ JWSInvalid: Invalid Compact JWS
+    at verifyToken (lib/auth/session.ts:34:38)
+    at getUser (lib/db/queries.ts:14:40)
+    at async getTeamForUser (lib/db/queries.ts:104:15)
+  32 |
+  33 | export async function verifyToken(input: string) {
+> 34 |   const { payload } = await jwtVerify(input, key, {
+     |                                      ^
+  35 |     algorithms: ['HS256'],
+  36 |   });
+  37 |   return payload as SessionData; {
+  code: 'ERR_JWS_INVALID',
+  digest: '2808697024'
+}
+ GET /admin/templates/2 500 in 6309ms
+[?25h

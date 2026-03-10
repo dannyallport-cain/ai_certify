@@ -10,21 +10,17 @@ const updateTemplateSchema = z.object({
   description: z.string().optional(),
   isDefault: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  // Accept any well-formed template JSON — sections vary by certificate type
+  // (some use 'title', others use 'label'; some have 'config', others 'style')
   template: z.object({
-    sections: z.array(z.object({
-      id: z.string(),
-      type: z.string(),
-      title: z.string(),
-      order: z.number(),
-      visible: z.boolean(),
-      style: z.object({
-        backgroundColor: z.string().optional(),
-        textColor: z.string().optional(),
-        fontSize: z.number().optional(),
-        padding: z.number().optional(),
-        margin: z.number().optional(),
-      }).optional(),
-    })),
+    sections: z.array(
+      z.object({
+        id: z.string(),
+        type: z.string(),
+        order: z.number(),
+        visible: z.boolean(),
+      }).passthrough()
+    ),
     colors: z.object({
       primary: z.string(),
       secondary: z.string(),
