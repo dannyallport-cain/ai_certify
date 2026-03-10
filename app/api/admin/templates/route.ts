@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin (you may want to adjust this based on your role system)
-    if (user.role !== 'admin' && user.role !== 'owner') {
+    // Check if user is admin
+    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    if (user.role !== 'admin' && user.role !== 'owner') {
+    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

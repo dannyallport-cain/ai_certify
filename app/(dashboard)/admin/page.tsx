@@ -40,7 +40,7 @@ async function getSystemStats() {
       db.select({ count: count() }).from(users),
       db.select({ count: count() }).from(teams),
       db.select({ count: count() }).from(customers),
-      db.select({ count: count() }).from(users).where(sql`role IN ('admin', 'owner')`),
+      db.select({ count: count() }).from(users).where(sql`role IN ('supersystemAdmin', 'systemAdmin', 'owner')`),
       db.select({ count: count() }).from(teams).where(eq(teams.subscriptionStatus, 'active')),
       db.select({ count: count() }).from(teams).where(sql`subscription_status = 'active' OR subscription_status = 'trialing'`)
     ]);
@@ -77,7 +77,7 @@ async function AdminDashboardContent() {
       icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50',
-      href: '/dashboard/admin/users'
+      href: '/admin/users'
     },
     {
       title: 'Active Teams',
@@ -85,7 +85,7 @@ async function AdminDashboardContent() {
       icon: Building2,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-      href: '/dashboard/admin/users'
+      href: '/admin/users'
     },
     {
       title: 'Active Subscriptions',
@@ -93,7 +93,7 @@ async function AdminDashboardContent() {
       icon: CreditCard,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
-      href: '/dashboard/admin/subscriptions'
+      href: '/admin/subscriptions'
     },
     {
       title: 'Administrators',
@@ -101,7 +101,7 @@ async function AdminDashboardContent() {
       icon: Shield,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      href: '/dashboard/admin/users'
+      href: '/admin/users'
     }
   ];
 
@@ -110,7 +110,7 @@ async function AdminDashboardContent() {
       title: 'Template Management',
       description: 'Create and manage certificate templates with WYSIWYG editor',
       icon: LayoutTemplate,
-      href: '/dashboard/admin/templates',
+      href: '/admin/templates',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
     },
@@ -118,7 +118,7 @@ async function AdminDashboardContent() {
       title: 'User Management',
       description: 'View, edit, and manage user accounts',
       icon: Users,
-      href: '/dashboard/admin/users',
+      href: '/admin/users',
       color: 'text-blue-600',
       bgColor: 'bg-blue-50'
     },
@@ -126,7 +126,7 @@ async function AdminDashboardContent() {
       title: 'Subscription Plans',
       description: 'Manage pricing and billing',
       icon: CreditCard,
-      href: '/dashboard/admin/subscriptions',
+      href: '/admin/subscriptions',
       color: 'text-green-600',
       bgColor: 'bg-green-50'
     },
@@ -134,7 +134,7 @@ async function AdminDashboardContent() {
       title: 'System Reports',
       description: 'View analytics and activity logs',
       icon: BarChart3,
-      href: '/dashboard/admin/reports',
+      href: '/admin/reports',
       color: 'text-orange-600',
       bgColor: 'bg-orange-50'
     },
@@ -142,7 +142,7 @@ async function AdminDashboardContent() {
       title: 'Stripe Configuration',
       description: 'Configure payment settings',
       icon: Settings,
-      href: '/dashboard/admin/stripe-config',
+      href: '/admin/stripe-config',
       color: 'text-gray-600',
       bgColor: 'bg-gray-50'
     }
@@ -232,7 +232,7 @@ async function AdminDashboardContent() {
             <h2 className="text-2xl font-bold text-gray-900">Template Management</h2>
             <p className="text-gray-600 mt-1">Create and customize certificate templates</p>
           </div>
-          <Link href="/dashboard/admin/templates">
+          <Link href="/admin/templates">
             <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2">
               <LayoutTemplate className="h-5 w-5" />
               Manage Templates

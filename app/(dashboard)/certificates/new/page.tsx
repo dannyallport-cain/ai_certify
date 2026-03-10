@@ -38,6 +38,13 @@ const certificateTypes = [
     description: 'Testing and maintenance certificate for dry riser systems',
     icon: '🚰',
     color: 'bg-green-50 border-green-200 hover:bg-green-100'
+  },
+  {
+    type: CertificateType.EICR,
+    title: 'EICR - Electrical Installation Condition Report',
+    description: 'Electrical installation condition report in accordance with BS 7671 IET Wiring Regulations',
+    icon: '⚡',
+    color: 'bg-blue-50 border-blue-200 hover:bg-blue-100'
   }
 ];
 
@@ -67,6 +74,7 @@ export default function NewCertificatePage() {
               case 'BS5266': return 'bs5266'
               case 'FIRE_EXTINGUISHER': return 'fire-extinguisher'
               case 'DRY_RISER': return 'dry-riser'
+              case 'EICR': return 'eicr'
               default: return type.toLowerCase()
             }
           }

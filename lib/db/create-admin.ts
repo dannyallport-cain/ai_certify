@@ -23,7 +23,7 @@ export async function createAdminUser() {
         email: adminEmail,
         name: 'Danny Allport',
         passwordHash: await hashPassword(adminPassword),
-        role: 'admin',
+        role: 'supersystemAdmin',
       })
       .returning();
 

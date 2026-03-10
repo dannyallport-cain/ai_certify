@@ -32,6 +32,7 @@ export default function TemplatesPage() {
     { value: 'BS5266', label: 'BS5266 Emergency Lighting' },
     { value: 'FIRE_EXTINGUISHER', label: 'Fire Extinguisher' },
     { value: 'DRY_RISER', label: 'Dry Riser' },
+    { value: 'EICR', label: 'EICR (BS 7671)' },
   ];
 
   useEffect(() => {
@@ -210,7 +211,7 @@ export default function TemplatesPage() {
                     </Button>
                   </Link>
                   
-                  <Link href={`/admin/templates/${template.id}/edit`} className="flex-1">
+                  <Link href={`/admin/templates/${template.id}`} className="flex-1">
                     <Button variant="outline" size="sm" className="w-full">
                       <Edit className="h-4 w-4 mr-1" />
                       Edit

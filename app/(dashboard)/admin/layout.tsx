@@ -31,7 +31,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       const response = await fetch('/api/auth/user');
       if (response.ok) {
         const userData = await response.json();
-        if (userData.role === 'admin' || userData.role === 'owner') {
+        if (userData.role === 'supersystemAdmin' || userData.role === 'systemAdmin' || userData.role === 'owner') {
           setUser(userData);
         } else {
           router.push('/dashboard');
@@ -105,27 +105,27 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <nav className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8 overflow-x-auto py-3">
-            <Link href="/dashboard/admin" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
+            <Link href="/admin" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
               <Home className="h-4 w-4" />
               <span>Overview</span>
             </Link>
-            <Link href="/dashboard/admin/users" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
+            <Link href="/admin/users" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
               <Users className="h-4 w-4" />
               <span>Users</span>
             </Link>
-            <Link href="/dashboard/admin/templates" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
+            <Link href="/admin/templates" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
               <FileText className="h-4 w-4" />
               <span>Templates</span>
             </Link>
-            <Link href="/dashboard/admin/subscriptions" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
+            <Link href="/admin/subscriptions" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
               <CreditCard className="h-4 w-4" />
               <span>Subscriptions</span>
             </Link>
-            <Link href="/dashboard/admin/reports" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
+            <Link href="/admin/reports" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
               <BarChart3 className="h-4 w-4" />
               <span>Reports</span>
             </Link>
-            <Link href="/dashboard/admin/stripe-config" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
+            <Link href="/admin/stripe-config" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
               <Settings className="h-4 w-4" />
               <span>Settings</span>
             </Link>
