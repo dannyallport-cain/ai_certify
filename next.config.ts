@@ -2,7 +2,7 @@
 const nextConfig = {
   experimental: {
     ppr: true,
-    clientSegmentCache: true
+    clientSegmentCache: true,
   },
   typescript: {
     ignoreBuildErrors: true

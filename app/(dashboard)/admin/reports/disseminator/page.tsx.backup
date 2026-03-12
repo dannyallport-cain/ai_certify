@@ -1,0 +1,536 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { Plus, Upload, Wand2, Save } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+
+type FieldType = 'dropdown' | 'address' | 'state_enum' | 'numeric' | 'text' | 'linked_text';
+
+type ReportField = {
+  id: string;
+  page: number;
+  label: string;
+  fieldType: FieldType;
+  required: boolean;
+  plainTextHint?: string;
+  dropdownOptions?: string[];
+  stateOptions?: Array<'tick' | 'cross' | 'NA' | 'LIM' | 'NV'>;
+  addressConfig?: { mode: 'uk_postcode_format' };
+  numericConfig?: { min?: number; max?: number; resolution?: number; unit?: string };
+  linkedConfig?: { relatedSection: string; relatedFieldId: string; relationType: 'mirrors' | 'derived_from' | 'depends_on' };
+};
+
+type DisseminatorTemplate = {
+  id: number;
+  name: string;
+  description?: string | null;
+  status: 'draft' | 'review' | 'published';
+  version: number;
+  sourceFileName: string;
+  sourceMimeType: string;
+  sourcePdfBase64?: string;
+  fields: ReportField[];
+  wizardData: {
+    currentStep?: number;
+    notes?: string;
+    aiSuggestionsEnabled?: boolean;
+  };
+};
+
+const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
+  { value: 'text', label: 'Plain text' },
+  { value: 'dropdown', label: 'Dropdown options' },
+  { value: 'address', label: 'Address (UK postcode format)' },
+  { value: 'state_enum', label: 'Tick/Cross/NA/LIM/NV' },
+  { value: 'numeric', label: 'Numeric value' },
+  { value: 'linked_text', label: 'Related section text' },
+];
+
+const isUkPostcodeFormat = (value: string) => {
+  const pattern = /^([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})$/i;
+  return pattern.test(value.trim());
+};
+
+export default function ReportDisseminatorPage() {
+  const [templates, setTemplates] = useState<DisseminatorTemplate[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selected, setSelected] = useState<DisseminatorTemplate | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createFeedback, setCreateFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+
+  const loadTemplates = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/report-disseminator');
+      if (!res.ok) throw new Error('Failed to load templates');
+      const data = await res.json();
+      setTemplates(data);
+      if (!selectedId && data.length > 0) {
+        setSelectedId(data[0].id);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load report disseminator templates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTemplate = async (id: number) => {
+    try {
+      const res = await fetch(`/api/admin/report-disseminator/${id}`);
+      if (!res.ok) throw new Error('Failed to load template');
+      const data = await res.json();
+      setSelected(data);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load template details');
+    }
+  };
+
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  useEffect(() => {
+    if (selectedId) {
+      loadTemplate(selectedId);
+    }
+  }, [selectedId]);
+
+  const createTemplate = async () => {
+    setCreateFeedback(null);
+    if (!name.trim() || !file) {
+      const message = 'Name and PDF file are required';
+      setCreateFeedback({ type: 'error', message });
+      toast.error(message);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', name.trim());
+    formData.append('description', description.trim());
+    formData.append('file', file);
+
+    setCreating(true);
+    try {
+      const res = await fetch('/api/admin/report-disseminator', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.error || 'Failed to create template');
+      }
+
+      const message = 'Template created. Continue with field wizard.';
+      setCreateFeedback({ type: 'success', message });
+      toast.success(message);
+      setName('');
+      setDescription('');
+      setFile(null);
+      await loadTemplates();
+      setSelectedId(payload.id);
+    } catch (error: any) {
+      console.error(error);
+      const message = error.message || 'Failed to create template';
+      setCreateFeedback({ type: 'error', message });
+      toast.error(message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const addField = () => {
+    if (!selected) return;
+    const next: ReportField = {
+      id: crypto.randomUUID(),
+      page: 1,
+      label: 'New field',
+      fieldType: 'text',
+      required: false,
+      plainTextHint: '',
+    };
+    setSelected({ ...selected, fields: [...(selected.fields || []), next] });
+  };
+
+  const updateField = (id: string, patch: Partial<ReportField>) => {
+    if (!selected) return;
+    setSelected({
+      ...selected,
+      fields: (selected.fields || []).map((field) => (field.id === id ? { ...field, ...patch } : field)),
+    });
+  };
+
+  const applyAiSuggestion = (field: ReportField) => {
+    const label = field.label.toLowerCase();
+    if (label.includes('address') || label.includes('postcode')) {
+      updateField(field.id, { fieldType: 'address', addressConfig: { mode: 'uk_postcode_format' } });
+      return;
+    }
+    if (label.includes('yes/no') || label.includes('lim') || label.includes('nv') || label.includes('na')) {
+      updateField(field.id, { fieldType: 'state_enum', stateOptions: ['tick', 'cross', 'NA', 'LIM', 'NV'] });
+      return;
+    }
+    if (label.includes('number') || label.includes('value') || label.includes('ohms') || label.includes('amps')) {
+      updateField(field.id, { fieldType: 'numeric', numericConfig: { resolution: 0.01 } });
+      return;
+    }
+    if (label.includes('type') || label.includes('classification')) {
+      updateField(field.id, { fieldType: 'dropdown', dropdownOptions: ['Option 1', 'Option 2'] });
+      return;
+    }
+    updateField(field.id, { fieldType: 'text' });
+  };
+
+  const saveTemplate = async () => {
+    if (!selected) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/report-disseminator/${selected.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: selected.fields,
+          wizardData: selected.wizardData,
+          status: selected.status,
+          description: selected.description || '',
+          name: selected.name,
+        }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.error || 'Failed to save template');
+      }
+
+      setSelected(payload);
+      toast.success('Template draft saved');
+      await loadTemplates();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to save template');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const wizardStep = selected?.wizardData?.currentStep || 1;
+
+  const selectedSummary = useMemo(() => {
+    if (!selected) return null;
+    const numericCount = selected.fields.filter((f) => f.fieldType === 'numeric').length;
+    const dropdownCount = selected.fields.filter((f) => f.fieldType === 'dropdown').length;
+    const addressCount = selected.fields.filter((f) => f.fieldType === 'address').length;
+    return { numericCount, dropdownCount, addressCount };
+  }, [selected]);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Report Disseminator</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Upload a source PDF and build a facsimile-ready template with per-field intent metadata.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Create From Source PDF</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          <div className="space-y-2 md:col-span-1">
+            <Label>Template name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="EICR Original Facsimile" />
+          </div>
+          <div className="space-y-2 md:col-span-1">
+            <Label>Description</Label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
+          </div>
+          <div className="space-y-2 md:col-span-1">
+            <Label>Source PDF</Label>
+            <Input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            {file && <p className="text-xs text-muted-foreground">Selected: {file.name}</p>}
+          </div>
+          <Button type="button" onClick={createTemplate} className="md:col-span-1" disabled={creating}>
+            <Upload className="w-4 h-4 mr-2" />
+            {creating ? 'Uploading…' : 'Upload & Create'}
+          </Button>
+          {createFeedback && (
+            <p className={`text-sm md:col-span-4 ${createFeedback.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+              {createFeedback.message}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle>Templates</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+            {!loading && templates.length === 0 && <p className="text-sm text-muted-foreground">No templates yet.</p>}
+            {templates.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                className={`w-full text-left border rounded p-3 ${selectedId === template.id ? 'border-primary' : 'border-border'}`}
+                onClick={() => setSelectedId(template.id)}
+              >
+                <p className="font-medium text-sm">{template.name}</p>
+                <p className="text-xs text-muted-foreground mt-1">{template.sourceFileName}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <Badge variant="secondary">v{template.version}</Badge>
+                  <Badge variant={template.status === 'published' ? 'default' : 'outline'}>{template.status}</Badge>
+                </div>
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Wizard</CardTitle>
+            <div className="flex items-center gap-2">
+              <Select
+                value={String(wizardStep)}
+                onValueChange={(value) => selected && setSelected({
+                  ...selected,
+                  wizardData: { ...selected.wizardData, currentStep: Number(value) },
+                })}
+              >
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Step 1: Field inventory</SelectItem>
+                  <SelectItem value="2">Step 2: Intent type mapping</SelectItem>
+                  <SelectItem value="3">Step 3: Validation rules</SelectItem>
+                  <SelectItem value="4">Step 4: Review & publish state</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={addField} variant="outline" disabled={!selected}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Field
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!selected && <p className="text-sm text-muted-foreground">Select a template to begin the wizard.</p>}
+
+            {selected && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>Template title</Label>
+                    <Input value={selected.name} onChange={(e) => setSelected({ ...selected, name: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select value={selected.status} onValueChange={(value: 'draft' | 'review' | 'published') => setSelected({ ...selected, status: value })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">draft</SelectItem>
+                        <SelectItem value="review">review</SelectItem>
+                        <SelectItem value="published">published</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Source</Label>
+                    <Input value={selected.sourceFileName} disabled />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {(selected.fields || []).map((field) => (
+                    <div key={field.id} className="border rounded p-3 space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="space-y-2">
+                          <Label>Field label</Label>
+                          <Input value={field.label} onChange={(e) => updateField(field.id, { label: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Page</Label>
+                          <Input type="number" min={1} value={field.page} onChange={(e) => updateField(field.id, { page: Number(e.target.value || 1) })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Type</Label>
+                          <Select value={field.fieldType} onValueChange={(value: FieldType) => updateField(field.id, { fieldType: value })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {FIELD_TYPES.map((item) => (
+                                <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={() => applyAiSuggestion(field)}>
+                          <Wand2 className="w-4 h-4 mr-1" />
+                          AI Suggest
+                        </Button>
+                        <Badge variant="outline">{field.required ? 'Required' : 'Optional'}</Badge>
+                      </div>
+
+                      {field.fieldType === 'dropdown' && (
+                        <div className="space-y-2">
+                          <Label>Dropdown options (comma-separated)</Label>
+                          <Input
+                            value={(field.dropdownOptions || []).join(', ')}
+                            onChange={(e) => updateField(field.id, { dropdownOptions: e.target.value.split(',').map((v) => v.trim()).filter(Boolean) })}
+                          />
+                        </div>
+                      )}
+
+                      {field.fieldType === 'state_enum' && (
+                        <div className="space-y-2">
+                          <Label>State options</Label>
+                          <Input value={(field.stateOptions || ['tick', 'cross', 'NA', 'LIM', 'NV']).join(', ')} disabled />
+                        </div>
+                      )}
+
+                      {field.fieldType === 'address' && (
+                        <div className="space-y-2">
+                          <Label>Address validation</Label>
+                          <Input value="UK postcode format check" disabled />
+                          <Input
+                            placeholder="Optional sample postcode (e.g. M12 6AE)"
+                            onBlur={(e) => {
+                              if (e.target.value && !isUkPostcodeFormat(e.target.value)) {
+                                toast.error('Postcode sample is not in valid UK format');
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {field.fieldType === 'numeric' && (
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                          <Input
+                            placeholder="Min"
+                            type="number"
+                            value={field.numericConfig?.min ?? ''}
+                            onChange={(e) => updateField(field.id, { numericConfig: { ...field.numericConfig, min: e.target.value === '' ? undefined : Number(e.target.value) } })}
+                          />
+                          <Input
+                            placeholder="Max"
+                            type="number"
+                            value={field.numericConfig?.max ?? ''}
+                            onChange={(e) => updateField(field.id, { numericConfig: { ...field.numericConfig, max: e.target.value === '' ? undefined : Number(e.target.value) } })}
+                          />
+                          <Input
+                            placeholder="Resolution"
+                            type="number"
+                            value={field.numericConfig?.resolution ?? ''}
+                            onChange={(e) => updateField(field.id, { numericConfig: { ...field.numericConfig, resolution: e.target.value === '' ? undefined : Number(e.target.value) } })}
+                          />
+                          <Input
+                            placeholder="Unit"
+                            value={field.numericConfig?.unit ?? ''}
+                            onChange={(e) => updateField(field.id, { numericConfig: { ...field.numericConfig, unit: e.target.value } })}
+                          />
+                        </div>
+                      )}
+
+                      {field.fieldType === 'linked_text' && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                          <Input
+                            placeholder="Related section"
+                            value={field.linkedConfig?.relatedSection ?? ''}
+                            onChange={(e) => updateField(field.id, {
+                              linkedConfig: {
+                                relatedSection: e.target.value,
+                                relatedFieldId: field.linkedConfig?.relatedFieldId || '',
+                                relationType: field.linkedConfig?.relationType || 'depends_on',
+                              },
+                            })}
+                          />
+                          <Input
+                            placeholder="Related field ID"
+                            value={field.linkedConfig?.relatedFieldId ?? ''}
+                            onChange={(e) => updateField(field.id, {
+                              linkedConfig: {
+                                relatedSection: field.linkedConfig?.relatedSection || '',
+                                relatedFieldId: e.target.value,
+                                relationType: field.linkedConfig?.relationType || 'depends_on',
+                              },
+                            })}
+                          />
+                          <Select
+                            value={field.linkedConfig?.relationType || 'depends_on'}
+                            onValueChange={(value: 'mirrors' | 'derived_from' | 'depends_on') => updateField(field.id, {
+                              linkedConfig: {
+                                relatedSection: field.linkedConfig?.relatedSection || '',
+                                relatedFieldId: field.linkedConfig?.relatedFieldId || '',
+                                relationType: value,
+                              },
+                            })}
+                          >
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="depends_on">depends_on</SelectItem>
+                              <SelectItem value="mirrors">mirrors</SelectItem>
+                              <SelectItem value="derived_from">derived_from</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Wizard notes</Label>
+                  <Textarea
+                    value={selected.wizardData?.notes || ''}
+                    onChange={(e) => setSelected({
+                      ...selected,
+                      wizardData: { ...selected.wizardData, notes: e.target.value },
+                    })}
+                    placeholder="Capture assumptions and field intent notes..."
+                  />
+                </div>
+
+                {selectedSummary && (
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">Fields: {selected.fields.length}</Badge>
+                    <Badge variant="outline">Numeric: {selectedSummary.numericCount}</Badge>
+                    <Badge variant="outline">Dropdown: {selectedSummary.dropdownCount}</Badge>
+                    <Badge variant="outline">Address: {selectedSummary.addressCount}</Badge>
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <Button onClick={saveTemplate} disabled={saving}>
+                    <Save className="w-4 h-4 mr-2" />
+                    {saving ? 'Saving…' : 'Save Draft'}
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

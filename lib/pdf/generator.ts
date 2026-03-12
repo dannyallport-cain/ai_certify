@@ -1164,20 +1164,62 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   sectionHeader('9', 'Declaration');
   const declarationText =
     'I/We, being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our signatures below), particulars of which are described above, having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, including the observations and the attached schedules, provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations in section 4 of this report.';
-  textBlock(declarationText);
-  y += 1;
+  textBlock(declarationText, 6.2);
+  y += 0.5;
 
-  row('Trading Title:', ss(fd.tradingTitle) || companyName);
-  row('Address:', ss(fd.companyAddress) || '');
-  row('Registration Number (if applicable):', ss(fd.registrationNumber) || '');
-  row('Telephone Number:', ss(fd.companyTelephone) || '');
-  y += 1;
+  const declarationTwoColRow = (leftLabel: string, leftValue: string, rightLabel: string, rightValue: string) => {
+    const colW = W / 2;
+    const labelW = colW * 0.52;
+    const valueW = colW - labelW;
+
+    pdf.setFontSize(6.5);
+    pdf.setFont('helvetica', 'bold');
+    const leftLabelLines = pdf.splitTextToSize(leftLabel, labelW - 4);
+    const rightLabelLines = pdf.splitTextToSize(rightLabel, labelW - 4);
+
+    pdf.setFont('helvetica', 'normal');
+    const leftValueLines = pdf.splitTextToSize(ss(leftValue), valueW - 4);
+    const rightValueLines = pdf.splitTextToSize(ss(rightValue), valueW - 4);
+
+    const maxLines = Math.max(
+      leftLabelLines.length,
+      rightLabelLines.length,
+      leftValueLines.length,
+      rightValueLines.length
+    );
+    const h = Math.max(6.5, maxLines * 3.1 + 2.5);
+    checkPage(h);
+
+    const drawCell = (x0: number, labelLines: string[], valueLines: string[]) => {
+      borderedRect(x0, y, colW, h);
+      filledRect(x0 + 0.15, y + 0.15, labelW - 0.3, h - 0.3, light);
+
+      pdf.setFontSize(6.5);
+      pdf.setFont('helvetica', 'bold');
+      const labelY = y + h / 2 + 1.5 - (labelLines.length > 1 ? (labelLines.length - 1) * 1.55 : 0);
+      labelLines.forEach((line: string, i: number) => {
+        text(line, x0 + 2, labelY + i * 3.1);
+      });
+
+      pdf.setFont('helvetica', 'normal');
+      const valueY = y + h / 2 + 1.5 - (valueLines.length > 1 ? (valueLines.length - 1) * 1.55 : 0);
+      valueLines.forEach((line: string, i: number) => {
+        text(line, x0 + labelW + 2, valueY + i * 3.1);
+      });
+    };
+
+    drawCell(margin, leftLabelLines, leftValueLines);
+    drawCell(margin + colW, rightLabelLines, rightValueLines);
+    y += h;
+  };
+
+  declarationTwoColRow('Trading Title:', ss(fd.tradingTitle) || companyName, 'Address:', ss(fd.companyAddress) || '');
+  declarationTwoColRow('Registration Number (if applicable):', ss(fd.registrationNumber) || '', 'Telephone Number:', ss(fd.companyTelephone) || '');
+  y += 0.5;
   subHeader('For the INSPECTION, TESTING AND ASSESSMENT of the report:');
-  row('Name:', ss(certificate.inspectorName));
-  row('Position:', ss(fd.inspectorPosition) || 'Qualified Supervisor');
-  row('Signature:', '');
-  row('Date:', formatDate(certificate.inspectionDate));
-  y += 1;
+  declarationTwoColRow('Name:', ss(certificate.inspectorName), 'Position:', ss(fd.inspectorPosition) || 'Qualified Supervisor');
+  declarationTwoColRow('Signature:', '', 'Date:', formatDate(certificate.inspectionDate || null));
+  y += 0.5;
 
   // Test Instruments (Section 10)
   sectionHeader('10', 'Test Instruments');
@@ -1337,12 +1379,10 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   }
 
   // ════════════════════════════════════════════════════════════
-  // PAGE 3 continued / PAGE 4 start – Particulars of Installation (section 12)
-  // then Inspection Schedule
+  // Particulars of Installation (section J)
   // ════════════════════════════════════════════════════════════
-  newPage();
 
-  // Section 12 – Particulars of Installation Referred to in the Report
+  // Section J – Particulars of Installation Referred to in the Report
   sectionHeader('J', 'Particulars of Installation Referred to in the Report');
 
   // ── Row 1: Means of Earthing (full width) + electrode details ──
