@@ -153,6 +153,56 @@ export const certificateTemplates = pgTable('certificate_templates', {
     .references(() => users.id),
 });
 
+export const servicem8Connections = pgTable('servicem8_connections', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id)
+    .unique(),
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token').notNull(),
+  tokenExpiresAt: timestamp('token_expires_at'),
+  servicem8AccountUuid: varchar('servicem8_account_uuid', { length: 255 }),
+  servicem8CompanyName: varchar('servicem8_company_name', { length: 255 }),
+  isActive: boolean('is_active').default(true),
+  lastSyncAt: timestamp('last_sync_at'),
+  syncEnabled: boolean('sync_enabled').default(true),
+  // Which direction to sync: 'to_servicem8', 'from_servicem8', 'bidirectional'
+  syncDirection: varchar('sync_direction', { length: 20 }).default('bidirectional'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const servicem8JobMappings = pgTable('servicem8_job_mappings', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  certificateId: integer('certificate_id')
+    .notNull()
+    .references(() => certificates.id),
+  servicem8JobUuid: varchar('servicem8_job_uuid', { length: 255 }).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
+  syncStatus: varchar('sync_status', { length: 20 }).default('synced'), // synced, pending, error
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const servicem8ClientMappings = pgTable('servicem8_client_mappings', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  customerId: integer('customer_id')
+    .notNull()
+    .references(() => customers.id),
+  servicem8CompanyUuid: varchar('servicem8_company_uuid', { length: 255 }).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
+  syncStatus: varchar('sync_status', { length: 20 }).default('synced'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const reportDisseminatorTemplates = pgTable('report_disseminator_templates', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
@@ -182,6 +232,9 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   certificates: many(certificates),
   certificateTemplates: many(certificateTemplates),
   reportDisseminatorTemplates: many(reportDisseminatorTemplates),
+  servicem8Connections: many(servicem8Connections),
+  servicem8JobMappings: many(servicem8JobMappings),
+  servicem8ClientMappings: many(servicem8ClientMappings),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -272,6 +325,35 @@ export const reportDisseminatorTemplatesRelations = relations(reportDisseminator
   }),
 }));
 
+export const servicem8ConnectionsRelations = relations(servicem8Connections, ({ one }) => ({
+  team: one(teams, {
+    fields: [servicem8Connections.teamId],
+    references: [teams.id],
+  }),
+}));
+
+export const servicem8JobMappingsRelations = relations(servicem8JobMappings, ({ one }) => ({
+  team: one(teams, {
+    fields: [servicem8JobMappings.teamId],
+    references: [teams.id],
+  }),
+  certificate: one(certificates, {
+    fields: [servicem8JobMappings.certificateId],
+    references: [certificates.id],
+  }),
+}));
+
+export const servicem8ClientMappingsRelations = relations(servicem8ClientMappings, ({ one }) => ({
+  team: one(teams, {
+    fields: [servicem8ClientMappings.teamId],
+    references: [teams.id],
+  }),
+  customer: one(customers, {
+    fields: [servicem8ClientMappings.customerId],
+    references: [customers.id],
+  }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Team = typeof teams.$inferSelect;
@@ -292,6 +374,12 @@ export type CertificateTemplate = typeof certificateTemplates.$inferSelect;
 export type NewCertificateTemplate = typeof certificateTemplates.$inferInsert;
 export type ReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferSelect;
 export type NewReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferInsert;
+export type ServiceM8Connection = typeof servicem8Connections.$inferSelect;
+export type NewServiceM8Connection = typeof servicem8Connections.$inferInsert;
+export type ServiceM8JobMapping = typeof servicem8JobMappings.$inferSelect;
+export type NewServiceM8JobMapping = typeof servicem8JobMappings.$inferInsert;
+export type ServiceM8ClientMapping = typeof servicem8ClientMappings.$inferSelect;
+export type NewServiceM8ClientMapping = typeof servicem8ClientMappings.$inferInsert;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
