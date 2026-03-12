@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
     if (text.length > 0) {
       console.log('🔵 [ocr-text] First 300 chars:', text.slice(0, 300));
     }
+
+    if (text.length === 0) {
       return NextResponse.json({ 
         error: 'No text found. This PDF may be scanned/image-based. Consider using Azure Document Intelligence.',
         text: '',
