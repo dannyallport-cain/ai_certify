@@ -815,17 +815,33 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // Two-column label: value row
   const row = (label: string, value: string, labelW = 70, rowH?: number) => {
     const valueW = W - labelW;
-    const lines = pdf.splitTextToSize(ss(value), valueW - 4);
-    const h = rowH || Math.max(6, lines.length * 3.2 + 2.5);
+    
+    // Set font to measure text accurately
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    const valLines = pdf.splitTextToSize(ss(value), valueW - 4);
+    
+    pdf.setFont('helvetica', 'bold');
+    const labLines = pdf.splitTextToSize(label, labelW - 4);
+    
+    const maxLines = Math.max(valLines.length, labLines.length);
+    const h = rowH || Math.max(6, maxLines * 3.2 + 2.5);
+    
     checkPage(h);
     borderedRect(margin, y, W, h);
+    
     // label background
     filledRect(margin + 0.15, y + 0.15, labelW - 0.3, h - 0.3, light);
+    
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
-    text(label, margin + 2, y + h / 2 + 1.5);
+    const labY = y + h / 2 + 1.5 - (labLines.length > 1 ? (labLines.length - 1) * 1.6 : 0);
+    pdf.text(labLines, margin + 2, labY);
+    
     pdf.setFont('helvetica', 'normal');
-    pdf.text(lines, margin + labelW + 2, y + h / 2 + 1.5 - (lines.length > 1 ? (lines.length - 1) * 1.6 : 0));
+    const valY = y + h / 2 + 1.5 - (valLines.length > 1 ? (valLines.length - 1) * 1.6 : 0);
+    pdf.text(valLines, margin + labelW + 2, valY);
+    
     y += h;
   };
 

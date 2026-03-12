@@ -207,6 +207,8 @@ export default function TemplatePreviewPage() {
   const [template, setTemplate] = useState<Template | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
 
   useEffect(() => {
     fetch(`/api/admin/templates/${id}`)
@@ -218,6 +220,97 @@ export default function TemplatePreviewPage() {
       .catch(() => toast.error('Failed to load template'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!template) return;
+    
+    let isMounted = true;
+    const generatePreview = async () => {
+      setGeneratingPreview(true);
+      try {
+        const { generateCertificatePDF } = await import('@/lib/pdf/generator');
+        const sampleCert = {
+          id: 0,
+          certificateNumber: 'PREVIEW-12345',
+          certificateType: template.certificateType,
+          siteName: 'Highfield Hall Community Centre',
+          siteAddress: 'Marsh Lane, Farnworth, Bolton, BL4 0AW',
+          inspectionDate: '2024-03-15',
+          nextInspectionDate: '2027-03-15',
+          inspectorName: 'Daniel Allport',
+          status: 'completed',
+          templateConfig: template.template ? {
+            colors: template.template.colors,
+            fonts: template.template.fonts,
+            layout: template.template.layout,
+          } : undefined,
+          formData: {
+            ...sampleData,
+            tradingTitle: 'Cain Enabled Engineering Ltd',
+            companyAddress: 'Piccadilly Business Centre, Manchester, M12 6AE',
+            registrationNumber: '611716000',
+            companyTelephone: '01246 387 450',
+            companyEmail: 'info@cain-enabled.co.uk',
+            inspectorPosition: 'Qualified Supervisor',
+            extentOfInspection: '50% of the installation in accordance with Guidance Note 3.',
+            agreedLimitations: 'No testing of HVAC control cables.',
+            agreedLimitationsWith: 'Mr. J. Hargreaves (Centre Manager)',
+            generalCondition: 'Good condition, adequate for continued use.',
+            natureOfSupply: '3-phase (4 wire) ac',
+            numberOfSupplies: '1',
+            supplyProtectiveDeviceType: 'BS 1361 Fuse HBC',
+            supplyProtectiveDeviceRating: '100',
+            shortCircuitCapacity: '33',
+            meansOfEarthing: "Distributor's facility",
+            maximumDemand: '100 Amps',
+            protectiveMeasures: 'ADS',
+            instrumentMultiFunction: 'Megger 1553',
+            consumerUnitDesignation: 'DB1',
+            consumerUnitLocation: 'Reception',
+            consumerUnitPfc: '1.2',
+            circuits: [
+              { id: '1', circuitNumber: '01', designation: 'Lights', wiringType: 'A', rating: '32', maxZs: '1.15', measuredZs: '0.4' },
+              { id: '2', circuitNumber: '02', designation: 'Sockets', wiringType: 'A', rating: '32', maxZs: '1.15', measuredZs: '0.35' }
+            ],
+            observations: [
+              { id: '1', description: 'Means of isolation does not have provision for securing in the off position.', defects: 'C2', recommendations: 'Provide padlock facility.' },
+              { id: '2', description: 'IP rating of luminaires is not appropriate for Zone 1.', defects: 'C3', recommendations: 'Replace luminaires with correct IP rating.' },
+            ]
+          },
+          customer: {
+            name: 'Highfield Hall Community Centre',
+            email: 'admin@highfieldhall.org.uk',
+            phone: '01204 571 849',
+            address: 'Marsh Lane, Farnworth, Bolton',
+            postcode: 'BL4 0AW',
+            contactPerson: 'Mr. J. Hargreaves',
+          },
+          items: [
+            { id: 1, itemType: 'observation', location: 'Main DB', description: 'Means of isolation does not have provision for securing in the off position. Regulation 537.3.2 refers.', status: 'unsatisfactory', defects: 'C2', recommendations: 'Provide padlock facility.' },
+            { id: 2, itemType: 'observation', location: 'Kitchen', description: 'IP rating of luminaires is not appropriate for Zone 1. Regulation 701.512.2 refers.', status: 'satisfactory', defects: 'C3', recommendations: 'Replace luminaires with correct IP rating.' },
+            { id: 3, itemType: 'observation', location: 'Circuit 14', description: 'Earth fault loop impedance exceeds maximum value for installed 16A Type B MCB. Further investigation required.', status: 'not_tested', defects: 'FI', recommendations: 'Investigate cause of elevated Zs.' },
+          ],
+        };
+        const bytes = generateCertificatePDF(sampleCert as any);
+        const blob = new Blob([bytes as any], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        if (isMounted) {
+          setPdfPreviewUrl(url);
+        }
+      } catch (err) {
+        console.error('Failed to generate preview PDF', err);
+      } finally {
+        if (isMounted) setGeneratingPreview(false);
+      }
+    };
+    
+    generatePreview();
+    
+    return () => {
+      isMounted = false;
+      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+    };
+  }, [template]);
 
   const handleDownloadSample = async () => {
     setDownloading(true);
@@ -287,7 +380,7 @@ export default function TemplatePreviewPage() {
         ],
       };
       const bytes = generateCertificatePDF(sampleCert as any);
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const blob = new Blob([bytes as any], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -365,19 +458,20 @@ export default function TemplatePreviewPage() {
         )}
       </div>
 
-      {/* Mock A4 page */}
-      <Card className="shadow-2xl">
-        <CardContent className="p-8 space-y-3" style={{ backgroundColor: colors.background, minHeight: '297mm', fontFamily: template.template?.fonts?.body || 'sans-serif' }}>
-          {sections.length === 0 ? (
-            <div className="text-center text-muted-foreground py-20">
-              No sections configured in this template
-            </div>
-          ) : (
-            sections.map(section => (
-              <SectionPreview key={section.id} section={section} colors={colors} />
-            ))
-          )}
-        </CardContent>
+      {/* Real PDF Preview */}
+      <Card className="shadow-2xl overflow-hidden h-[800px]">
+        {generatingPreview ? (
+          <div className="flex flex-col items-center justify-center h-full space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">Generating accurate PDF preview...</p>
+          </div>
+        ) : pdfPreviewUrl ? (
+          <iframe src={`${pdfPreviewUrl}#view=FitH`} className="w-full h-full border-0" title="PDF Preview" />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            Failed to load PDF preview.
+          </div>
+        )}
       </Card>
     </div>
   );
