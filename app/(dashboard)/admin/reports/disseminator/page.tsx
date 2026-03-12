@@ -62,6 +62,9 @@ type DisseminatorTemplate = {
     currentStep?: number;
     notes?: string;
     aiSuggestionsEnabled?: boolean;
+    finalArtifactName?: string;
+    finalArtifactMimeType?: string;
+    finalArtifactBase64?: string;
   };
 };
 
@@ -265,6 +268,7 @@ export default function ReportDisseminatorPage() {
   const [file, setFile] = useState<File | null>(null);
 
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [uploadingFinalArtifact, setUploadingFinalArtifact] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -614,23 +618,65 @@ export default function ReportDisseminatorPage() {
 
   const applyAiSuggestion = (field: ReportField) => {
     const label = field.label.toLowerCase();
-    if (label.includes('address') || label.includes('postcode')) {
-      updateField(field.id, { fieldType: 'address', addressConfig: { mode: 'uk_postcode_format' } });
-      return;
+    let patch: Partial<ReportField>;
+
+    if (
+      label.includes('address') ||
+      label.includes('postcode') ||
+      label.includes('post code') ||
+      label.includes('location')
+    ) {
+      patch = { fieldType: 'address', addressConfig: { mode: 'uk_postcode_format' } };
+    } else if (
+      label.includes('yes/no') ||
+      label.includes('yes no') ||
+      label.includes('pass/fail') ||
+      label.includes('pass fail') ||
+      label.includes('lim') ||
+      label.includes('nv') ||
+      label.includes('na') ||
+      label.includes('satisfactory') ||
+      label.includes('unsatisfactory')
+    ) {
+      patch = { fieldType: 'state_enum', stateOptions: ['tick', 'cross', 'NA', 'LIM', 'NV'] };
+    } else if (
+      label.includes('number') ||
+      label.includes('value') ||
+      label.includes('ohms') ||
+      label.includes('amps') ||
+      label.includes('volts') ||
+      label.includes('voltage') ||
+      label.includes('current') ||
+      label.includes('resistance') ||
+      label.includes('reading')
+    ) {
+      patch = { fieldType: 'numeric', numericConfig: { resolution: 0.01 } };
+    } else if (
+      label.includes('type') ||
+      label.includes('classification') ||
+      label.includes('category') ||
+      label.includes('code') ||
+      label.includes('method')
+    ) {
+      patch = { fieldType: 'dropdown', dropdownOptions: ['Option 1', 'Option 2'] };
+    } else {
+      patch = { fieldType: 'text' };
     }
-    if (label.includes('yes/no') || label.includes('lim') || label.includes('nv') || label.includes('na')) {
-      updateField(field.id, { fieldType: 'state_enum', stateOptions: ['tick', 'cross', 'NA', 'LIM', 'NV'] });
-      return;
+
+    const changed =
+      patch.fieldType !== field.fieldType ||
+      (patch.dropdownOptions && JSON.stringify(patch.dropdownOptions) !== JSON.stringify(field.dropdownOptions)) ||
+      (patch.stateOptions && JSON.stringify(patch.stateOptions) !== JSON.stringify(field.stateOptions)) ||
+      (patch.addressConfig && JSON.stringify(patch.addressConfig) !== JSON.stringify(field.addressConfig)) ||
+      (patch.numericConfig && JSON.stringify(patch.numericConfig) !== JSON.stringify(field.numericConfig));
+
+    updateField(field.id, patch);
+
+    if (changed) {
+      toast.success(`AI suggestion applied: ${field.label} → ${patch.fieldType}`);
+    } else {
+      toast.info(`No stronger AI suggestion for "${field.label}"`);
     }
-    if (label.includes('number') || label.includes('value') || label.includes('ohms') || label.includes('amps')) {
-      updateField(field.id, { fieldType: 'numeric', numericConfig: { resolution: 0.01 } });
-      return;
-    }
-    if (label.includes('type') || label.includes('classification')) {
-      updateField(field.id, { fieldType: 'dropdown', dropdownOptions: ['Option 1', 'Option 2'] });
-      return;
-    }
-    updateField(field.id, { fieldType: 'text' });
   };
 
   const saveTemplate = async () => {
@@ -663,6 +709,40 @@ export default function ReportDisseminatorPage() {
       toast.error(error.message || 'Failed to save template');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const uploadFinalArtifact = async (uploadedFile: File | null) => {
+    if (!selected || !uploadedFile) return;
+    if (uploadedFile.type !== 'application/pdf') {
+      toast.error('Final artifact must be a PDF');
+      return;
+    }
+
+    setUploadingFinalArtifact(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Could not read final artifact file'));
+        reader.readAsDataURL(uploadedFile);
+      });
+      const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '');
+      setSelected({
+        ...selected,
+        wizardData: {
+          ...selected.wizardData,
+          finalArtifactName: uploadedFile.name,
+          finalArtifactMimeType: uploadedFile.type,
+          finalArtifactBase64: base64,
+        },
+      });
+      toast.success('Final artifact attached. Click Save & Publish State to persist.');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to process final artifact file');
+    } finally {
+      setUploadingFinalArtifact(false);
     }
   };
 
@@ -822,9 +902,17 @@ export default function ReportDisseminatorPage() {
                       <List className="w-4 h-4 mr-2" />
                       Fields
                     </TabsTrigger>
-                    <TabsTrigger value="preview">
+                    <TabsTrigger value="preview-origin">
                       <Eye className="w-4 h-4 mr-2" />
-                      Preview
+                      Preview Origin
+                    </TabsTrigger>
+                    <TabsTrigger value="preview-new-version">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Preview New Version
+                    </TabsTrigger>
+                    <TabsTrigger value="compare">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Compare
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="fields" className="space-y-3 mt-4">
@@ -844,7 +932,7 @@ export default function ReportDisseminatorPage() {
                       </SortableContext>
                     </DndContext>
                   </TabsContent>
-                  <TabsContent value="preview" className="mt-4">
+                  <TabsContent value="preview-origin" className="mt-4">
                     {selected.sourcePdfBase64 ? (
                       <PdfPageCanvas
                         pdfBase64={selected.sourcePdfBase64}
@@ -856,6 +944,55 @@ export default function ReportDisseminatorPage() {
                     ) : (
                       <p className="text-sm text-muted-foreground">No PDF preview available (base64 not stored).</p>
                     )}
+                  </TabsContent>
+                  <TabsContent value="preview-new-version" className="mt-4">
+                    {selected.wizardData?.finalArtifactBase64 ? (
+                      <PdfPageCanvas
+                        pdfBase64={selected.wizardData.finalArtifactBase64}
+                        pageNumber={1}
+                        fields={selected.fields.map((f) => ({ id: f.id, label: f.label, boundingBox: f.boundingBox || null }))}
+                        selectedId={selectedFieldId}
+                        onSelectField={setSelectedFieldId}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No final artifact uploaded yet. Go to Step 4 and upload the final template PDF first.
+                      </p>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="compare" className="mt-4">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Origin</p>
+                        {selected.sourcePdfBase64 ? (
+                          <PdfPageCanvas
+                            pdfBase64={selected.sourcePdfBase64}
+                            pageNumber={1}
+                            fields={selected.fields.map((f) => ({ id: f.id, label: f.label, boundingBox: f.boundingBox || null }))}
+                            selectedId={selectedFieldId}
+                            onSelectField={setSelectedFieldId}
+                          />
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No original PDF available.</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">New Version</p>
+                        {selected.wizardData?.finalArtifactBase64 ? (
+                          <PdfPageCanvas
+                            pdfBase64={selected.wizardData.finalArtifactBase64}
+                            pageNumber={1}
+                            fields={selected.fields.map((f) => ({ id: f.id, label: f.label, boundingBox: f.boundingBox || null }))}
+                            selectedId={selectedFieldId}
+                            onSelectField={setSelectedFieldId}
+                          />
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            No final artifact uploaded yet. Go to Step 4 and upload the final template PDF first.
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </TabsContent>
                 </Tabs>
 
@@ -871,6 +1008,39 @@ export default function ReportDisseminatorPage() {
                   />
                 </div>
 
+                {wizardStep === 4 && (
+                  <div className="space-y-3 border rounded-md p-3">
+                    <div>
+                      <Label>Final artifact PDF</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Upload the finalized template artifact for this disseminator template.
+                      </p>
+                    </div>
+                    <Input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={(e) => uploadFinalArtifact(e.target.files?.[0] || null)}
+                      disabled={uploadingFinalArtifact}
+                    />
+                    {selected.wizardData?.finalArtifactName && (
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm text-muted-foreground">
+                          Attached: {selected.wizardData.finalArtifactName}
+                        </p>
+                        {selected.wizardData.finalArtifactBase64 && (
+                          <a
+                            className="text-sm underline"
+                            href={`data:${selected.wizardData.finalArtifactMimeType || 'application/pdf'};base64,${selected.wizardData.finalArtifactBase64}`}
+                            download={selected.wizardData.finalArtifactName}
+                          >
+                            Download attached artifact
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {selectedSummary && (
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary">Fields: {selected.fields.length}</Badge>
@@ -883,7 +1053,7 @@ export default function ReportDisseminatorPage() {
                 <div className="flex justify-end">
                   <Button onClick={saveTemplate} disabled={saving}>
                     <Save className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving…' : 'Save Draft'}
+                    {saving ? 'Saving…' : wizardStep === 4 ? 'Save & Publish State' : 'Save Draft'}
                   </Button>
                 </div>
               </>
