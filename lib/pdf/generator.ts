@@ -719,8 +719,68 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   const companyEmail = ss(fd.companyEmail) || 'office@cain-enabled.co.uk';
 
   // ── Helpers ──────────────────────────────────────────────
-  const text = (t: string, x: number, yy: number, opts?: any) =>
-    pdf.text(ss(t), x, yy, opts);
+  const text = (t: string, x: number, yy: number, opts?: any) => {
+    let str = ss(t);
+    
+    // Replace "I\"n" or "I dn" or variants with true Δ character and "ohms" with Ω 
+    // This allows us to handle input easily
+    str = str.replace(/I"n/g, 'I\u0394n').replace(/I dn/g, 'I\u0394n').replace(/ohms/g, '\u03A9');
+
+    if (!str.includes('\u03A9') && !str.includes('\u0394')) {
+      pdf.text(str, x, yy, opts);
+      return;
+    }
+
+    const parts = str.split(/([\u03A9\u0394])/);
+    let currentX = x;
+
+    const font = pdf.getFont();
+    const fontSize = pdf.getFontSize();
+    
+    // Manual alignment calculations purely for center/right since pdf.text options don't cover chunked calls
+    let renderOpts = opts ? { ...opts } : undefined;
+    if (opts && (opts.align === 'center' || opts.align === 'right')) {
+      let totalWidth = 0;
+      parts.forEach(p => {
+        if (p === '\u03A9') {
+          pdf.setFont('Symbol', 'normal');
+          totalWidth += pdf.getStringUnitWidth('W') * fontSize / pdf.internal.scaleFactor;
+        } else if (p === '\u0394') {
+          pdf.setFont('Symbol', 'normal');
+          totalWidth += pdf.getStringUnitWidth('D') * fontSize / pdf.internal.scaleFactor;
+        } else {
+          pdf.setFont(font.fontName, font.fontStyle);
+          totalWidth += pdf.getStringUnitWidth(p) * fontSize / pdf.internal.scaleFactor;
+        }
+      });
+      if (opts.align === 'center') currentX = x - totalWidth / 2;
+      if (opts.align === 'right') currentX = x - totalWidth;
+      
+      // Strip align out so manual positioning works left-to-right
+      delete renderOpts.align;
+    }
+
+    // Render char by char seamlessly swapping between Helvetica and Symbol
+    parts.forEach(part => {
+      if (!part) return;
+      if (part === '\u03A9') {
+        pdf.setFont('Symbol', 'normal');
+        pdf.text('W', currentX, yy, renderOpts);
+        currentX += pdf.getStringUnitWidth('W') * fontSize / pdf.internal.scaleFactor;
+      } else if (part === '\u0394') {
+        pdf.setFont('Symbol', 'normal');
+        pdf.text('D', currentX, yy, renderOpts);
+        currentX += pdf.getStringUnitWidth('D') * fontSize / pdf.internal.scaleFactor;
+      } else {
+        pdf.setFont(font.fontName, font.fontStyle);
+        pdf.text(part, currentX, yy, renderOpts);
+        currentX += pdf.getStringUnitWidth(part) * fontSize / pdf.internal.scaleFactor;
+      }
+    });
+
+    // Restore original font
+    pdf.setFont(font.fontName, font.fontStyle);
+  };
 
   const filledRect = (x: number, yy: number, w: number, h: number, rgb: [number,number,number]) => {
     pdf.setFillColor(rgb[0], rgb[1], rgb[2]);
@@ -836,11 +896,15 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
     const labY = y + h / 2 + 1.5 - (labLines.length > 1 ? (labLines.length - 1) * 1.6 : 0);
-    pdf.text(labLines, margin + 2, labY);
+    labLines.forEach((line: string, i: number) => {
+      text(line, margin + 2, labY + i * 3.2);
+    });
     
     pdf.setFont('helvetica', 'normal');
     const valY = y + h / 2 + 1.5 - (valLines.length > 1 ? (valLines.length - 1) * 1.6 : 0);
-    pdf.text(valLines, margin + labelW + 2, valY);
+    valLines.forEach((line: string, i: number) => {
+      text(line, margin + labelW + 2, valY + i * 3.2);
+    });
     
     y += h;
   };
@@ -854,7 +918,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     checkPage(h);
     filledRect(margin, y, W, h, light);
     borderedRect(margin, y, W, h);
-    pdf.text(lines, margin + 3, y + 3);
+    lines.forEach((line: string, i: number) => {
+      text(line, margin + 3, y + 3 + i * (fontSize * 0.4));
+    });
     y += h;
   };
 
@@ -866,7 +932,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     const h = lines.length * (fontSize * 0.4) + 3;
     checkPage(h);
     pdf.setTextColor(60, 60, 60);
-    pdf.text(lines, margin + 2, y + 2.5);
+    lines.forEach((line: string, i: number) => {
+      text(line, margin + 2, y + 2.5 + i * (fontSize * 0.4));
+    });
     pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'normal');
     y += h;
@@ -1023,7 +1091,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       pdf.setFont('helvetica', 'bold');
       text(String(idx + 1), margin + obsColWidths.num / 2, y + h / 2 + 1.5, { align: 'center' });
       pdf.setFont('helvetica', 'normal');
-      pdf.text(descLines, margin + obsColWidths.num + 2, y + 4);
+      descLines.forEach((line: string, i: number) => {
+        text(line, margin + obsColWidths.num + 2, y + 4 + i * 3.2);
+      });
       // Code badge
       filledRect(margin + W - obsColWidths.code + 0.15, y + 0.15, obsColWidths.code - 0.3, h - 0.3, clr);
       pdf.setTextColor(255, 255, 255);
@@ -1673,7 +1743,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       text(sectionLabel, margin + 2, y + 4);
       if (section.items.length > 0) {
         const titleLines = pdf.splitTextToSize(section.title, descW - 2);
-        pdf.text(titleLines, margin + refW + 2, y + 4);
+    titleLines.forEach((tLine: string, i: number) => {
+          text(tLine, margin + refW + 2, y + 4 + i * 2.5);
+        });
       }
       // section outcome if no items
       if (section.items.length === 0) {
@@ -1709,7 +1781,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
         pdf.setFontSize(6);
         text(item.ref, margin + 2, y + rowH / 2 + 1);
-        pdf.text(descLines, margin + refW + 2, y + 3);
+        descLines.forEach((dLine: string, i: number) => {
+          text(dLine, margin + refW + 2, y + 3 + i * 2.5);
+        });
         text(comment, margin + refW + descW + 2, y + rowH / 2 + 1);
 
         // Outcome - use tick mark for acceptable
@@ -1904,7 +1978,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       // Group label centered
       const labelLines = pdf.splitTextToSize(g.label, spanW - 2);
       const labelH = labelLines.length * 2.5;
-      pdf.text(labelLines, startX + spanW / 2, atY + (groupRowH - labelH) / 2 + 2.5, { align: 'center' });
+      labelLines.forEach((line: string, i: number) => {
+        text(line, startX + spanW / 2, atY + (groupRowH - labelH) / 2 + 2.5 + i * 2.5, { align: 'center' });
+      });
 
       // Bottom border of group row
       pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
@@ -1954,7 +2030,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       } else {
         // Render standard horizontal text
         const lines = pdf.splitTextToSize(c.label, cp.w - 1.5);
-        pdf.text(lines, cp.x + cp.w / 2, atY + groupRowH + 2.5, { align: 'center' });
+        lines.forEach((line: string, i: number) => {
+          text(line, cp.x + cp.w / 2, atY + groupRowH + 2.5 + i * 2.5, { align: 'center' });
+        });
       }
     });
 
@@ -2006,7 +2084,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
         text(truncated, cp.x + 1.5, rowY + rowH / 2 + 1.2);
       } else {
         // Center-align all other values
-        pdf.text(ss(val), cp.x + cp.w / 2, rowY + rowH / 2 + 1.2, { align: 'center' });
+        text(ss(val), cp.x + cp.w / 2, rowY + rowH / 2 + 1.2, { align: 'center' });
       }
     });
 

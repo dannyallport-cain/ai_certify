@@ -10,7 +10,7 @@
 endobj
 4 0 obj
 <<
-/Length 13513
+/Length 14526
 >>
 stream
 0.5670000000000001 w
@@ -146,7 +146,13 @@ BT
 0. g
 238.1102362204724727 642.4726771653542983 Td
 (Safety assessment requested by client. To assess compliance with BS 7671 \(2018\) Amendment 2) Tj
-T* (\(2022\) and the Electricity at Work Regulations 1989.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+238.1102362204724727 633.4018110236220309 Td
+(\(2022\) and the Electricity at Work Regulations 1989.) Tj
 ET
 0.71 0.75 0.78 RG
 0.8503937007874016 w
@@ -162,7 +168,13 @@ BT
 0. g
 39.6850393700787407 617.2443307086613231 Td
 (Date\(s\) on which inspection and testing was carried) Tj
-T* (out:) Tj
+ET
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+0. g
+39.6850393700787407 608.1734645669290558 Td
+(out:) Tj
 ET
 BT
 /F1 7 Tf
@@ -337,7 +349,13 @@ BT
 0. g
 39.6850393700787407 438.9451181102361375 Td
 (Extent of the electrical installation covered by this) Tj
-T* (report:) Tj
+ET
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+0. g
+39.6850393700787407 429.8742519685038701 Td
+(report:) Tj
 ET
 BT
 /F1 7 Tf
@@ -345,7 +363,13 @@ BT
 0. g
 238.1102362204724727 438.9451181102361375 Td
 (50% of the installation in accordance with item 3.8.4 of Guidance Note 3. Circuits in the main hall and) Tj
-T* (offices were tested in full; storage and utility areas were visually inspected only.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+238.1102362204724727 429.8742519685038701 Td
+(offices were tested in full; storage and utility areas were visually inspected only.) Tj
 ET
 0.71 0.75 0.78 RG
 0.8503937007874016 w
@@ -361,7 +385,13 @@ BT
 0. g
 39.6850393700787407 413.7167716535432191 Td
 (Agreed limitations including the reasons \(see) Tj
-T* (Regulation 653.2\):) Tj
+ET
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+0. g
+39.6850393700787407 404.6459055118109518 Td
+(Regulation 653.2\):) Tj
 ET
 BT
 /F1 7 Tf
@@ -369,7 +399,13 @@ BT
 0. g
 238.1102362204724727 413.7167716535432191 Td
 (No testing of HVAC control cables. No lifting of floor boards or inspection of buried conduit. Areas) Tj
-T* (inaccessible due to ongoing building use were excluded from destructive testing.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+238.1102362204724727 404.6459055118109518 Td
+(inaccessible due to ongoing building use were excluded from destructive testing.) Tj
 ET
 0.71 0.75 0.78 RG
 0.8503937007874016 w
@@ -421,8 +457,20 @@ BT
 0.235 g
 39.6850393700787407 356.882125984251843 Td
 (The inspection and testing detailed in this report and accompanying schedules have been carried out in accordance with BS 7671:2018 \(IET Wiring Regulations\) as amended to 2020. It should) Tj
-T* (be noted that cables concealed within trunking and conduits, under floors, in roof spaces, and generally within the fabric of the building or underground, have not been inspected unless) Tj
-T* (specifically agreed between the client and inspector prior to the inspection. An inspection should be made within an accessible roof space housing other electrical equipment.) Tj
+ET
+BT
+/F3 6 Tf
+6.8999999999999995 TL
+0.235 g
+39.6850393700787407 350.0789763779525856 Td
+(be noted that cables concealed within trunking and conduits, under floors, in roof spaces, and generally within the fabric of the building or underground, have not been inspected unless) Tj
+ET
+BT
+/F3 6 Tf
+6.8999999999999995 TL
+0.235 g
+39.6850393700787407 343.2758267716533851 Td
+(specifically agreed between the client and inspector prior to the inspection. An inspection should be made within an accessible roof space housing other electrical equipment.) Tj
 ET
 0.1 0.23 0.36 rg
 34.0157480314960665 332.220708661417234 527.2485039370078539 -22.677165354330711 re
@@ -489,8 +537,20 @@ BT
 0.235 g
 39.6850393700787407 220.8191338582676053 Td
 (Where the overall assessment of the suitability of the installation for continued use on page 1 is stated as 'UNSATISFACTORY', I/We recommend that any observations classified as 'Code 1 -) Tj
-T* (Danger Present' or 'Code 2 - Potentially dangerous' are acted upon as a matter of urgency. Investigation without delay is recommended for observations identified as 'FI - Further Investigation) Tj
-T* (Required'. Observations classified as 'Code 3 - Improvement recommended' should be given due consideration.) Tj
+ET
+BT
+/F3 6 Tf
+6.8999999999999995 TL
+0.235 g
+39.6850393700787407 214.015984251968348 Td
+(Danger Present' or 'Code 2 - Potentially dangerous' are acted upon as a matter of urgency. Investigation without delay is recommended for observations identified as 'FI - Further Investigation) Tj
+ET
+BT
+/F3 6 Tf
+6.8999999999999995 TL
+0.235 g
+39.6850393700787407 207.2128346456690906 Td
+(Required'. Observations classified as 'Code 3 - Improvement recommended' should be given due consideration.) Tj
 ET
 0.71 0.75 0.78 RG
 0.8503937007874016 w
@@ -506,7 +566,13 @@ BT
 0. g
 39.6850393700787407 186.6616535433070112 Td
 (Subject to the necessary remedial action being taken, I/we recommend that the) Tj
-T* (installation is further inspected and tested by:) Tj
+ET
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+0. g
+39.6850393700787407 177.5907874015747439 Td
+(installation is further inspected and tested by:) Tj
 ET
 BT
 /F1 7 Tf
@@ -521,7 +587,13 @@ BT
 0.235 g
 39.6850393700787407 163.8427559055116944 Td
 (Note: The proposed date for the next inspection should take into consideration the frequency and quality of maintenance that the installation can reasonably be expected to receive during its) Tj
-T* (intended life. The period should be agreed between relevant parties.) Tj
+ET
+BT
+/F3 6 Tf
+6.8999999999999995 TL
+0.235 g
+39.6850393700787407 157.0396062992124371 Td
+(intended life. The period should be agreed between relevant parties.) Tj
 ET
 BT
 /F3 6.5 Tf
@@ -570,7 +642,7 @@ endobj
 endobj
 6 0 obj
 <<
-/Length 13257
+/Length 14107
 >>
 stream
 0.8503937007874016 w
@@ -583,7 +655,7 @@ BT
 9.1999999999999993 TL
 1. g
 39.6850393700787407 792.2837007874015853 Td
-(7  OBSERVATIONS AND RECOMMENDATIONS FOR ACTIONS TO BE TAKEN) Tj
+(K  OBSERVATIONS) Tj
 ET
 BT
 /F3 6 Tf
@@ -591,7 +663,13 @@ BT
 0.235 g
 39.6850393700787407 778.1104724409448181 Td
 (Referring to the attached schedules of inspection and test results, and subject to the limitations specified on page 1 of this report under 'Extent of the Installation and Limitations of Inspection) Tj
-T* (and Testing':) Tj
+ET
+BT
+/F3 6 Tf
+6.8999999999999995 TL
+0.235 g
+39.6850393700787407 771.3073228346456744 Td
+(and Testing':) Tj
 ET
 0.9 0.92 0.94 rg
 34.0157480314960665 760.2522047244093528 527.2485039370078539 -19.8425196850393704 re
@@ -653,7 +731,13 @@ BT
 0. g
 90.708661417322844 729.0711023622046696 Td
 (Inspection Schedule Item 1.1: The means of isolation \(main switch\) does not have provision for securing in the off position.) Tj
-T* (Regulation 537.3.2 refers.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+90.708661417322844 720.0002362204724022 Td
+(Regulation 537.3.2 refers.) Tj
 ET
 1. 0.55 0. rg
 510.6658267716534851 739.9844881889763428 50.1732283464566962 -25.7952755905511815 re
@@ -698,7 +782,13 @@ BT
 0. g
 90.708661417322844 702.42543307086612 Td
 (Inspection Schedule Item 3.4: Conductor insulation is discoloured and shows signs of thermal damage at the connection to) Tj
-T* (luminaire fitting in office 3. Regulation 512.1.1 refers.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+90.708661417322844 693.3545669291338527 Td
+(luminaire fitting in office 3. Regulation 512.1.1 refers.) Tj
 ET
 1. 0.55 0. rg
 510.6658267716534851 713.3388188976377933 50.1732283464566962 -25.7952755905511815 re
@@ -740,7 +830,13 @@ BT
 0. g
 90.708661417322844 675.7797637795275705 Td
 (Inspection Schedule Item 6.2: IP rating of luminaires is not appropriate for Zone 1 in the kitchen area. IP2X or IPXXB) Tj
-T* (minimum is required. Regulation 701.512.2 refers.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+90.708661417322844 666.7088976377951894 Td
+(minimum is required. Regulation 701.512.2 refers.) Tj
 ET
 0.1 0.23 0.36 rg
 510.6658267716534851 686.69314960629913 50.1732283464566962 -25.7952755905511815 re
@@ -785,7 +881,13 @@ BT
 0. g
 90.708661417322844 649.1340944881889072 Td
 (Inspection Schedule Item 8.1: The external consumer unit cover does not close securely, allowing access to live parts.) Tj
-T* (Regulation 416.1 refers.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+90.708661417322844 640.0632283464566399 Td
+(Regulation 416.1 refers.) Tj
 ET
 1. 0.55 0. rg
 510.6658267716534851 660.0474803149606942 50.1732283464566962 -25.7952755905511815 re
@@ -827,7 +929,13 @@ BT
 0. g
 90.708661417322844 622.4884251968503577 Td
 ( I n s p e c t i o n   S c h e d u l e   I t e m   4 . 3 :   S i n g l e - p h a s e   s o c k e t   o u t l e t s   i n s t a l l e d   w i t h o u t   a d d i t i o n a l   p r o t e c t i o n   b y   R C D   \("d 3 0 m A \)   i n   a) Tj
-T* (location where use of portable equipment outdoors is reasonably foreseeable. Regulation 411.3.3 refers.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+90.708661417322844 613.4175590551180903 Td
+(location where use of portable equipment outdoors is reasonably foreseeable. Regulation 411.3.3 refers.) Tj
 ET
 0.1 0.23 0.36 rg
 510.6658267716534851 633.4018110236219172 50.1732283464566962 -25.7952755905511815 re
@@ -872,7 +980,13 @@ BT
 0. g
 90.708661417322844 595.8427559055118081 Td
 (Inspection Schedule Item 5.9: Cables in the ceiling void are not adequately supported and are resting on suspended ceiling) Tj
-T* (tiles. Risk of mechanical damage and overheating. Regulation 522.8.5 refers.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+90.708661417322844 586.7718897637794271 Td
+(tiles. Risk of mechanical damage and overheating. Regulation 522.8.5 refers.) Tj
 ET
 0.1 0.23 0.36 rg
 510.6658267716534851 606.7561417322834814 50.1732283464566962 -25.7952755905511815 re
@@ -913,8 +1027,42 @@ BT
 8.0499999999999989 TL
 0. g
 90.708661417322844 569.1970866141732586 Td
-( I n s p e c t i o n   S c h e d u l e   I t e m   2 . 7 :   E a r t h   f a u l t   l o o p   i m p e d a n c e   f o r   c i r c u i t   1 4   \( H V A C \)   m e a s u r e d   a t   1 . 9 2©   e x c e e d s   t h e   m a x i m u m) Tj
-T* ( v a l u e   o f   1 . 8 4©   p e r m i t t e d   f o r   t h e   i n s t a l l e d   1 6 A   T y p e   B   M C B .   F u r t h e r   i n v e s t i g a t i o n   r e q u i r e d   t o   d e t e r m i n e   c a u s e .) Tj
+(Inspection Schedule Item 2.7: Earth fault loop impedance for circuit 14 \(HVAC\) measured at 1.92) Tj
+ET
+BT
+/F14 7 Tf
+8.0499999999999989 TL
+0. g
+388.3486614173227167 569.1970866141732586 Td
+(W) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+392.4086614173227758 569.1970866141732586 Td
+( exceeds the maximum) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+90.708661417322844 560.1262204724408775 Td
+(value of 1.84) Tj
+ET
+BT
+/F14 7 Tf
+8.0499999999999989 TL
+0. g
+130.5386614173228281 560.1262204724408775 Td
+(W) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+134.5986614173228304 560.1262204724408775 Td
+( permitted for the installed 16A Type B MCB. Further investigation required to determine cause.) Tj
 ET
 0.39 0.22 0.61 rg
 510.6658267716534851 580.1104724409448181 50.1732283464566962 -25.7952755905511815 re
@@ -946,7 +1094,13 @@ BT
 0.235 g
 39.6850393700787407 507.6852755905511003 Td
 (One of the following codes, as appropriate, has been allocated to each of the observations made above to indicate to the person\(s\) responsible for the installation the degree of urgency for) Tj
-T* (remedial action.) Tj
+ET
+BT
+/F3 6 Tf
+6.8999999999999995 TL
+0.235 g
+39.6850393700787407 500.882125984251843 Td
+(remedial action.) Tj
 ET
 0.86 0.21 0.27 rg
 34.0157480314960665 489.827007874015635 128.9774803149606157 -19.8425196850393704 re
@@ -1169,7 +1323,7 @@ endobj
 endobj
 8 0 obj
 <<
-/Length 16735
+/Length 17236
 >>
 stream
 0.8503937007874016 w
@@ -1198,7 +1352,13 @@ BT
 0. g
 39.6850393700787407 768.3309448818897636 Td
 (General condition of the installation \(in terms of) Tj
-T* (electrical safety\):) Tj
+ET
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+0. g
+39.6850393700787407 759.2600787401574962 Td
+(electrical safety\):) Tj
 ET
 BT
 /F1 7 Tf
@@ -1206,8 +1366,20 @@ BT
 0. g
 238.1102362204724727 772.8663779527558972 Td
 (The installation was found to be in a generally good condition, adequate for continued use. A number) Tj
-T* (of C3 observations were made that should be attended to at the earliest opportunity to ensure) Tj
-T* (continued safety.) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+238.1102362204724727 763.7955118110236299 Td
+(of C3 observations were made that should be attended to at the earliest opportunity to ensure) Tj
+ET
+BT
+/F1 7 Tf
+8.0499999999999989 TL
+0. g
+238.1102362204724727 754.7246456692913625 Td
+(continued safety.) Tj
 ET
 0.1 0.23 0.36 rg
 34.0157480314960665 748.0632283464566399 527.2485039370078539 -22.677165354330711 re
@@ -1233,9 +1405,27 @@ BT
 0. g
 42.5196850393700814 716.8821259842519567 Td
 (I/We, being the person\(s\) responsible for the inspection and testing of the electrical installation \(as indicated by my/our signatures below\), particulars of which are described) Tj
-T* (above, having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, including the observations and) Tj
-T* (the attached schedules, provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations in section 4 of this) Tj
-T* (report.) Tj
+ET
+BT
+/F1 6.5 Tf
+7.4749999999999996 TL
+0. g
+42.5196850393700814 709.5120472440944468 Td
+(above, having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, including the observations and) Tj
+ET
+BT
+/F1 6.5 Tf
+7.4749999999999996 TL
+0. g
+42.5196850393700814 702.1419685039369369 Td
+(the attached schedules, provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations in section 4 of this) Tj
+ET
+BT
+/F1 6.5 Tf
+7.4749999999999996 TL
+0. g
+42.5196850393700814 694.7718897637794271 Td
+(report.) Tj
 ET
 0.71 0.75 0.78 RG
 0.8503937007874016 w
@@ -1393,13 +1583,6 @@ BT
 0. g
 39.6850393700787407 544.2522047244094665 Td
 (Signature:) Tj
-ET
-BT
-/F1 7 Tf
-8.0499999999999989 TL
-0. g
-238.1102362204724727 544.2522047244094665 Td
-() Tj
 ET
 0.71 0.75 0.78 RG
 0.8503937007874016 w
@@ -1573,7 +1756,7 @@ BT
 9.1999999999999993 TL
 1. g
 39.6850393700787407 412.7246456692912489 Td
-(11  SUPPLY CHARACTERISTICS AND EARTHING ARRANGEMENTS) Tj
+(I  SUPPLY CHARACTERISTICS AND EARTHING ARRANGEMENTS) Tj
 ET
 0.71 0.75 0.78 RG
 0.8503937007874016 w
@@ -1861,7 +2044,14 @@ BT
 6.3249999999999993 TL
 0. g
 330.3044147401574833 316.3466929133857093 Td
-( 0 . 1 3  ©) Tj
+(0.13 ) Tj
+ET
+BT
+/F14 5.5 Tf
+6.3249999999999993 TL
+0. g
+342.459414740157456 316.3466929133857093 Td
+(W) Tj
 ET
 0.92 0.95 0.98 rg
 387.697442519685012 405.2128346456692043 173.1416125984251835 -16.1574803149606332 re
@@ -2006,7 +2196,7 @@ endobj
 endobj
 10 0 obj
 <<
-/Length 15056
+/Length 15217
 >>
 stream
 0.8503937007874016 w
@@ -2019,7 +2209,7 @@ BT
 9.1999999999999993 TL
 1. g
 39.6850393700787407 792.2837007874015853 Td
-(12  PARTICULARS OF INSTALLATION REFERRED TO IN THE REPORT) Tj
+(J  PARTICULARS OF INSTALLATION REFERRED TO IN THE REPORT) Tj
 ET
 0.71 0.75 0.78 RG
 0.8503937007874016 w
@@ -2413,7 +2603,21 @@ BT
 6.3249999999999993 TL
 0. g
 303.309291338582625 671.8112598425196893 Td
-( R a t e d   r e s i d u a l   c u r r e n t   \( I” n \) :) Tj
+(Rated residual current \(I) Tj
+ET
+BT
+/F14 5.5 Tf
+6.3249999999999993 TL
+0. g
+366.3392913385826546 671.8112598425196893 Td
+(D) Tj
+ET
+BT
+/F2 5.5 Tf
+6.3249999999999993 TL
+0. g
+369.5292913385826523 671.8112598425196893 Td
+(n\):) Tj
 ET
 BT
 /F1 5.5 Tf
@@ -2828,7 +3032,7 @@ endobj
 endobj
 12 0 obj
 <<
-/Length 43240
+/Length 43406
 >>
 stream
 0.8503937007874016 w
@@ -4380,7 +4584,13 @@ BT
 0. g
 73.7007874015748143 267.8742519685038133 Td
 (Compatibility of protective devices, bases and other components; correct type and rating \(No signs of unacceptable thermal damage,) Tj
-T* (arcing or overheating\) \(411.3.2; 411.4; 411.5; 411.6; Sections 432, 433\)) Tj
+ET
+BT
+/F1 6 Tf
+6.8999999999999995 TL
+0. g
+73.7007874015748143 260.7876377952754865 Td
+(arcing or overheating\) \(411.3.2; 411.4; 411.5; 411.6; Sections 432, 433\)) Tj
 ET
 BT
 /F1 6 Tf
@@ -4738,7 +4948,13 @@ BT
 0. g
 73.7007874015748143 154.4884251968503577 Td
 (Confirmation that ALL conductor connections, including connections to busbars, are correctly located in terminals and are tight and) Tj
-T* (secure \(526.1\)) Tj
+ET
+BT
+/F1 6 Tf
+6.8999999999999995 TL
+0. g
+73.7007874015748143 147.4018110236219172 Td
+(secure \(526.1\)) Tj
 ET
 BT
 /F1 6 Tf
@@ -5206,7 +5422,7 @@ endobj
 endobj
 16 0 obj
 <<
-/Length 44699
+/Length 44782
 >>
 stream
 0.8503937007874016 w
@@ -5701,7 +5917,13 @@ BT
 0. g
 73.7007874015748143 632.1262204724408775 Td
 (Cables concealed under floors, above ceilings or in walls/partitions, adequately protected against damage \(see Section 4. Extent and) Tj
-T* (Limitations\) \(522.6.204\)) Tj
+ET
+BT
+/F1 6 Tf
+6.8999999999999995 TL
+0. g
+73.7007874015748143 625.0396062992125508 Td
+(Limitations\) \(522.6.204\)) Tj
 ET
 BT
 /F1 6 Tf
@@ -7997,7 +8219,7 @@ endobj
 endobj
 22 0 obj
 <<
-/Length 60712
+/Length 60987
 >>
 stream
 0.8503937007874016 w
@@ -8083,7 +8305,12 @@ BT
 0. g
 253.119562083585663 505.9886614173228168 Td
 (Circuit conductors:) Tj
-18.850000000000005 -5.75 Td
+ET
+BT
+/F2 5 Tf
+5.75 TL
+0. g
+271.9695620835856289 498.9020472440944332 Td
 (csa) Tj
 ET
 0.71 0.75 0.78 RG
@@ -8157,7 +8384,12 @@ BT
 1. g
 42.7797686250757181 488.9807874015747302 Td
 (Circuit) Tj
--1.1249999999999991 -5.1749999999999998 Td
+ET
+BT
+/F2 4.5 Tf
+5.1749999999999998 TL
+1. g
+41.6547686250757181 481.8941732283464034 Td
 (number) Tj
 ET
 0.71 0.75 0.78 RG
@@ -8171,7 +8403,12 @@ BT
 1. g
 106.2758509993943363 488.9807874015747302 Td
 (Circuit) Tj
--5.4675000000000029 -5.1749999999999998 Td
+ET
+BT
+/F2 4.5 Tf
+5.1749999999999998 TL
+1. g
+100.8083509993943068 481.8941732283464034 Td
 (designation) Tj
 ET
 0.71 0.75 0.78 RG
@@ -8185,7 +8422,12 @@ BT
 1. g
 168.916933373712908 488.9807874015747302 Td
 (Type of) Tj
-1.3275000000000006 -5.1749999999999998 Td
+ET
+BT
+/F2 4.5 Tf
+5.1749999999999998 TL
+1. g
+170.2444333737128943 481.8941732283464034 Td
 (wiring) Tj
 ET
 0.71 0.75 0.78 RG
@@ -8199,7 +8441,12 @@ BT
 1. g
 202.4157219866747539 488.9807874015747302 Td
 (Ref.) Tj
--3.8699999999999988 -5.1749999999999998 Td
+ET
+BT
+/F2 4.5 Tf
+5.1749999999999998 TL
+1. g
+198.5457219866747209 481.8941732283464034 Td
 (method) Tj
 ET
 0.71 0.75 0.78 RG
@@ -8213,7 +8460,12 @@ BT
 1. g
 228.0577580254391137 488.9807874015747302 Td
 (No. of) Tj
--0.3600000000000007 -5.1749999999999998 Td
+ET
+BT
+/F2 4.5 Tf
+5.1749999999999998 TL
+1. g
+227.6977580254391285 481.8941732283464034 Td
 (points) Tj
 ET
 0.71 0.75 0.78 RG
@@ -10903,7 +11155,7 @@ endobj
 39 0 obj
 <<
 /Producer (jsPDF 3.0.4)
-/CreationDate (D:20260312011914-00'00')
+/CreationDate (D:20260312014432-00'00')
 >>
 endobj
 40 0 obj
@@ -10917,53 +11169,53 @@ endobj
 xref
 0 41
 0000000000 65535 f 
-0000223891 00000 n 
-0000225781 00000 n 
+0000226940 00000 n 
+0000228830 00000 n 
 0000000015 00000 n 
 0000000152 00000 n 
-0000013718 00000 n 
-0000013855 00000 n 
-0000027165 00000 n 
-0000027302 00000 n 
-0000044090 00000 n 
-0000044228 00000 n 
-0000059338 00000 n 
-0000059477 00000 n 
-0000102771 00000 n 
-0000102910 00000 n 
-0000104775 00000 n 
-0000104914 00000 n 
-0000149667 00000 n 
-0000149806 00000 n 
-0000151671 00000 n 
-0000151810 00000 n 
-0000157327 00000 n 
-0000157466 00000 n 
-0000218232 00000 n 
-0000218371 00000 n 
-0000224016 00000 n 
-0000224142 00000 n 
-0000224273 00000 n 
-0000224407 00000 n 
-0000224545 00000 n 
-0000224669 00000 n 
-0000224798 00000 n 
-0000224930 00000 n 
-0000225066 00000 n 
-0000225194 00000 n 
-0000225321 00000 n 
-0000225450 00000 n 
-0000225583 00000 n 
-0000225685 00000 n 
-0000226034 00000 n 
-0000226120 00000 n 
+0000014731 00000 n 
+0000014868 00000 n 
+0000029028 00000 n 
+0000029165 00000 n 
+0000046454 00000 n 
+0000046592 00000 n 
+0000061863 00000 n 
+0000062002 00000 n 
+0000105462 00000 n 
+0000105601 00000 n 
+0000107466 00000 n 
+0000107605 00000 n 
+0000152441 00000 n 
+0000152580 00000 n 
+0000154445 00000 n 
+0000154584 00000 n 
+0000160101 00000 n 
+0000160240 00000 n 
+0000221281 00000 n 
+0000221420 00000 n 
+0000227065 00000 n 
+0000227191 00000 n 
+0000227322 00000 n 
+0000227456 00000 n 
+0000227594 00000 n 
+0000227718 00000 n 
+0000227847 00000 n 
+0000227979 00000 n 
+0000228115 00000 n 
+0000228243 00000 n 
+0000228370 00000 n 
+0000228499 00000 n 
+0000228632 00000 n 
+0000228734 00000 n 
+0000229083 00000 n 
+0000229169 00000 n 
 trailer
 <<
 /Size 41
 /Root 40 0 R
 /Info 39 0 R
-/ID [ <070B5CFDF7DFA20A756167C4F7EE41DE> <070B5CFDF7DFA20A756167C4F7EE41DE> ]
+/ID [ <583704A6084590B12470C8C970BBEABE> <583704A6084590B12470C8C970BBEABE> ]
 >>
 startxref
-226224
+229273
 %%EOF
