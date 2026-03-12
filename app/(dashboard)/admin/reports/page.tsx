@@ -2,13 +2,20 @@
 import AdminLayout from '../layout';
 import { getAllActivityLogs } from '@/lib/db/queries';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export default async function ReportsPage() {
   const logs = await getAllActivityLogs();
 
   return (
     <AdminLayout>
-      <h2 className="text-2xl font-bold mb-4">System Activity Logs</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-bold">System Activity Logs</h2>
+        <Link href="/admin/reports/disseminator">
+          <Button variant="outline">Open Report Disseminator</Button>
+        </Link>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>All Activity Logs</CardTitle>

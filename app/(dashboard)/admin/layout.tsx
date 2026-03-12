@@ -10,6 +10,7 @@ import {
   Shield, 
   Users, 
   FileText, 
+  Wand2,
   CreditCard, 
   Settings, 
   BarChart3,
@@ -124,6 +125,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <Link href="/admin/reports" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
               <BarChart3 className="h-4 w-4" />
               <span>Reports</span>
+            </Link>
+            <Link href="/admin/reports/disseminator" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
+              <Wand2 className="h-4 w-4" />
+              <span>Disseminator</span>
             </Link>
             <Link href="/admin/stripe-config" className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-blue-600 whitespace-nowrap">
               <Settings className="h-4 w-4" />

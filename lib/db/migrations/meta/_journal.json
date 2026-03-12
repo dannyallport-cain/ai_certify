@@ -22,6 +22,13 @@
       "when": 1749710429951,
       "tag": "0002_amusing_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1773279000000,
+      "tag": "0003_giant_report_disseminator",
+      "breakpoints": true
     }
   ]
 }

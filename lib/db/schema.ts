@@ -153,6 +153,27 @@ export const certificateTemplates = pgTable('certificate_templates', {
     .references(() => users.id),
 });
 
+export const reportDisseminatorTemplates = pgTable('report_disseminator_templates', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  status: varchar('status', { length: 20 }).notNull().default('draft'),
+  version: integer('version').notNull().default(1),
+  sourceFileName: varchar('source_file_name', { length: 255 }).notNull(),
+  sourceMimeType: varchar('source_mime_type', { length: 100 }).notNull(),
+  sourcePdfBase64: text('source_pdf_base64').notNull(),
+  fields: json('fields').notNull(),
+  wizardData: json('wizard_data').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
@@ -160,11 +181,13 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   customers: many(customers),
   certificates: many(certificates),
   certificateTemplates: many(certificateTemplates),
+  reportDisseminatorTemplates: many(reportDisseminatorTemplates),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
+  reportDisseminatorTemplates: many(reportDisseminatorTemplates),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -238,6 +261,17 @@ export const certificateTemplatesRelations = relations(certificateTemplates, ({ 
   }),
 }));
 
+export const reportDisseminatorTemplatesRelations = relations(reportDisseminatorTemplates, ({ one }) => ({
+  team: one(teams, {
+    fields: [reportDisseminatorTemplates.teamId],
+    references: [teams.id],
+  }),
+  createdBy: one(users, {
+    fields: [reportDisseminatorTemplates.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Team = typeof teams.$inferSelect;
@@ -256,6 +290,8 @@ export type CertificateItem = typeof certificateItems.$inferSelect;
 export type NewCertificateItem = typeof certificateItems.$inferInsert;
 export type CertificateTemplate = typeof certificateTemplates.$inferSelect;
 export type NewCertificateTemplate = typeof certificateTemplates.$inferInsert;
+export type ReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferSelect;
+export type NewReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferInsert;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
