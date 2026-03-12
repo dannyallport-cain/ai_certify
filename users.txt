@@ -1,0 +1,8 @@
+Role	Email	Password
+supersystemAdmin	supersystemadmin@test.com	Verify123!!!
+systemAdmin	systemadmin@test.com	Verify123!!!
+support	support@test.com	Verify123!!!
+owner	owner@test.com	Verify123!!!
+member	member@test.com	Verify123!!!
+client	client@test.com	Verify123!!!
+All users are members of the "System Administration" team.
