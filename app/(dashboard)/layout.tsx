@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { use, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { CircleIcon, Home, LogOut, FileText, Users, Award, Settings, Shield } from 'lucide-react';
+import { CircleIcon, Home, LogOut, FileText, Users, Award, Settings, Shield, Plug } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,6 +85,12 @@ function UserMenu() {
           <Link href="/dashboard/general" className="flex w-full items-center">
             <Settings className="mr-2 h-4 w-4" />
             <span>Settings</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer">
+          <Link href="/dashboard/servicem8" className="flex w-full items-center">
+            <Plug className="mr-2 h-4 w-4" />
+            <span>ServiceM8</span>
           </Link>
         </DropdownMenuItem>
         {(user.role === 'supersystemAdmin' || user.role === 'systemAdmin' || user.role === 'owner') && (

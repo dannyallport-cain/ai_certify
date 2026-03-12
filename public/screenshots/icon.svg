@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f97316;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ea580c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="paper" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f1f5f9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded square background -->
+  <rect x="0" y="0" width="512" height="512" rx="96" ry="96" fill="url(#bg)"/>
+  
+  <!-- Document/Report shape -->
+  <g transform="translate(120, 72)">
+    <!-- Paper shadow -->
+    <rect x="12" y="12" width="200" height="260" rx="12" fill="rgba(0,0,0,0.15)"/>
+    <!-- Paper -->
+    <rect x="0" y="0" width="200" height="260" rx="12" fill="url(#paper)"/>
+    <!-- Folded corner -->
+    <path d="M 152 0 L 200 48 L 152 48 Z" fill="#e2e8f0"/>
+    <path d="M 152 0 L 200 48 L 200 12 Q 200 0 188 0 Z" fill="#cbd5e1"/>
+    
+    <!-- Report lines -->
+    <rect x="28" y="36" width="96" height="8" rx="4" fill="#f97316" opacity="0.8"/>
+    <rect x="28" y="56" width="120" height="5" rx="2.5" fill="#94a3b8" opacity="0.5"/>
+    <rect x="28" y="70" width="105" height="5" rx="2.5" fill="#94a3b8" opacity="0.5"/>
+    <rect x="28" y="84" width="115" height="5" rx="2.5" fill="#94a3b8" opacity="0.5"/>
+    
+    <!-- Checkbox items -->
+    <rect x="28" y="108" width="14" height="14" rx="3" fill="#f97316" opacity="0.9"/>
+    <polyline points="31,115 35,119 41,111" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="52" y="110" width="80" height="5" rx="2.5" fill="#64748b" opacity="0.5"/>
+    
+    <rect x="28" y="132" width="14" height="14" rx="3" fill="#f97316" opacity="0.9"/>
+    <polyline points="31,139 35,143 41,135" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="52" y="134" width="95" height="5" rx="2.5" fill="#64748b" opacity="0.5"/>
+    
+    <rect x="28" y="156" width="14" height="14" rx="3" fill="#f97316" opacity="0.9"/>
+    <polyline points="31,163 35,167 41,159" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="52" y="158" width="70" height="5" rx="2.5" fill="#64748b" opacity="0.5"/>
+    
+    <!-- Signature line -->
+    <line x1="28" y1="232" x2="110" y2="232" stroke="#94a3b8" stroke-width="1.5" opacity="0.6"/>
+    <text x="28" y="246" font-family="Arial, sans-serif" font-size="8" fill="#94a3b8" opacity="0.6">Signature</text>
+    
+    <!-- Certificate badge -->
+    <circle cx="150" cy="220" r="24" fill="#f97316" opacity="0.15"/>
+    <circle cx="150" cy="220" r="18" fill="#f97316" opacity="0.25"/>
+    <polyline points="142,220 148,226 160,214" stroke="#f97316" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  
+  <!-- Small flame accent -->
+  <g transform="translate(340, 300)">
+    <path d="M 32 80 C 32 80 0 52 0 32 C 0 14 14 0 32 0 C 50 0 64 14 64 32 C 64 52 32 80 32 80 Z" fill="white" opacity="0.25"/>
+    <path d="M 32 64 C 32 64 12 46 12 32 C 12 20 21 12 32 12 C 43 12 52 20 52 32 C 52 46 32 64 32 64 Z" fill="white" opacity="0.35"/>
+    <path d="M 32 48 C 32 48 22 38 22 30 C 22 24 27 20 32 20 C 37 20 42 24 42 30 C 42 38 32 48 32 48 Z" fill="white" opacity="0.5"/>
+  </g>
+  
+  <!-- "FC" text mark -->
+  <text x="256" y="462" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="52" fill="white" opacity="0.95" letter-spacing="4">REPORT</text>
+</svg>
