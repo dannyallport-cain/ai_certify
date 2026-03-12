@@ -13,13 +13,13 @@
  *  onSelectField – callback when a field rect is clicked
  */
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Text } from 'react-konva';
 
 type FieldOverlay = {
   id: string;
   label: string;
-  boundingBox: number[] | null; // flat [x1,y1,x2,y2,...] in PDF points
+  boundingBox?: { x: number; y: number; width: number; height: number } | null;
 };
 
 type Props = {
@@ -116,9 +116,8 @@ export function PdfPageCanvas({ pdfBase64, pageNumber = 1, fields = [], selected
                 const isSelected = field.id === selectedId;
 
                 return (
-                  <>
+                  <React.Fragment key={field.id}>
                     <Rect
-                      key={`rect-${field.id}`}
                       x={canvasX}
                       y={canvasY}
                       width={w}
@@ -129,7 +128,6 @@ export function PdfPageCanvas({ pdfBase64, pageNumber = 1, fields = [], selected
                       onClick={() => onSelectField?.(field.id)}
                     />
                     <Text
-                      key={`text-${field.id}`}
                       x={canvasX + 2}
                       y={canvasY + 2}
                       text={field.label}
@@ -137,7 +135,7 @@ export function PdfPageCanvas({ pdfBase64, pageNumber = 1, fields = [], selected
                       fill={isSelected ? '#2563eb' : '#92400e'}
                       listening={false}
                     />
-                  </>
+                  </React.Fragment>
                 );
               })}
             </Layer>
