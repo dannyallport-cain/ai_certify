@@ -973,7 +973,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // ════════════════════════════════════════════════════════════
   newPage();
 
-  sectionHeader('7', 'Observations and Recommendations for Actions to Be Taken');
+  sectionHeader('K', 'OBSERVATIONS');
 
   // Introductory text
   italicNote("Referring to the attached schedules of inspection and test results, and subject to the limitations specified on page 1 of this report under 'Extent of the Installation and Limitations of Inspection and Testing':");
@@ -1143,7 +1143,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   y += 1;
 
   // Section 11 – Supply Characteristics and Earthing Arrangements
-  sectionHeader('11', 'Supply Characteristics and Earthing Arrangements');
+  sectionHeader('I', 'Supply Characteristics and Earthing Arrangements');
 
   // ── Three-panel side-by-side layout matching original report ──
   {
@@ -1222,7 +1222,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       { lbl: 'Nominal voltage(s): Uo:', val: `${ss(fd.nominalVoltageUo) || '230'} V` },
       { lbl: 'Nominal frequency, f:', val: `${ss(fd.nominalFrequency) || '50'} Hz` },
       { lbl: 'Prospective fault current, Ipf:', val: ss(fd.prospectiveFaultCurrent) ? `${ss(fd.prospectiveFaultCurrent)} kA` : 'N/A' },
-      { lbl: 'External earth fault loop impedance, Ze:', val: ss(fd.externalEarthFaultLoopImpedance) ? `${ss(fd.externalEarthFaultLoopImpedance)} \u03A9` : 'N/A' },
+      { lbl: 'External earth fault loop impedance, Ze:', val: ss(fd.externalEarthFaultLoopImpedance) ? `${ss(fd.externalEarthFaultLoopImpedance)} ohms` : 'N/A' },
     ];
 
     let py = panelY + 8;
@@ -1273,7 +1273,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   newPage();
 
   // Section 12 – Particulars of Installation Referred to in the Report
-  sectionHeader('12', 'Particulars of Installation Referred to in the Report');
+  sectionHeader('J', 'Particulars of Installation Referred to in the Report');
 
   // ── Row 1: Means of Earthing (full width) + electrode details ──
   {
@@ -1311,7 +1311,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
     const electrodeRows = [
       { lbl: 'Type:', val: ss(fd.earthElectrodeType) || 'N/A' },
-      { lbl: 'Resistance to Earth:', val: ss(fd.earthElectrodeResistance) ? `${ss(fd.earthElectrodeResistance)} \u03A9` : 'N/A' },
+      { lbl: 'Resistance to Earth:', val: ss(fd.earthElectrodeResistance) ? `${ss(fd.earthElectrodeResistance)} ohms` : 'N/A' },
       { lbl: 'Location:', val: ss(fd.earthElectrodeLocation) || 'N/A' },
     ];
     let ey = py + 7;
