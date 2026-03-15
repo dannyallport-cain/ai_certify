@@ -1,0 +1,90 @@
+name: CI
+
+on:
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main, blackboxai/**]
+
+concurrency:
+    group: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    quality-and-build:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10.8.1
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Type check
+              run: pnpm exec tsc --noEmit
+
+            - name: Build
+              run: pnpm build
+              env:
+                  POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/ai_certify_ci
+                  AUTH_SECRET: ci-secret
+                  AUTH_URL: http://localhost:4000
+                  STRIPE_SECRET_KEY: sk_test_placeholder
+                  STRIPE_WEBHOOK_SECRET: whsec_placeholder
+                  NEXTAUTH_SECRET: ci-nextauth-secret
+                  NEXTAUTH_URL: http://localhost:4000
+
+    migration-smoke:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+
+        services:
+            postgres:
+                image: postgres:16
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: ai_certify_ci
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U postgres -d ai_certify_ci"
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 10
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 10.8.1
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Run DB migrations
+              run: pnpm db:migrate
+              env:
+                  POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/ai_certify_ci
