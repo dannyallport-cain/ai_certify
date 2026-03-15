@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { certificateTemplates } from '@/lib/db/schema';
-import { getUser } from '@/lib/db/queries';
+import { isAdminRole } from '@/lib/auth/roles';
+import { getTeamForUser, getUser } from '@/lib/db/queries';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -54,8 +55,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin
-    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
+    if (!isAdminRole(user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -90,17 +90,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
+    if (!isAdminRole(user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
     const validatedData = createTemplateSchema.parse(body);
+    const team = await getTeamForUser();
 
     const newTemplate = await db
       .insert(certificateTemplates)
       .values({
-        teamId: user.teamId || 1, // Fallback to team 1 for admin templates
+        teamId: team?.id ?? 1,
         name: validatedData.name,
         certificateType: validatedData.certificateType,
         description: validatedData.description || null,

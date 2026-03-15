@@ -1,6 +1,14 @@
 // filepath: app/api/admin/users/route.ts
 import { NextResponse } from 'next/server';
 import { getAllUsers, createUser } from '@/lib/db/queries';
+import { USER_ROLES } from '@/lib/auth/roles';
+import { z } from 'zod';
+
+const createUserSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('A valid email is required'),
+  role: z.enum(USER_ROLES),
+});
 
 export async function GET() {
   try {
@@ -14,14 +22,15 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { name, email, role } = await request.json();
-    if (!name || !email || !role) {
-      return NextResponse.json({ error: 'Name, email, and role required' }, { status: 400 });
-    }
+    const body = await request.json();
+    const { name, email, role } = createUserSchema.parse(body);
     const user = await createUser({ name, email, role });
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
     console.error('Error creating user:', error);
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Invalid user data', details: error.flatten() }, { status: 400 });
+    }
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

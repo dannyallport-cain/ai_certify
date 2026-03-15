@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
+import { isAdminRole } from '@/lib/auth/roles';
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -93,7 +94,7 @@ function UserMenu() {
             <span>ServiceM8</span>
           </Link>
         </DropdownMenuItem>
-        {(user.role === 'supersystemAdmin' || user.role === 'systemAdmin' || user.role === 'owner') && (
+        {isAdminRole(user.role) && (
           <DropdownMenuItem className="cursor-pointer">
             <Link href="/admin" className="flex w-full items-center">
               <Shield className="mr-2 h-4 w-4" />
@@ -150,7 +151,7 @@ function Header() {
           >
             Customers
           </Link>
-          {(user?.role === 'supersystemAdmin' || user?.role === 'systemAdmin' || user?.role === 'owner') && (
+          {isAdminRole(user?.role) && (
             <Link
               href="/admin"
               className="text-sm font-medium text-gray-700 hover:text-gray-900"

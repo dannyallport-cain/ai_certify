@@ -1,17 +1,34 @@
 import { stripe } from '../payments/stripe';
 import { db } from './drizzle';
-import { 
-  users, 
-  teams, 
-  teamMembers, 
-  activityLogs, 
-  customers, 
-  certificates, 
+import {
+  users,
+  teams,
+  teamMembers,
+  activityLogs,
+  customers,
+  certificates,
   certificateItems,
-  invitations 
+  invitations
 } from './schema';
 import { hashPassword } from '@/lib/auth/session';
+import { type UserRole } from '@/lib/auth/roles';
 import { eq } from 'drizzle-orm';
+
+import { sql } from 'drizzle-orm';
+
+async function resetSequences() {
+  console.log('Resetting sequences...');
+  const tables = ['users', 'teams', 'customers', 'certificates', 'certificate_items', 'activity_logs', 'invitations'];
+
+  for (const table of tables) {
+    try {
+      await db.execute(sql.raw(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), coalesce(max(id),0) + 1, false) FROM ${table};`));
+    } catch (error) {
+      console.warn(`Failed to reset sequence for ${table}:`, error);
+    }
+  }
+  console.log('Sequences reset.');
+}
 
 async function createStripeProducts() {
   // Skip Stripe setup if no valid API key is provided
@@ -76,10 +93,15 @@ async function createStripeProducts() {
 }
 
 async function createSampleUsers() {
-  const sampleUsers = [
+  const sampleUsers: Array<{
+    email: string;
+    name: string;
+    role: UserRole;
+    password: string;
+  }> = [
     { email: 'owner@test.com', name: 'John Owner', role: 'owner', password: 'admin123' },
-    { email: 'manager@test.com', name: 'Sarah Manager', role: 'owner', password: 'manager123' },
-    { email: 'inspector@test.com', name: 'Mike Inspector', role: 'member', password: 'inspector123' },
+    { email: 'manager@test.com', name: 'Sarah Manager', role: 'support', password: 'manager123' },
+    { email: 'inspector@test.com', name: 'Mike Inspector', role: 'client', password: 'inspector123' },
     { email: 'member@test.com', name: 'Lisa Member', role: 'member', password: 'member123' }
   ];
 
@@ -87,7 +109,7 @@ async function createSampleUsers() {
 
   for (const userData of sampleUsers) {
     const existingUser = await db.select().from(users).where(eq(users.email, userData.email)).limit(1);
-    
+
     if (existingUser.length === 0) {
       const [newUser] = await db
         .insert(users)
@@ -98,7 +120,7 @@ async function createSampleUsers() {
           role: userData.role,
         })
         .returning();
-      
+
       createdUsers.push(newUser);
       console.log(`Created user: ${userData.email}`);
     } else {
@@ -112,17 +134,17 @@ async function createSampleUsers() {
 
 async function createSampleTeams(users: any[]) {
   const sampleTeams = [
-    { 
+    {
       name: 'Fire Safety Pro Ltd',
       planName: 'Professional',
       subscriptionStatus: 'active'
     },
-    { 
+    {
       name: 'Safe Buildings Co',
       planName: 'Starter',
       subscriptionStatus: 'active'
     },
-    { 
+    {
       name: 'City Inspectors Group',
       planName: 'Professional',
       subscriptionStatus: 'trial'
@@ -132,13 +154,20 @@ async function createSampleTeams(users: any[]) {
   const createdTeams = [];
 
   for (const teamData of sampleTeams) {
-    const [team] = await db
-      .insert(teams)
-      .values(teamData)
-      .returning();
-    
-    createdTeams.push(team);
-    console.log(`Created team: ${teamData.name}`);
+    const existingTeam = await db.select().from(teams).where(eq(teams.name, teamData.name)).limit(1);
+
+    if (existingTeam.length === 0) {
+      const [team] = await db
+        .insert(teams)
+        .values(teamData)
+        .returning();
+
+      createdTeams.push(team);
+      console.log(`Created team: ${teamData.name}`);
+    } else {
+      createdTeams.push(existingTeam[0]);
+      console.log(`Team ${teamData.name} already exists`);
+    }
   }
 
   return createdTeams;
@@ -149,15 +178,16 @@ async function createTeamMembers(users: any[], teams: any[]) {
     { teamId: teams[0].id, userId: users[0].id, role: 'owner' },
     { teamId: teams[0].id, userId: users[1].id, role: 'manager' },
     { teamId: teams[0].id, userId: users[2].id, role: 'inspector' },
-    { teamId: teams[1].id, userId: users[1].id, role: 'owner' },
-    { teamId: teams[2].id, userId: users[2].id, role: 'manager' }
+    { teamId: teams[0].id, userId: users[1].id, role: 'owner' },
+    { teamId: teams[2].id, userId: users[2].id, role: 'manager' },
+    { teamId: teams[0].id, userId: users[3].id, role: 'member' }
   ];
 
   for (const membership of membershipData) {
     await db
       .insert(teamMembers)
       .values(membership);
-    
+
     console.log(`Added user ${membership.userId} to team ${membership.teamId} as ${membership.role}`);
   }
 }
@@ -200,7 +230,7 @@ async function createSampleCustomers(teams: any[]) {
       .insert(customers)
       .values(customer)
       .returning();
-    
+
     createdCustomers.push(newCustomer);
     console.log(`Created customer: ${customer.name}`);
   }
@@ -321,7 +351,7 @@ async function createSampleCertificates(teams: any[], customers: any[]) {
       .insert(certificates)
       .values(cert)
       .returning();
-    
+
     createdCertificates.push(newCert);
     console.log(`Created certificate: ${cert.certificateNumber}`);
   }
@@ -474,7 +504,7 @@ async function createSampleCertificateItems(certificates: any[]) {
     await db
       .insert(certificateItems)
       .values(item);
-    
+
     console.log(`Created certificate item: ${item.itemType} at ${item.location}`);
   }
 }
@@ -505,7 +535,7 @@ async function createSampleActivityLogs(teams: any[], users: any[]) {
     await db
       .insert(activityLogs)
       .values(activity);
-    
+
     console.log(`Created activity log: ${activity.action}`);
   }
 }
@@ -532,7 +562,7 @@ async function createSampleInvitations(teams: any[], users: any[]) {
     await db
       .insert(invitations)
       .values(invitation);
-    
+
     console.log(`Created invitation for: ${invitation.email}`);
   }
 }
@@ -540,29 +570,31 @@ async function createSampleInvitations(teams: any[], users: any[]) {
 async function seed() {
   console.log('Starting seed process...');
 
+  await resetSequences();
+
   await createStripeProducts();
-  
+
   console.log('Creating users...');
   const users = await createSampleUsers();
-  
+
   console.log('Creating teams...');
   const teams = await createSampleTeams(users);
-  
+
   console.log('Creating team members...');
   await createTeamMembers(users, teams);
-  
+
   console.log('Creating customers...');
   const customers = await createSampleCustomers(teams);
-  
+
   console.log('Creating certificates...');
   const certificates = await createSampleCertificates(teams, customers);
-  
+
   console.log('Creating certificate items...');
   await createSampleCertificateItems(certificates);
-  
+
   console.log('Creating activity logs...');
   await createSampleActivityLogs(teams, users);
-  
+
   console.log('Creating invitations...');
   try {
     await createSampleInvitations(teams, users);

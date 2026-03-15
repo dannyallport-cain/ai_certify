@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../../layout';
+import { USER_ROLES, USER_ROLE_LABELS, type UserRole } from '@/lib/auth/roles';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ export default function NewUserPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('member');
+  const [role, setRole] = useState<UserRole>('member');
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,11 +46,19 @@ export default function NewUserPage() {
         </div>
         <div>
           <Label htmlFor="role">Role</Label>
-          <select id="role" aria-label="Role" value={role} onChange={(e) => setRole(e.target.value)} required className="block w-full mt-1 border rounded-md px-3 py-2">
-            <option value="member">Member</option>
-            <option value="manager">Manager</option>
-            <option value="inspector">Inspector</option>
-            <option value="owner">Owner</option>
+          <select
+            id="role"
+            aria-label="Role"
+            value={role}
+            onChange={(e) => setRole(e.target.value as UserRole)}
+            required
+            className="block w-full mt-1 border rounded-md px-3 py-2"
+          >
+            {USER_ROLES.map((roleOption) => (
+              <option key={roleOption} value={roleOption}>
+                {USER_ROLE_LABELS[roleOption]}
+              </option>
+            ))}
           </select>
         </div>
         <div className="flex space-x-2">

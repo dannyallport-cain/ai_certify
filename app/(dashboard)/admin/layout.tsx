@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { isAdminRole } from '@/lib/auth/roles';
 import { 
   Shield, 
   Users, 
@@ -32,7 +33,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       const response = await fetch('/api/auth/user');
       if (response.ok) {
         const userData = await response.json();
-        if (userData.role === 'supersystemAdmin' || userData.role === 'systemAdmin' || userData.role === 'owner') {
+        if (isAdminRole(userData.role)) {
           setUser(userData);
         } else {
           router.push('/dashboard');
