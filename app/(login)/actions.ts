@@ -17,6 +17,7 @@ import {
   invitations
 } from '@/lib/db/schema';
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
+import { isAdminRole } from '@/lib/auth/roles';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createCheckoutSession } from '@/lib/payments/stripe';
@@ -98,7 +99,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   }
 
   // Role-based redirect
-  if (foundUser.role === 'supersystemAdmin' || foundUser.role === 'systemAdmin' || foundUser.role === 'owner') {
+  if (isAdminRole(foundUser.role)) {
     redirect('/admin');
   } else {
     redirect('/dashboard');

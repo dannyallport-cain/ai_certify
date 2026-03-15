@@ -3,6 +3,7 @@ import { db } from '@/lib/db/drizzle';
 import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
+import { isAdminRole } from './roles';
 
 export async function requireAdmin() {
   const session = await getSession();
@@ -17,7 +18,7 @@ export async function requireAdmin() {
     .where(eq(users.id, session.user.id))
     .limit(1);
 
-  if (!user || (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner')) {
+  if (!user || !isAdminRole(user.role)) {
     redirect('/dashboard');
   }
 
@@ -38,7 +39,7 @@ export async function isAdmin(): Promise<boolean> {
       .where(eq(users.id, session.user.id))
       .limit(1);
 
-    return user && (user.role === 'supersystemAdmin' || user.role === 'systemAdmin' || user.role === 'owner');
+    return !!user && isAdminRole(user.role);
   } catch {
     return false;
   }

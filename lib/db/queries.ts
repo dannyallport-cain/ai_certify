@@ -3,6 +3,7 @@ import { db } from './drizzle';
 import { activityLogs, teamMembers, teams, users, customers, certificates, certificateItems, ActivityType } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
+import { type UserRole } from '@/lib/auth/roles';
 import { NewActivityLog } from './schema';
 
 export async function getUser() {
@@ -310,7 +311,7 @@ export async function getAllActivityLogs() {
 /**
  * Create a new user
  */
-export async function createUser(data: { name: string; email: string; role: string; }) {
+export async function createUser(data: { name: string; email: string; role: UserRole; }) {
   const [user] = await db
     .insert(users)
     .values({
@@ -326,7 +327,7 @@ export async function createUser(data: { name: string; email: string; role: stri
 /**
  * Update an existing user
  */
-export async function updateUserById(userId: number, data: { name?: string; role?: string; }) {
+export async function updateUserById(userId: number, data: { name?: string; role?: UserRole; }) {
   const [user] = await db
     .update(users)
     .set({

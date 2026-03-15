@@ -1,5 +1,6 @@
 import {
   pgTable,
+  pgEnum,
   serial,
   varchar,
   text,
@@ -10,13 +11,16 @@ import {
   date,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
+import { USER_ROLES } from '@/lib/auth/roles';
+
+export const userRoleEnum = pgEnum('UserRole', USER_ROLES);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 100 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: text('password_hash').notNull(),
-  role: varchar('role', { length: 20 }).notNull().default('member'),
+  role: userRoleEnum('role').notNull().default('member'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
@@ -98,7 +102,7 @@ export const certificates = pgTable('certificates', {
   certificateType: varchar('certificate_type', { length: 50 }).notNull(), // BS5839-1, BS5839-6, BS5266, FIRE_EXTINGUISHER, DRY_RISER
   certificateNumber: varchar('certificate_number', { length: 100 }).notNull(),
   status: varchar('status', { length: 20 }).notNull().default('draft'), // draft, completed, issued
-  
+
   // Common fields
   siteName: varchar('site_name', { length: 255 }),
   siteAddress: text('site_address'),
@@ -106,10 +110,10 @@ export const certificates = pgTable('certificates', {
   nextInspectionDate: date('next_inspection_date'),
   inspectorName: varchar('inspector_name', { length: 255 }),
   inspectorSignature: text('inspector_signature'),
-  
+
   // Form data - stored as JSON for flexibility
   formData: json('form_data'),
-  
+
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -138,14 +142,14 @@ export const certificateTemplates = pgTable('certificate_templates', {
   certificateType: varchar('certificate_type', { length: 50 }).notNull(), // BS5839-1, BS5839-6, BS5266, FIRE_EXTINGUISHER, DRY_RISER
   isDefault: boolean('is_default').default(false),
   isActive: boolean('is_active').default(true),
-  
+
   // Template design configuration stored as JSON
   template: json('template').notNull(), // Contains sections, styles, layout configuration
-  
+
   // Metadata
   description: text('description'),
   version: integer('version').default(1),
-  
+
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   createdBy: integer('created_by')
@@ -220,6 +224,14 @@ export const reportDisseminatorTemplates = pgTable('report_disseminator_template
   sourcePdfBase64: text('source_pdf_base64').notNull(),
   fields: json('fields').notNull(),
   wizardData: json('wizard_data').notNull(),
+  publishedAt: timestamp('published_at'),
+  archivedAt: timestamp('archived_at'),
+  parentTemplateId: integer('parent_template_id').references((): any => reportDisseminatorTemplates.id),
+  finalArtifactName: varchar('final_artifact_name', { length: 255 }),
+  finalArtifactMimeType: varchar('final_artifact_mime_type', { length: 100 }),
+  finalArtifactBase64: text('final_artifact_base64'),
+  storageProvider: varchar('storage_provider', { length: 50 }),
+  storageKey: text('storage_key'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

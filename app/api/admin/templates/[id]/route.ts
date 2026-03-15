@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { certificateTemplates } from '@/lib/db/schema';
+import { isAdminRole } from '@/lib/auth/roles';
 import { getUser } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -60,7 +61,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
+    if (!isAdminRole(user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -99,7 +100,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
+    if (!isAdminRole(user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -135,7 +136,7 @@ export async function PUT(
     if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
     if (validatedData.template !== undefined) {
       updateData.template = validatedData.template;
-      updateData.version = existingTemplate[0].version + 1;
+      updateData.version = (existingTemplate[0].version ?? 0) + 1;
     }
 
     const updatedTemplate = await db
@@ -170,7 +171,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (user.role !== 'supersystemAdmin' && user.role !== 'systemAdmin' && user.role !== 'owner') {
+    if (!isAdminRole(user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

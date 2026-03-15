@@ -53,7 +53,7 @@ export const reportFieldSchema = z.object({
 export const reportDisseminatorTemplateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  status: z.enum(['draft', 'review', 'published']).default('draft'),
+  status: z.enum(['draft', 'review', 'published', 'archived']).default('draft'),
   fields: z.array(reportFieldSchema).default([]),
   wizardData: z
     .object({

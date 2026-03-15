@@ -1,5 +1,6 @@
 import { db } from '../lib/db/drizzle';
 import { users, teams, teamMembers } from '../lib/db/schema';
+import { type UserRole } from '../lib/auth/roles';
 import { hashPassword } from '../lib/auth/session';
 import { eq } from 'drizzle-orm';
 
@@ -7,7 +8,7 @@ async function addSysAdmin() {
   const email = 'sysadmin@riskassessorpro.com';
   const name = 'System Admin';
   const password = 'Verify123!!!';
-  const role = 'sysadmin';
+  const role: UserRole = 'systemAdmin';
 
   // 1. Ensure System team exists
   const systemTeamName = 'System';
@@ -45,7 +46,7 @@ async function addSysAdmin() {
     await db.insert(teamMembers).values({
       userId: sysadminUser.id,
       teamId: systemTeam.id,
-      role: 'sysadmin',
+      role: 'systemAdmin',
     });
     console.log('Sysadmin added to System team.');
   } else {
