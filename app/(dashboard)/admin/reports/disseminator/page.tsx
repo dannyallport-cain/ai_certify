@@ -87,6 +87,9 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
   { value: 'linked_text', label: 'Related section text' },
 ];
 
+const AUTO_OPTION_RESEARCH_LIMIT = 8;
+const OPTION_FIELD_PATTERN = /\b(type|class|classification|category|method|code|rating|phase|arrangement|supply|system|scheme|grade|status)\b/i;
+
 function PdfDocumentPreview({
   pdfBase64,
   fields,
@@ -821,6 +824,42 @@ export default function ReportDisseminatorPage() {
         return;
       }
 
+      const autoResearchCandidates = allFields
+        .filter((field) => shouldAutoResearchOptions(field))
+        .slice(0, AUTO_OPTION_RESEARCH_LIMIT);
+
+      if (autoResearchCandidates.length > 0) {
+        toast.info(
+          `Researching online option lists for ${autoResearchCandidates.length} extracted field${autoResearchCandidates.length === 1 ? '' : 's'}...`,
+        );
+
+        const enrichedFields = [...allFields];
+        let researchedCount = 0;
+
+        for (const candidate of autoResearchCandidates) {
+          try {
+            const result = await researchOnlineOptionsForField(candidate);
+            if (!result) continue;
+
+            const index = enrichedFields.findIndex((field) => field.id === candidate.id);
+            if (index === -1) continue;
+
+            enrichedFields[index] = {
+              ...enrichedFields[index],
+              ...result.patch,
+            };
+            researchedCount += 1;
+          } catch (error) {
+            console.warn(`Online option research skipped for ${candidate.label}:`, error);
+          }
+        }
+
+        if (researchedCount > 0) {
+          allFields = enrichedFields;
+          methods.push(`Online options (${researchedCount})`);
+        }
+      }
+
       // Save all extracted fields
       console.log('🔵 ABOUT TO SAVE - Making PUT request...');
       const updatedTemplate = { ...selected, fields: [...selected.fields, ...allFields] };
@@ -919,52 +958,15 @@ export default function ReportDisseminatorPage() {
 
   const searchOnlineOptions = async (field: ReportField) => {
     if (!selected) return;
-    if (!field.label.trim()) {
-      toast.error('Field label is required before searching online options');
-      return;
-    }
-
     setSearchingFieldId(field.id);
     try {
-      const res = await fetch('/api/admin/report-disseminator/option-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          label: field.label,
-          fieldType: field.fieldType,
-          context: `${selected.name} | ${selected.sourceFileName}`,
-        }),
-      });
-
-      const payload = await res.json();
-      if (!res.ok) {
-        throw new Error(payload?.error || 'Failed to research option list');
-      }
-
-      if (!Array.isArray(payload.options) || payload.options.length === 0) {
-        toast.info(payload.notes || `No strong online option list found for "${field.label}"`);
+      const result = await researchOnlineOptionsForField(field, { notifyNoResults: true });
+      if (!result) {
         return;
       }
-
-      const patch: Partial<ReportField> = {
-        label: payload.normalizedLabel || field.label,
-      };
-
-      if (payload.suggestedFieldType === 'state_enum') {
-        patch.fieldType = 'state_enum';
-        patch.stateOptions = [...DEFAULT_STATE_OPTIONS];
-        patch.dropdownOptions = undefined;
-      } else {
-        patch.fieldType = 'dropdown';
-        patch.dropdownOptions = payload.options;
-        patch.stateOptions = undefined;
-      }
-
-      updateField(field.id, patch);
-
-      const sourceCount = Array.isArray(payload.sources) ? payload.sources.length : 0;
+      updateField(field.id, result.patch);
       toast.success(
-        `Applied ${payload.options.length} researched option${payload.options.length === 1 ? '' : 's'}${sourceCount ? ` from ${sourceCount} source${sourceCount === 1 ? '' : 's'}` : ''}`,
+        `Applied ${result.optionCount} researched option${result.optionCount === 1 ? '' : 's'}${result.sourceCount ? ` from ${result.sourceCount} source${result.sourceCount === 1 ? '' : 's'}` : ''}`,
       );
     } catch (error: any) {
       console.error(error);
@@ -972,6 +974,68 @@ export default function ReportDisseminatorPage() {
     } finally {
       setSearchingFieldId((current) => (current === field.id ? null : current));
     }
+  };
+
+  const shouldAutoResearchOptions = (field: ReportField) => {
+    if (field.dropdownOptions && field.dropdownOptions.length > 0) return false;
+    if (field.fieldType === 'dropdown') return true;
+    if (field.fieldType === 'text' && OPTION_FIELD_PATTERN.test(field.label)) return true;
+    return false;
+  };
+
+  const researchOnlineOptionsForField = async (
+    field: ReportField,
+    options: { notifyNoResults?: boolean } = {}
+  ): Promise<{ patch: Partial<ReportField>; optionCount: number; sourceCount: number } | null> => {
+    if (!selected) return null;
+    if (!field.label.trim()) {
+      if (options.notifyNoResults) {
+        toast.error('Field label is required before searching online options');
+      }
+      return null;
+    }
+
+    const res = await fetch('/api/admin/report-disseminator/option-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        label: field.label,
+        fieldType: field.fieldType,
+        context: `${selected.name} | ${selected.sourceFileName}`,
+      }),
+    });
+
+    const payload = await res.json();
+    if (!res.ok) {
+      throw new Error(payload?.error || 'Failed to research option list');
+    }
+
+    if (!Array.isArray(payload.options) || payload.options.length === 0) {
+      if (options.notifyNoResults) {
+        toast.info(payload.notes || `No strong online option list found for "${field.label}"`);
+      }
+      return null;
+    }
+
+    const patch: Partial<ReportField> = {
+      label: payload.normalizedLabel || field.label,
+    };
+
+    if (payload.suggestedFieldType === 'state_enum') {
+      patch.fieldType = 'state_enum';
+      patch.stateOptions = [...DEFAULT_STATE_OPTIONS];
+      patch.dropdownOptions = undefined;
+    } else {
+      patch.fieldType = 'dropdown';
+      patch.dropdownOptions = payload.options;
+      patch.stateOptions = undefined;
+    }
+
+    return {
+      patch,
+      optionCount: payload.options.length,
+      sourceCount: Array.isArray(payload.sources) ? payload.sources.length : 0,
+    };
   };
 
   const saveTemplate = async () => {
