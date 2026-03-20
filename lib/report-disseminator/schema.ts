@@ -65,6 +65,7 @@ export const reportDisseminatorTemplateSchema = z.object({
       currentStep: z.number().int().min(1).default(1),
       notes: z.string().optional(),
       aiSuggestionsEnabled: z.boolean().default(true),
+      previewValues: z.record(z.string()).optional(),
     })
     .default({ currentStep: 1, aiSuggestionsEnabled: true }),
 });
