@@ -62,9 +62,6 @@ type DisseminatorTemplate = {
     currentStep?: number;
     notes?: string;
     aiSuggestionsEnabled?: boolean;
-    finalArtifactName?: string;
-    finalArtifactMimeType?: string;
-    finalArtifactBase64?: string;
   };
 };
 
@@ -76,6 +73,89 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
   { value: 'numeric', label: 'Numeric value' },
   { value: 'linked_text', label: 'Related section text' },
 ];
+
+function PdfDocumentPreview({
+  pdfBase64,
+  fields,
+  selectedId,
+  onSelectField,
+}: {
+  pdfBase64?: string;
+  fields: ReportField[];
+  selectedId: string | null;
+  onSelectField: (id: string | null) => void;
+}) {
+  const [pageCount, setPageCount] = useState(0);
+
+  useEffect(() => {
+    if (!pdfBase64) {
+      setPageCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+        const base64Data = pdfBase64.replace(/^data:[^;]+;base64,/, '');
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+        if (!cancelled) {
+          setPageCount(pdf.numPages || 1);
+        }
+      } catch (error) {
+        console.error('Failed to load PDF page count', error);
+        if (!cancelled) {
+          setPageCount(0);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfBase64]);
+
+  if (!pdfBase64) {
+    return <p className="text-sm text-muted-foreground">No PDF preview available (base64 not stored).</p>;
+  }
+
+  if (pageCount === 0) {
+    return <p className="text-sm text-muted-foreground">Loading PDF preview…</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: pageCount }, (_, index) => {
+        const pageNumber = index + 1;
+        return (
+          <div key={pageNumber} className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">
+              Page {pageNumber} of {pageCount}
+            </p>
+            <PdfPageCanvas
+              pdfBase64={pdfBase64}
+              pageNumber={pageNumber}
+              fields={fields
+                .filter((field) => field.page === pageNumber)
+                .map((field) => ({ id: field.id, label: field.label, boundingBox: field.boundingBox || null }))}
+              selectedId={selectedId}
+              onSelectField={onSelectField}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function SortableFieldRow({ field, onUpdate, onAiSuggest }: { field: ReportField; onUpdate: (patch: Partial<ReportField>) => void; onAiSuggest: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
@@ -261,8 +341,9 @@ export default function ReportDisseminatorPage() {
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
   const [extracting, setExtracting] = useState(false);
-  const [uploadingFinalArtifact, setUploadingFinalArtifact] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveTemplateName, setSaveTemplateName] = useState('');
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -681,6 +762,10 @@ export default function ReportDisseminatorPage() {
 
   const saveTemplate = async () => {
     if (!selected) return;
+    if (!saveTemplateName.trim()) {
+      toast.error('Template name is required');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -688,11 +773,11 @@ export default function ReportDisseminatorPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          intent: 'save_as',
           fields: selected.fields,
           wizardData: selected.wizardData,
-          status: selected.status,
           description: selected.description || '',
-          name: selected.name,
+          name: saveTemplateName.trim(),
         }),
       });
 
@@ -701,48 +786,16 @@ export default function ReportDisseminatorPage() {
         throw new Error(payload?.error || 'Failed to save template');
       }
 
-      setSelected(payload);
-      toast.success('Template draft saved');
+      setSaveDialogOpen(false);
+      setSaveTemplateName('');
+      toast.success('Template saved');
       await loadTemplates();
+      setSelectedId(payload.id);
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || 'Failed to save template');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const uploadFinalArtifact = async (uploadedFile: File | null) => {
-    if (!selected || !uploadedFile) return;
-    if (uploadedFile.type !== 'application/pdf') {
-      toast.error('Final artifact must be a PDF');
-      return;
-    }
-
-    setUploadingFinalArtifact(true);
-    try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || ''));
-        reader.onerror = () => reject(new Error('Could not read final artifact file'));
-        reader.readAsDataURL(uploadedFile);
-      });
-      const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '');
-      setSelected({
-        ...selected,
-        wizardData: {
-          ...selected.wizardData,
-          finalArtifactName: uploadedFile.name,
-          finalArtifactMimeType: uploadedFile.type,
-          finalArtifactBase64: base64,
-        },
-      });
-      toast.success('Final artifact attached. Click Save & Publish State to persist.');
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to process final artifact file');
-    } finally {
-      setUploadingFinalArtifact(false);
     }
   };
 
@@ -905,15 +958,11 @@ export default function ReportDisseminatorPage() {
                     </TabsTrigger>
                     <TabsTrigger value="preview-origin">
                       <Eye className="w-4 h-4 mr-2" />
-                      Preview Origin
+                      Preview Source
                     </TabsTrigger>
-                    <TabsTrigger value="preview-new-version">
+                    <TabsTrigger value="preview-template">
                       <Eye className="w-4 h-4 mr-2" />
-                      Preview New Version
-                    </TabsTrigger>
-                    <TabsTrigger value="compare">
-                      <Eye className="w-4 h-4 mr-2" />
-                      Compare
+                      Preview Template
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="fields" className="space-y-3 mt-4">
@@ -934,66 +983,24 @@ export default function ReportDisseminatorPage() {
                     </DndContext>
                   </TabsContent>
                   <TabsContent value="preview-origin" className="mt-4">
-                    {selected.sourcePdfBase64 ? (
-                      <PdfPageCanvas
-                        pdfBase64={selected.sourcePdfBase64}
-                        pageNumber={1}
-                        fields={selected.fields.map((f) => ({ id: f.id, label: f.label, boundingBox: f.boundingBox || null }))}
-                        selectedId={selectedFieldId}
-                        onSelectField={setSelectedFieldId}
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No PDF preview available (base64 not stored).</p>
-                    )}
+                    <PdfDocumentPreview
+                      pdfBase64={selected.sourcePdfBase64}
+                      fields={selected.fields}
+                      selectedId={selectedFieldId}
+                      onSelectField={setSelectedFieldId}
+                    />
                   </TabsContent>
-                  <TabsContent value="preview-new-version" className="mt-4">
-                    {selected.wizardData?.finalArtifactBase64 ? (
-                      <PdfPageCanvas
-                        pdfBase64={selected.wizardData.finalArtifactBase64}
-                        pageNumber={1}
-                        fields={selected.fields.map((f) => ({ id: f.id, label: f.label, boundingBox: f.boundingBox || null }))}
-                        selectedId={selectedFieldId}
-                        onSelectField={setSelectedFieldId}
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No final artifact uploaded yet. Go to Step 4 and upload the final template PDF first.
-                      </p>
-                    )}
-                  </TabsContent>
-                  <TabsContent value="compare" className="mt-4">
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">Origin</p>
-                        {selected.sourcePdfBase64 ? (
-                          <PdfPageCanvas
-                            pdfBase64={selected.sourcePdfBase64}
-                            pageNumber={1}
-                            fields={selected.fields.map((f) => ({ id: f.id, label: f.label, boundingBox: f.boundingBox || null }))}
-                            selectedId={selectedFieldId}
-                            onSelectField={setSelectedFieldId}
-                          />
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No original PDF available.</p>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium">New Version</p>
-                        {selected.wizardData?.finalArtifactBase64 ? (
-                          <PdfPageCanvas
-                            pdfBase64={selected.wizardData.finalArtifactBase64}
-                            pageNumber={1}
-                            fields={selected.fields.map((f) => ({ id: f.id, label: f.label, boundingBox: f.boundingBox || null }))}
-                            selectedId={selectedFieldId}
-                            onSelectField={setSelectedFieldId}
-                          />
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            No final artifact uploaded yet. Go to Step 4 and upload the final template PDF first.
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                  <TabsContent value="preview-template" className="mt-4 space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      No second PDF upload is required. The generated template is derived from the uploaded source PDF plus
+                      the current field and layout metadata.
+                    </p>
+                    <PdfDocumentPreview
+                      pdfBase64={selected.sourcePdfBase64}
+                      fields={selected.fields}
+                      selectedId={selectedFieldId}
+                      onSelectField={setSelectedFieldId}
+                    />
                   </TabsContent>
                 </Tabs>
 
@@ -1011,34 +1018,11 @@ export default function ReportDisseminatorPage() {
 
                 {wizardStep === 4 && (
                   <div className="space-y-3 border rounded-md p-3">
-                    <div>
-                      <Label>Final artifact PDF</Label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Upload the finalized template artifact for this disseminator template.
-                      </p>
-                    </div>
-                    <Input
-                      type="file"
-                      accept="application/pdf"
-                      onChange={(e) => uploadFinalArtifact(e.target.files?.[0] || null)}
-                      disabled={uploadingFinalArtifact}
-                    />
-                    {selected.wizardData?.finalArtifactName && (
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm text-muted-foreground">
-                          Attached: {selected.wizardData.finalArtifactName}
-                        </p>
-                        {selected.wizardData.finalArtifactBase64 && (
-                          <a
-                            className="text-sm underline"
-                            href={`data:${selected.wizardData.finalArtifactMimeType || 'application/pdf'};base64,${selected.wizardData.finalArtifactBase64}`}
-                            download={selected.wizardData.finalArtifactName}
-                          >
-                            Download attached artifact
-                          </a>
-                        )}
-                      </div>
-                    )}
+                    <Label>Review & publish</Label>
+                    <p className="text-sm text-muted-foreground">
+                      No final template upload is needed here. Publishing uses the original uploaded PDF together with the
+                      extracted fields and the layout metadata you have configured.
+                    </p>
                   </div>
                 )}
 
@@ -1052,9 +1036,16 @@ export default function ReportDisseminatorPage() {
                 )}
 
                 <div className="flex justify-end">
-                  <Button onClick={saveTemplate} disabled={saving}>
+                  <Button
+                    onClick={() => {
+                      if (!selected) return;
+                      setSaveTemplateName(selected.name);
+                      setSaveDialogOpen(true);
+                    }}
+                    disabled={saving}
+                  >
                     <Save className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving…' : wizardStep === 4 ? 'Save & Publish State' : 'Save Draft'}
+                    {saving ? 'Saving…' : 'Save Template'}
                   </Button>
                 </div>
               </>
@@ -1062,6 +1053,47 @@ export default function ReportDisseminatorPage() {
           </CardContent>
         </Card>
       </div>
+
+      {saveDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg">
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">Save Template</h2>
+              <p className="text-sm text-muted-foreground">
+                Save the current source PDF, extracted fields, and layout metadata as a template entry.
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="save-template-name">Template name</Label>
+              <Input
+                id="save-template-name"
+                value={saveTemplateName}
+                onChange={(e) => setSaveTemplateName(e.target.value)}
+                placeholder="Enter template name"
+                autoFocus
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSaveDialogOpen(false);
+                  setSaveTemplateName('');
+                }}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={saveTemplate} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
