@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Upload, Wand2, Save, Eye, List } from 'lucide-react';
+import { Plus, Upload, Wand2, Save, Eye, List, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -257,7 +257,19 @@ function PdfFormDocumentPreview({
   );
 }
 
-function SortableFieldRow({ field, onUpdate, onAiSuggest }: { field: ReportField; onUpdate: (patch: Partial<ReportField>) => void; onAiSuggest: () => void }) {
+function SortableFieldRow({
+  field,
+  onUpdate,
+  onAiSuggest,
+  onSearchOnlineOptions,
+  searchingOnlineOptions,
+}: {
+  field: ReportField;
+  onUpdate: (patch: Partial<ReportField>) => void;
+  onAiSuggest: () => void;
+  onSearchOnlineOptions: () => void;
+  searchingOnlineOptions: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
 
   const style = {
@@ -320,6 +332,12 @@ function SortableFieldRow({ field, onUpdate, onAiSuggest }: { field: ReportField
           <Wand2 className="w-4 h-4 mr-1" />
           AI Suggest
         </Button>
+        {(field.fieldType === 'dropdown' || field.fieldType === 'text' || field.fieldType === 'state_enum') && (
+          <Button type="button" variant="outline" size="sm" onClick={onSearchOnlineOptions} disabled={searchingOnlineOptions}>
+            <Globe className="w-4 h-4 mr-1" />
+            {searchingOnlineOptions ? 'Searching…' : 'Search Online Options'}
+          </Button>
+        )}
       </div>
 
       {field.fieldType === 'dropdown' && (
@@ -465,6 +483,7 @@ export default function ReportDisseminatorPage() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveTemplateName, setSaveTemplateName] = useState('');
   const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
+  const [searchingFieldId, setSearchingFieldId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -898,6 +917,63 @@ export default function ReportDisseminatorPage() {
     }
   };
 
+  const searchOnlineOptions = async (field: ReportField) => {
+    if (!selected) return;
+    if (!field.label.trim()) {
+      toast.error('Field label is required before searching online options');
+      return;
+    }
+
+    setSearchingFieldId(field.id);
+    try {
+      const res = await fetch('/api/admin/report-disseminator/option-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: field.label,
+          fieldType: field.fieldType,
+          context: `${selected.name} | ${selected.sourceFileName}`,
+        }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.error || 'Failed to research option list');
+      }
+
+      if (!Array.isArray(payload.options) || payload.options.length === 0) {
+        toast.info(payload.notes || `No strong online option list found for "${field.label}"`);
+        return;
+      }
+
+      const patch: Partial<ReportField> = {
+        label: payload.normalizedLabel || field.label,
+      };
+
+      if (payload.suggestedFieldType === 'state_enum') {
+        patch.fieldType = 'state_enum';
+        patch.stateOptions = [...DEFAULT_STATE_OPTIONS];
+        patch.dropdownOptions = undefined;
+      } else {
+        patch.fieldType = 'dropdown';
+        patch.dropdownOptions = payload.options;
+        patch.stateOptions = undefined;
+      }
+
+      updateField(field.id, patch);
+
+      const sourceCount = Array.isArray(payload.sources) ? payload.sources.length : 0;
+      toast.success(
+        `Applied ${payload.options.length} researched option${payload.options.length === 1 ? '' : 's'}${sourceCount ? ` from ${sourceCount} source${sourceCount === 1 ? '' : 's'}` : ''}`,
+      );
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to research option list');
+    } finally {
+      setSearchingFieldId((current) => (current === field.id ? null : current));
+    }
+  };
+
   const saveTemplate = async () => {
     if (!selected) return;
     if (!saveTemplateName.trim()) {
@@ -1182,6 +1258,8 @@ export default function ReportDisseminatorPage() {
                             field={field}
                             onUpdate={(patch) => updateField(field.id, patch)}
                             onAiSuggest={() => applyAiSuggestion(field)}
+                            onSearchOnlineOptions={() => searchOnlineOptions(field)}
+                            searchingOnlineOptions={searchingFieldId === field.id}
                           />
                         ))}
                       </SortableContext>
