@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isAdminRole } from '@/lib/auth/roles';
 import { getUser } from '@/lib/db/queries';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
@@ -15,7 +16,7 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!['supersystemAdmin', 'systemAdmin', 'owner'].includes(user.role ?? '')) {
+  if (!isAdminRole(user.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     if (text.length === 0) {
       return NextResponse.json({ 
-        error: 'No text found. This PDF may be scanned/image-based. Consider using Azure Document Intelligence.',
+        error: 'No text found. This PDF may be scanned/image-based. Consider using AI Gateway analysis.',
         text: '',
         method: 'pdf-parse',
         pageCount 

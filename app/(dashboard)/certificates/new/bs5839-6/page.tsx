@@ -128,7 +128,7 @@ export default function BS5839_6CertificatePage() {
                     <SelectValue placeholder="Select a customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers.map((customer) => (
+                    {customers.map((customer: any) => (
                       <SelectItem key={customer.id} value={customer.id.toString()}>
                         {customer.name}
                       </SelectItem>

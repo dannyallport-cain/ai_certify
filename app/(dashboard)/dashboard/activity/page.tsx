@@ -36,6 +36,7 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.UPDATE_CERTIFICATE]: Edit,
   [ActivityType.DELETE_CERTIFICATE]: Trash2,
   [ActivityType.ISSUE_CERTIFICATE]: Award,
+  [ActivityType.EXPORT_CERTIFICATE]: FileText,
 };
 
 function getRelativeTime(date: Date) {
@@ -88,6 +89,8 @@ function formatAction(action: ActivityType): string {
       return 'You deleted a certificate';
     case ActivityType.ISSUE_CERTIFICATE:
       return 'You issued a certificate';
+    case ActivityType.EXPORT_CERTIFICATE:
+      return 'You exported a certificate';
     default:
       return 'Unknown action occurred';
   }

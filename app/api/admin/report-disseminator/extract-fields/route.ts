@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument } from 'pdf-lib';
+import { isAdminRole } from '@/lib/auth/roles';
 import { getUser } from '@/lib/db/queries';
 
 export const runtime = 'nodejs';
@@ -13,7 +14,7 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!['supersystemAdmin', 'systemAdmin', 'owner'].includes(user.role ?? '')) {
+  if (!isAdminRole(user.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

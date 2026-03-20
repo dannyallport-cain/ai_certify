@@ -82,7 +82,7 @@ export function PdfPageCanvas({ pdfBase64, pageNumber = 1, fields = [], selected
         canvas.height = viewport.height;
         const ctx = canvas.getContext('2d')!;
 
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        await page.render({ canvas: canvas as HTMLCanvasElement, canvasContext: ctx, viewport }).promise;
       } catch (err) {
         console.error('[PdfPageCanvas] render error', err);
       }

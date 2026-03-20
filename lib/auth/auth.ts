@@ -32,16 +32,10 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-      }
+    async jwt({ token }) {
       return token
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string
-      }
+    async session({ session }) {
       return session
     }
   }
