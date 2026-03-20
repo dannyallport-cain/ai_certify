@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument } from 'pdf-lib';
 import { isAdminRole } from '@/lib/auth/roles';
 import { getUser } from '@/lib/db/queries';
+import { analyzeFieldDefinition } from '@/lib/report-disseminator/field-analysis';
 
 export const runtime = 'nodejs';
 
@@ -52,14 +53,21 @@ export async function POST(request: NextRequest) {
   const fields = rawFields.map((f) => {
     const name = f.getName();
     const type = f.constructor.name; // PDFTextField, PDFDropdown, PDFCheckBox, etc.
+    const analysis = analyzeFieldDefinition(name, { fieldTypeHint: mapPdfFieldType(type, name) });
     return {
       id: crypto.randomUUID(),
       page: 1, // pdf-lib doesn't expose page for all widget types easily; default 1
-      label: name,
+      label: analysis.label,
       rawType: type,
-      // Map pdf-lib types to our FieldType slugs
-      fieldType: mapPdfFieldType(type, name),
+      fieldType: analysis.fieldType,
       required: false,
+      plainTextHint: analysis.plainTextHint,
+      dropdownOptions: analysis.dropdownOptions,
+      stateOptions: analysis.stateOptions,
+      addressConfig: analysis.addressConfig,
+      postcodeConfig: analysis.postcodeConfig,
+      phoneConfig: analysis.phoneConfig,
+      numericConfig: analysis.numericConfig,
     };
   });
 
@@ -72,14 +80,11 @@ function mapPdfFieldType(pdfType: string, name: string): string {
   const lower = name.toLowerCase();
   if (pdfType === 'PDFDropdown' || pdfType === 'PDFOptionList') return 'dropdown';
   if (pdfType === 'PDFCheckBox' || pdfType === 'PDFRadioGroup') return 'state_enum';
-  if (lower.includes('address') || lower.includes('postcode')) return 'address';
-  if (
-    lower.includes('number') ||
-    lower.includes('value') ||
-    lower.includes('ohms') ||
-    lower.includes('amps') ||
-    lower.includes('volts')
-  )
-    return 'numeric';
+  if (lower.includes('phone') || lower.includes('telephone') || lower.includes('mobile')) return 'uk_phone';
+  if (lower.includes('postcode') || lower.includes('post code')) return 'postcode';
+  if (lower.includes('address') || lower.includes('location')) return 'address';
+  if (lower.includes('resistance') || lower.includes('impedance') || lower.includes('ohms')) return 'resistance';
+  if (lower.includes('voltage') || lower.includes('volts')) return 'voltage';
+  if (lower.includes('number') || lower.includes('value') || lower.includes('amps')) return 'numeric';
   return 'text';
 }

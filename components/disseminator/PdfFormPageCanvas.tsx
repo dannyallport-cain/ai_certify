@@ -1,14 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { DEFAULT_STATE_OPTIONS, isNumericLikeFieldType, type DisseminatorFieldType } from '@/lib/report-disseminator/field-analysis';
 
-type FieldType = 'dropdown' | 'address' | 'state_enum' | 'numeric' | 'text' | 'linked_text';
+type FieldType = DisseminatorFieldType;
 
 type FormField = {
   id: string;
   label: string;
   fieldType: FieldType;
   required?: boolean;
+  plainTextHint?: string;
   dropdownOptions?: string[];
   stateOptions?: Array<'tick' | 'cross' | 'NA' | 'LIM' | 'NV'>;
   numericConfig?: { min?: number; max?: number; resolution?: number; unit?: string };
@@ -124,7 +126,7 @@ export function PdfFormPageCanvas({
           onFocus={() => onSelectField?.(field.id)}
         >
           <option value="">{field.label}</option>
-          {(field.stateOptions || ['tick', 'cross', 'NA', 'LIM', 'NV']).map((option) => (
+          {(field.stateOptions || [...DEFAULT_STATE_OPTIONS]).map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
@@ -136,8 +138,8 @@ export function PdfFormPageCanvas({
     return (
       <input
         className={commonClassName}
-        type={field.fieldType === 'numeric' ? 'number' : 'text'}
-        placeholder={field.label}
+        type={isNumericLikeFieldType(field.fieldType) ? 'number' : field.fieldType === 'uk_phone' ? 'tel' : 'text'}
+        placeholder={field.plainTextHint || field.label}
         required={field.required}
         min={field.numericConfig?.min}
         max={field.numericConfig?.max}

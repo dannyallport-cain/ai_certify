@@ -4,6 +4,10 @@ import { z } from 'zod';
 import { createRequire } from 'module';
 import { isAdminRole } from '@/lib/auth/roles';
 import { getUser } from '@/lib/db/queries';
+import {
+  analyzeFieldDefinition,
+  DISSEMINATOR_FIELD_TYPES,
+} from '@/lib/report-disseminator/field-analysis';
 
 export const runtime = 'nodejs';
 const require = createRequire(import.meta.url);
@@ -13,7 +17,7 @@ const gatewayFieldSchema = z.object({
   label: z.string().min(1).optional(),
   value: z.string().nullable().optional(),
   pageNumber: z.number().int().min(1).optional(),
-  fieldType: z.enum(['address', 'numeric', 'state_enum', 'dropdown', 'text']).optional(),
+  fieldType: z.enum(DISSEMINATOR_FIELD_TYPES).optional(),
 });
 
 const gatewayResponseSchema = z.object({
@@ -115,14 +119,22 @@ export async function POST(request: NextRequest) {
     .map((field) => {
       const key = (field.key || field.label || '').trim();
       if (!key) return null;
+      const analysis = analyzeFieldDefinition(key, { fieldTypeHint: field.fieldType });
 
       return {
         id: crypto.randomUUID(),
-        key,
+        key: analysis.label,
         value: field.value ?? null,
         pageNumber: field.pageNumber ?? 1,
         boundingBox: null,
-        fieldType: field.fieldType ?? guessFieldType(key),
+        fieldType: analysis.fieldType,
+        plainTextHint: analysis.plainTextHint,
+        dropdownOptions: analysis.dropdownOptions,
+        stateOptions: analysis.stateOptions,
+        addressConfig: analysis.addressConfig,
+        postcodeConfig: analysis.postcodeConfig,
+        phoneConfig: analysis.phoneConfig,
+        numericConfig: analysis.numericConfig,
       };
     })
     .filter((field): field is NonNullable<typeof field> => {
@@ -189,7 +201,9 @@ function buildPrompt({
   return [
     'Extract likely fillable field labels for a report template editor.',
     'Return only valid JSON with the shape {"fields":[{"key":"Field label","value":null,"pageNumber":1,"fieldType":"text"}]}.',
-    'Allowed fieldType values: address, numeric, state_enum, dropdown, text.',
+    `Allowed fieldType values: ${DISSEMINATOR_FIELD_TYPES.join(', ')}.`,
+    'Use human-friendly labels such as Address, Phone Number, Postcode, Resistance Reading, and Voltage Reading.',
+    'Use postcode for UK postcodes, uk_phone for UK telephone numbers, resistance for ohms/impedance/insulation readings, and voltage for voltage readings.',
     'Prefer fields a technician or office user would fill in, verify, or copy into a template.',
     'Deduplicate obvious repeats. Do not include bounding boxes. If page number is unclear, use 1.',
     `Source file: ${fileName}`,
@@ -215,25 +229,4 @@ function parseGatewayPayload(content: string) {
   const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
   const payload = jsonMatch ? jsonMatch[0] : trimmed;
   return gatewayResponseSchema.parse(JSON.parse(payload));
-}
-
-function guessFieldType(key: string): 'address' | 'numeric' | 'state_enum' | 'dropdown' | 'text' {
-  const lower = key.toLowerCase();
-  if (lower.includes('address') || lower.includes('postcode')) return 'address';
-  if (
-    lower.includes('ohms') ||
-    lower.includes('amps') ||
-    lower.includes('volts') ||
-    lower.includes('number') ||
-    lower.includes('value')
-  ) {
-    return 'numeric';
-  }
-  if (lower.includes('pass') || lower.includes('fail') || lower.includes('n/a') || lower.includes('lim')) {
-    return 'state_enum';
-  }
-  if (lower.includes('type') || lower.includes('class') || lower.includes('cat')) {
-    return 'dropdown';
-  }
-  return 'text';
 }
