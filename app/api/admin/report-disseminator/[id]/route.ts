@@ -104,6 +104,45 @@ export async function PUT(
     const current = existing[0];
     const intent = (body?.intent as string | undefined) || 'update';
 
+    if (intent === 'save_as') {
+      const nextName = parsed.data.name?.trim();
+      if (!nextName) {
+        return NextResponse.json({ error: 'Template name is required' }, { status: 400 });
+      }
+
+      const sameNameVersions = await db
+        .select({
+          version: reportDisseminatorTemplates.version,
+        })
+        .from(reportDisseminatorTemplates)
+        .where(and(eq(reportDisseminatorTemplates.teamId, teamId), eq(reportDisseminatorTemplates.name, nextName)))
+        .orderBy(desc(reportDisseminatorTemplates.version));
+
+      const nextVersion = (sameNameVersions[0]?.version || 0) + 1;
+
+      const created = await db
+        .insert(reportDisseminatorTemplates)
+        .values({
+          teamId,
+          createdBy: user.id,
+          name: nextName,
+          description: parsed.data.description !== undefined ? parsed.data.description || null : current.description,
+          status: 'draft',
+          version: nextVersion,
+          sourceFileName: current.sourceFileName,
+          sourceMimeType: current.sourceMimeType,
+          sourcePdfBase64: current.sourcePdfBase64,
+          fields: parsed.data.fields ?? current.fields,
+          wizardData: parsed.data.wizardData ?? current.wizardData,
+          parentTemplateId: current.id,
+          storageProvider: current.storageProvider,
+          storageKey: current.storageKey,
+        })
+        .returning();
+
+      return NextResponse.json(created[0], { status: 201 });
+    }
+
     if (intent === 'clone') {
       const sameNameVersions = await db
         .select({
@@ -130,9 +169,6 @@ export async function PUT(
           fields: current.fields,
           wizardData: current.wizardData,
           parentTemplateId: current.id,
-          finalArtifactName: current.finalArtifactName,
-          finalArtifactMimeType: current.finalArtifactMimeType,
-          finalArtifactBase64: current.finalArtifactBase64,
           storageProvider: current.storageProvider,
           storageKey: current.storageKey,
         })
@@ -210,12 +246,6 @@ export async function PUT(
 
     if (parsed.data.fields !== undefined || parsed.data.wizardData !== undefined) {
       updates.version = current.version + 1;
-    }
-
-    if (parsed.data.wizardData?.finalArtifactBase64) {
-      updates.finalArtifactBase64 = parsed.data.wizardData.finalArtifactBase64;
-      updates.finalArtifactMimeType = parsed.data.wizardData.finalArtifactMimeType || 'application/pdf';
-      updates.finalArtifactName = parsed.data.wizardData.finalArtifactName || `${current.name}.pdf`;
     }
 
     const updated = await db
