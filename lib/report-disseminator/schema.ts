@@ -1,15 +1,9 @@
 import { z } from 'zod';
+import { DEFAULT_STATE_OPTIONS, DISSEMINATOR_FIELD_TYPES } from '@/lib/report-disseminator/field-analysis';
 
-export const fieldTypeSchema = z.enum([
-  'dropdown',
-  'address',
-  'state_enum',
-  'numeric',
-  'text',
-  'linked_text',
-]);
+export const fieldTypeSchema = z.enum(DISSEMINATOR_FIELD_TYPES);
 
-export const stateOptionSchema = z.enum(['tick', 'cross', 'NA', 'LIM', 'NV']);
+export const stateOptionSchema = z.enum(DEFAULT_STATE_OPTIONS);
 
 export const boundingBoxSchema = z.object({
   x: z.number().min(0),
@@ -29,7 +23,18 @@ export const reportFieldSchema = z.object({
   dropdownOptions: z.array(z.string().min(1)).optional(),
   addressConfig: z
     .object({
-      mode: z.enum(['uk_postcode_format']),
+      mode: z.enum(['uk_address', 'uk_postcode_format']),
+    })
+    .optional(),
+  postcodeConfig: z
+    .object({
+      country: z.enum(['GB']).default('GB'),
+      validateAddress: z.boolean().default(true),
+    })
+    .optional(),
+  phoneConfig: z
+    .object({
+      country: z.enum(['GB']).default('GB'),
     })
     .optional(),
   stateOptions: z.array(stateOptionSchema).optional(),

@@ -30,9 +30,15 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PdfPageCanvas } from '@/components/disseminator/PdfPageCanvas';
 import { PdfFormPageCanvas } from '@/components/disseminator/PdfFormPageCanvas';
+import {
+  analyzeFieldDefinition,
+  DEFAULT_STATE_OPTIONS,
+  isNumericLikeFieldType,
+  type DisseminatorFieldType,
+} from '@/lib/report-disseminator/field-analysis';
 import { validateUkPostcode } from '@/lib/report-disseminator/postcode';
 
-type FieldType = 'dropdown' | 'address' | 'state_enum' | 'numeric' | 'text' | 'linked_text';
+type FieldType = DisseminatorFieldType;
 
 type ReportField = {
   id: string;
@@ -43,7 +49,9 @@ type ReportField = {
   plainTextHint?: string;
   dropdownOptions?: string[];
   stateOptions?: Array<'tick' | 'cross' | 'NA' | 'LIM' | 'NV'>;
-  addressConfig?: { mode: 'uk_postcode_format' };
+  addressConfig?: { mode: 'uk_address' | 'uk_postcode_format' };
+  postcodeConfig?: { country: 'GB'; validateAddress: boolean };
+  phoneConfig?: { country: 'GB' };
   numericConfig?: { min?: number; max?: number; resolution?: number; unit?: string };
   linkedConfig?: { relatedSection: string; relatedFieldId: string; relationType: 'mirrors' | 'derived_from' | 'depends_on' };
   boundingBox?: { x: number; y: number; width: number; height: number };
@@ -69,9 +77,13 @@ type DisseminatorTemplate = {
 const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
   { value: 'text', label: 'Plain text' },
   { value: 'dropdown', label: 'Dropdown options' },
-  { value: 'address', label: 'Address (UK postcode format)' },
+  { value: 'address', label: 'Address' },
+  { value: 'postcode', label: 'Postcode (UK)' },
+  { value: 'uk_phone', label: 'Phone Number (UK)' },
   { value: 'state_enum', label: 'Tick/Cross/NA/LIM/NV' },
   { value: 'numeric', label: 'Numeric value' },
+  { value: 'resistance', label: 'Resistance reading' },
+  { value: 'voltage', label: 'Voltage reading' },
   { value: 'linked_text', label: 'Related section text' },
 ];
 
@@ -323,11 +335,21 @@ function SortableFieldRow({ field, onUpdate, onAiSuggest }: { field: ReportField
       {field.fieldType === 'state_enum' && (
         <div className="space-y-2">
           <Label>State options</Label>
-          <Input value={(field.stateOptions || ['tick', 'cross', 'NA', 'LIM', 'NV']).join(', ')} disabled />
+          <Input value={(field.stateOptions || [...DEFAULT_STATE_OPTIONS]).join(', ')} disabled />
         </div>
       )}
 
       {field.fieldType === 'address' && (
+        <div className="space-y-2">
+          <Label>Address guidance</Label>
+          <Input value={field.plainTextHint || 'UK address'} disabled />
+          <p className="text-xs text-muted-foreground">
+            Address fields should capture the full UK address. Use a separate postcode field when the form includes one.
+          </p>
+        </div>
+      )}
+
+      {field.fieldType === 'postcode' && (
         <div className="space-y-2">
           <Label>UK Postcode Validation</Label>
           <div className="flex gap-2">
@@ -346,7 +368,17 @@ function SortableFieldRow({ field, onUpdate, onAiSuggest }: { field: ReportField
         </div>
       )}
 
-      {field.fieldType === 'numeric' && (
+      {field.fieldType === 'uk_phone' && (
+        <div className="space-y-2">
+          <Label>Phone guidance</Label>
+          <Input value={field.plainTextHint || 'UK phone number'} disabled />
+          <p className="text-xs text-muted-foreground">
+            Phone fields are tagged as UK-only so generated forms can apply telephone validation later.
+          </p>
+        </div>
+      )}
+
+      {isNumericLikeFieldType(field.fieldType) && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
           <Input
             placeholder="Min"
@@ -609,14 +641,26 @@ export default function ReportDisseminatorPage() {
           const acroData = await acroRes.json();
           console.log('🔵 AcroForm data:', acroData.fields?.length || 0, 'fields');
           if (acroData.fields && acroData.fields.length > 0) {
-            const acroFields: ReportField[] = acroData.fields.map((f: any) => ({
-              id: f.id || crypto.randomUUID(),
-              page: f.pageNumber || f.page || 1,
-              label: f.key || f.label || 'Untitled',
-              fieldType: f.fieldType || 'text',
-              required: false,
-              // boundingBox omitted - AcroForm doesn't reliably provide valid coordinates
-            }));
+            const acroFields: ReportField[] = acroData.fields.map((f: any) => {
+              const analysis = analyzeFieldDefinition(f.key || f.label || 'Untitled', {
+                fieldTypeHint: f.fieldType,
+              });
+              return {
+                id: f.id || crypto.randomUUID(),
+                page: f.pageNumber || f.page || 1,
+                label: analysis.label,
+                fieldType: analysis.fieldType,
+                required: false,
+                plainTextHint: analysis.plainTextHint,
+                dropdownOptions: analysis.dropdownOptions,
+                stateOptions: analysis.stateOptions,
+                addressConfig: analysis.addressConfig,
+                postcodeConfig: analysis.postcodeConfig,
+                phoneConfig: analysis.phoneConfig,
+                numericConfig: analysis.numericConfig,
+                // boundingBox omitted - AcroForm doesn't reliably provide valid coordinates
+              };
+            });
             allFields = [...allFields, ...acroFields];
             methods.push(`AcroForm (${acroFields.length})`);
           }
@@ -639,6 +683,9 @@ export default function ReportDisseminatorPage() {
           console.log('🔵 AI Gateway data:', gatewayData.fields?.length || 0, 'fields');
           if (gatewayData.fields && gatewayData.fields.length > 0) {
             const gatewayFields: ReportField[] = gatewayData.fields.map((f: any) => {
+              const analysis = analyzeFieldDefinition(f.key || f.label || 'Untitled', {
+                fieldTypeHint: f.fieldType,
+              });
               // Convert flat polygon array [x1,y1,x2,y2,...] to bounding box {x,y,width,height}
               let boundingBox: ReportField['boundingBox'] = undefined;
               if (Array.isArray(f.boundingBox) && f.boundingBox.length >= 8) {
@@ -651,9 +698,16 @@ export default function ReportDisseminatorPage() {
               return {
                 id: f.id || crypto.randomUUID(),
                 page: f.pageNumber || f.page || 1,
-                label: f.key || f.label || 'Untitled',
-                fieldType: f.fieldType || 'text',
+                label: analysis.label,
+                fieldType: analysis.fieldType,
                 required: false,
+                plainTextHint: analysis.plainTextHint,
+                dropdownOptions: analysis.dropdownOptions,
+                stateOptions: analysis.stateOptions,
+                addressConfig: analysis.addressConfig,
+                postcodeConfig: analysis.postcodeConfig,
+                phoneConfig: analysis.phoneConfig,
+                numericConfig: analysis.numericConfig,
                 ...(boundingBox ? { boundingBox } : {}),
               };
             });
@@ -712,14 +766,24 @@ export default function ReportDisseminatorPage() {
               }
 
               if (fieldLabels.size > 0) {
-                const ocrFields = Array.from(fieldLabels).map((label) => ({
-                  id: crypto.randomUUID(),
-                  page: 1,
-                  label,
-                  fieldType: 'text' as const,
-                  required: false,
-                  // No boundingBox - OCR doesn't give us coordinates
-                }));
+                const ocrFields = Array.from(fieldLabels).map((label) => {
+                  const analysis = analyzeFieldDefinition(label);
+                  return {
+                    id: crypto.randomUUID(),
+                    page: 1,
+                    label: analysis.label,
+                    fieldType: analysis.fieldType,
+                    required: false,
+                    plainTextHint: analysis.plainTextHint,
+                    dropdownOptions: analysis.dropdownOptions,
+                    stateOptions: analysis.stateOptions,
+                    addressConfig: analysis.addressConfig,
+                    postcodeConfig: analysis.postcodeConfig,
+                    phoneConfig: analysis.phoneConfig,
+                    numericConfig: analysis.numericConfig,
+                    // No boundingBox - OCR doesn't give us coordinates
+                  };
+                });
 
                 allFields = [...allFields, ...ocrFields];
                 methods.push(`OCR (${ocrFields.length} fields)`);
@@ -802,57 +866,27 @@ export default function ReportDisseminatorPage() {
   };
 
   const applyAiSuggestion = (field: ReportField) => {
-    const label = field.label.toLowerCase();
-    let patch: Partial<ReportField>;
-
-    if (
-      label.includes('address') ||
-      label.includes('postcode') ||
-      label.includes('post code') ||
-      label.includes('location')
-    ) {
-      patch = { fieldType: 'address', addressConfig: { mode: 'uk_postcode_format' } };
-    } else if (
-      label.includes('yes/no') ||
-      label.includes('yes no') ||
-      label.includes('pass/fail') ||
-      label.includes('pass fail') ||
-      label.includes('lim') ||
-      label.includes('nv') ||
-      label.includes('na') ||
-      label.includes('satisfactory') ||
-      label.includes('unsatisfactory')
-    ) {
-      patch = { fieldType: 'state_enum', stateOptions: ['tick', 'cross', 'NA', 'LIM', 'NV'] };
-    } else if (
-      label.includes('number') ||
-      label.includes('value') ||
-      label.includes('ohms') ||
-      label.includes('amps') ||
-      label.includes('volts') ||
-      label.includes('voltage') ||
-      label.includes('current') ||
-      label.includes('resistance') ||
-      label.includes('reading')
-    ) {
-      patch = { fieldType: 'numeric', numericConfig: { resolution: 0.01 } };
-    } else if (
-      label.includes('type') ||
-      label.includes('classification') ||
-      label.includes('category') ||
-      label.includes('code') ||
-      label.includes('method')
-    ) {
-      patch = { fieldType: 'dropdown', dropdownOptions: ['Option 1', 'Option 2'] };
-    } else {
-      patch = { fieldType: 'text' };
-    }
+    const analysis = analyzeFieldDefinition(field.label);
+    const patch: Partial<ReportField> = {
+      label: analysis.label,
+      fieldType: analysis.fieldType,
+      plainTextHint: analysis.plainTextHint,
+      dropdownOptions: analysis.fieldType === 'dropdown' ? field.dropdownOptions || analysis.dropdownOptions || ['Option 1', 'Option 2'] : analysis.dropdownOptions,
+      stateOptions: analysis.stateOptions,
+      addressConfig: analysis.addressConfig,
+      postcodeConfig: analysis.postcodeConfig,
+      phoneConfig: analysis.phoneConfig,
+      numericConfig: analysis.numericConfig,
+    };
 
     const changed =
+      patch.label !== field.label ||
       patch.fieldType !== field.fieldType ||
       (patch.dropdownOptions && JSON.stringify(patch.dropdownOptions) !== JSON.stringify(field.dropdownOptions)) ||
       (patch.stateOptions && JSON.stringify(patch.stateOptions) !== JSON.stringify(field.stateOptions)) ||
       (patch.addressConfig && JSON.stringify(patch.addressConfig) !== JSON.stringify(field.addressConfig)) ||
+      (patch.postcodeConfig && JSON.stringify(patch.postcodeConfig) !== JSON.stringify(field.postcodeConfig)) ||
+      (patch.phoneConfig && JSON.stringify(patch.phoneConfig) !== JSON.stringify(field.phoneConfig)) ||
       (patch.numericConfig && JSON.stringify(patch.numericConfig) !== JSON.stringify(field.numericConfig));
 
     updateField(field.id, patch);
@@ -922,10 +956,11 @@ export default function ReportDisseminatorPage() {
 
   const selectedSummary = useMemo(() => {
     if (!selected) return null;
-    const numericCount = selected.fields.filter((f) => f.fieldType === 'numeric').length;
+    const numericCount = selected.fields.filter((f) => isNumericLikeFieldType(f.fieldType)).length;
     const dropdownCount = selected.fields.filter((f) => f.fieldType === 'dropdown').length;
-    const addressCount = selected.fields.filter((f) => f.fieldType === 'address').length;
-    return { numericCount, dropdownCount, addressCount };
+    const addressCount = selected.fields.filter((f) => f.fieldType === 'address' || f.fieldType === 'postcode').length;
+    const phoneCount = selected.fields.filter((f) => f.fieldType === 'uk_phone').length;
+    return { numericCount, dropdownCount, addressCount, phoneCount };
   }, [selected]);
 
   const updatePreviewValue = (fieldId: string, value: string) => {
@@ -966,7 +1001,7 @@ export default function ReportDisseminatorPage() {
           onFocus={() => setSelectedFieldId(field.id)}
         >
           <option value="">Select {field.label}</option>
-          {(field.stateOptions || ['tick', 'cross', 'NA', 'LIM', 'NV']).map((option) => (
+          {(field.stateOptions || [...DEFAULT_STATE_OPTIONS]).map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
@@ -978,8 +1013,8 @@ export default function ReportDisseminatorPage() {
     return (
       <Input
         className="w-full"
-        type={field.fieldType === 'numeric' ? 'number' : 'text'}
-        placeholder={field.label}
+        type={isNumericLikeFieldType(field.fieldType) ? 'number' : field.fieldType === 'uk_phone' ? 'tel' : 'text'}
+        placeholder={field.plainTextHint || field.label}
         min={field.numericConfig?.min}
         max={field.numericConfig?.max}
         step={field.numericConfig?.resolution}
@@ -1222,7 +1257,8 @@ export default function ReportDisseminatorPage() {
                     <Badge variant="secondary">Fields: {selected.fields.length}</Badge>
                     <Badge variant="outline">Numeric: {selectedSummary.numericCount}</Badge>
                     <Badge variant="outline">Dropdown: {selectedSummary.dropdownCount}</Badge>
-                    <Badge variant="outline">Address: {selectedSummary.addressCount}</Badge>
+                    <Badge variant="outline">Address/Postcode: {selectedSummary.addressCount}</Badge>
+                    <Badge variant="outline">Phone: {selectedSummary.phoneCount}</Badge>
                   </div>
                 )}
 
