@@ -6,6 +6,7 @@ import { getTeamForUser, getUser } from '@/lib/db/queries';
 
 const ALLOWED_ADMIN_ROLES = new Set(['supersystemAdmin', 'systemAdmin', 'owner']);
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
 const resolveTeamId = async () => {
   const team = await getTeamForUser();
@@ -44,7 +45,7 @@ export async function GET() {
       .where(eq(reportDisseminatorTemplates.teamId, teamId))
       .orderBy(desc(reportDisseminatorTemplates.createdAt));
 
-    return NextResponse.json(templates);
+    return NextResponse.json(templates, { headers: NO_STORE_HEADERS });
   } catch (error) {
     console.error('Error fetching report disseminator templates:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
         updatedAt: reportDisseminatorTemplates.updatedAt,
       });
 
-    return NextResponse.json(created[0], { status: 201 });
+    return NextResponse.json(created[0], { status: 201, headers: NO_STORE_HEADERS });
   } catch (error) {
     console.error('Error creating report disseminator template:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -7,6 +7,7 @@ import { getTeamForUser, getUser } from '@/lib/db/queries';
 import { reportDisseminatorUpdateSchema } from '@/lib/report-disseminator/schema';
 
 const ALLOWED_ADMIN_ROLES = new Set(['supersystemAdmin', 'systemAdmin', 'owner']);
+const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
 const resolveTeamId = async () => {
   const team = await getTeamForUser();
@@ -53,7 +54,7 @@ export async function GET(
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    return NextResponse.json(template[0]);
+    return NextResponse.json(template[0], { headers: NO_STORE_HEADERS });
   } catch (error) {
     console.error('Error fetching report disseminator template:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -140,7 +141,7 @@ export async function PUT(
         })
         .returning();
 
-      return NextResponse.json(created[0], { status: 201 });
+      return NextResponse.json(created[0], { status: 201, headers: NO_STORE_HEADERS });
     }
 
     if (intent === 'clone') {
@@ -183,7 +184,7 @@ export async function PUT(
         })
         .where(and(eq(reportDisseminatorTemplates.id, current.id), eq(reportDisseminatorTemplates.teamId, teamId)));
 
-      return NextResponse.json(cloned[0], { status: 201 });
+      return NextResponse.json(cloned[0], { status: 201, headers: NO_STORE_HEADERS });
     }
 
     if (intent === 'archive') {
@@ -198,7 +199,7 @@ export async function PUT(
           .where(and(eq(reportDisseminatorTemplates.id, id), eq(reportDisseminatorTemplates.teamId, teamId)))
           .returning();
 
-        return NextResponse.json(archived[0]);
+        return NextResponse.json(archived[0], { headers: NO_STORE_HEADERS });
       }
     }
 
@@ -254,7 +255,7 @@ export async function PUT(
       .where(and(eq(reportDisseminatorTemplates.id, id), eq(reportDisseminatorTemplates.teamId, teamId)))
       .returning();
 
-    return NextResponse.json(updated[0]);
+    return NextResponse.json(updated[0], { headers: NO_STORE_HEADERS });
   } catch (error) {
     console.error('Error updating report disseminator template:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
