@@ -1,1 +1,5 @@
-export { POST, runtime } from '../ai-gateway-analyze/route';
+import { POST } from '../ai-gateway-analyze/route';
+
+export const runtime = 'nodejs';
+
+export { POST };
