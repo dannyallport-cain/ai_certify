@@ -71,6 +71,7 @@ type DisseminatorTemplate = {
     currentStep?: number;
     notes?: string;
     aiSuggestionsEnabled?: boolean;
+    previewValues?: Record<string, string>;
   };
 };
 
@@ -567,7 +568,10 @@ export default function ReportDisseminatorPage() {
     setPreviewValues((currentValues) => {
       const nextValues: Record<string, string> = {};
       for (const field of selected.fields) {
-        nextValues[field.id] = currentValues[field.id] || '';
+        nextValues[field.id] =
+          currentValues[field.id] ??
+          selected.wizardData?.previewValues?.[field.id] ??
+          '';
       }
       return nextValues;
     });
@@ -1108,6 +1112,20 @@ export default function ReportDisseminatorPage() {
       ...current,
       [fieldId]: value,
     }));
+
+    setSelected((currentSelected) => {
+      if (!currentSelected) return currentSelected;
+      return {
+        ...currentSelected,
+        wizardData: {
+          ...currentSelected.wizardData,
+          previewValues: {
+            ...(currentSelected.wizardData?.previewValues || {}),
+            [fieldId]: value,
+          },
+        },
+      };
+    });
   };
 
   const renderInlineFieldInput = (field: ReportField) => {
