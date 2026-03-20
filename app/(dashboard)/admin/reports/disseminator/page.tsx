@@ -505,7 +505,7 @@ export default function ReportDisseminatorPage() {
   const loadTemplates = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/report-disseminator');
+      const res = await fetch('/api/admin/report-disseminator', { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load templates');
       const data = await res.json();
       setTemplates(data);
@@ -522,7 +522,7 @@ export default function ReportDisseminatorPage() {
 
   const loadTemplate = async (id: number) => {
     try {
-      const res = await fetch(`/api/admin/report-disseminator/${id}`);
+      const res = await fetch(`/api/admin/report-disseminator/${id}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load template');
       const data = await res.json();
       setSelected(data);
@@ -1057,7 +1057,10 @@ export default function ReportDisseminatorPage() {
         body: JSON.stringify({
           intent: 'save_as',
           fields: selected.fields,
-          wizardData: selected.wizardData,
+          wizardData: {
+            ...selected.wizardData,
+            previewValues,
+          },
           description: selected.description || '',
           name: saveTemplateName.trim(),
         }),
@@ -1070,8 +1073,12 @@ export default function ReportDisseminatorPage() {
 
       setSaveDialogOpen(false);
       setSaveTemplateName('');
+      setSelected(payload);
+      setTemplates((current) => [
+        payload,
+        ...current.filter((template) => template.id !== payload.id),
+      ]);
       toast.success('Template saved');
-      await loadTemplates();
       setSelectedId(payload.id);
     } catch (error: any) {
       console.error(error);
