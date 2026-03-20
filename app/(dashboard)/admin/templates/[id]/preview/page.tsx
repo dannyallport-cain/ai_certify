@@ -134,9 +134,9 @@ function SectionPreview({ section, colors }: { section: Section; colors: Templat
                 </div>
               </div>
             ))}
-            {section.config?.fields?.length > 4 && (
+            {(section.config?.fields?.length ?? 0) > 4 && (
               <div className="px-2 py-1 text-center text-gray-400 text-xs bg-gray-50">
-                +{section.config.fields.length - 4} more fields…
+                +{(section.config?.fields?.length ?? 0) - 4} more fields…
               </div>
             )}
           </div>

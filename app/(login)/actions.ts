@@ -1,5 +1,6 @@
 'use server';
 
+import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
@@ -450,6 +451,7 @@ export const inviteTeamMember = validatedActionWithUser(
     await db.insert(invitations).values({
       teamId: userWithTeam.teamId,
       email,
+      token: randomUUID(),
       role,
       invitedBy: user.id,
       status: 'pending'

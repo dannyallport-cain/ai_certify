@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { stripe } from '../payments/stripe';
 import { db } from './drizzle';
 import {
@@ -545,6 +546,7 @@ async function createSampleInvitations(teams: any[], users: any[]) {
     {
       teamId: teams[0].id,
       email: 'pending@test.com',
+      token: randomUUID(),
       role: 'inspector',
       invitedBy: users[0].id,
       status: 'pending'
@@ -552,6 +554,7 @@ async function createSampleInvitations(teams: any[], users: any[]) {
     {
       teamId: teams[1].id,
       email: 'accepted@test.com',
+      token: randomUUID(),
       role: 'member',
       invitedBy: users[1].id,
       status: 'accepted'

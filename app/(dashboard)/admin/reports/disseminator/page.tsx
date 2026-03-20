@@ -52,7 +52,7 @@ type DisseminatorTemplate = {
   id: number;
   name: string;
   description?: string | null;
-  status: 'draft' | 'review' | 'published';
+  status: 'draft' | 'review' | 'published' | 'archived';
   version: number;
   sourceFileName: string;
   sourceMimeType: string;
@@ -261,6 +261,7 @@ export default function ReportDisseminatorPage() {
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [uploadingFinalArtifact, setUploadingFinalArtifact] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
   const [name, setName] = useState('');
@@ -268,7 +269,6 @@ export default function ReportDisseminatorPage() {
   const [file, setFile] = useState<File | null>(null);
 
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
-  const [uploadingFinalArtifact, setUploadingFinalArtifact] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -440,20 +440,20 @@ export default function ReportDisseminatorPage() {
         console.warn('AcroForm extraction failed:', e);
       }
 
-      // Step 2: Try Azure AI for intelligent field extraction
-      toast.info('Analyzing with Azure AI...');
+      // Step 2: Try AI Gateway for intelligent field extraction
+      toast.info('Analyzing with AI Gateway...');
       try {
-        const azureRes = await fetch('/api/admin/report-disseminator/azure-analyze', {
+        const gatewayRes = await fetch('/api/admin/report-disseminator/ai-gateway-analyze', {
           method: 'POST',
           body: makePdfFormData(),
         });
-        console.log('🔵 Azure response status:', azureRes.status);
+        console.log('🔵 AI Gateway response status:', gatewayRes.status);
         
-        if (azureRes.ok) {
-          const azureData = await azureRes.json();
-          console.log('🔵 Azure data:', azureData.fields?.length || 0, 'fields');
-          if (azureData.fields && azureData.fields.length > 0) {
-            const azureFields: ReportField[] = azureData.fields.map((f: any) => {
+        if (gatewayRes.ok) {
+          const gatewayData = await gatewayRes.json();
+          console.log('🔵 AI Gateway data:', gatewayData.fields?.length || 0, 'fields');
+          if (gatewayData.fields && gatewayData.fields.length > 0) {
+            const gatewayFields: ReportField[] = gatewayData.fields.map((f: any) => {
               // Convert flat polygon array [x1,y1,x2,y2,...] to bounding box {x,y,width,height}
               let boundingBox: ReportField['boundingBox'] = undefined;
               if (Array.isArray(f.boundingBox) && f.boundingBox.length >= 8) {
@@ -473,27 +473,27 @@ export default function ReportDisseminatorPage() {
               };
             });
             
-            // Deduplicate by label (prefer Azure fields with bounding boxes)
+            // Deduplicate by label (prefer AI Gateway fields with bounding boxes)
             const existingLabels = new Set(allFields.map(f => f.label.toLowerCase()));
-            const newAzureFields = azureFields.filter(f => !existingLabels.has(f.label.toLowerCase()));
+            const newGatewayFields = gatewayFields.filter(f => !existingLabels.has(f.label.toLowerCase()));
             
-            allFields = [...allFields, ...newAzureFields];
-            methods.push(`Azure AI (${azureFields.length} found, ${newAzureFields.length} unique)`);
+            allFields = [...allFields, ...newGatewayFields];
+            methods.push(`AI Gateway (${gatewayFields.length} found, ${newGatewayFields.length} unique)`);
           }
         } else {
-          const errorData = await azureRes.json();
+          const errorData = await gatewayRes.json();
           if (errorData.hint) {
-            console.log('Azure hint:', errorData.hint);
+            console.log('AI Gateway hint:', errorData.hint);
           }
         }
       } catch (e) {
-        console.warn('Azure extraction skipped:', e);
+        console.warn('AI Gateway extraction skipped:', e);
       }
 
       // Step 3: OCR fallback - if both methods returned 0 fields, try text extraction
       console.log('🔵 Fields so far:', allFields.length);
       if (allFields.length === 0) {
-        console.log('🔵 No fields from AcroForm/Azure, trying OCR fallback...');
+        console.log('🔵 No fields from AcroForm/AI Gateway, trying OCR fallback...');
         try {
           const ocrRes = await fetch('/api/admin/report-disseminator/ocr-text', {
             method: 'POST',
@@ -867,12 +867,13 @@ export default function ReportDisseminatorPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
-                    <Select value={selected.status} onValueChange={(value: 'draft' | 'review' | 'published') => setSelected({ ...selected, status: value })}>
+                    <Select value={selected.status} onValueChange={(value: 'draft' | 'review' | 'published' | 'archived') => setSelected({ ...selected, status: value })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="draft">draft</SelectItem>
                         <SelectItem value="review">review</SelectItem>
                         <SelectItem value="published">published</SelectItem>
+                        <SelectItem value="archived">archived</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -893,7 +894,7 @@ export default function ReportDisseminatorPage() {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Automatically extracts all possible fields from the PDF using AcroForm + Azure AI
+                  Automatically extracts all possible fields from the PDF using AcroForm + AI Gateway
                 </p>
 
                 <Tabs defaultValue="fields" className="w-full">

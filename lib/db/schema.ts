@@ -14,28 +14,50 @@ import { relations } from 'drizzle-orm';
 import { USER_ROLES } from '@/lib/auth/roles';
 
 export const userRoleEnum = pgEnum('UserRole', USER_ROLES);
+export const userStatusEnum = pgEnum('UserStatus', ['pending', 'active', 'inactive', 'suspended']);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  name: varchar('name', { length: 100 }),
-  email: varchar('email', { length: 255 }).notNull().unique(),
+  name: text('name'),
+  email: text('email').notNull().unique(),
+  customEmail: varchar('custom_email', { length: 255 }),
+  customEmailSignature: text('custom_email_signature'),
   passwordHash: text('password_hash').notNull(),
+  teamId: integer('team_id').references(() => teams.id, { onDelete: 'cascade' }),
   role: userRoleEnum('role').notNull().default('member'),
+  status: userStatusEnum('status').notNull().default('active'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  lastLoginAt: timestamp('last_login_at'),
+  activatedAt: timestamp('activated_at'),
+  avatarR2Key: text('avatar_r2_key'),
+  avatarUpdatedAt: timestamp('avatar_updated_at'),
+  avatarUrl: text('avatar_url'),
+  deactivatedAt: timestamp('deactivated_at'),
   deletedAt: timestamp('deleted_at'),
+  signatureR2Key: text('signature_r2_key'),
+  signatureUpdatedAt: timestamp('signature_updated_at'),
+  signatureUrl: text('signature_url'),
+  statusChangedAt: timestamp('status_changed_at'),
 });
 
 export const teams = pgTable('teams', {
   id: serial('id').primaryKey(),
-  name: varchar('name', { length: 100 }).notNull(),
+  name: text('name').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   stripeCustomerId: text('stripe_customer_id').unique(),
   stripeSubscriptionId: text('stripe_subscription_id').unique(),
   stripeProductId: text('stripe_product_id'),
-  planName: varchar('plan_name', { length: 50 }),
-  subscriptionStatus: varchar('subscription_status', { length: 20 }),
+  planName: text('plan_name'),
+  subscriptionStatus: text('subscription_status'),
+  discountPercentage: integer('discount_percentage'),
+  subscriptionBypass: boolean('subscription_bypass'),
+  subscriptionBypassReason: text('subscription_bypass_reason'),
+  subscriptionBypassRemovedAt: timestamp('subscription_bypass_removed_at'),
+  subscriptionBypassSetAt: timestamp('subscription_bypass_set_at'),
+  subscriptionBypassSetBy: integer('subscription_bypass_set_by'),
+  trialEndDate: timestamp('trial_end_date'),
 });
 
 export const teamMembers = pgTable('team_members', {
@@ -67,7 +89,8 @@ export const invitations = pgTable('invitations', {
     .notNull()
     .references(() => teams.id),
   email: varchar('email', { length: 255 }).notNull(),
-  role: varchar('role', { length: 50 }).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  role: varchar('role', { length: 50 }).notNull().default('member'),
   invitedBy: integer('invited_by')
     .notNull()
     .references(() => users.id),
@@ -226,7 +249,9 @@ export const reportDisseminatorTemplates = pgTable('report_disseminator_template
   wizardData: json('wizard_data').notNull(),
   publishedAt: timestamp('published_at'),
   archivedAt: timestamp('archived_at'),
-  parentTemplateId: integer('parent_template_id').references((): any => reportDisseminatorTemplates.id),
+  parentTemplateId: integer('parent_template_id').references((): any => reportDisseminatorTemplates.id, {
+    onDelete: 'set null',
+  }),
   finalArtifactName: varchar('final_artifact_name', { length: 255 }),
   finalArtifactMimeType: varchar('final_artifact_mime_type', { length: 100 }),
   finalArtifactBase64: text('final_artifact_base64'),

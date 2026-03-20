@@ -133,6 +133,7 @@ export default function EICRCertificatePage() {
                 <CertificateNumberField
                   value={certificateNumber}
                   onChange={setCertificateNumber}
+                  certificateType="EICR"
                 />
                 <input type="hidden" name="certificateNumber" value={certificateNumber} />
               </div>
@@ -339,7 +340,11 @@ export default function EICRCertificatePage() {
               </div>
               <div className="space-y-2">
                 <Label>Next Inspection Date</Label>
-                <NextVisitField value={nextInspectionDate} onChange={setNextInspectionDate} />
+                <NextVisitField
+                  visitDate={nextInspectionDate}
+                  value={nextInspectionDate}
+                  onChange={setNextInspectionDate}
+                />
                 <input type="hidden" name="nextInspectionDate" value={nextInspectionDate} />
               </div>
             </div>

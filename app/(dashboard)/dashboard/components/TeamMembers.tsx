@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User } from '@/lib/db/schema';
+import { User, TeamDataWithMembers } from '@/lib/db/schema';
 import { removeTeamMember } from '@/app/(login)/actions';
 import { useActionState } from 'react';
 import useSWR from 'swr';

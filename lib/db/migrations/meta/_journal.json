@@ -29,6 +29,13 @@
       "when": 1773279000000,
       "tag": "0003_giant_report_disseminator",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773970803079,
+      "tag": "20260320014003_sync_schema",
+      "breakpoints": true
     }
   ]
 }
