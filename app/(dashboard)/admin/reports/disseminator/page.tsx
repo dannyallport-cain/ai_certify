@@ -29,6 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PdfPageCanvas } from '@/components/disseminator/PdfPageCanvas';
+import { PdfFormPageCanvas } from '@/components/disseminator/PdfFormPageCanvas';
 import { validateUkPostcode } from '@/lib/report-disseminator/postcode';
 
 type FieldType = 'dropdown' | 'address' | 'state_enum' | 'numeric' | 'text' | 'linked_text';
@@ -149,6 +150,93 @@ function PdfDocumentPreview({
                 .map((field) => ({ id: field.id, label: field.label, boundingBox: field.boundingBox || null }))}
               selectedId={selectedId}
               onSelectField={onSelectField}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PdfFormDocumentPreview({
+  pdfBase64,
+  fields,
+  values,
+  onValueChange,
+  selectedId,
+  onSelectField,
+}: {
+  pdfBase64?: string;
+  fields: ReportField[];
+  values: Record<string, string>;
+  onValueChange: (fieldId: string, value: string) => void;
+  selectedId: string | null;
+  onSelectField: (id: string | null) => void;
+}) {
+  const [pageCount, setPageCount] = useState(0);
+
+  useEffect(() => {
+    if (!pdfBase64) {
+      setPageCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+        const base64Data = pdfBase64.replace(/^data:[^;]+;base64,/, '');
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+        if (!cancelled) {
+          setPageCount(pdf.numPages || 1);
+        }
+      } catch (error) {
+        console.error('Failed to load PDF form page count', error);
+        if (!cancelled) {
+          setPageCount(0);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfBase64]);
+
+  if (!pdfBase64) {
+    return <p className="text-sm text-muted-foreground">No PDF preview available (base64 not stored).</p>;
+  }
+
+  if (pageCount === 0) {
+    return <p className="text-sm text-muted-foreground">Loading PDF preview…</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: pageCount }, (_, index) => {
+        const pageNumber = index + 1;
+        return (
+          <div key={pageNumber} className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">
+              Rendered Form Page {pageNumber} of {pageCount}
+            </p>
+            <PdfFormPageCanvas
+              pdfBase64={pdfBase64}
+              pageNumber={pageNumber}
+              fields={fields.filter((field) => field.page === pageNumber && field.boundingBox)}
+              values={values}
+              onValueChange={onValueChange}
+              selectedId={selectedId}
+              onSelectField={(id) => onSelectField(id)}
             />
           </div>
         );
@@ -344,6 +432,7 @@ export default function ReportDisseminatorPage() {
   const [createFeedback, setCreateFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveTemplateName, setSaveTemplateName] = useState('');
+  const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -414,6 +503,21 @@ export default function ReportDisseminatorPage() {
       loadTemplate(selectedId);
     }
   }, [selectedId]);
+
+  useEffect(() => {
+    if (!selected) {
+      setPreviewValues({});
+      return;
+    }
+
+    setPreviewValues((currentValues) => {
+      const nextValues: Record<string, string> = {};
+      for (const field of selected.fields) {
+        nextValues[field.id] = currentValues[field.id] || '';
+      }
+      return nextValues;
+    });
+  }, [selected]);
 
   const createTemplate = async () => {
     setCreateFeedback(null);
@@ -811,6 +915,10 @@ export default function ReportDisseminatorPage() {
   };
 
   const wizardStep = selected?.wizardData?.currentStep || 1;
+  const unplacedFields = useMemo(
+    () => selected?.fields.filter((field) => !field.boundingBox) || [],
+    [selected]
+  );
 
   const selectedSummary = useMemo(() => {
     if (!selected) return null;
@@ -819,6 +927,68 @@ export default function ReportDisseminatorPage() {
     const addressCount = selected.fields.filter((f) => f.fieldType === 'address').length;
     return { numericCount, dropdownCount, addressCount };
   }, [selected]);
+
+  const updatePreviewValue = (fieldId: string, value: string) => {
+    setPreviewValues((current) => ({
+      ...current,
+      [fieldId]: value,
+    }));
+  };
+
+  const renderInlineFieldInput = (field: ReportField) => {
+    const commonClassName = 'w-full rounded border border-input bg-background px-3 py-2 text-sm';
+    const value = previewValues[field.id] || '';
+
+    if (field.fieldType === 'dropdown') {
+      return (
+        <select
+          className={commonClassName}
+          value={value}
+          onChange={(event) => updatePreviewValue(field.id, event.target.value)}
+          onFocus={() => setSelectedFieldId(field.id)}
+        >
+          <option value="">Select {field.label}</option>
+          {(field.dropdownOptions || []).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (field.fieldType === 'state_enum') {
+      return (
+        <select
+          className={commonClassName}
+          value={value}
+          onChange={(event) => updatePreviewValue(field.id, event.target.value)}
+          onFocus={() => setSelectedFieldId(field.id)}
+        >
+          <option value="">Select {field.label}</option>
+          {(field.stateOptions || ['tick', 'cross', 'NA', 'LIM', 'NV']).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    return (
+      <Input
+        className="w-full"
+        type={field.fieldType === 'numeric' ? 'number' : 'text'}
+        placeholder={field.label}
+        min={field.numericConfig?.min}
+        max={field.numericConfig?.max}
+        step={field.numericConfig?.resolution}
+        value={value}
+        onChange={(event) => updatePreviewValue(field.id, event.target.value)}
+        onFocus={() => setSelectedFieldId(field.id)}
+      />
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -992,15 +1162,36 @@ export default function ReportDisseminatorPage() {
                   </TabsContent>
                   <TabsContent value="preview-template" className="mt-4 space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      No second PDF upload is required. The generated template is derived from the uploaded source PDF plus
-                      the current field and layout metadata.
+                      This preview renders the actual generated form layout from the uploaded source PDF with interactive
+                      inputs for every extracted field.
                     </p>
-                    <PdfDocumentPreview
+                    <PdfFormDocumentPreview
                       pdfBase64={selected.sourcePdfBase64}
                       fields={selected.fields}
+                      values={previewValues}
+                      onValueChange={updatePreviewValue}
                       selectedId={selectedFieldId}
                       onSelectField={setSelectedFieldId}
                     />
+
+                    {unplacedFields.length > 0 && (
+                      <div className="space-y-3 rounded-md border p-4">
+                        <div>
+                          <p className="text-sm font-medium">Fields Without Placement</p>
+                          <p className="text-xs text-muted-foreground">
+                            These extracted fields do not have page coordinates yet, so they are shown here for data entry.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          {unplacedFields.map((field) => (
+                            <div key={field.id} className="space-y-1">
+                              <Label>{field.label}</Label>
+                              {renderInlineFieldInput(field)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
 
