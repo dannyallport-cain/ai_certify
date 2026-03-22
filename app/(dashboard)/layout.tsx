@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from '@/app/(login)/actions';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import { isAdminRole } from '@/lib/auth/roles';
 import useSWR from 'swr';
@@ -176,9 +176,12 @@ function Header() {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isAdminRoute = pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard/admin');
+
   return (
     <section className="flex flex-col min-h-screen">
-      <Header />
+      {!isAdminRoute && <Header />}
       {children}
     </section>
   );
