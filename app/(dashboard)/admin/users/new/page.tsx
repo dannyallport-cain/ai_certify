@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AdminLayout from '../../layout';
 import { USER_ROLES, USER_ROLE_LABELS, type UserRole } from '@/lib/auth/roles';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,7 +32,7 @@ export default function NewUserPage() {
   };
 
   return (
-    <AdminLayout>
+    <>
       <h2 className="text-2xl font-bold mb-4">Create New User</h2>
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
         <div>
@@ -66,6 +65,6 @@ export default function NewUserPage() {
           <Button variant="outline" onClick={() => router.back()}>Cancel</Button>
         </div>
       </form>
-    </AdminLayout>
+    </>
   );
 }
