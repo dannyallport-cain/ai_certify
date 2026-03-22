@@ -69,6 +69,11 @@ export function NextVisitField({
   label = 'Next Visit Due'
 }: NextVisitFieldProps) {
   const [date, setDate] = useState<Date | undefined>(value ? new Date(value) : undefined);
+  const [isAutoPopulated, setIsAutoPopulated] = useState(false);
+
+  useEffect(() => {
+    setDate(value ? new Date(value) : undefined);
+  }, [value]);
 
   const setNextVisitDate = (monthsToAdd: number) => {
     if (!visitDate) return;
@@ -80,6 +85,7 @@ export function NextVisitField({
     const adjustedDate = getPreviousWorkingDay(newDate);
     setDate(adjustedDate);
     onChange(adjustedDate.toISOString().split('T')[0]);
+    setIsAutoPopulated(true);
   };
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -89,6 +95,7 @@ export function NextVisitField({
     const adjustedDate = getPreviousWorkingDay(selectedDate);
     setDate(adjustedDate);
     onChange(adjustedDate.toISOString().split('T')[0]);
+    setIsAutoPopulated(false);
   };
 
   return (
@@ -115,8 +122,10 @@ export function NextVisitField({
             variant="outline"
             className={cn(
               "w-full justify-start text-left font-normal",
-              !date && "text-muted-foreground"
+              !date && "text-muted-foreground",
+              isAutoPopulated && "border-amber-300 bg-amber-50"
             )}
+            title={isAutoPopulated ? 'Auto-populated from the visit date and selected period. You can still pick a custom date.' : undefined}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -160,6 +169,14 @@ export function NextVisitField({
           />
         </PopoverContent>
       </Popover>
+        {isAutoPopulated && (
+          <p
+            className="text-xs text-amber-700"
+            title="This date is automatically calculated from the visit date, period, and UK working-day adjustment."
+          >
+            Auto-populated from visit date + period. Hover the date field for details.
+          </p>
+        )}
     </div>
   );
 } 

@@ -40,10 +40,17 @@ const codeLabels: Record<string, string> = {
 
 export default function EICRCertificatePage() {
   const router = useRouter();
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const { data: customers = [] } = useSWR('/api/customers', fetcher);
+  const [siteName, setSiteName] = useState('');
+  const [clientAddress, setClientAddress] = useState('');
+  const [isSiteNameAuto, setIsSiteNameAuto] = useState(false);
+  const [isClientAddressAuto, setIsClientAddressAuto] = useState(false);
   const [certificateNumber, setCertificateNumber] = useState('');
+  const [inspectionDate, setInspectionDate] = useState(getTodayDate());
+  const [isInspectionDateAuto, setIsInspectionDateAuto] = useState(true);
   const [nextInspectionDate, setNextInspectionDate] = useState('');
   const [overallAssessment, setOverallAssessment] = useState('SATISFACTORY');
   const [earthingArrangement, setEarthingArrangement] = useState('TN-C-S');
@@ -143,9 +150,24 @@ export default function EICRCertificatePage() {
                   name="customerId"
                   id="customerId"
                   required
+                  title="Select customer"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   value={selectedCustomer}
-                  onChange={e => setSelectedCustomer(e.target.value)}
+                  onChange={e => {
+                    const value = e.target.value;
+                    setSelectedCustomer(value);
+                    const customer = customers.find((c: any) => String(c.id) === value);
+
+                    if (!siteName && (customer?.name || customer?.address)) {
+                      setSiteName(customer?.name || customer?.address || '');
+                      setIsSiteNameAuto(true);
+                    }
+
+                    if (!clientAddress && customer?.address) {
+                      setClientAddress(customer.address);
+                      setIsClientAddressAuto(true);
+                    }
+                  }}
                 >
                   <option value="">Select customer...</option>
                   {customers.map((c: any) => (
@@ -164,11 +186,45 @@ export default function EICRCertificatePage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="siteName">Client / Organisation *</Label>
-                <Input id="siteName" name="siteName" required placeholder="Highfield Hall Community Centre" />
+                <Input
+                  id="siteName"
+                  name="siteName"
+                  required
+                  placeholder="Highfield Hall Community Centre"
+                  value={siteName}
+                  onChange={(e) => {
+                    setSiteName(e.target.value);
+                    setIsSiteNameAuto(false);
+                  }}
+                  className={isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                  title={isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined}
+                />
+                {isSiteNameAuto && (
+                  <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer.">
+                    Auto-populated from customer details. Hover the field for details.
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="clientAddress">Client Address *</Label>
-                <Input id="clientAddress" name="clientAddress" required placeholder="Marsh Lane, Farnworth, Bolton, BL4 0AW" />
+                <Input
+                  id="clientAddress"
+                  name="clientAddress"
+                  required
+                  placeholder="Marsh Lane, Farnworth, Bolton, BL4 0AW"
+                  value={clientAddress}
+                  onChange={(e) => {
+                    setClientAddress(e.target.value);
+                    setIsClientAddressAuto(false);
+                  }}
+                  className={isClientAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                  title={isClientAddressAuto ? 'Auto-populated from selected customer address. Edit if needed.' : undefined}
+                />
+                {isClientAddressAuto && (
+                  <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer address.">
+                    Auto-populated from customer address. Hover the field for details.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -190,7 +246,27 @@ export default function EICRCertificatePage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="inspectionDate">Date(s) of Inspection *</Label>
-                <Input id="inspectionDate" name="inspectionDate" type="date" required />
+                <Input
+                  id="inspectionDate"
+                  name="inspectionDate"
+                  type="date"
+                  value={inspectionDate}
+                  onChange={(e) => {
+                    setInspectionDate(e.target.value);
+                    setIsInspectionDateAuto(false);
+                  }}
+                  required
+                  className={isInspectionDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                  title={isInspectionDateAuto ? 'Auto-populated with today\'s date. Edit if required.' : undefined}
+                />
+                {isInspectionDateAuto && (
+                  <p
+                    className="text-xs text-amber-700"
+                    title="This assumed date is auto-filled to reduce repeated entry."
+                  >
+                    Auto-populated with today&apos;s date. Hover the field for details.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -341,7 +417,7 @@ export default function EICRCertificatePage() {
               <div className="space-y-2">
                 <Label>Next Inspection Date</Label>
                 <NextVisitField
-                  visitDate={nextInspectionDate}
+                  visitDate={inspectionDate}
                   value={nextInspectionDate}
                   onChange={setNextInspectionDate}
                 />
