@@ -21,6 +21,7 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function BS5839_6CertificatePage() {
   const router = useRouter()
+  const getTodayDate = () => new Date().toISOString().split('T')[0]
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const { data: customers = [] } = useSWR('/api/customers', fetcher)
@@ -28,9 +29,10 @@ export default function BS5839_6CertificatePage() {
   const [certificateNumber, setCertificateNumber] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
   const [siteName, setSiteName] = useState('');
-  const [visitDate, setVisitDate] = useState('');
+  const [isSiteNameAuto, setIsSiteNameAuto] = useState(false);
+  const [visitDate, setVisitDate] = useState(getTodayDate());
+  const [isVisitDateAuto, setIsVisitDateAuto] = useState(true);
   const [nextVisitDate, setNextVisitDate] = useState('');
-  const [inspectionDate, setInspectionDate] = useState('');
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true)
@@ -122,6 +124,10 @@ export default function BS5839_6CertificatePage() {
                     setSelectedCustomer(value);
                     const customer = customers.find((c: any) => c.id.toString() === value);
                     setSelectedCustomerName(customer?.name || '');
+                    if (!siteName && (customer?.address || customer?.name)) {
+                      setSiteName(customer?.address || customer?.name || '');
+                      setIsSiteNameAuto(true);
+                    }
                   }}
                 >
                   <SelectTrigger>
@@ -157,8 +163,18 @@ export default function BS5839_6CertificatePage() {
                     placeholder="Property address"
                     required
                     value={siteName}
-                    onChange={(e) => setSiteName(e.target.value)}
+                    onChange={(e) => {
+                      setSiteName(e.target.value)
+                      setIsSiteNameAuto(false)
+                    }}
+                    className={isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined}
                   />
+                  {isSiteNameAuto && (
+                    <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer.">
+                      Auto-populated from customer details. Hover the field for details.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="propertyType">Property Type *</Label>
@@ -319,12 +335,25 @@ export default function BS5839_6CertificatePage() {
                     name="visitDate"
                     type="date"
                     value={visitDate}
-                    onChange={(e) => setVisitDate(e.target.value)}
+                    onChange={(e) => {
+                      setVisitDate(e.target.value)
+                      setIsVisitDateAuto(false)
+                    }}
                     required
+                    className={isVisitDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isVisitDateAuto ? 'Auto-populated with today\'s date. Edit if required.' : undefined}
                   />
+                  {isVisitDateAuto && (
+                    <p
+                      className="text-xs text-amber-700"
+                      title="This assumed date is auto-filled to reduce repeated entry."
+                    >
+                      Auto-populated with today&apos;s date. Hover the field for details.
+                    </p>
+                  )}
                 </div>
                 <NextVisitField
-                  visitDate={inspectionDate}
+                  visitDate={visitDate}
                   value={nextVisitDate}
                   onChange={setNextVisitDate}
                   required

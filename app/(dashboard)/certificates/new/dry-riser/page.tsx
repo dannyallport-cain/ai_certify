@@ -26,6 +26,7 @@ const fetcher = (url: string) => fetch(url).then(res => {
 
 export default function DryRiserCertificatePage() {
   const router = useRouter()
+  const getTodayDate = () => new Date().toISOString().split('T')[0]
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const { data: customers = [], error } = useSWR('/api/customers', fetcher)
@@ -33,7 +34,9 @@ export default function DryRiserCertificatePage() {
   const [certificateNumber, setCertificateNumber] = useState('')
   const [selectedCustomerName, setSelectedCustomerName] = useState('')
   const [siteName, setSiteName] = useState('')
-  const [inspectionDate, setInspectionDate] = useState('')
+  const [isSiteNameAuto, setIsSiteNameAuto] = useState(false)
+  const [inspectionDate, setInspectionDate] = useState(getTodayDate())
+  const [isInspectionDateAuto, setIsInspectionDateAuto] = useState(true)
   const [nextInspectionDate, setNextInspectionDate] = useState('')
   const [visitDate, setVisitDate] = useState('')
   const [nextVisitDate, setNextVisitDate] = useState('')
@@ -126,6 +129,10 @@ export default function DryRiserCertificatePage() {
                     setSelectedCustomer(value);
                     const customer = customers.find((c: any) => c.id.toString() === value);
                     setSelectedCustomerName(customer?.name || '');
+                    if (!siteName && (customer?.address || customer?.name)) {
+                      setSiteName(customer?.address || customer?.name || '')
+                      setIsSiteNameAuto(true)
+                    }
                   }}
                 >
                   <SelectTrigger>
@@ -164,8 +171,18 @@ export default function DryRiserCertificatePage() {
                     name="siteName"
                     placeholder="Building name and address"
                     value={siteName}
-                    onChange={(e) => setSiteName(e.target.value)}
+                    onChange={(e) => {
+                      setSiteName(e.target.value)
+                      setIsSiteNameAuto(false)
+                    }}
+                    className={isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined}
                   />
+                  {isSiteNameAuto && (
+                    <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer.">
+                      Auto-populated from customer details. Hover the field for details.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="buildingHeight">Building Height (m)</Label>
@@ -332,8 +349,21 @@ export default function DryRiserCertificatePage() {
                     name="inspectionDate"
                     type="date"
                     value={inspectionDate}
-                    onChange={(e) => setInspectionDate(e.target.value)}
+                    onChange={(e) => {
+                      setInspectionDate(e.target.value)
+                      setIsInspectionDateAuto(false)
+                    }}
+                    className={isInspectionDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isInspectionDateAuto ? 'Auto-populated with today\'s date. Edit if required.' : undefined}
                   />
+                  {isInspectionDateAuto && (
+                    <p
+                      className="text-xs text-amber-700"
+                      title="This assumed date is auto-filled to reduce repeated entry."
+                    >
+                      Auto-populated with today&apos;s date. Hover the field for details.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="inspectionType">Inspection Type *</Label>

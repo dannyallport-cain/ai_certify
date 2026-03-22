@@ -3,7 +3,7 @@
 # Cloudflare API credentials
 CF_API_TOKEN="-DeqOGVQ7BmPEPI6V10OgWE8Ep-XaT7nBVx0TGKI"
 ZONE_ID="80078b60da55e56fcc83ed6229a4b3fb"
-DOMAIN="fire-call.com"
+DOMAIN="ai-certificates.app"
 
 # Function to add DNS record
 add_dns_record() {

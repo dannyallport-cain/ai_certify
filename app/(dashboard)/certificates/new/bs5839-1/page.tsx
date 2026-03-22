@@ -18,6 +18,7 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export default function BS5839_1CertificatePage() {
   const router = useRouter();
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const { data: customers = [] } = useSWR('/api/customers', fetcher);
@@ -25,7 +26,11 @@ export default function BS5839_1CertificatePage() {
   const [certificateNumber, setCertificateNumber] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
   const [siteName, setSiteName] = useState('');
-  const [inspectionDate, setInspectionDate] = useState('');
+  const [siteAddress, setSiteAddress] = useState('');
+  const [isSiteNameAuto, setIsSiteNameAuto] = useState(false);
+  const [isSiteAddressAuto, setIsSiteAddressAuto] = useState(false);
+  const [inspectionDate, setInspectionDate] = useState(getTodayDate());
+  const [isInspectionDateAuto, setIsInspectionDateAuto] = useState(true);
   const [nextInspectionDate, setNextInspectionDate] = useState('');
   const [visitDate, setVisitDate] = useState('');
   const [nextVisitDate, setNextVisitDate] = useState('');
@@ -135,7 +140,22 @@ export default function BS5839_1CertificatePage() {
                     id="customerId"
                     name="customerId"
                     value={selectedCustomer}
-                    onChange={(e) => setSelectedCustomer(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedCustomer(value);
+                      const customer = customers.find((c: any) => String(c.id) === value);
+                      setSelectedCustomerName(customer?.name || '');
+
+                      if (!siteName && (customer?.name || customer?.address)) {
+                        setSiteName(customer?.name || customer?.address || '');
+                        setIsSiteNameAuto(true);
+                      }
+
+                      if (!siteAddress && customer?.address) {
+                        setSiteAddress(customer.address);
+                        setIsSiteAddressAuto(true);
+                      }
+                    }}
                     required
                     aria-label="Select a customer"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -164,7 +184,19 @@ export default function BS5839_1CertificatePage() {
                     id="siteName"
                     name="siteName"
                     placeholder="Enter site or building name"
+                    value={siteName}
+                    onChange={(e) => {
+                      setSiteName(e.target.value);
+                      setIsSiteNameAuto(false);
+                    }}
+                    className={isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined}
                   />
+                  {isSiteNameAuto && (
+                    <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer.">
+                      Auto-populated from customer details. Hover the field for details.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="siteAddress">Site Address</Label>
@@ -173,8 +205,19 @@ export default function BS5839_1CertificatePage() {
                     name="siteAddress"
                     placeholder="Enter full site address"
                     rows={3}
-                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={siteAddress}
+                    onChange={(e) => {
+                      setSiteAddress(e.target.value);
+                      setIsSiteAddressAuto(false);
+                    }}
+                    className={`flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isSiteAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}`}
+                    title={isSiteAddressAuto ? 'Auto-populated from selected customer address. Edit if needed.' : undefined}
                   />
+                  {isSiteAddressAuto && (
+                    <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer address.">
+                      Auto-populated from customer address. Hover the field for details.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -194,9 +237,22 @@ export default function BS5839_1CertificatePage() {
                       name="inspectionDate"
                       type="date"
                       value={inspectionDate}
-                      onChange={(e) => setInspectionDate(e.target.value)}
+                      onChange={(e) => {
+                        setInspectionDate(e.target.value);
+                        setIsInspectionDateAuto(false);
+                      }}
                       required
+                      className={isInspectionDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                      title={isInspectionDateAuto ? 'Auto-populated with today\'s date. Edit if inspection occurred on a different date.' : undefined}
                     />
+                    {isInspectionDateAuto && (
+                      <p
+                        className="text-xs text-amber-700"
+                        title="This assumed date is auto-filled to speed up data entry."
+                      >
+                        Auto-populated with today&apos;s date. Hover the field for details.
+                      </p>
+                    )}
                   </div>
                   <NextVisitField
                     visitDate={inspectionDate}
@@ -230,6 +286,7 @@ export default function BS5839_1CertificatePage() {
                   <select
                     id="inspectionType"
                     name="inspectionType"
+                    title="Select inspection type"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">Select inspection type</option>
@@ -350,6 +407,7 @@ export default function BS5839_1CertificatePage() {
                     <select
                       id="serviceInterval"
                       name="serviceInterval"
+                      title="Select service interval"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Select interval</option>

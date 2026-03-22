@@ -67,9 +67,25 @@ async function getSystemStats() {
   }
 }
 
+function getSiteDomain() {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.BASE_URL ||
+    process.env.NEXTAUTH_URL ||
+    'https://ai-certificates.app';
+
+  try {
+    return new URL(baseUrl).hostname;
+  } catch {
+    const sanitized = baseUrl.replace(/^https?:\/\//i, '').split('/')[0];
+    return sanitized || 'ai-certificates.app';
+  }
+}
+
 async function AdminDashboardContent() {
   await requireAdmin();
   const stats = await getSystemStats();
+  const siteDomain = getSiteDomain();
 
   const statsCards = [
     {
@@ -175,7 +191,7 @@ async function AdminDashboardContent() {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Domain</span>
               <Badge variant="secondary" className="bg-green-100 text-green-800">
-                fire-call.com
+                {siteDomain}
               </Badge>
             </div>
             <div className="flex items-center justify-between">

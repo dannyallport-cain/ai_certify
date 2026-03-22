@@ -8,7 +8,7 @@ fi
 
 # Prompt for zone name if not set
 if [ -z "$ZONE_NAME" ]; then
-  read -p "Enter your Cloudflare Zone Name (e.g. fire-call.com): " ZONE_NAME
+  read -p "Enter your Cloudflare Zone Name (e.g. ai-certificates.app): " ZONE_NAME
 fi
 
 # Check for jq and install if missing (macOS/Homebrew or Ubuntu/Apt)

@@ -27,6 +27,7 @@ const fetcher = (url: string) => fetch(url).then(res => {
 
 export default function BS5266CertificatePage() {
   const router = useRouter()
+  const getTodayDate = () => new Date().toISOString().split('T')[0]
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const { data: customers = [], error } = useSWR('/api/customers', fetcher);
@@ -34,9 +35,14 @@ export default function BS5266CertificatePage() {
   const [certificateNumber, setCertificateNumber] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
   const [siteName, setSiteName] = useState('');
-  const [inspectionDate, setInspectionDate] = useState('');
+  const [siteAddress, setSiteAddress] = useState('');
+  const [isSiteNameAuto, setIsSiteNameAuto] = useState(false);
+  const [isSiteAddressAuto, setIsSiteAddressAuto] = useState(false);
+  const [inspectionDate, setInspectionDate] = useState(getTodayDate());
+  const [isInspectionDateAuto, setIsInspectionDateAuto] = useState(true);
   const [nextInspectionDate, setNextInspectionDate] = useState('');
-  const [visitDate, setVisitDate] = useState('');
+  const [visitDate, setVisitDate] = useState(getTodayDate());
+  const [isVisitDateAuto, setIsVisitDateAuto] = useState(true);
   const [nextVisitDate, setNextVisitDate] = useState('');
 
   const handleSubmit = async (formData: FormData) => {
@@ -148,6 +154,14 @@ export default function BS5266CertificatePage() {
                     setSelectedCustomer(value);
                     const customer = customers.find((c: any) => c.id.toString() === value);
                     setSelectedCustomerName(customer?.name || '');
+                    if (!siteName && (customer?.name || customer?.address)) {
+                      setSiteName(customer?.name || customer?.address || '');
+                      setIsSiteNameAuto(true);
+                    }
+                    if (!siteAddress && customer?.address) {
+                      setSiteAddress(customer.address);
+                      setIsSiteAddressAuto(true);
+                    }
                   }}
                 >
                   <SelectTrigger>
@@ -184,8 +198,18 @@ export default function BS5266CertificatePage() {
                     placeholder="Building or site name"
                     required
                     value={siteName}
-                    onChange={(e) => setSiteName(e.target.value)}
+                    onChange={(e) => {
+                      setSiteName(e.target.value)
+                      setIsSiteNameAuto(false)
+                    }}
+                    className={isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined}
                   />
+                  {isSiteNameAuto && (
+                    <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer.">
+                      Auto-populated from customer details. Hover the field for details.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="siteAddress">Site Address</Label>
@@ -193,7 +217,19 @@ export default function BS5266CertificatePage() {
                     id="siteAddress"
                     name="siteAddress"
                     placeholder="Full address"
+                    value={siteAddress}
+                    onChange={(e) => {
+                      setSiteAddress(e.target.value)
+                      setIsSiteAddressAuto(false)
+                    }}
+                    className={isSiteAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isSiteAddressAuto ? 'Auto-populated from selected customer address. Edit if needed.' : undefined}
                   />
+                  {isSiteAddressAuto && (
+                    <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer address.">
+                      Auto-populated from customer address. Hover the field for details.
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -365,8 +401,21 @@ export default function BS5266CertificatePage() {
                     name="inspectionDate"
                     type="date"
                     value={inspectionDate}
-                    onChange={(e) => setInspectionDate(e.target.value)}
+                    onChange={(e) => {
+                      setInspectionDate(e.target.value)
+                      setIsInspectionDateAuto(false)
+                    }}
+                    className={isInspectionDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isInspectionDateAuto ? 'Auto-populated with today\'s date. Edit if required.' : undefined}
                   />
+                  {isInspectionDateAuto && (
+                    <p
+                      className="text-xs text-amber-700"
+                      title="This assumed date is auto-filled to reduce repeated entry."
+                    >
+                      Auto-populated with today&apos;s date. Hover the field for details.
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="visitDate">Visit Date *</Label>
@@ -375,8 +424,21 @@ export default function BS5266CertificatePage() {
                     name="visitDate"
                     type="date"
                     value={visitDate}
-                    onChange={(e) => setVisitDate(e.target.value)}
+                    onChange={(e) => {
+                      setVisitDate(e.target.value)
+                      setIsVisitDateAuto(false)
+                    }}
+                    className={isVisitDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isVisitDateAuto ? 'Auto-populated with today\'s date. Edit if required.' : undefined}
                   />
+                  {isVisitDateAuto && (
+                    <p
+                      className="text-xs text-amber-700"
+                      title="This assumed date is auto-filled to reduce repeated entry."
+                    >
+                      Auto-populated with today&apos;s date. Hover the field for details.
+                    </p>
+                  )}
                 </div>
                 <NextVisitField
                   visitDate={inspectionDate}
