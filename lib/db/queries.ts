@@ -272,7 +272,14 @@ export async function logActivity(
  */
 export async function getAllUsers() {
   return await db
-    .select({ id: users.id, name: users.name, email: users.email, role: users.role, createdAt: users.createdAt })
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      status: users.status,
+      createdAt: users.createdAt,
+    })
     .from(users)
     .where(isNull(users.deletedAt));
 }
@@ -283,7 +290,12 @@ export async function getAllUsers() {
 export async function deactivateUserById(userId: number) {
   await db
     .update(users)
-    .set({ deletedAt: new Date() })
+    .set({
+      deletedAt: new Date(),
+      deactivatedAt: new Date(),
+      status: 'inactive',
+      statusChangedAt: new Date(),
+    })
     .where(eq(users.id, userId));
 }
 
@@ -311,14 +323,21 @@ export async function getAllActivityLogs() {
 /**
  * Create a new user
  */
-export async function createUser(data: { name: string; email: string; role: UserRole; }) {
+export async function createUser(data: {
+  name: string;
+  email: string;
+  role: UserRole;
+  passwordHash: string;
+}) {
   const [user] = await db
     .insert(users)
     .values({
       name: data.name,
       email: data.email,
       role: data.role,
-      passwordHash: '', // TODO: Set a proper initial password
+      passwordHash: data.passwordHash,
+      status: 'active',
+      statusChangedAt: new Date(),
     })
     .returning();
   return user;
@@ -335,5 +354,37 @@ export async function updateUserById(userId: number, data: { name?: string; role
     })
     .where(eq(users.id, userId))
     .returning();
+  return user;
+}
+
+export async function setUserStatusById(
+  userId: number,
+  status: 'active' | 'suspended' | 'inactive'
+) {
+  const deactivatedAt = status === 'active' ? null : new Date();
+
+  const [user] = await db
+    .update(users)
+    .set({
+      status,
+      deactivatedAt,
+      statusChangedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning();
+
+  return user;
+}
+
+export async function setUserPasswordById(userId: number, passwordHash: string) {
+  const [user] = await db
+    .update(users)
+    .set({
+      passwordHash,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning();
+
   return user;
 }
