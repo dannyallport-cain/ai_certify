@@ -20,8 +20,19 @@ interface CertificateTemplate {
   updatedAt: string;
 }
 
+interface DisseminatorTemplate {
+  id: number;
+  name: string;
+  description?: string;
+  status: 'draft' | 'review' | 'published' | 'archived';
+  version: number;
+  sourceFileName: string;
+  updatedAt: string;
+}
+
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
+  const [disseminatorTemplates, setDisseminatorTemplates] = useState<DisseminatorTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string>('all');
 
@@ -42,14 +53,26 @@ export default function TemplatesPage() {
   const fetchTemplates = async () => {
     try {
       const params = selectedType !== 'all' ? `?type=${selectedType}` : '';
-      const response = await fetch(`/api/admin/templates${params}`);
-      
-      if (!response.ok) {
+      const [certificateResponse, disseminatorResponse] = await Promise.all([
+        fetch(`/api/admin/templates${params}`),
+        fetch('/api/admin/report-disseminator', { cache: 'no-store' }),
+      ]);
+
+      if (!certificateResponse.ok) {
         throw new Error('Failed to fetch templates');
       }
-      
-      const data = await response.json();
-      setTemplates(data);
+
+      if (!disseminatorResponse.ok) {
+        throw new Error('Failed to fetch report disseminator templates');
+      }
+
+      const [certificateData, disseminatorData] = await Promise.all([
+        certificateResponse.json(),
+        disseminatorResponse.json(),
+      ]);
+
+      setTemplates(certificateData);
+      setDisseminatorTemplates(disseminatorData);
     } catch (error) {
       console.error('Error fetching templates:', error);
       toast.error('Failed to load templates');
@@ -242,6 +265,66 @@ export default function TemplatesPage() {
           ))}
         </div>
       )}
+
+      <div className="space-y-4 pt-6 border-t">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Report Disseminator Templates</h2>
+            <p className="text-gray-600 mt-1">
+              Templates saved from Report Disseminator appear here.
+            </p>
+          </div>
+          <Link href="/admin/reports/disseminator">
+            <Button variant="outline">Open Report Disseminator</Button>
+          </Link>
+        </div>
+
+        {disseminatorTemplates.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <p className="text-gray-500 mb-4">No report disseminator templates found</p>
+              <Link href="/admin/reports/disseminator">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create In Disseminator
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {disseminatorTemplates.map((template) => (
+              <Card key={template.id} className="relative">
+                <CardHeader>
+                  <div className="flex justify-between items-start gap-3">
+                    <div>
+                      <h3 className="font-semibold text-lg">{template.name}</h3>
+                      <p className="text-sm text-gray-600">{template.sourceFileName}</p>
+                    </div>
+                    <Badge variant="outline" className="capitalize">{template.status}</Badge>
+                  </div>
+                  {template.description && (
+                    <p className="text-sm text-gray-500 mt-2">{template.description}</p>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between items-center text-sm text-gray-500 mb-4">
+                    <span>Version {template.version}</span>
+                    <span>
+                      Updated {new Date(template.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <Link href="/admin/reports/disseminator" className="block">
+                    <Button variant="outline" size="sm" className="w-full">
+                      Open In Disseminator
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 } 
