@@ -1180,6 +1180,7 @@ export default function ReportDisseminatorPage() {
           },
           description: selected.description || '',
           name: saveTemplateName.trim(),
+          status: selected.status,
         }),
       });
 

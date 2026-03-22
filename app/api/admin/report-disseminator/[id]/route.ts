@@ -111,6 +111,8 @@ export async function PUT(
         return NextResponse.json({ error: 'Template name is required' }, { status: 400 });
       }
 
+      const nextStatus = parsed.data.status ?? current.status;
+
       const sameNameVersions = await db
         .select({
           version: reportDisseminatorTemplates.version,
@@ -128,7 +130,7 @@ export async function PUT(
           createdBy: user.id,
           name: nextName,
           description: parsed.data.description !== undefined ? parsed.data.description || null : current.description,
-          status: 'draft',
+          status: nextStatus,
           version: nextVersion,
           sourceFileName: current.sourceFileName,
           sourceMimeType: current.sourceMimeType,
@@ -136,6 +138,8 @@ export async function PUT(
           fields: parsed.data.fields ?? current.fields,
           wizardData: parsed.data.wizardData ?? current.wizardData,
           parentTemplateId: current.id,
+          publishedAt: nextStatus === 'published' ? new Date() : null,
+          archivedAt: nextStatus === 'archived' ? new Date() : null,
           storageProvider: current.storageProvider,
           storageKey: current.storageKey,
         })
