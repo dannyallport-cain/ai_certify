@@ -261,6 +261,34 @@ export const reportDisseminatorTemplates = pgTable('report_disseminator_template
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+export const reportDisseminatorReports = pgTable('report_disseminator_reports', {
+  id: serial('id').primaryKey(),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  templateId: integer('template_id')
+    .notNull()
+    .references(() => reportDisseminatorTemplates.id),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  status: varchar('status', { length: 20 }).notNull().default('draft'),
+  templateVersion: integer('template_version').notNull(),
+  templateName: varchar('template_name', { length: 255 }).notNull(),
+  sourceFileName: varchar('source_file_name', { length: 255 }).notNull(),
+  sourceMimeType: varchar('source_mime_type', { length: 100 }).notNull(),
+  sourcePdfBase64: text('source_pdf_base64').notNull(),
+  fields: json('fields').notNull(),
+  values: json('values').notNull(),
+  notes: text('notes'),
+  completedAt: timestamp('completed_at'),
+  archivedAt: timestamp('archived_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
@@ -269,6 +297,7 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   certificates: many(certificates),
   certificateTemplates: many(certificateTemplates),
   reportDisseminatorTemplates: many(reportDisseminatorTemplates),
+  reportDisseminatorReports: many(reportDisseminatorReports),
   servicem8Connections: many(servicem8Connections),
   servicem8JobMappings: many(servicem8JobMappings),
   servicem8ClientMappings: many(servicem8ClientMappings),
@@ -278,6 +307,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
   reportDisseminatorTemplates: many(reportDisseminatorTemplates),
+  reportDisseminatorReports: many(reportDisseminatorReports),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -362,6 +392,21 @@ export const reportDisseminatorTemplatesRelations = relations(reportDisseminator
   }),
 }));
 
+export const reportDisseminatorReportsRelations = relations(reportDisseminatorReports, ({ one }) => ({
+  team: one(teams, {
+    fields: [reportDisseminatorReports.teamId],
+    references: [teams.id],
+  }),
+  template: one(reportDisseminatorTemplates, {
+    fields: [reportDisseminatorReports.templateId],
+    references: [reportDisseminatorTemplates.id],
+  }),
+  createdBy: one(users, {
+    fields: [reportDisseminatorReports.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export const servicem8ConnectionsRelations = relations(servicem8Connections, ({ one }) => ({
   team: one(teams, {
     fields: [servicem8Connections.teamId],
@@ -411,6 +456,8 @@ export type CertificateTemplate = typeof certificateTemplates.$inferSelect;
 export type NewCertificateTemplate = typeof certificateTemplates.$inferInsert;
 export type ReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferSelect;
 export type NewReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferInsert;
+export type ReportDisseminatorReport = typeof reportDisseminatorReports.$inferSelect;
+export type NewReportDisseminatorReport = typeof reportDisseminatorReports.$inferInsert;
 export type ServiceM8Connection = typeof servicem8Connections.$inferSelect;
 export type NewServiceM8Connection = typeof servicem8Connections.$inferInsert;
 export type ServiceM8JobMapping = typeof servicem8JobMappings.$inferSelect;

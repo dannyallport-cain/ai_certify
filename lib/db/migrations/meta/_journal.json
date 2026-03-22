@@ -36,6 +36,13 @@
       "when": 1773970803079,
       "tag": "20260320014003_sync_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773984342516,
+      "tag": "0005_fair_naoko",
+      "breakpoints": true
     }
   ]
 }

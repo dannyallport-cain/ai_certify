@@ -39,6 +39,8 @@ import {
 import { validateUkPostcode } from '@/lib/report-disseminator/postcode';
 
 type FieldType = DisseminatorFieldType;
+type TemplateStatus = 'draft' | 'review' | 'published' | 'archived';
+type ReportStatus = 'draft' | 'completed' | 'archived';
 
 type ReportField = {
   id: string;
@@ -61,7 +63,7 @@ type DisseminatorTemplate = {
   id: number;
   name: string;
   description?: string | null;
-  status: 'draft' | 'review' | 'published' | 'archived';
+  status: TemplateStatus;
   version: number;
   sourceFileName: string;
   sourceMimeType: string;
@@ -73,6 +75,27 @@ type DisseminatorTemplate = {
     aiSuggestionsEnabled?: boolean;
     previewValues?: Record<string, string>;
   };
+};
+
+type DisseminatorReportListItem = {
+  id: number;
+  templateId: number;
+  templateName: string;
+  templateVersion: number;
+  name: string;
+  description?: string | null;
+  status: ReportStatus;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type DisseminatorReport = DisseminatorReportListItem & {
+  sourceFileName: string;
+  sourceMimeType: string;
+  sourcePdfBase64?: string;
+  fields: ReportField[];
+  values: Record<string, string>;
+  notes?: string | null;
 };
 
 const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
@@ -477,15 +500,25 @@ function SortableFieldRow({
 
 export default function ReportDisseminatorPage() {
   const [templates, setTemplates] = useState<DisseminatorTemplate[]>([]);
+  const [reports, setReports] = useState<DisseminatorReportListItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selected, setSelected] = useState<DisseminatorTemplate | null>(null);
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+  const [selectedReport, setSelectedReport] = useState<DisseminatorReport | null>(null);
+  const [editorMode, setEditorMode] = useState<'template' | 'report'>('template');
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loadingReports, setLoadingReports] = useState(true);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [savingReport, setSavingReport] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [creatingReport, setCreatingReport] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [createFeedback, setCreateFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveTemplateName, setSaveTemplateName] = useState('');
+  const [createReportDialogOpen, setCreateReportDialogOpen] = useState(false);
+  const [reportName, setReportName] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
   const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
   const [searchingFieldId, setSearchingFieldId] = useState<string | null>(null);
 
@@ -520,6 +553,24 @@ export default function ReportDisseminatorPage() {
     }
   };
 
+  const loadReports = async () => {
+    try {
+      setLoadingReports(true);
+      const res = await fetch('/api/admin/report-disseminator/reports', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to load reports');
+      const data = await res.json();
+      setReports(data);
+      if (!selectedReportId && editorMode === 'report' && data.length > 0) {
+        setSelectedReportId(data[0].id);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load saved disseminated reports');
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
   const loadTemplate = async (id: number) => {
     try {
       const res = await fetch(`/api/admin/report-disseminator/${id}`, { cache: 'no-store' });
@@ -549,8 +600,21 @@ export default function ReportDisseminatorPage() {
     }
   };
 
+  const loadReport = async (id: number) => {
+    try {
+      const res = await fetch(`/api/admin/report-disseminator/reports/${id}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to load report');
+      const data = await res.json();
+      setSelectedReport(data);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load saved report');
+    }
+  };
+
   useEffect(() => {
     loadTemplates();
+    loadReports();
   }, []);
 
   useEffect(() => {
@@ -558,6 +622,14 @@ export default function ReportDisseminatorPage() {
       loadTemplate(selectedId);
     }
   }, [selectedId]);
+
+  useEffect(() => {
+    if (selectedReportId) {
+      loadReport(selectedReportId);
+    } else {
+      setSelectedReport(null);
+    }
+  }, [selectedReportId]);
 
   useEffect(() => {
     if (!selected) {
@@ -609,6 +681,7 @@ export default function ReportDisseminatorPage() {
       setName('');
       setDescription('');
       setFile(null);
+      setEditorMode('template');
       await loadTemplates();
       setSelectedId(payload.id);
     } catch (error: any) {
@@ -1042,14 +1115,58 @@ export default function ReportDisseminatorPage() {
     };
   };
 
-  const saveTemplate = async () => {
+  const upsertTemplateSummary = (template: DisseminatorTemplate) => {
+    setTemplates((current) => [template, ...current.filter((item) => item.id !== template.id)]);
+  };
+
+  const upsertReportSummary = (report: DisseminatorReport | DisseminatorReportListItem) => {
+    setReports((current) => [report, ...current.filter((item) => item.id !== report.id)]);
+  };
+
+  const updateTemplate = async () => {
+    if (!selected) return;
+
+    setSavingTemplate(true);
+    try {
+      const res = await fetch(`/api/admin/report-disseminator/${selected.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: selected.fields,
+          wizardData: {
+            ...selected.wizardData,
+            previewValues,
+          },
+          description: selected.description || '',
+          name: selected.name,
+          status: selected.status,
+        }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.error || 'Failed to save template');
+      }
+
+      setSelected(payload);
+      upsertTemplateSummary(payload);
+      toast.success('Template updated');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to save template');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const saveTemplateAsNew = async () => {
     if (!selected) return;
     if (!saveTemplateName.trim()) {
       toast.error('Template name is required');
       return;
     }
 
-    setSaving(true);
+    setSavingTemplate(true);
     try {
       const res = await fetch(`/api/admin/report-disseminator/${selected.id}`, {
         method: 'PUT',
@@ -1074,17 +1191,117 @@ export default function ReportDisseminatorPage() {
       setSaveDialogOpen(false);
       setSaveTemplateName('');
       setSelected(payload);
-      setTemplates((current) => [
-        payload,
-        ...current.filter((template) => template.id !== payload.id),
-      ]);
-      toast.success('Template saved');
+      upsertTemplateSummary(payload);
+      toast.success('New template saved');
       setSelectedId(payload.id);
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || 'Failed to save template');
     } finally {
-      setSaving(false);
+      setSavingTemplate(false);
+    }
+  };
+
+  const openCreateReportDialog = () => {
+    if (!selected) return;
+    if (!selected.fields.length) {
+      toast.error('Extract or add fields before creating a report');
+      return;
+    }
+    setReportName(`${selected.name} report`);
+    setReportDescription(selected.description || '');
+    setCreateReportDialogOpen(true);
+  };
+
+  const createReportFromTemplate = async () => {
+    if (!selected) return;
+    if (!reportName.trim()) {
+      toast.error('Report name is required');
+      return;
+    }
+
+    if (!selected.sourcePdfBase64) {
+      toast.error('This template is missing its source PDF snapshot');
+      return;
+    }
+
+    setCreatingReport(true);
+    try {
+      const res = await fetch('/api/admin/report-disseminator/reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: selected.id,
+          name: reportName.trim(),
+          description: reportDescription.trim(),
+          values: previewValues,
+          notes: selected.wizardData?.notes || '',
+          snapshot: {
+            templateName: selected.name,
+            templateVersion: selected.version,
+            sourceFileName: selected.sourceFileName,
+            sourceMimeType: selected.sourceMimeType,
+            sourcePdfBase64: selected.sourcePdfBase64,
+            fields: selected.fields,
+          },
+        }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.error || 'Failed to create report');
+      }
+
+      setCreateReportDialogOpen(false);
+      setReportName('');
+      setReportDescription('');
+      setSelectedReport(payload);
+      upsertReportSummary(payload);
+      setSelectedReportId(payload.id);
+      setEditorMode('report');
+      toast.success('Draft report created');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to create report');
+    } finally {
+      setCreatingReport(false);
+    }
+  };
+
+  const saveReport = async () => {
+    if (!selectedReport) return;
+    if (!selectedReport.name.trim()) {
+      toast.error('Report name is required');
+      return;
+    }
+
+    setSavingReport(true);
+    try {
+      const res = await fetch(`/api/admin/report-disseminator/reports/${selectedReport.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: selectedReport.name,
+          description: selectedReport.description || '',
+          status: selectedReport.status,
+          values: selectedReport.values,
+          notes: selectedReport.notes || '',
+        }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) {
+        throw new Error(payload?.error || 'Failed to save report');
+      }
+
+      setSelectedReport(payload);
+      upsertReportSummary(payload);
+      toast.success('Report saved');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to save report');
+    } finally {
+      setSavingReport(false);
     }
   };
 
@@ -1099,20 +1316,32 @@ export default function ReportDisseminatorPage() {
     }
   };
 
+  const summarizeFields = (fields: ReportField[]) => {
+    const numericCount = fields.filter((f) => isNumericLikeFieldType(f.fieldType)).length;
+    const dropdownCount = fields.filter((f) => f.fieldType === 'dropdown').length;
+    const addressCount = fields.filter((f) => f.fieldType === 'address' || f.fieldType === 'postcode').length;
+    const phoneCount = fields.filter((f) => f.fieldType === 'uk_phone').length;
+    return { numericCount, dropdownCount, addressCount, phoneCount };
+  };
+
   const wizardStep = selected?.wizardData?.currentStep || 1;
   const unplacedFields = useMemo(
     () => selected?.fields.filter((field) => !field.boundingBox) || [],
     [selected]
   );
+  const reportUnplacedFields = useMemo(
+    () => selectedReport?.fields.filter((field) => !field.boundingBox) || [],
+    [selectedReport]
+  );
 
   const selectedSummary = useMemo(() => {
     if (!selected) return null;
-    const numericCount = selected.fields.filter((f) => isNumericLikeFieldType(f.fieldType)).length;
-    const dropdownCount = selected.fields.filter((f) => f.fieldType === 'dropdown').length;
-    const addressCount = selected.fields.filter((f) => f.fieldType === 'address' || f.fieldType === 'postcode').length;
-    const phoneCount = selected.fields.filter((f) => f.fieldType === 'uk_phone').length;
-    return { numericCount, dropdownCount, addressCount, phoneCount };
+    return summarizeFields(selected.fields);
   }, [selected]);
+  const selectedReportSummary = useMemo(() => {
+    if (!selectedReport) return null;
+    return summarizeFields(selectedReport.fields);
+  }, [selectedReport]);
 
   const updatePreviewValue = (fieldId: string, value: string) => {
     setPreviewValues((current) => ({
@@ -1135,16 +1364,33 @@ export default function ReportDisseminatorPage() {
     });
   };
 
-  const renderInlineFieldInput = (field: ReportField) => {
+  const updateReportValue = (fieldId: string, value: string) => {
+    setSelectedReport((currentReport) => {
+      if (!currentReport) return currentReport;
+      return {
+        ...currentReport,
+        values: {
+          ...currentReport.values,
+          [fieldId]: value,
+        },
+      };
+    });
+  };
+
+  const renderInlineFieldInput = (
+    field: ReportField,
+    values: Record<string, string>,
+    onValueChange: (fieldId: string, value: string) => void
+  ) => {
     const commonClassName = 'w-full rounded border border-input bg-background px-3 py-2 text-sm';
-    const value = previewValues[field.id] || '';
+    const value = values[field.id] || '';
 
     if (field.fieldType === 'dropdown') {
       return (
         <select
           className={commonClassName}
           value={value}
-          onChange={(event) => updatePreviewValue(field.id, event.target.value)}
+          onChange={(event) => onValueChange(field.id, event.target.value)}
           onFocus={() => setSelectedFieldId(field.id)}
         >
           <option value="">Select {field.label}</option>
@@ -1162,7 +1408,7 @@ export default function ReportDisseminatorPage() {
         <select
           className={commonClassName}
           value={value}
-          onChange={(event) => updatePreviewValue(field.id, event.target.value)}
+          onChange={(event) => onValueChange(field.id, event.target.value)}
           onFocus={() => setSelectedFieldId(field.id)}
         >
           <option value="">Select {field.label}</option>
@@ -1184,7 +1430,7 @@ export default function ReportDisseminatorPage() {
         max={field.numericConfig?.max}
         step={field.numericConfig?.resolution}
         value={value}
-        onChange={(event) => updatePreviewValue(field.id, event.target.value)}
+        onChange={(event) => onValueChange(field.id, event.target.value)}
         onFocus={() => setSelectedFieldId(field.id)}
       />
     );
@@ -1230,58 +1476,120 @@ export default function ReportDisseminatorPage() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Templates</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
-            {!loading && templates.length === 0 && <p className="text-sm text-muted-foreground">No templates yet.</p>}
-            {templates.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                className={`w-full text-left border rounded p-3 ${selectedId === template.id ? 'border-primary' : 'border-border'}`}
-                onClick={() => setSelectedId(template.id)}
-              >
-                <p className="font-medium text-sm">{template.name}</p>
-                <p className="text-xs text-muted-foreground mt-1">{template.sourceFileName}</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <Badge variant="secondary">v{template.version}</Badge>
-                  <Badge variant={template.status === 'published' ? 'default' : 'outline'}>{template.status}</Badge>
-                </div>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
+        <div className="space-y-6 lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle>Templates</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+              {!loading && templates.length === 0 && <p className="text-sm text-muted-foreground">No templates yet.</p>}
+              {templates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  className={`w-full text-left border rounded p-3 ${
+                    editorMode === 'template' && selectedId === template.id ? 'border-primary' : 'border-border'
+                  }`}
+                  onClick={() => {
+                    setEditorMode('template');
+                    setSelectedId(template.id);
+                    setSelectedFieldId(null);
+                  }}
+                >
+                  <p className="font-medium text-sm">{template.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{template.sourceFileName}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge variant="secondary">v{template.version}</Badge>
+                    <Badge variant={template.status === 'published' ? 'default' : 'outline'}>{template.status}</Badge>
+                  </div>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Saved Reports</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {loadingReports && <p className="text-sm text-muted-foreground">Loading…</p>}
+              {!loadingReports && reports.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No saved reports yet. Create one from a template once the form layout is ready.
+                </p>
+              )}
+              {reports.map((report) => (
+                <button
+                  key={report.id}
+                  type="button"
+                  className={`w-full text-left border rounded p-3 ${
+                    editorMode === 'report' && selectedReportId === report.id ? 'border-primary' : 'border-border'
+                  }`}
+                  onClick={() => {
+                    setEditorMode('report');
+                    setSelectedReportId(report.id);
+                    setSelectedFieldId(null);
+                  }}
+                >
+                  <p className="font-medium text-sm">{report.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    From {report.templateName} v{report.templateVersion}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge variant={report.status === 'completed' ? 'default' : 'outline'}>{report.status}</Badge>
+                    {report.updatedAt && (
+                      <span className="text-[11px] text-muted-foreground">
+                        Updated {new Date(report.updatedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
 
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Wizard</CardTitle>
-            <div className="flex items-center gap-2">
-              <Select
-                value={String(wizardStep)}
-                onValueChange={(value) => selected && setSelected({
-                  ...selected,
-                  wizardData: { ...selected.wizardData, currentStep: Number(value) },
-                })}
-              >
-                <SelectTrigger className="w-[220px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Step 1: Field inventory</SelectItem>
-                  <SelectItem value="2">Step 2: Intent type mapping</SelectItem>
-                  <SelectItem value="3">Step 3: Validation rules</SelectItem>
-                  <SelectItem value="4">Step 4: Review & publish state</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-1">
+              <CardTitle>{editorMode === 'report' ? 'Saved Report Editor' : 'Template Builder'}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {editorMode === 'report'
+                  ? 'Saved reports hold completed form data. Templates remain reusable definitions.'
+                  : 'Templates define the extracted fields, validations, and layout used by future saved reports.'}
+              </p>
             </div>
+            {editorMode === 'template' && selected && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={String(wizardStep)}
+                  onValueChange={(value) =>
+                    setSelected({
+                      ...selected,
+                      wizardData: { ...selected.wizardData, currentStep: Number(value) },
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Step 1: Field inventory</SelectItem>
+                    <SelectItem value="2">Step 2: Intent type mapping</SelectItem>
+                    <SelectItem value="3">Step 3: Validation rules</SelectItem>
+                    <SelectItem value="4">Step 4: Review & publish state</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
-            {!selected && <p className="text-sm text-muted-foreground">Select a template to begin the wizard.</p>}
+            {editorMode === 'template' && !selected && (
+              <p className="text-sm text-muted-foreground">Select a template to begin building the form definition.</p>
+            )}
 
-            {selected && (
+            {editorMode === 'template' && selected && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-2">
@@ -1290,7 +1598,10 @@ export default function ReportDisseminatorPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
-                    <Select value={selected.status} onValueChange={(value: 'draft' | 'review' | 'published' | 'archived') => setSelected({ ...selected, status: value })}>
+                    <Select
+                      value={selected.status}
+                      onValueChange={(value: TemplateStatus) => setSelected({ ...selected, status: value })}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="draft">draft</SelectItem>
@@ -1315,9 +1626,13 @@ export default function ReportDisseminatorPage() {
                     <Plus className="w-4 h-4 mr-1" />
                     Add Field Manually
                   </Button>
+                  <Button type="button" onClick={openCreateReportDialog} variant="outline" size="sm" disabled={!selected.fields.length}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Create Draft Report
+                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Automatically extracts all possible fields from the PDF using AcroForm + AI Gateway
+                  Auto Extract builds the template. Create Draft Report snapshots the current template into a saved form instance.
                 </p>
 
                 <Tabs defaultValue="fields" className="w-full">
@@ -1388,7 +1703,7 @@ export default function ReportDisseminatorPage() {
                           {unplacedFields.map((field) => (
                             <div key={field.id} className="space-y-1">
                               <Label>{field.label}</Label>
-                              {renderInlineFieldInput(field)}
+                              {renderInlineFieldInput(field, previewValues, updatePreviewValue)}
                             </div>
                           ))}
                         </div>
@@ -1398,13 +1713,15 @@ export default function ReportDisseminatorPage() {
                 </Tabs>
 
                 <div className="space-y-2">
-                  <Label>Wizard notes</Label>
+                  <Label>Template notes</Label>
                   <Textarea
                     value={selected.wizardData?.notes || ''}
-                    onChange={(e) => setSelected({
-                      ...selected,
-                      wizardData: { ...selected.wizardData, notes: e.target.value },
-                    })}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        wizardData: { ...selected.wizardData, notes: e.target.value },
+                      })
+                    }
                     placeholder="Capture assumptions and field intent notes..."
                   />
                 </div>
@@ -1429,17 +1746,168 @@ export default function ReportDisseminatorPage() {
                   </div>
                 )}
 
-                <div className="flex justify-end">
-                  <Button
-                    onClick={() => {
-                      if (!selected) return;
-                      setSaveTemplateName(selected.name);
-                      setSaveDialogOpen(true);
-                    }}
-                    disabled={saving}
-                  >
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => {
+                    setSaveTemplateName(selected.name);
+                    setSaveDialogOpen(true);
+                  }} disabled={savingTemplate}>
                     <Save className="w-4 h-4 mr-2" />
-                    {saving ? 'Saving…' : 'Save Template'}
+                    Save As Template
+                  </Button>
+                  <Button type="button" onClick={updateTemplate} disabled={savingTemplate}>
+                    <Save className="w-4 h-4 mr-2" />
+                    {savingTemplate ? 'Saving…' : 'Update Template'}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {editorMode === 'report' && !selectedReport && (
+              <p className="text-sm text-muted-foreground">
+                Select a saved report from the list, or create one from a template once the template is ready.
+              </p>
+            )}
+
+            {editorMode === 'report' && selectedReport && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>Report title</Label>
+                    <Input
+                      value={selectedReport.name}
+                      onChange={(e) =>
+                        setSelectedReport({ ...selectedReport, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={selectedReport.status}
+                      onValueChange={(value: ReportStatus) =>
+                        setSelectedReport({ ...selectedReport, status: value })
+                      }
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">draft</SelectItem>
+                        <SelectItem value="completed">completed</SelectItem>
+                        <SelectItem value="archived">archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Based on template</Label>
+                    <Input value={`${selectedReport.templateName} v${selectedReport.templateVersion}`} disabled />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Report description</Label>
+                  <Input
+                    value={selectedReport.description || ''}
+                    onChange={(e) =>
+                      setSelectedReport({ ...selectedReport, description: e.target.value })
+                    }
+                    placeholder="Optional description"
+                  />
+                </div>
+
+                <Tabs defaultValue="report-form" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="report-form">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Rendered Form
+                    </TabsTrigger>
+                    <TabsTrigger value="report-fields">
+                      <List className="w-4 h-4 mr-2" />
+                      All Fields
+                    </TabsTrigger>
+                    <TabsTrigger value="report-source">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Source PDF
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="report-form" className="mt-4 space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      This is the saved report instance. Values entered here belong to this report, not the reusable template.
+                    </p>
+                    <PdfFormDocumentPreview
+                      pdfBase64={selectedReport.sourcePdfBase64}
+                      fields={selectedReport.fields}
+                      values={selectedReport.values}
+                      onValueChange={updateReportValue}
+                      selectedId={selectedFieldId}
+                      onSelectField={setSelectedFieldId}
+                    />
+
+                    {reportUnplacedFields.length > 0 && (
+                      <div className="space-y-3 rounded-md border p-4">
+                        <div>
+                          <p className="text-sm font-medium">Unplaced Fields</p>
+                          <p className="text-xs text-muted-foreground">
+                            These report fields do not have page coordinates, so they are editable below.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          {reportUnplacedFields.map((field) => (
+                            <div key={field.id} className="space-y-1">
+                              <Label>{field.label}</Label>
+                              {renderInlineFieldInput(field, selectedReport.values, updateReportValue)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="report-fields" className="mt-4">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {selectedReport.fields.map((field) => (
+                        <div key={field.id} className="space-y-1 rounded-md border p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <Label>{field.label}</Label>
+                            <Badge variant="outline">{field.fieldType}</Badge>
+                          </div>
+                          {renderInlineFieldInput(field, selectedReport.values, updateReportValue)}
+                        </div>
+                      ))}
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="report-source" className="mt-4">
+                    <PdfDocumentPreview
+                      pdfBase64={selectedReport.sourcePdfBase64}
+                      fields={selectedReport.fields}
+                      selectedId={selectedFieldId}
+                      onSelectField={setSelectedFieldId}
+                    />
+                  </TabsContent>
+                </Tabs>
+
+                <div className="space-y-2">
+                  <Label>Report notes</Label>
+                  <Textarea
+                    value={selectedReport.notes || ''}
+                    onChange={(e) =>
+                      setSelectedReport({ ...selectedReport, notes: e.target.value })
+                    }
+                    placeholder="Save contextual notes for this filled report..."
+                  />
+                </div>
+
+                {selectedReportSummary && (
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">Fields: {selectedReport.fields.length}</Badge>
+                    <Badge variant="outline">Numeric: {selectedReportSummary.numericCount}</Badge>
+                    <Badge variant="outline">Dropdown: {selectedReportSummary.dropdownCount}</Badge>
+                    <Badge variant="outline">Address/Postcode: {selectedReportSummary.addressCount}</Badge>
+                    <Badge variant="outline">Phone: {selectedReportSummary.phoneCount}</Badge>
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <Button type="button" onClick={saveReport} disabled={savingReport}>
+                    <Save className="w-4 h-4 mr-2" />
+                    {savingReport ? 'Saving…' : 'Save Report'}
                   </Button>
                 </div>
               </>
@@ -1452,9 +1920,9 @@ export default function ReportDisseminatorPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg">
             <div className="space-y-2">
-              <h2 className="text-lg font-semibold">Save Template</h2>
+              <h2 className="text-lg font-semibold">Save As Template</h2>
               <p className="text-sm text-muted-foreground">
-                Save the current source PDF, extracted fields, and layout metadata as a template entry.
+                Create a new reusable template entry from the current source PDF, extracted fields, and layout metadata.
               </p>
             </div>
 
@@ -1477,12 +1945,67 @@ export default function ReportDisseminatorPage() {
                   setSaveDialogOpen(false);
                   setSaveTemplateName('');
                 }}
-                disabled={saving}
+                disabled={savingTemplate}
               >
                 Cancel
               </Button>
-              <Button type="button" onClick={saveTemplate} disabled={saving}>
-                {saving ? 'Saving…' : 'Save'}
+              <Button type="button" onClick={saveTemplateAsNew} disabled={savingTemplate}>
+                {savingTemplate ? 'Saving…' : 'Save Template'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {createReportDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg">
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">Create Saved Report</h2>
+              <p className="text-sm text-muted-foreground">
+                This creates a real saved report instance from the current template snapshot. Future edits to the template
+                will not overwrite this report.
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="report-name">Report name</Label>
+                <Input
+                  id="report-name"
+                  value={reportName}
+                  onChange={(e) => setReportName(e.target.value)}
+                  placeholder="Enter report name"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="report-description">Description</Label>
+                <Input
+                  id="report-description"
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Optional description"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCreateReportDialogOpen(false);
+                  setReportName('');
+                  setReportDescription('');
+                }}
+                disabled={creatingReport}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={createReportFromTemplate} disabled={creatingReport}>
+                {creatingReport ? 'Creating…' : 'Create Report'}
               </Button>
             </div>
           </div>

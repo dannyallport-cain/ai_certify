@@ -72,5 +72,36 @@ export const reportDisseminatorTemplateSchema = z.object({
 
 export const reportDisseminatorUpdateSchema = reportDisseminatorTemplateSchema.partial();
 
+export const REPORT_DISSEMINATOR_REPORT_STATUSES = ['draft', 'completed', 'archived'] as const;
+
+export const reportDisseminatorReportStatusSchema = z.enum(REPORT_DISSEMINATOR_REPORT_STATUSES);
+
+export const reportDisseminatorReportSchema = z.object({
+  templateId: z.number().int().positive(),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  status: reportDisseminatorReportStatusSchema.default('draft'),
+  values: z.record(z.string()).default({}),
+  notes: z.string().optional(),
+  snapshot: z
+    .object({
+      templateName: z.string().min(1),
+      templateVersion: z.number().int().min(1),
+      sourceFileName: z.string().min(1),
+      sourceMimeType: z.string().min(1),
+      sourcePdfBase64: z.string().min(1),
+      fields: z.array(reportFieldSchema).default([]),
+    })
+    .optional(),
+});
+
+export const reportDisseminatorReportUpdateSchema = reportDisseminatorReportSchema
+  .omit({
+    templateId: true,
+    snapshot: true,
+  })
+  .partial();
+
 export type ReportDisseminatorField = z.infer<typeof reportFieldSchema>;
 export type ReportDisseminatorTemplateInput = z.infer<typeof reportDisseminatorTemplateSchema>;
+export type ReportDisseminatorReportInput = z.infer<typeof reportDisseminatorReportSchema>;
