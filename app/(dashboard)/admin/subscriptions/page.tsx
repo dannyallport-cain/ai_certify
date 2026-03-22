@@ -1,6 +1,5 @@
 'use client';
 // filepath: app/(dashboard)/admin/subscriptions/page.tsx
-import AdminLayout from '../layout';
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,7 @@ export default function SubscriptionsPage() {
   };
 
   return (
-    <AdminLayout>
+    <>
       <h2 className="text-xl font-semibold mb-4">Subscription Plans</h2>
       <div className="space-y-4">
         {plans.map(plan => (
@@ -50,6 +49,6 @@ export default function SubscriptionsPage() {
           </Card>
         ))}
       </div>
-    </AdminLayout>
+    </>
   );
 }

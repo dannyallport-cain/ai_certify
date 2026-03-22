@@ -1,5 +1,4 @@
 // filepath: app/(dashboard)/admin/reports/page.tsx
-import AdminLayout from '../layout';
 import { getAllActivityLogs } from '@/lib/db/queries';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
@@ -9,7 +8,7 @@ export default async function ReportsPage() {
   const logs = await getAllActivityLogs();
 
   return (
-    <AdminLayout>
+    <>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl font-bold">System Activity Logs</h2>
         <Link href="/admin/reports/disseminator">
@@ -47,6 +46,6 @@ export default async function ReportsPage() {
           </div>
         </CardContent>
       </Card>
-    </AdminLayout>
+    </>
   );
 }

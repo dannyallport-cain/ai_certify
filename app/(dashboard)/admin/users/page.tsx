@@ -2,7 +2,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import AdminLayout from '../layout';
 import { Table } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 
@@ -34,7 +33,7 @@ export default function UsersPage() {
   };
 
   return (
-    <AdminLayout>
+    <>
       <h2 className="text-xl font-semibold mb-4">User Management</h2>
       {loading ? (
         <p>Loading users...</p>
@@ -68,6 +67,6 @@ export default function UsersPage() {
           </tbody>
         </Table>
       )}
-    </AdminLayout>
+    </>
   );
 }
