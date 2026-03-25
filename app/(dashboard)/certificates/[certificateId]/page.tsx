@@ -1,20 +1,32 @@
 // filepath: app/(dashboard)/certificates/[certificateId]/page.tsx
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getCertificateById } from '@/lib/db/queries';
 import { CertificateStatus, CertificateType } from '@/lib/db/schema';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { DownloadPDFButton } from '@/components/DownloadPDFButton';
+import { PdfPreviewFrame } from '@/components/PdfPreviewFrame';
 
 export default async function CertificatePage({ params }: any) {
   const resolvedParams = await params;
   const id = parseInt(resolvedParams.certificateId, 10);
-  const data = await getCertificateById(id);
+  let data;
+
+  try {
+    data = await getCertificateById(id);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'User not authenticated') {
+      redirect(`/sign-in?redirect=${encodeURIComponent(`/certificates/${id}`)}`);
+    }
+    throw error;
+  }
+
   if (!data) {
     notFound();
   }
   const { customer, items, ...certificate } = data;
+  const pdfPreviewUrl = `/api/certificates/${certificate.id}/pdf?disposition=inline#view=FitH`;
 
   const statusColor = {
     [CertificateStatus.DRAFT]: 'bg-gray-100 text-gray-800',
@@ -72,6 +84,20 @@ export default async function CertificatePage({ params }: any) {
           </CardContent>
         </Card>
       )}
+
+      <Card className="mt-4 overflow-hidden">
+        <CardHeader>
+          <CardTitle>PDF Preview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[900px] overflow-hidden rounded-md border bg-muted/20">
+            <PdfPreviewFrame
+              src={pdfPreviewUrl}
+              title={`PDF preview for certificate ${certificate.certificateNumber}`}
+            />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

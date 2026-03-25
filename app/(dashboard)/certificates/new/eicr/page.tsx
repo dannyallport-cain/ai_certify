@@ -12,7 +12,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
+import { DateDropdownField } from '@/components/DateDropdownField';
 import { NextVisitField } from '@/components/NextVisitField';
+import { AddressAutocompleteField } from '@/components/AddressAutocompleteField';
+import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
+import { OrganisationAutocompleteField } from '@/components/OrganisationAutocompleteField';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -38,20 +42,33 @@ const codeLabels: Record<string, string> = {
   FI: 'FI – Further Investigation Required',
 };
 
+const REINSPECTION_PERIODS = [
+  { label: '1 Year', months: 12 },
+  { label: '2 Years', months: 24 },
+  { label: '3 Years', months: 36 },
+  { label: '5 Years', months: 60 },
+  { label: '10 Years', months: 120 },
+] as const;
+
 export default function EICRCertificatePage() {
   const router = useRouter();
   const getTodayDate = () => new Date().toISOString().split('T')[0];
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('');
-  const { data: customers = [] } = useSWR('/api/customers', fetcher);
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const { data: customersData } = useSWR('/api/customers', fetcher);
+  const customers = Array.isArray(customersData) ? customersData : [];
   const [siteName, setSiteName] = useState('');
   const [clientAddress, setClientAddress] = useState('');
+  const [installationAddress, setInstallationAddress] = useState('');
   const [isSiteNameAuto, setIsSiteNameAuto] = useState(false);
   const [isClientAddressAuto, setIsClientAddressAuto] = useState(false);
   const [certificateNumber, setCertificateNumber] = useState('');
   const [inspectionDate, setInspectionDate] = useState(getTodayDate());
   const [isInspectionDateAuto, setIsInspectionDateAuto] = useState(true);
   const [nextInspectionDate, setNextInspectionDate] = useState('');
+  const [nextInspectionPeriod, setNextInspectionPeriod] = useState<(typeof REINSPECTION_PERIODS)[number]['label']>('3 Years');
+  const [formError, setFormError] = useState('');
   const [overallAssessment, setOverallAssessment] = useState('SATISFACTORY');
   const [earthingArrangement, setEarthingArrangement] = useState('TN-C-S');
   const [meansOfEarthing, setMeansOfEarthing] = useState("Distributor's facility");
@@ -81,9 +98,14 @@ export default function EICRCertificatePage() {
     setObservations(prev => prev.filter(o => o.id !== id));
   };
 
+  const nextInspectionPeriodMonths = REINSPECTION_PERIODS.find(
+    (period) => period.label === nextInspectionPeriod,
+  )?.months;
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFormError('');
     try {
       const form = e.currentTarget;
       const formData = new FormData(form);
@@ -101,11 +123,15 @@ export default function EICRCertificatePage() {
 
       const result = await createCertificate({}, formData);
       if (result?.error) {
-        console.error('Error creating certificate:', result.error);
-        alert(`Error: ${result.error}`);
+        if (isSessionExpiredError(result.error)) {
+          router.push(getSignInRedirectPath('/certificates/new/eicr'));
+          return;
+        }
+        setFormError(result.error);
       }
     } catch (error) {
       console.error('Error creating certificate:', error);
+      setFormError('Unable to create certificate. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -127,6 +153,11 @@ export default function EICRCertificatePage() {
 
       <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
         <input type="hidden" name="certificateType" value="EICR" />
+        {formError && (
+          <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {formError}
+          </p>
+        )}
 
         {/* ── Basic / Certificate Number ── */}
         <Card>
@@ -145,35 +176,41 @@ export default function EICRCertificatePage() {
                 <input type="hidden" name="certificateNumber" value={certificateNumber} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="customerId">Customer *</Label>
-                <select
-                  name="customerId"
-                  id="customerId"
+                <Label htmlFor="customerName">Customer *</Label>
+                <input type="hidden" name="customerId" value={selectedCustomer} />
+                <Input
+                  name="customerName"
+                  id="customerName"
                   required
-                  title="Select customer"
+                  list="customers-list-eicr"
+                  placeholder="Type customer name"
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={selectedCustomer}
+                  value={selectedCustomerName}
                   onChange={e => {
                     const value = e.target.value;
-                    setSelectedCustomer(value);
-                    const customer = customers.find((c: any) => String(c.id) === value);
+                    setSelectedCustomerName(value);
+                    const normalizedValue = value.trim().toLowerCase();
+                    const exactMatch = customers.find((c: any) => c.name?.trim().toLowerCase() === normalizedValue);
+                    const prefixMatches = customers.filter((c: any) => c.name?.trim().toLowerCase().startsWith(normalizedValue));
+                    const customer = exactMatch || (normalizedValue && prefixMatches.length === 1 ? prefixMatches[0] : null);
+                    setSelectedCustomer(customer ? String(customer.id) : '');
 
-                    if (!siteName && (customer?.name || customer?.address)) {
-                      setSiteName(customer?.name || customer?.address || '');
+                    if (customer && !siteName && (customer.name || customer.address)) {
+                      setSiteName(customer.name || customer.address || '');
                       setIsSiteNameAuto(true);
                     }
 
-                    if (!clientAddress && customer?.address) {
+                    if (customer && !clientAddress && customer.address) {
                       setClientAddress(customer.address);
                       setIsClientAddressAuto(true);
                     }
                   }}
-                >
-                  <option value="">Select customer...</option>
+                />
+                <datalist id="customers-list-eicr">
                   {customers.map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <option key={c.id} value={c.name} />
                   ))}
-                </select>
+                </datalist>
               </div>
             </div>
           </CardContent>
@@ -186,15 +223,22 @@ export default function EICRCertificatePage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="siteName">Client / Organisation *</Label>
-                <Input
+                <OrganisationAutocompleteField
                   id="siteName"
                   name="siteName"
                   required
                   placeholder="Highfield Hall Community Centre"
                   value={siteName}
-                  onChange={(e) => {
-                    setSiteName(e.target.value);
+                  onChange={(v) => {
+                    setSiteName(v);
                     setIsSiteNameAuto(false);
+                  }}
+                  onAddressPick={(address) => {
+                    setClientAddress(address);
+                    setIsClientAddressAuto(true);
+                    if (!installationAddress) {
+                      setInstallationAddress(address);
+                    }
                   }}
                   className={isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
                   title={isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined}
@@ -207,14 +251,14 @@ export default function EICRCertificatePage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="clientAddress">Client Address *</Label>
-                <Input
+                <AddressAutocompleteField
                   id="clientAddress"
                   name="clientAddress"
                   required
                   placeholder="Marsh Lane, Farnworth, Bolton, BL4 0AW"
                   value={clientAddress}
-                  onChange={(e) => {
-                    setClientAddress(e.target.value);
+                  onChange={(newValue) => {
+                    setClientAddress(newValue);
                     setIsClientAddressAuto(false);
                   }}
                   className={isClientAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
@@ -245,28 +289,20 @@ export default function EICRCertificatePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="inspectionDate">Date(s) of Inspection *</Label>
-                <Input
+                <DateDropdownField
                   id="inspectionDate"
                   name="inspectionDate"
-                  type="date"
+                  label="Date(s) of Inspection"
                   value={inspectionDate}
-                  onChange={(e) => {
-                    setInspectionDate(e.target.value);
+                  onChange={(newDate) => {
+                    setInspectionDate(newDate);
                     setIsInspectionDateAuto(false);
                   }}
                   required
-                  className={isInspectionDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
-                  title={isInspectionDateAuto ? 'Auto-populated with today\'s date. Edit if required.' : undefined}
+                  isAutoPopulated={isInspectionDateAuto}
+                  autoTitle="Auto-populated with today's date. Edit if required."
+                  autoHelpText="Auto-populated with today's date. Hover the field for details."
                 />
-                {isInspectionDateAuto && (
-                  <p
-                    className="text-xs text-amber-700"
-                    title="This assumed date is auto-filled to reduce repeated entry."
-                  >
-                    Auto-populated with today&apos;s date. Hover the field for details.
-                  </p>
-                )}
               </div>
             </div>
           </CardContent>
@@ -279,7 +315,13 @@ export default function EICRCertificatePage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="installationAddress">Installation Address</Label>
-                <Input id="installationAddress" name="installationAddress" placeholder="Same as client address" />
+                <AddressAutocompleteField
+                  id="installationAddress"
+                  name="installationAddress"
+                  placeholder="Same as client address"
+                  value={installationAddress}
+                  onChange={setInstallationAddress}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="premisesType">Description of Premises</Label>
@@ -403,7 +445,11 @@ export default function EICRCertificatePage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="nextInspectionPeriod">Recommended Reinspection Period</Label>
-                <Select name="nextInspectionPeriod" defaultValue="3 Years">
+                <Select
+                  name="nextInspectionPeriod"
+                  value={nextInspectionPeriod}
+                  onValueChange={(value) => setNextInspectionPeriod(value as (typeof REINSPECTION_PERIODS)[number]['label'])}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1 Year">1 Year</SelectItem>
@@ -420,6 +466,8 @@ export default function EICRCertificatePage() {
                   visitDate={inspectionDate}
                   value={nextInspectionDate}
                   onChange={setNextInspectionDate}
+                  periodMonths={nextInspectionPeriodMonths}
+                  showPeriodSelect={false}
                 />
                 <input type="hidden" name="nextInspectionDate" value={nextInspectionDate} />
               </div>

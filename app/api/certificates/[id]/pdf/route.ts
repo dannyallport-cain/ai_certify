@@ -10,6 +10,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const disposition = request.nextUrl.searchParams.get('disposition') === 'inline'
+      ? 'inline'
+      : 'attachment';
+
     // Check authentication
     const user = await getUser();
     if (!user) {
@@ -119,8 +123,9 @@ export async function GET(
     // Set response headers for PDF download
     const headers = new Headers();
     headers.set('Content-Type', 'application/pdf');
-    headers.set('Content-Disposition', `attachment; filename="certificate-${certificate.certificateNumber}.pdf"`);
+    headers.set('Content-Disposition', `${disposition}; filename="certificate-${certificate.certificateNumber}.pdf"`);
     headers.set('Content-Length', pdfBuffer.length.toString());
+    headers.set('Cache-Control', 'private, no-store, max-age=0');
 
     return new NextResponse(pdfBuffer, {
       status: 200,

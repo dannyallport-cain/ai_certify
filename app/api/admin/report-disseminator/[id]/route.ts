@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { reportDisseminatorTemplates } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { enrichFieldsWithAcroFormPlacements } from '@/lib/report-disseminator/pdf-acroform';
+import { sanitizeStoredPdfBase64 } from '@/lib/report-disseminator/pdf-sanitize';
 import { reportDisseminatorUpdateSchema } from '@/lib/report-disseminator/schema';
 
 const ALLOWED_ADMIN_ROLES = new Set(['supersystemAdmin', 'systemAdmin', 'owner']);
@@ -15,6 +17,23 @@ const resolveTeamId = async () => {
     return team.id;
   }
   return 1;
+};
+
+const stripPreviewValuesFromWizardData = (wizardData: Record<string, unknown> | null | undefined) => {
+  if (!wizardData || typeof wizardData !== 'object' || !('previewValues' in wizardData)) {
+    return {
+      wizardData,
+      changed: false,
+    };
+  }
+
+  const nextWizardData = { ...wizardData };
+  delete nextWizardData.previewValues;
+
+  return {
+    wizardData: nextWizardData,
+    changed: true,
+  };
 };
 
 const updateSchema = reportDisseminatorUpdateSchema.extend({
@@ -54,7 +73,33 @@ export async function GET(
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    return NextResponse.json(template[0], { headers: NO_STORE_HEADERS });
+    const sanitized = stripPreviewValuesFromWizardData(template[0].wizardData as Record<string, unknown> | null | undefined);
+    const sanitizedPdf = await sanitizeStoredPdfBase64(template[0].sourcePdfBase64);
+    const enrichedFields = await enrichFieldsWithAcroFormPlacements(template[0].fields as any, sanitizedPdf.base64);
+
+    if (sanitized.changed || sanitizedPdf.changed || enrichedFields.changed) {
+      const cleaned = await db
+        .update(reportDisseminatorTemplates)
+        .set({
+          fields: enrichedFields.fields,
+          wizardData: sanitized.wizardData as typeof reportDisseminatorTemplates.$inferInsert.wizardData,
+          sourcePdfBase64: sanitizedPdf.base64,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(reportDisseminatorTemplates.id, id), eq(reportDisseminatorTemplates.teamId, teamId)))
+        .returning();
+
+      return NextResponse.json(cleaned[0], { headers: NO_STORE_HEADERS });
+    }
+
+    return NextResponse.json(
+      {
+        ...template[0],
+        fields: enrichedFields.fields,
+        sourcePdfBase64: sanitizedPdf.base64,
+      },
+      { headers: NO_STORE_HEADERS }
+    );
   } catch (error) {
     console.error('Error fetching report disseminator template:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -136,7 +181,7 @@ export async function PUT(
           sourceMimeType: current.sourceMimeType,
           sourcePdfBase64: current.sourcePdfBase64,
           fields: parsed.data.fields ?? current.fields,
-          wizardData: parsed.data.wizardData ?? current.wizardData,
+          wizardData: stripPreviewValuesFromWizardData((parsed.data.wizardData ?? current.wizardData) as Record<string, unknown> | null | undefined).wizardData,
           parentTemplateId: current.id,
           publishedAt: nextStatus === 'published' ? new Date() : null,
           archivedAt: nextStatus === 'archived' ? new Date() : null,
@@ -172,7 +217,7 @@ export async function PUT(
           sourceMimeType: current.sourceMimeType,
           sourcePdfBase64: current.sourcePdfBase64,
           fields: current.fields,
-          wizardData: current.wizardData,
+          wizardData: stripPreviewValuesFromWizardData(current.wizardData as Record<string, unknown> | null | undefined).wizardData,
           parentTemplateId: current.id,
           storageProvider: current.storageProvider,
           storageKey: current.storageKey,
@@ -221,7 +266,9 @@ export async function PUT(
     if (parsed.data.name !== undefined) updates.name = parsed.data.name;
     if (parsed.data.description !== undefined) updates.description = parsed.data.description || null;
     if (parsed.data.fields !== undefined) updates.fields = parsed.data.fields;
-    if (parsed.data.wizardData !== undefined) updates.wizardData = parsed.data.wizardData;
+    if (parsed.data.wizardData !== undefined) {
+      updates.wizardData = stripPreviewValuesFromWizardData(parsed.data.wizardData as Record<string, unknown> | null | undefined).wizardData as typeof reportDisseminatorTemplates.$inferInsert.wizardData;
+    }
 
     if (parsed.data.status !== undefined) {
       const nextStatus = parsed.data.status;

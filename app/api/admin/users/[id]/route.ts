@@ -14,13 +14,24 @@ const patchSchema = z.object({
   newPassword: z.string().min(8).max(100).optional(),
 });
 
+async function getRouteUserId(context: any) {
+  const maybeParams = context?.params;
+  const resolvedParams =
+    maybeParams && typeof maybeParams.then === 'function'
+      ? await maybeParams
+      : maybeParams;
+
+  const id = parseInt(String(resolvedParams?.id ?? ''), 10);
+  return id;
+}
+
 export async function DELETE(_request: Request, context: any) {
   if (!(await isAdmin())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const currentUser = await getCurrentUser();
-  const id = parseInt(context.params.id, 10);
+  const id = await getRouteUserId(context);
   if (isNaN(id)) {
     return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
   }
@@ -43,7 +54,7 @@ export async function PATCH(request: Request, context: any) {
 
   const currentUser = await getCurrentUser();
 
-  const id = parseInt(context.params.id, 10);
+  const id = await getRouteUserId(context);
   if (isNaN(id)) {
     return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
   }

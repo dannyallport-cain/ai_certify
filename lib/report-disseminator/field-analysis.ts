@@ -1,4 +1,6 @@
 export const DISSEMINATOR_FIELD_TYPES = [
+  'auto_reference',
+  'date',
   'dropdown',
   'address',
   'postcode',
@@ -94,6 +96,22 @@ export function analyzeFieldDefinition(rawLabel: string, options: AnalyzeOptions
   const label = humanizeFieldLabel(rawLabel);
   const lower = label.toLowerCase();
   const hintedType = normalizeHint(options.fieldTypeHint);
+
+  if (hintedType === 'auto_reference' || isAutoReferenceField(lower)) {
+    return {
+      label: normalizeAutoReferenceLabel(label),
+      fieldType: 'auto_reference',
+      plainTextHint: 'Auto-generated reference',
+    };
+  }
+
+  if (hintedType === 'date' || isDateField(lower)) {
+    return {
+      label: normalizeDateLabel(label),
+      fieldType: 'date',
+      plainTextHint: 'Pick a date',
+    };
+  }
 
   if (hintedType === 'state_enum' || isStateEnumField(lower)) {
     return {
@@ -198,6 +216,14 @@ function isUkPhoneField(lower: string) {
   return /\b(phone|telephone|tel|mobile|contact number|telephone number)\b/.test(lower);
 }
 
+function isDateField(lower: string) {
+  return /\b(date|dated|inspection date|test date|visit date|due date|expiry date|expiration date|next visit|next inspection|issued on)\b/.test(lower);
+}
+
+function isAutoReferenceField(lower: string) {
+  return /\b(report reference|reference number|certificate number|certificate no\.?|document number|doc number|\bref\b|\breference\b)\b/.test(lower);
+}
+
 function isPostcodeField(lower: string) {
   return /\b(postcode|post code|postal code|zip code)\b/.test(lower);
 }
@@ -231,6 +257,20 @@ function normalizeStateLabel(label: string) {
   if (/satisfactory|unsatisfactory/i.test(label)) return 'Condition';
   if (/pass|fail/i.test(label)) return 'Pass / Fail';
   return label;
+}
+
+function normalizeAutoReferenceLabel(label: string) {
+  if (/report/i.test(label)) return 'Report Reference';
+  if (/certificate/i.test(label)) return 'Certificate Reference';
+  return 'Reference';
+}
+
+function normalizeDateLabel(label: string) {
+  if (/next visit|next inspection/i.test(label)) return 'Next Inspection Date';
+  if (/expiry|expiration/i.test(label)) return 'Expiry Date';
+  if (/inspection/i.test(label)) return 'Inspection Date';
+  if (/test/i.test(label)) return 'Test Date';
+  return /date/i.test(label) ? label : `${label} Date`;
 }
 
 function normalizeAddressLabel(label: string) {
