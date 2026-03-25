@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Upload, Wand2, Save, Eye, List, Globe } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Plus, Upload, Wand2, Save, Eye, List, Globe, Info, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -28,7 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PdfPageCanvas } from '@/components/disseminator/PdfPageCanvas';
+import { PdfPageCanvas, type TextOverlay } from '@/components/disseminator/PdfPageCanvas';
 import { PdfFormPageCanvas } from '@/components/disseminator/PdfFormPageCanvas';
 import {
   analyzeFieldDefinition,
@@ -98,7 +99,170 @@ type DisseminatorReport = DisseminatorReportListItem & {
   notes?: string | null;
 };
 
+type RedactionLogicOptions = {
+  fieldBounds: boolean;
+  labelMatch: boolean;
+  genericText: boolean;
+  pixelFallback: boolean;
+};
+
+type PlacementSuggestion = {
+  pageNumber: number;
+  boundingBox: { x: number; y: number; width: number; height: number };
+  anchorText: string;
+  relation: 'right_of_label' | 'below_label';
+};
+
+type PdfTextToken = {
+  text: string;
+  normalized: string;
+  x: number;
+  baselineY: number;
+  width: number;
+  height: number;
+};
+
+function normalizeSuggestionText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function tokenizeSuggestionLabel(label: string) {
+  return normalizeSuggestionText(label)
+    .split(' ')
+    .filter((token) => token.length >= 3);
+}
+
+function buildPdfTextTokens(textContent: any): PdfTextToken[] {
+  const items = Array.isArray(textContent?.items) ? textContent.items : [];
+
+  return items
+    .map((item: any) => {
+      const text = typeof item?.str === 'string' ? item.str : '';
+      const normalized = normalizeSuggestionText(text);
+      const transform = Array.isArray(item?.transform) ? item.transform : null;
+      if (!normalized || !transform) return null;
+
+      const width = Math.max(Number(item?.width) || 0, 1);
+      const height = Math.max(Number(item?.height) || Math.abs(Number(transform[3]) || 0), 8);
+
+      return {
+        text,
+        normalized,
+        x: Number(transform[4]) || 0,
+        baselineY: Number(transform[5]) || 0,
+        width,
+        height,
+      } satisfies PdfTextToken;
+    })
+    .filter((item: PdfTextToken | null): item is PdfTextToken => Boolean(item));
+}
+
+async function findPlacementSuggestionForField(pdfBase64: string, fieldLabel: string): Promise<PlacementSuggestion | null> {
+  const normalizedLabel = normalizeSuggestionText(fieldLabel);
+  const labelTokens = tokenizeSuggestionLabel(fieldLabel);
+  if (!normalizedLabel || labelTokens.length === 0) return null;
+
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+
+  const base64Data = pdfBase64.replace(/^data:[^;]+;base64,/, '');
+  const binaryString = atob(base64Data);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  let bestMatch: { score: number; suggestion: PlacementSuggestion } | null = null;
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 1 });
+    const textContent = await page.getTextContent();
+    const tokens = buildPdfTextTokens(textContent);
+    if (!tokens.length) continue;
+
+    const lineBuckets = new Map<number, PdfTextToken[]>();
+    for (const token of tokens) {
+      const bucket = Math.round(token.baselineY / 10);
+      const current = lineBuckets.get(bucket) || [];
+      current.push(token);
+      lineBuckets.set(bucket, current);
+    }
+
+    for (const line of lineBuckets.values()) {
+      const sorted = [...line].sort((left, right) => left.x - right.x);
+      const lineText = sorted.map((token) => token.text).join(' ').replace(/\s+/g, ' ').trim();
+      const normalizedLineText = normalizeSuggestionText(lineText);
+      if (!normalizedLineText) continue;
+
+      const tokenHits = labelTokens.filter((token) => normalizedLineText.includes(token)).length;
+      const exactHit = normalizedLineText.includes(normalizedLabel) ? 6 : 0;
+      const prefixHit = normalizedLabel.includes(normalizedLineText) && normalizedLineText.length >= 6 ? 3 : 0;
+      const score = exactHit + prefixHit + tokenHits;
+      if (score < 2) continue;
+
+      const lineLeft = Math.max(Math.min(...sorted.map((token) => token.x)), 0);
+      const lineRight = Math.max(...sorted.map((token) => token.x + token.width));
+      const baselineY = sorted.reduce((sum, token) => sum + token.baselineY, 0) / sorted.length;
+      const lineHeight = Math.max(...sorted.map((token) => token.height), 12);
+      const rightGap = viewport.width - lineRight - 14;
+      const suggestedHeight = Math.max(lineHeight * 1.8, 18);
+      const rightWidth = Math.min(Math.max(viewport.width * 0.22, 110), Math.max(rightGap, 0));
+
+      const suggestion: PlacementSuggestion = rightWidth >= 80
+        ? {
+            pageNumber,
+            boundingBox: {
+              x: Math.max(Math.min(lineRight + 8, viewport.width - rightWidth - 8), 8),
+              y: Math.max(baselineY - lineHeight * 0.85, 8),
+              width: rightWidth,
+              height: suggestedHeight,
+            },
+            anchorText: lineText,
+            relation: 'right_of_label',
+          }
+        : {
+            pageNumber,
+            boundingBox: {
+              x: Math.max(Math.min(lineLeft, viewport.width - Math.min(Math.max(viewport.width * 0.32, 150), viewport.width - lineLeft - 12) - 8), 8),
+              y: Math.max(baselineY - lineHeight * 2.6, 8),
+              width: Math.min(Math.max(viewport.width * 0.32, 150), viewport.width - lineLeft - 12),
+              height: suggestedHeight,
+            },
+            anchorText: lineText,
+            relation: 'below_label',
+          };
+
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = { score, suggestion };
+      }
+    }
+  }
+
+  return bestMatch?.suggestion || null;
+}
+
+function generateAutoReferenceValue(templateId: number, field: Pick<ReportField, 'id' | 'label'>) {
+  const label = field.label.toLowerCase();
+  const prefix = label.includes('report') ? 'RPT' : label.includes('certificate') ? 'CERT' : 'REF';
+  const fieldToken = field.id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase() || 'FIELD';
+  return `${prefix}-${String(templateId).padStart(4, '0')}-${fieldToken}`;
+}
+
+function stripTemplatePreviewValues(template: DisseminatorTemplate): DisseminatorTemplate {
+  const nextWizardData = { ...(template.wizardData || {}) };
+  delete nextWizardData.previewValues;
+
+  return {
+    ...template,
+    wizardData: nextWizardData,
+  };
+}
+
 const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
+  { value: 'auto_reference', label: 'Auto-generated ref' },
+  { value: 'date', label: 'Date' },
   { value: 'text', label: 'Plain text' },
   { value: 'dropdown', label: 'Dropdown options' },
   { value: 'address', label: 'Address' },
@@ -113,17 +277,78 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
 
 const AUTO_OPTION_RESEARCH_LIMIT = 8;
 const OPTION_FIELD_PATTERN = /\b(type|class|classification|category|method|code|rating|phase|arrangement|supply|system|scheme|grade|status)\b/i;
+const IMMUTABLE_PUBLISHED_TEMPLATE_ERROR =
+  'Published templates are immutable. Clone to create a new editable version.';
+
+const WIZARD_STEP_DETAILS = {
+  1: {
+    title: 'Field inventory',
+    summary: 'Extract fields from the PDF, remove noise, and make sure the template contains every required input.',
+    focus: 'Use Auto Extract, then add, remove, rename, and reorder fields until the inventory matches the source form.',
+    suggestedTab: 'fields',
+  },
+  2: {
+    title: 'Intent type mapping',
+    summary: 'Assign the correct field type so the generated form uses the right control for each value.',
+    focus: 'Review text vs dropdown vs status vs auto-generated ref and use AI Suggest where labels are ambiguous.',
+    suggestedTab: 'fields',
+  },
+  3: {
+    title: 'Validation rules',
+    summary: 'Configure numeric ranges, units, dropdown options, postcode checks, and other field-level constraints.',
+    focus: 'Open each field and add the rules that should apply when a report is filled in.',
+    suggestedTab: 'preview-template',
+  },
+  4: {
+    title: 'Review & publish state',
+    summary: 'Check the rendered facsimile, confirm any unplaced fields, add notes, and set the right lifecycle state.',
+    focus: 'Use the template preview to verify layout before saving, reviewing, or publishing.',
+    suggestedTab: 'preview-template',
+  },
+} as const;
+
+function getSuggestedTabForWizardStep(step: number) {
+  return WIZARD_STEP_DETAILS[step as keyof typeof WIZARD_STEP_DETAILS]?.suggestedTab || 'fields';
+}
 
 function PdfDocumentPreview({
   pdfBase64,
   fields,
   selectedId,
   onSelectField,
+  redactionOptions,
+  manualPlacementField,
+  placementMode,
+  suggestedPlacement,
+  onAssignBoundingBox,
+  step1Mode,
+  step1Blanks,
+  onStep1Click,
+  onStep1Update,
+  textEditMode,
+  textOverlays,
+  onAddTextOverlay,
+  onUpdateTextOverlay,
+  onRemoveTextOverlay,
 }: {
   pdfBase64?: string;
   fields: ReportField[];
   selectedId: string | null;
   onSelectField: (id: string | null) => void;
+  redactionOptions: RedactionLogicOptions;
+  manualPlacementField?: { id: string; label: string } | null;
+  placementMode?: 'auto' | 'manual';
+  suggestedPlacement?: PlacementSuggestion | null;
+  onAssignBoundingBox?: (pageNumber: number, boundingBox: { x: number; y: number; width: number; height: number }) => void;
+  step1Mode?: boolean;
+  step1Blanks?: Array<{ x: number; y: number; width: number; height: number; page: number }>;
+  onStep1Click?: (pageNumber: number, boundingBox: { x: number; y: number; width: number; height: number }) => void;
+  onStep1Update?: (index: number, boundingBox: { x: number; y: number; width: number; height: number }) => void;
+  textEditMode?: boolean;
+  textOverlays?: TextOverlay[];
+  onAddTextOverlay?: (pageNumber: number, overlay: Omit<TextOverlay, 'id' | 'page'>) => void;
+  onUpdateTextOverlay?: (id: string, updates: Partial<TextOverlay>) => void;
+  onRemoveTextOverlay?: (id: string) => void;
 }) {
   const [pageCount, setPageCount] = useState(0);
 
@@ -187,8 +412,29 @@ function PdfDocumentPreview({
               fields={fields
                 .filter((field) => field.page === pageNumber)
                 .map((field) => ({ id: field.id, label: field.label, boundingBox: field.boundingBox || null }))}
+              redactionOptions={redactionOptions}
               selectedId={selectedId}
               onSelectField={onSelectField}
+              manualPlacementField={manualPlacementField}
+              placementMode={placementMode}
+              suggestedBoundingBox={suggestedPlacement?.pageNumber === pageNumber ? suggestedPlacement.boundingBox : null}
+              suggestedLabel={suggestedPlacement?.pageNumber === pageNumber ? suggestedPlacement.anchorText : null}
+              onAssignBoundingBox={onAssignBoundingBox}
+              step1Mode={step1Mode}
+              step1Blanks={step1Blanks?.filter((b) => b.page === pageNumber)}
+              onStep1Click={onStep1Click}
+              onStep1Update={onStep1Update ? (localIdx, bb) => {
+                const blanksForPage = (step1Blanks ?? []).filter((b) => b.page === pageNumber);
+                const target = blanksForPage[localIdx];
+                if (!target) return;
+                const globalIdx = (step1Blanks ?? []).indexOf(target);
+                if (globalIdx >= 0) onStep1Update(globalIdx, bb);
+              } : undefined}
+              textEditMode={textEditMode}
+              textOverlays={textOverlays?.filter((o) => o.page === pageNumber)}
+              onAddTextOverlay={onAddTextOverlay}
+              onUpdateTextOverlay={onUpdateTextOverlay}
+              onRemoveTextOverlay={onRemoveTextOverlay}
             />
           </div>
         );
@@ -204,6 +450,7 @@ function PdfFormDocumentPreview({
   onValueChange,
   selectedId,
   onSelectField,
+  redactionOptions,
 }: {
   pdfBase64?: string;
   fields: ReportField[];
@@ -211,6 +458,7 @@ function PdfFormDocumentPreview({
   onValueChange: (fieldId: string, value: string) => void;
   selectedId: string | null;
   onSelectField: (id: string | null) => void;
+  redactionOptions: RedactionLogicOptions;
 }) {
   const [pageCount, setPageCount] = useState(0);
 
@@ -271,8 +519,9 @@ function PdfFormDocumentPreview({
             <PdfFormPageCanvas
               pdfBase64={pdfBase64}
               pageNumber={pageNumber}
-              fields={fields.filter((field) => field.page === pageNumber && field.boundingBox)}
+              fields={fields.filter((field) => field.page === pageNumber)}
               values={values}
+              redactionOptions={redactionOptions}
               onValueChange={onValueChange}
               selectedId={selectedId}
               onSelectField={(id) => onSelectField(id)}
@@ -280,6 +529,57 @@ function PdfFormDocumentPreview({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function RedactionLogicControls({
+  value,
+  onChange,
+}: {
+  value: RedactionLogicOptions;
+  onChange: (next: RedactionLogicOptions) => void;
+}) {
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      <p className="text-sm font-medium">Redaction Logic</p>
+      <p className="text-xs text-muted-foreground">
+        Toggle each strategy on/off to find the cleanest preview for this PDF.
+      </p>
+      <div className="flex flex-wrap gap-4">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={value.fieldBounds}
+            onChange={(event) => onChange({ ...value, fieldBounds: event.target.checked })}
+          />
+          Field bounding-box redaction
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={value.labelMatch}
+            onChange={(event) => onChange({ ...value, labelMatch: event.target.checked })}
+          />
+          Label-matched redaction
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={value.genericText}
+            onChange={(event) => onChange({ ...value, genericText: event.target.checked })}
+          />
+          Generic text redaction
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={value.pixelFallback}
+            onChange={(event) => onChange({ ...value, pixelFallback: event.target.checked })}
+          />
+          Pixel fallback redaction
+        </label>
+      </div>
     </div>
   );
 }
@@ -298,12 +598,8 @@ function SortableFieldRow({
   searchingOnlineOptions: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: field.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+  const rowClassName = `sortable-field-row-${field.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+  const rowCss = `.${rowClassName}{transform:${CSS.Transform.toString(transform) || 'none'};transition:${transition || 'none'};opacity:${isDragging ? '0.5' : '1'};}`;
 
   const [postcodeTest, setPostcodeTest] = useState('');
   const [postcodeResult, setPostcodeResult] = useState<{ valid: boolean; error?: string } | null>(null);
@@ -320,7 +616,9 @@ function SortableFieldRow({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="border rounded p-3 space-y-3 bg-white">
+    <>
+      <style>{rowCss}</style>
+      <div ref={setNodeRef} className={`${rowClassName} space-y-3 rounded border bg-white p-3`}>
       <div className="flex items-center gap-2">
         <button type="button" className="cursor-grab active:cursor-grabbing" {...attributes} {...listeners}>
           <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -332,19 +630,20 @@ function SortableFieldRow({
         <Badge variant={field.required ? 'default' : 'secondary'}>{field.required ? 'Required' : 'Optional'}</Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="space-y-2">
-          <Label>Field label</Label>
-          <Input value={field.label} onChange={(e) => onUpdate({ label: e.target.value })} />
-        </div>
+      <div className="space-y-2">
+        <Label>Field label</Label>
+        <Input title="Human-readable label shown to users in the generated form" value={field.label} onChange={(e) => onUpdate({ label: e.target.value })} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label>Page</Label>
-          <Input type="number" min={1} value={field.page} onChange={(e) => onUpdate({ page: Number(e.target.value || 1) })} />
+          <Input title="PDF page where this field belongs" type="number" min={1} value={field.page} onChange={(e) => onUpdate({ page: Number(e.target.value || 1) })} />
         </div>
         <div className="space-y-2">
           <Label>Type</Label>
           <Select value={field.fieldType} onValueChange={(value: FieldType) => onUpdate({ fieldType: value })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger title="Behavior of this field in the generated form"><SelectValue /></SelectTrigger>
             <SelectContent>
               {FIELD_TYPES.map((item) => (
                 <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
@@ -371,6 +670,7 @@ function SortableFieldRow({
         <div className="space-y-2">
           <Label>Dropdown options (comma-separated)</Label>
           <Input
+            title="Comma-separated list of options for this dropdown field"
             value={(field.dropdownOptions || []).join(', ')}
             onChange={(e) => onUpdate({ dropdownOptions: e.target.value.split(',').map((v) => v.trim()).filter(Boolean) })}
           />
@@ -381,6 +681,26 @@ function SortableFieldRow({
         <div className="space-y-2">
           <Label>State options</Label>
           <Input value={(field.stateOptions || [...DEFAULT_STATE_OPTIONS]).join(', ')} disabled />
+        </div>
+      )}
+
+      {field.fieldType === 'auto_reference' && (
+        <div className="space-y-2">
+          <Label>Reference generation</Label>
+          <Input value="Auto-generated from template id and field id" disabled />
+          <p className="text-xs text-muted-foreground">
+            This field is populated automatically and remains read-only in the generated preview.
+          </p>
+        </div>
+      )}
+
+      {field.fieldType === 'date' && (
+        <div className="space-y-2">
+          <Label>Date input</Label>
+          <Input value={field.plainTextHint || 'Pick a date from the calendar dropdown'} disabled />
+          <p className="text-xs text-muted-foreground">
+            Date fields render as date pickers in the generated preview so engineers can select valid calendar dates quickly.
+          </p>
         </div>
       )}
 
@@ -399,6 +719,7 @@ function SortableFieldRow({
           <Label>UK Postcode Validation</Label>
           <div className="flex gap-2">
             <Input
+              title="Use a sample UK postcode to verify the postcode rule"
               placeholder="Test postcode (e.g. SW1A 1AA)"
               value={postcodeTest}
               onChange={(e) => setPostcodeTest(e.target.value)}
@@ -426,24 +747,28 @@ function SortableFieldRow({
       {isNumericLikeFieldType(field.fieldType) && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
           <Input
+            title="Minimum allowed value"
             placeholder="Min"
             type="number"
             value={field.numericConfig?.min ?? ''}
             onChange={(e) => onUpdate({ numericConfig: { ...field.numericConfig, min: e.target.value === '' ? undefined : Number(e.target.value) } })}
           />
           <Input
+            title="Maximum allowed value"
             placeholder="Max"
             type="number"
             value={field.numericConfig?.max ?? ''}
             onChange={(e) => onUpdate({ numericConfig: { ...field.numericConfig, max: e.target.value === '' ? undefined : Number(e.target.value) } })}
           />
           <Input
+            title="Allowed precision or increment"
             placeholder="Resolution"
             type="number"
             value={field.numericConfig?.resolution ?? ''}
             onChange={(e) => onUpdate({ numericConfig: { ...field.numericConfig, resolution: e.target.value === '' ? undefined : Number(e.target.value) } })}
           />
           <Input
+            title="Measurement unit shown to users"
             placeholder="Unit"
             value={field.numericConfig?.unit ?? ''}
             onChange={(e) => onUpdate({ numericConfig: { ...field.numericConfig, unit: e.target.value } })}
@@ -454,6 +779,7 @@ function SortableFieldRow({
       {field.fieldType === 'linked_text' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <Input
+            title="Related section or group for this linked field"
             placeholder="Related section"
             value={field.linkedConfig?.relatedSection ?? ''}
             onChange={(e) => onUpdate({
@@ -465,6 +791,7 @@ function SortableFieldRow({
             })}
           />
           <Input
+            title="ID of the field this entry links to"
             placeholder="Related field ID"
             value={field.linkedConfig?.relatedFieldId ?? ''}
             onChange={(e) => onUpdate({
@@ -485,7 +812,7 @@ function SortableFieldRow({
               },
             })}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger title="How this field depends on the referenced field"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="depends_on">depends_on</SelectItem>
               <SelectItem value="mirrors">mirrors</SelectItem>
@@ -494,11 +821,14 @@ function SortableFieldRow({
           </Select>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
 export default function ReportDisseminatorPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [templates, setTemplates] = useState<DisseminatorTemplate[]>([]);
   const [reports, setReports] = useState<DisseminatorReportListItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -517,10 +847,87 @@ export default function ReportDisseminatorPage() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saveTemplateName, setSaveTemplateName] = useState('');
   const [createReportDialogOpen, setCreateReportDialogOpen] = useState(false);
+  const [saveReportDialogOpen, setSaveReportDialogOpen] = useState(false);
   const [reportName, setReportName] = useState('');
   const [reportDescription, setReportDescription] = useState('');
+  const [saveReportName, setSaveReportName] = useState('');
+
+  const navigateToTemplateEditor = (templateId: number) => {
+    router.replace(`/admin/reports/disseminator?templateId=${templateId}`);
+  };
+
+  const navigateToReportEditor = (reportId: number) => {
+    router.replace(`/admin/reports/disseminator?mode=report&reportId=${reportId}`);
+  };
   const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
   const [searchingFieldId, setSearchingFieldId] = useState<string | null>(null);
+  const [templateTab, setTemplateTab] = useState('fields');
+  const [reportTab, setReportTab] = useState('report-form');
+  const [templateFieldSearch, setTemplateFieldSearch] = useState('');
+  const [reportFieldSearch, setReportFieldSearch] = useState('');
+  const [fieldWizardIndex, setFieldWizardIndex] = useState(0);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
+  const [placementSuggestions, setPlacementSuggestions] = useState<Record<string, PlacementSuggestion | null>>({});
+  const [mappingUndoStack, setMappingUndoStack] = useState<Array<{ fieldId: string; previousBoundingBox: ReportField['boundingBox']; previousPage: number }>>([]);
+
+  // ── Wizard Step Through ──────────────────────────────────────────────
+  type WizardPhase = 'select' | 'name' | 'type' | 'logic' | 'confirm';
+  type WizardDraft = {
+    boundingBox: ReportField['boundingBox'];
+    page: number;
+    label: string;
+    fieldType: FieldType;
+    stateOptions: Array<'tick' | 'cross' | 'NA' | 'LIM' | 'NV'>;
+    dropdownOptions: string[];
+    prefix: string;
+    suffix: string;
+    increment: boolean;
+    numericUnit: string;
+  };
+  const EMPTY_WIZARD_DRAFT: WizardDraft = {
+    boundingBox: undefined,
+    page: 1,
+    label: '',
+    fieldType: 'text',
+    stateOptions: [...DEFAULT_STATE_OPTIONS],
+    dropdownOptions: ['Option 1', 'Option 2'],
+    prefix: '',
+    suffix: '',
+    increment: false,
+    numericUnit: '',
+  };
+  const [wizardActive, setWizardActive] = useState(false);
+  const [wizardPhase, setWizardPhase] = useState<WizardPhase>('select');
+  const [wizardDraft, setWizardDraft] = useState<WizardDraft>(EMPTY_WIZARD_DRAFT);
+  const [wizardFieldsAdded, setWizardFieldsAdded] = useState(0);
+
+  // ── Step 1: mark-and-blank field detection ────────────────────────────────
+  const [step1Active, setStep1Active] = useState(false);
+  const [step1Blanks, setStep1Blanks] = useState<Array<{ x: number; y: number; width: number; height: number; page: number }>>([]);
+  const [step2Queue, setStep2Queue] = useState<Array<{ x: number; y: number; width: number; height: number; page: number }>>([]);
+
+  // ── Text edit mode: redact / replace text in the PDF ──────────────────────
+  const [textEditActive, setTextEditActive] = useState(false);
+  const [textOverlays, setTextOverlays] = useState<TextOverlay[]>([]);
+
+  const handleAddTextOverlay = (pageNumber: number, overlay: Omit<TextOverlay, 'id' | 'page'>) => {
+    setTextOverlays((prev) => [...prev, { ...overlay, id: crypto.randomUUID(), page: pageNumber }]);
+  };
+  const handleUpdateTextOverlay = (id: string, updates: Partial<TextOverlay>) => {
+    setTextOverlays((prev) => prev.map((o) => (o.id === id ? { ...o, ...updates } : o)));
+  };
+  const handleRemoveTextOverlay = (id: string) => {
+    setTextOverlays((prev) => prev.filter((o) => o.id !== id));
+  };
+
+  const [redactionOptions, setRedactionOptions] = useState<RedactionLogicOptions>({
+    fieldBounds: true,
+    labelMatch: true,
+    genericText: false,
+    pixelFallback: false,
+  });
+  const [manualPlacementMode, setManualPlacementMode] = useState(false);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -576,7 +983,7 @@ export default function ReportDisseminatorPage() {
       const res = await fetch(`/api/admin/report-disseminator/${id}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load template');
       const data = await res.json();
-      setSelected(data);
+      setSelected(stripTemplatePreviewValues(data));
       
       // Reconstruct File from base64 for extraction APIs
       if (data.sourcePdfBase64) {
@@ -632,6 +1039,39 @@ export default function ReportDisseminatorPage() {
   }, [selectedReportId]);
 
   useEffect(() => {
+    const mode = searchParams.get('mode');
+    const reportIdParam = searchParams.get('reportId');
+    if (mode === 'report' && reportIdParam) {
+      const id = parseInt(reportIdParam, 10);
+      if (!Number.isNaN(id)) {
+        setEditorMode('report');
+        setSelectedReportId(id);
+      }
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const templateIdParam = searchParams.get('templateId');
+    if (!templateIdParam) return;
+
+    const id = parseInt(templateIdParam, 10);
+    if (Number.isNaN(id)) return;
+
+    setEditorMode('template');
+    setSelectedId(id);
+    setSelectedFieldId(null);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action !== 'create-report' || !selected) return;
+    if (selectedId !== selected.id) return;
+
+    openCreateReportDialog();
+    navigateToTemplateEditor(selected.id);
+  }, [searchParams, selected, selectedId]);
+
+  useEffect(() => {
     if (!selected) {
       setPreviewValues({});
       return;
@@ -640,10 +1080,12 @@ export default function ReportDisseminatorPage() {
     setPreviewValues((currentValues) => {
       const nextValues: Record<string, string> = {};
       for (const field of selected.fields) {
+        const existingValue = currentValues[field.id];
         nextValues[field.id] =
-          currentValues[field.id] ??
-          selected.wizardData?.previewValues?.[field.id] ??
-          '';
+          existingValue ??
+          (field.fieldType === 'auto_reference'
+            ? generateAutoReferenceValue(selected.id, field)
+            : '');
       }
       return nextValues;
     });
@@ -1000,6 +1442,69 @@ export default function ReportDisseminatorPage() {
     });
   };
 
+  const buildFieldTypePatch = (field: ReportField, fieldType: FieldType): Partial<ReportField> => {
+    const analysis = analyzeFieldDefinition(field.label, { fieldTypeHint: fieldType });
+
+    const patch: Partial<ReportField> = {
+      fieldType,
+      plainTextHint: analysis.plainTextHint,
+      dropdownOptions: undefined,
+      stateOptions: undefined,
+      addressConfig: undefined,
+      postcodeConfig: undefined,
+      phoneConfig: undefined,
+      numericConfig: undefined,
+      linkedConfig: undefined,
+    };
+
+    if (fieldType === 'dropdown') {
+      patch.dropdownOptions = field.dropdownOptions?.length ? field.dropdownOptions : analysis.dropdownOptions || ['Option 1', 'Option 2'];
+    }
+
+    if (fieldType === 'state_enum') {
+      patch.stateOptions = field.stateOptions?.length ? field.stateOptions : [...DEFAULT_STATE_OPTIONS];
+    }
+
+    if (fieldType === 'address') {
+      patch.addressConfig = analysis.addressConfig || { mode: 'uk_address' };
+    }
+
+    if (fieldType === 'postcode') {
+      patch.postcodeConfig = analysis.postcodeConfig || { country: 'GB', validateAddress: true };
+    }
+
+    if (fieldType === 'uk_phone') {
+      patch.phoneConfig = analysis.phoneConfig || { country: 'GB' };
+    }
+
+    if (isNumericLikeFieldType(fieldType)) {
+      patch.numericConfig = {
+        min: field.numericConfig?.min,
+        max: field.numericConfig?.max,
+        resolution: field.numericConfig?.resolution,
+        unit: field.numericConfig?.unit || analysis.numericConfig?.unit,
+      };
+    }
+
+    if (fieldType === 'linked_text') {
+      patch.linkedConfig = field.linkedConfig || {
+        relatedSection: '',
+        relatedFieldId: '',
+        relationType: 'depends_on',
+      };
+    }
+
+    return patch;
+  };
+
+  const applyWizardFieldType = (field: ReportField, fieldType: FieldType) => {
+    updateField(field.id, buildFieldTypePatch(field, fieldType));
+
+    if (fieldWizardIndex < fieldWizardFields.length - 1) {
+      setFieldWizardIndex((currentIndex) => currentIndex + 1);
+    }
+  };
+
   const applyAiSuggestion = (field: ReportField) => {
     const analysis = analyzeFieldDefinition(field.label);
     const patch: Partial<ReportField> = {
@@ -1014,23 +1519,55 @@ export default function ReportDisseminatorPage() {
       numericConfig: analysis.numericConfig,
     };
 
-    const changed =
-      patch.label !== field.label ||
-      patch.fieldType !== field.fieldType ||
-      (patch.dropdownOptions && JSON.stringify(patch.dropdownOptions) !== JSON.stringify(field.dropdownOptions)) ||
-      (patch.stateOptions && JSON.stringify(patch.stateOptions) !== JSON.stringify(field.stateOptions)) ||
-      (patch.addressConfig && JSON.stringify(patch.addressConfig) !== JSON.stringify(field.addressConfig)) ||
-      (patch.postcodeConfig && JSON.stringify(patch.postcodeConfig) !== JSON.stringify(field.postcodeConfig)) ||
-      (patch.phoneConfig && JSON.stringify(patch.phoneConfig) !== JSON.stringify(field.phoneConfig)) ||
-      (patch.numericConfig && JSON.stringify(patch.numericConfig) !== JSON.stringify(field.numericConfig));
+    const stringifyValue = (value: unknown) => {
+      if (value === undefined) return 'none';
+      if (typeof value === 'string') return value || '(empty)';
+      if (Array.isArray(value)) return value.length ? value.join(', ') : '(empty)';
+      return JSON.stringify(value);
+    };
+
+    const diffLines: string[] = [];
+    if (patch.label !== field.label) {
+      diffLines.push(`Label: ${field.label} -> ${patch.label}`);
+    }
+    if (patch.fieldType !== field.fieldType) {
+      diffLines.push(`Type: ${field.fieldType} -> ${patch.fieldType}`);
+    }
+
+    const configComparisons: Array<{ name: string; before: unknown; after: unknown }> = [
+      { name: 'Hint', before: field.plainTextHint, after: patch.plainTextHint },
+      { name: 'Dropdown options', before: field.dropdownOptions, after: patch.dropdownOptions },
+      { name: 'State options', before: field.stateOptions, after: patch.stateOptions },
+      { name: 'Address config', before: field.addressConfig, after: patch.addressConfig },
+      { name: 'Postcode config', before: field.postcodeConfig, after: patch.postcodeConfig },
+      { name: 'Phone config', before: field.phoneConfig, after: patch.phoneConfig },
+      { name: 'Numeric config', before: field.numericConfig, after: patch.numericConfig },
+    ];
+
+    for (const comparison of configComparisons) {
+      if (JSON.stringify(comparison.before) !== JSON.stringify(comparison.after)) {
+        diffLines.push(
+          `${comparison.name}: ${stringifyValue(comparison.before)} -> ${stringifyValue(comparison.after)}`,
+        );
+      }
+    }
+
+    if (!diffLines.length) {
+      toast.info(`No stronger AI suggestion for "${field.label}"`);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      ['Apply AI suggestion to this field?', '', ...diffLines.map((line) => `- ${line}`)].join('\n'),
+    );
+
+    if (!confirmed) {
+      toast.info('AI suggestion cancelled');
+      return;
+    }
 
     updateField(field.id, patch);
-
-    if (changed) {
-      toast.success(`AI suggestion applied: ${field.label} → ${patch.fieldType}`);
-    } else {
-      toast.info(`No stronger AI suggestion for "${field.label}"`);
-    }
+    toast.success(`AI suggestion applied: ${field.label} -> ${patch.fieldType}`);
   };
 
   const searchOnlineOptions = async (field: ReportField) => {
@@ -1126,29 +1663,92 @@ export default function ReportDisseminatorPage() {
   const updateTemplate = async () => {
     if (!selected) return;
 
+    const isPublished = selected.status === 'published';
+    const confirmMessage = isPublished
+      ? [
+          `Save changes to "${selected.name}"?`,
+          '',
+          'This template is published and cannot be edited directly.',
+          'Confirming will:',
+          '  - Clone it into a new draft with your changes',
+          '  - Archive the current published version',
+        ].join('\n')
+      : [
+          `Save changes to "${selected.name}"?`,
+          '',
+          `Status: ${selected.status}`,
+          `Fields: ${selected.fields.length}`,
+          '',
+          'This will overwrite the current saved version.',
+        ].join('\n');
+
+    if (!window.confirm(confirmMessage)) return;
+
+    const currentTemplate = selected;
+    const updateBody = {
+      fields: currentTemplate.fields,
+      wizardData: stripTemplatePreviewValues(currentTemplate).wizardData,
+      description: currentTemplate.description || '',
+      name: currentTemplate.name,
+      status: currentTemplate.status,
+    };
+
     setSavingTemplate(true);
     try {
-      const res = await fetch(`/api/admin/report-disseminator/${selected.id}`, {
+      const res = await fetch(`/api/admin/report-disseminator/${currentTemplate.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fields: selected.fields,
-          wizardData: {
-            ...selected.wizardData,
-            previewValues,
-          },
-          description: selected.description || '',
-          name: selected.name,
-          status: selected.status,
-        }),
+        body: JSON.stringify(updateBody),
       });
 
       const payload = await res.json();
       if (!res.ok) {
+        if (
+          res.status === 409 &&
+          typeof payload?.error === 'string' &&
+          payload.error.includes(IMMUTABLE_PUBLISHED_TEMPLATE_ERROR)
+        ) {
+          const cloneRes = await fetch(`/api/admin/report-disseminator/${currentTemplate.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ intent: 'clone' }),
+          });
+
+          const clonePayload = await cloneRes.json();
+          if (!cloneRes.ok) {
+            throw new Error(clonePayload?.error || 'Failed to clone published template');
+          }
+
+          const saveCloneRes = await fetch(`/api/admin/report-disseminator/${clonePayload.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...updateBody,
+              status: 'draft',
+            }),
+          });
+
+          const savedClonePayload = await saveCloneRes.json();
+          if (!saveCloneRes.ok) {
+            throw new Error(savedClonePayload?.error || 'Failed to save cloned template');
+          }
+
+          setTemplates((current) =>
+            current.map((item) =>
+              item.id === currentTemplate.id ? { ...item, status: 'archived' } : item
+            )
+          );
+          setSelected(stripTemplatePreviewValues(savedClonePayload));
+          upsertTemplateSummary(savedClonePayload);
+          setSelectedId(savedClonePayload.id);
+          toast.success('Published template cloned and saved as draft');
+          return;
+        }
+
         throw new Error(payload?.error || 'Failed to save template');
       }
 
-      setSelected(payload);
+      setSelected(stripTemplatePreviewValues(payload));
       upsertTemplateSummary(payload);
       toast.success('Template updated');
     } catch (error: any) {
@@ -1174,10 +1774,7 @@ export default function ReportDisseminatorPage() {
         body: JSON.stringify({
           intent: 'save_as',
           fields: selected.fields,
-          wizardData: {
-            ...selected.wizardData,
-            previewValues,
-          },
+          wizardData: stripTemplatePreviewValues(selected).wizardData,
           description: selected.description || '',
           name: saveTemplateName.trim(),
           status: selected.status,
@@ -1191,7 +1788,7 @@ export default function ReportDisseminatorPage() {
 
       setSaveDialogOpen(false);
       setSaveTemplateName('');
-      setSelected(payload);
+      setSelected(stripTemplatePreviewValues(payload));
       upsertTemplateSummary(payload);
       toast.success('New template saved');
       setSelectedId(payload.id);
@@ -1226,6 +1823,16 @@ export default function ReportDisseminatorPage() {
       return;
     }
 
+    // Build blank initial values — auto-generated refs keep their value (read-only),
+    // all other fields start empty so the report is a clean blank form.
+    const blankValues: Record<string, string> = {};
+    for (const field of selected.fields) {
+      blankValues[field.id] =
+        field.fieldType === 'auto_reference'
+          ? generateAutoReferenceValue(selected.id, field)
+          : '';
+    }
+
     setCreatingReport(true);
     try {
       const res = await fetch('/api/admin/report-disseminator/reports', {
@@ -1235,8 +1842,8 @@ export default function ReportDisseminatorPage() {
           templateId: selected.id,
           name: reportName.trim(),
           description: reportDescription.trim(),
-          values: previewValues,
-          notes: selected.wizardData?.notes || '',
+          values: blankValues,
+          notes: '',
           snapshot: {
             templateName: selected.name,
             templateVersion: selected.version,
@@ -1260,6 +1867,7 @@ export default function ReportDisseminatorPage() {
       upsertReportSummary(payload);
       setSelectedReportId(payload.id);
       setEditorMode('report');
+      navigateToReportEditor(payload.id);
       toast.success('Draft report created');
     } catch (error: any) {
       console.error(error);
@@ -1269,24 +1877,36 @@ export default function ReportDisseminatorPage() {
     }
   };
 
+  const openSaveReportDialog = () => {
+    if (!selectedReport) return;
+    setSaveReportName(selectedReport.name || '');
+    setSaveReportDialogOpen(true);
+  };
+
   const saveReport = async () => {
     if (!selectedReport) return;
-    if (!selectedReport.name.trim()) {
+    const trimmedName = saveReportName.trim();
+    if (!trimmedName) {
       toast.error('Report name is required');
       return;
     }
 
     setSavingReport(true);
     try {
+      const nextReport = {
+        ...selectedReport,
+        name: trimmedName,
+      };
+
       const res = await fetch(`/api/admin/report-disseminator/reports/${selectedReport.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: selectedReport.name,
-          description: selectedReport.description || '',
-          status: selectedReport.status,
-          values: selectedReport.values,
-          notes: selectedReport.notes || '',
+          name: nextReport.name,
+          description: nextReport.description || '',
+          status: nextReport.status,
+          values: nextReport.values,
+          notes: nextReport.notes || '',
         }),
       });
 
@@ -1295,6 +1915,8 @@ export default function ReportDisseminatorPage() {
         throw new Error(payload?.error || 'Failed to save report');
       }
 
+      setSaveReportDialogOpen(false);
+      setSaveReportName('');
       setSelectedReport(payload);
       upsertReportSummary(payload);
       toast.success('Report saved');
@@ -1325,7 +1947,20 @@ export default function ReportDisseminatorPage() {
     return { numericCount, dropdownCount, addressCount, phoneCount };
   };
 
+  const matchesFieldSearch = (field: ReportField, rawQuery: string) => {
+    const query = rawQuery.trim().toLowerCase();
+    if (!query) return true;
+
+    return [
+      field.label,
+      field.fieldType,
+      field.plainTextHint || '',
+      String(field.page),
+    ].some((value) => value.toLowerCase().includes(query));
+  };
+
   const wizardStep = selected?.wizardData?.currentStep || 1;
+  const currentWizardStep = WIZARD_STEP_DETAILS[wizardStep as keyof typeof WIZARD_STEP_DETAILS] || WIZARD_STEP_DETAILS[1];
   const unplacedFields = useMemo(
     () => selected?.fields.filter((field) => !field.boundingBox) || [],
     [selected]
@@ -1334,35 +1969,370 @@ export default function ReportDisseminatorPage() {
     () => selectedReport?.fields.filter((field) => !field.boundingBox) || [],
     [selectedReport]
   );
+  const filteredTemplateFields = useMemo(
+    () => selected?.fields.filter((field) => matchesFieldSearch(field, templateFieldSearch)) || [],
+    [selected, templateFieldSearch]
+  );
+  const fieldWizardFields = useMemo(() => {
+    if (!selected) return [] as ReportField[];
+
+    return [...selected.fields].sort((left, right) => {
+      const leftPlaced = Number(Boolean(left.boundingBox));
+      const rightPlaced = Number(Boolean(right.boundingBox));
+      if (leftPlaced !== rightPlaced) return leftPlaced - rightPlaced;
+      return left.label.localeCompare(right.label);
+    });
+  }, [selected]);
+  const filteredReportFields = useMemo(
+    () => selectedReport?.fields.filter((field) => matchesFieldSearch(field, reportFieldSearch)) || [],
+    [selectedReport, reportFieldSearch]
+  );
+  const filteredReportUnplacedFields = useMemo(
+    () => reportUnplacedFields.filter((field) => matchesFieldSearch(field, reportFieldSearch)),
+    [reportFieldSearch, reportUnplacedFields]
+  );
 
   const selectedSummary = useMemo(() => {
     if (!selected) return null;
     return summarizeFields(selected.fields);
   }, [selected]);
+  const selectedField = useMemo(
+    () => selected?.fields.find((field) => field.id === selectedFieldId) || null,
+    [selected, selectedFieldId]
+  );
+  const wizardField = fieldWizardFields[fieldWizardIndex] || null;
+  const nextUnplacedField = useMemo(
+    () => unplacedFields.find((field) => field.id !== selectedFieldId) || null,
+    [selectedFieldId, unplacedFields]
+  );
+  const placementFields = useMemo(() => {
+    if (!selected) return [] as ReportField[];
+
+    return [...selected.fields].sort((left, right) => {
+      const leftPlaced = Number(Boolean(left.boundingBox));
+      const rightPlaced = Number(Boolean(right.boundingBox));
+      if (leftPlaced !== rightPlaced) return leftPlaced - rightPlaced;
+      return left.label.localeCompare(right.label);
+    });
+  }, [selected]);
+  const placedFieldCount = selected?.fields.length
+    ? selected.fields.length - unplacedFields.length
+    : 0;
+  const sourcePreviewRedactionOptions = manualPlacementMode
+    ? { fieldBounds: false, labelMatch: false, genericText: false, pixelFallback: false }
+    : redactionOptions;
+  const selectedFieldPlacementSuggestion = selectedField ? placementSuggestions[selectedField.id] ?? null : null;
+
+  useEffect(() => {
+    setPlacementSuggestions({});
+  }, [selected?.id]);
+
+  useEffect(() => {
+    if (!selected?.sourcePdfBase64 || !selectedField || selectedField.boundingBox) return;
+    if (placementSuggestions[selectedField.id] !== undefined) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const suggestion = await findPlacementSuggestionForField(selected.sourcePdfBase64 || '', selectedField.label);
+        if (!cancelled) {
+          setPlacementSuggestions((current) => ({
+            ...current,
+            [selectedField.id]: suggestion,
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to build placement suggestion', error);
+        if (!cancelled) {
+          setPlacementSuggestions((current) => ({
+            ...current,
+            [selectedField.id]: null,
+          }));
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [placementSuggestions, selected?.sourcePdfBase64, selectedField]);
+
+  useEffect(() => {
+    setTemplateTab(getSuggestedTabForWizardStep(wizardStep));
+  }, [wizardStep]);
+
+  useEffect(() => {
+    if (!selectedFieldId) {
+      setManualPlacementMode(false);
+      return;
+    }
+
+    if (selected && !selected.fields.some((field) => field.id === selectedFieldId)) {
+      setSelectedFieldId(null);
+      setManualPlacementMode(false);
+    }
+  }, [selected, selectedFieldId]);
+
+  useEffect(() => {
+    if (fieldWizardFields.length === 0) {
+      setFieldWizardIndex(0);
+      return;
+    }
+
+    setFieldWizardIndex((currentIndex) => Math.min(currentIndex, fieldWizardFields.length - 1));
+  }, [fieldWizardFields]);
+
+  useEffect(() => {
+    if (wizardStep !== 2 || !wizardField) return;
+    setSelectedFieldId(wizardField.id);
+  }, [wizardField, wizardStep]);
+
+  useEffect(() => {
+    if (editorMode !== 'template' || templateTab !== 'preview-origin') return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName?.toLowerCase();
+      const isEditable =
+        tagName === 'input' ||
+        tagName === 'textarea' ||
+        tagName === 'select' ||
+        Boolean(target?.isContentEditable);
+
+      // Cmd/Ctrl+Z: undo last mapping.
+      if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
+        if (mappingUndoStack.length) {
+          event.preventDefault();
+          undoLastMapping();
+        }
+        return;
+      }
+
+      if (isEditable || event.altKey) return;
+
+      if (event.key === 'n') {
+        event.preventDefault();
+        if (nextUnplacedField) {
+          setSelectedFieldId(nextUnplacedField.id);
+        }
+      }
+
+      if (event.key === 'c') {
+        if (!selectedField?.boundingBox) return;
+        event.preventDefault();
+        clearSelectedFieldPlacement();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [editorMode, templateTab, nextUnplacedField, selectedField, mappingUndoStack]);
+
   const selectedReportSummary = useMemo(() => {
     if (!selectedReport) return null;
     return summarizeFields(selectedReport.fields);
   }, [selectedReport]);
+
+  const assignBoundingBoxToSelectedField = (
+    pageNumber: number,
+    boundingBox: { x: number; y: number; width: number; height: number }
+  ) => {
+    if (!selected || !selectedFieldId) return;
+
+    const field = selected.fields.find((candidate) => candidate.id === selectedFieldId);
+
+    // Push current state onto undo stack before overwriting.
+    setMappingUndoStack((prev) => [
+      ...prev,
+      { fieldId: selectedFieldId, previousBoundingBox: field?.boundingBox, previousPage: field?.page ?? 1 },
+    ]);
+
+    const nextUnplacedField = selected.fields.find(
+      (candidate) => candidate.id !== selectedFieldId && !candidate.boundingBox,
+    );
+
+    updateField(selectedFieldId, {
+      page: pageNumber,
+      boundingBox,
+    });
+
+    toast.success(`Mapped ${field?.label || 'field'} to page ${pageNumber}`);
+
+    if (nextUnplacedField) {
+      setSelectedFieldId(nextUnplacedField.id);
+    } else {
+      setManualPlacementMode(false);
+    }
+  };
+
+  const clearSelectedFieldPlacement = () => {
+    if (!selectedFieldId) return;
+    updateField(selectedFieldId, { boundingBox: undefined });
+  };
+
+  const undoLastMapping = () => {
+    if (!mappingUndoStack.length) return;
+    const last = mappingUndoStack[mappingUndoStack.length - 1];
+    setMappingUndoStack((prev) => prev.slice(0, -1));
+    if (!selected) return;
+    setSelected({
+      ...selected,
+      fields: selected.fields.map((f) =>
+        f.id === last.fieldId
+          ? { ...f, page: last.previousPage, boundingBox: last.previousBoundingBox }
+          : f,
+      ),
+    });
+    setSelectedFieldId(last.fieldId);
+    const fieldLabel = selected.fields.find((f) => f.id === last.fieldId)?.label;
+    toast.info(`Undid mapping for ${fieldLabel || 'field'}`);
+  };
+
+  const startWizardStepThrough = () => {
+    setWizardDraft(EMPTY_WIZARD_DRAFT);
+    setWizardFieldsAdded(0);
+    setWizardPhase('select');
+    setWizardActive(true);
+    setManualPlacementMode(false);
+    setTemplateTab('preview-origin');
+  };
+
+  const cancelWizardStepThrough = () => {
+    setWizardActive(false);
+    setWizardPhase('select');
+    setWizardDraft(EMPTY_WIZARD_DRAFT);
+  };
+
+  // ── Step 1 / Step 2 handlers ────────────────────────────────────────
+
+  const startStep1 = () => {
+    setStep1Blanks([]);
+    setStep2Queue([]);
+    setStep1Active(true);
+    setManualPlacementMode(false);
+    setWizardActive(false);
+    setTemplateTab('preview-origin');
+  };
+
+  const cancelStep1 = () => {
+    setStep1Active(false);
+    setStep1Blanks([]);
+    setStep2Queue([]);
+  };
+
+  const handleStep1Click = (
+    pageNumber: number,
+    boundingBox: { x: number; y: number; width: number; height: number },
+  ) => {
+    setStep1Blanks((prev) => [...prev, { ...boundingBox, page: pageNumber }]);
+  };
+
+  const handleStep1Update = (
+    globalIdx: number,
+    boundingBox: { x: number; y: number; width: number; height: number },
+  ) => {
+    setStep1Blanks((prev) =>
+      prev.map((b, i) => (i === globalIdx ? { ...b, ...boundingBox } : b)),
+    );
+  };
+
+  const undoStep1Blank = () => {
+    setStep1Blanks((prev) => prev.slice(0, -1));
+  };
+
+  const startStep2 = () => {
+    if (!step1Blanks.length) return;
+    const [first, ...rest] = step1Blanks;
+    setStep2Queue(rest);
+    setWizardDraft({
+      ...EMPTY_WIZARD_DRAFT,
+      boundingBox: { x: first.x, y: first.y, width: first.width, height: first.height },
+      page: first.page,
+    });
+    setWizardFieldsAdded(0);
+    setWizardPhase('name');
+    setWizardActive(true);
+    setStep1Active(false);
+  };
+
+  const handleWizardBoundingBoxSelect = (
+    pageNumber: number,
+    boundingBox: { x: number; y: number; width: number; height: number },
+  ) => {
+    setWizardDraft((d) => ({ ...d, boundingBox, page: pageNumber }));
+    setWizardPhase('name');
+  };
+
+  const confirmWizardField = () => {
+    if (!selected || !wizardDraft.boundingBox || !wizardDraft.label.trim()) return;
+    const analysis = analyzeFieldDefinition(wizardDraft.label, { fieldTypeHint: wizardDraft.fieldType });
+    const newField: ReportField = {
+      id: crypto.randomUUID(),
+      page: wizardDraft.page,
+      label: wizardDraft.label.trim(),
+      fieldType: wizardDraft.fieldType,
+      required: false,
+      boundingBox: wizardDraft.boundingBox,
+      plainTextHint:
+        wizardDraft.prefix || wizardDraft.suffix
+          ? `${wizardDraft.prefix}[value]${wizardDraft.suffix}`.trim()
+          : analysis.plainTextHint,
+      stateOptions: wizardDraft.fieldType === 'state_enum' ? wizardDraft.stateOptions : undefined,
+      dropdownOptions: wizardDraft.fieldType === 'dropdown' ? wizardDraft.dropdownOptions : undefined,
+      numericConfig: isNumericLikeFieldType(wizardDraft.fieldType)
+        ? { unit: wizardDraft.numericUnit || undefined, resolution: wizardDraft.increment ? 1 : undefined }
+        : undefined,
+    };
+    setSelected({ ...selected, fields: [...(selected.fields || []), newField] });
+    setWizardFieldsAdded((n) => n + 1);
+    toast.success(
+      `Added "${newField.label}" (${wizardFieldsAdded + 1} field${wizardFieldsAdded + 1 !== 1 ? 's' : ''} added this session)`,
+    );
+    if (step2Queue.length > 0) {
+      // Advance to the next blank in the step2 queue
+      const [next, ...remaining] = step2Queue;
+      setStep2Queue(remaining);
+      setWizardDraft({
+        ...EMPTY_WIZARD_DRAFT,
+        boundingBox: { x: next.x, y: next.y, width: next.width, height: next.height },
+        page: next.page,
+      });
+      setWizardPhase('name');
+    } else if (step1Blanks.length > 0) {
+      // All step1 areas have been named — clean up
+      setStep1Blanks([]);
+      setStep2Queue([]);
+      setWizardActive(false);
+      setWizardPhase('select');
+      setWizardDraft(EMPTY_WIZARD_DRAFT);
+      toast.success('All detected fields have been named!');
+    } else {
+      setWizardDraft(EMPTY_WIZARD_DRAFT);
+      setWizardPhase('select');
+    }
+  };
+
+  const toggleManualPlacementMode = () => {
+    if (manualPlacementMode) {
+      setManualPlacementMode(false);
+      return;
+    }
+
+    const targetField = selectedField || nextUnplacedField || selected?.fields[0] || null;
+    if (!targetField) return;
+
+    if (!selectedFieldId || selectedFieldId !== targetField.id) {
+      setSelectedFieldId(targetField.id);
+    }
+    setManualPlacementMode(true);
+  };
 
   const updatePreviewValue = (fieldId: string, value: string) => {
     setPreviewValues((current) => ({
       ...current,
       [fieldId]: value,
     }));
-
-    setSelected((currentSelected) => {
-      if (!currentSelected) return currentSelected;
-      return {
-        ...currentSelected,
-        wizardData: {
-          ...currentSelected.wizardData,
-          previewValues: {
-            ...(currentSelected.wizardData?.previewValues || {}),
-            [fieldId]: value,
-          },
-        },
-      };
-    });
   };
 
   const updateReportValue = (fieldId: string, value: string) => {
@@ -1390,6 +2360,7 @@ export default function ReportDisseminatorPage() {
       return (
         <select
           className={commonClassName}
+          title={field.label}
           value={value}
           onChange={(event) => onValueChange(field.id, event.target.value)}
           onFocus={() => setSelectedFieldId(field.id)}
@@ -1408,6 +2379,7 @@ export default function ReportDisseminatorPage() {
       return (
         <select
           className={commonClassName}
+          title={field.label}
           value={value}
           onChange={(event) => onValueChange(field.id, event.target.value)}
           onFocus={() => setSelectedFieldId(field.id)}
@@ -1422,9 +2394,36 @@ export default function ReportDisseminatorPage() {
       );
     }
 
+    if (field.fieldType === 'auto_reference') {
+      return (
+        <Input
+          className="w-full bg-muted text-muted-foreground"
+          value={value}
+          title={field.label}
+          readOnly
+          onFocus={() => setSelectedFieldId(field.id)}
+        />
+      );
+    }
+
+    if (field.fieldType === 'date') {
+      return (
+        <Input
+          className="w-full"
+          title={field.label}
+          type="date"
+          required={field.required}
+          value={value}
+          onChange={(event) => onValueChange(field.id, event.target.value)}
+          onFocus={() => setSelectedFieldId(field.id)}
+        />
+      );
+    }
+
     return (
       <Input
         className="w-full"
+        title={field.label}
         type={isNumericLikeFieldType(field.fieldType) ? 'number' : field.fieldType === 'uk_phone' ? 'tel' : 'text'}
         placeholder={field.plainTextHint || field.label}
         min={field.numericConfig?.min}
@@ -1440,9 +2439,12 @@ export default function ReportDisseminatorPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Report Disseminator</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Report Disseminator</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Upload a source PDF and build a facsimile-ready template with per-field intent metadata.
+        </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Templates are reusable definitions. Saved reports are filled-in copies created from those templates.
         </p>
       </div>
 
@@ -1453,21 +2455,24 @@ export default function ReportDisseminatorPage() {
         <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
           <div className="space-y-2 md:col-span-1">
             <Label>Template name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="EICR Original Facsimile" />
+            <Input title="Internal name for this reusable template" value={name} onChange={(e) => setName(e.target.value)} placeholder="EICR Original Facsimile" />
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Description</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
+            <Input title="Optional context explaining what this template is for" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description" />
           </div>
           <div className="space-y-2 md:col-span-1">
             <Label>Source PDF</Label>
-            <Input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <Input title="Upload the original source PDF to mirror as a form template" type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
             {file && <p className="text-xs text-muted-foreground">Selected: {file.name}</p>}
           </div>
-          <Button type="button" onClick={createTemplate} className="md:col-span-1" disabled={creating}>
+          <Button type="button" title="Create a new template from the uploaded source PDF" onClick={createTemplate} className="md:col-span-1" disabled={creating}>
             <Upload className="w-4 h-4 mr-2" />
             {creating ? 'Uploading…' : 'Upload & Create'}
           </Button>
+          <p className="text-xs text-muted-foreground md:col-span-4">
+            Upload creates the template shell. Field extraction, mapping, validation, and review happen in the builder below.
+          </p>
           {createFeedback && (
             <p className={`text-sm md:col-span-4 ${createFeedback.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
               {createFeedback.message}
@@ -1476,11 +2481,40 @@ export default function ReportDisseminatorPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 gap-6 ${isSidebarCollapsed ? 'lg:grid-cols-[56px_minmax(0,1fr)]' : 'lg:grid-cols-3'}`}>
+        {isSidebarCollapsed ? (
+        <div className="hidden lg:block">
+          <div className="sticky top-6">
+            <Card>
+              <CardContent className="flex min-h-[320px] items-center justify-center p-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  title="Expand templates and reports sidebar"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  className="flex h-full min-h-[280px] w-full flex-col items-center justify-center gap-3 rounded-md border border-dashed text-xs"
+                >
+                  <PanelLeftOpen className="h-4 w-4" />
+                  <span className="[writing-mode:vertical-rl] rotate-180 tracking-[0.2em] uppercase">Templates</span>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        ) : (
         <div className="space-y-6 lg:col-span-1">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle>Templates</CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                title="Collapse templates and reports to the left"
+                onClick={() => setIsSidebarCollapsed(true)}
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </Button>
             </CardHeader>
             <CardContent className="space-y-2">
               {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -1496,10 +2530,14 @@ export default function ReportDisseminatorPage() {
                     setEditorMode('template');
                     setSelectedId(template.id);
                     setSelectedFieldId(null);
+                    navigateToTemplateEditor(template.id);
                   }}
                 >
                   <p className="font-medium text-sm">{template.name}</p>
                   <p className="text-xs text-muted-foreground mt-1">{template.sourceFileName}</p>
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    Reusable template definition for future reports.
+                  </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge variant="secondary">v{template.version}</Badge>
                     <Badge variant={template.status === 'published' ? 'default' : 'outline'}>{template.status}</Badge>
@@ -1531,11 +2569,15 @@ export default function ReportDisseminatorPage() {
                     setEditorMode('report');
                     setSelectedReportId(report.id);
                     setSelectedFieldId(null);
+                    navigateToReportEditor(report.id);
                   }}
                 >
                   <p className="font-medium text-sm">{report.name}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     From {report.templateName} v{report.templateVersion}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    Saved report instance with its own values and notes.
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge variant={report.status === 'completed' ? 'default' : 'outline'}>{report.status}</Badge>
@@ -1550,8 +2592,9 @@ export default function ReportDisseminatorPage() {
             </CardContent>
           </Card>
         </div>
+        )}
 
-        <Card className="lg:col-span-2">
+        <Card className={isSidebarCollapsed ? 'lg:col-span-1' : 'lg:col-span-2'}>
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="space-y-1">
               <CardTitle>{editorMode === 'report' ? 'Saved Report Editor' : 'Template Builder'}</CardTitle>
@@ -1561,8 +2604,24 @@ export default function ReportDisseminatorPage() {
                   : 'Templates define the extracted fields, validations, and layout used by future saved reports.'}
               </p>
             </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                title={isSidebarCollapsed ? 'Expand the templates and reports sidebar' : 'Collapse the templates and reports sidebar'}
+                onClick={() => setIsSidebarCollapsed((current) => !current)}
+                className="hidden lg:inline-flex"
+              >
+                {isSidebarCollapsed ? <PanelLeftOpen className="mr-2 h-4 w-4" /> : <PanelLeftClose className="mr-2 h-4 w-4" />}
+                {isSidebarCollapsed ? 'Expand Lists' : 'Collapse Lists'}
+              </Button>
             {editorMode === 'template' && selected && (
-              <div className="flex items-center gap-2">
+              <>
+                <div className="hidden md:flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-muted-foreground">
+                  <Info className="h-4 w-4" />
+                  Steps set the current review focus and switch to the most relevant tab.
+                </div>
                 <Select
                   value={String(wizardStep)}
                   onValueChange={(value) =>
@@ -1572,7 +2631,7 @@ export default function ReportDisseminatorPage() {
                     })
                   }
                 >
-                  <SelectTrigger className="w-[220px]">
+                  <SelectTrigger className="w-[220px]" title="Choose the current template-building step">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1582,8 +2641,9 @@ export default function ReportDisseminatorPage() {
                     <SelectItem value="4">Step 4: Review & publish state</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </>
             )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {editorMode === 'template' && !selected && (
@@ -1592,10 +2652,21 @@ export default function ReportDisseminatorPage() {
 
             {editorMode === 'template' && selected && (
               <>
+                <div className="rounded-md border bg-muted/30 p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">Step {wizardStep}: {currentWizardStep.title}</p>
+                      <p className="text-sm text-muted-foreground">{currentWizardStep.summary}</p>
+                    </div>
+                    <Badge variant="outline">Wizard focus</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{currentWizardStep.focus}</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-2">
                     <Label>Template title</Label>
-                    <Input value={selected.name} onChange={(e) => setSelected({ ...selected, name: e.target.value })} />
+                    <Input title="Name displayed in the templates list and used for new reports" value={selected.name} onChange={(e) => setSelected({ ...selected, name: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
@@ -1603,7 +2674,7 @@ export default function ReportDisseminatorPage() {
                       value={selected.status}
                       onValueChange={(value: TemplateStatus) => setSelected({ ...selected, status: value })}
                     >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger title="Lifecycle state for this reusable template"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="draft">draft</SelectItem>
                         <SelectItem value="review">review</SelectItem>
@@ -1614,20 +2685,20 @@ export default function ReportDisseminatorPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Source</Label>
-                    <Input value={selected.sourceFileName} disabled />
+                    <Input title="Original uploaded PDF file name" value={selected.sourceFileName} disabled />
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="default" size="sm" onClick={autoExtractAllFields} disabled={extracting || !file || !selected}>
+                  <Button type="button" title="Scan the PDF and build an initial field list using extraction and AI analysis" variant="default" size="sm" onClick={autoExtractAllFields} disabled={extracting || !file || !selected}>
                     <Wand2 className="w-4 h-4 mr-1" />
                     {extracting ? 'Extracting Fields...' : 'Auto Extract'}
                   </Button>
-                  <Button type="button" onClick={addField} variant="outline" size="sm" disabled={!selected}>
+                  <Button type="button" title="Insert a blank field when extraction missed something" onClick={addField} variant="outline" size="sm" disabled={!selected}>
                     <Plus className="w-4 h-4 mr-1" />
                     Add Field Manually
                   </Button>
-                  <Button type="button" onClick={openCreateReportDialog} variant="outline" size="sm" disabled={!selected.fields.length}>
+                  <Button type="button" title="Create a saved report instance from the current template definition" onClick={openCreateReportDialog} variant="outline" size="sm" disabled={!selected.fields.length}>
                     <Plus className="w-4 h-4 mr-1" />
                     Create Draft Report
                   </Button>
@@ -1636,28 +2707,144 @@ export default function ReportDisseminatorPage() {
                   Auto Extract builds the template. Create Draft Report snapshots the current template into a saved form instance.
                 </p>
 
-                <Tabs defaultValue="fields" className="w-full">
+                <Tabs value={templateTab} onValueChange={setTemplateTab} className="w-full">
                   <TabsList>
-                    <TabsTrigger value="fields">
+                    <TabsTrigger value="fields" title="Field list and field configuration editor">
                       <List className="w-4 h-4 mr-2" />
                       Fields
                     </TabsTrigger>
-                    <TabsTrigger value="preview-origin">
+                    <TabsTrigger value="preview-origin" title="Original PDF with field overlays for placement review">
                       <Eye className="w-4 h-4 mr-2" />
                       Preview Source
                     </TabsTrigger>
-                    <TabsTrigger value="preview-template">
+                    <TabsTrigger value="preview-template" title="Rendered facsimile preview showing how the generated form behaves">
                       <Eye className="w-4 h-4 mr-2" />
                       Preview Template
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="fields" className="space-y-3 mt-4">
+                    <p className="text-xs text-muted-foreground">
+                      Fields is the working tab for inventory, field typing, and validation setup.
+                    </p>
+                    {wizardStep === 2 && wizardField && (
+                      <div className="space-y-4 rounded-md border bg-muted/20 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Type Wizard</p>
+                            <p className="text-xs text-muted-foreground">
+                              Work through each extracted field and confirm what control type it should become in the generated template.
+                            </p>
+                          </div>
+                          <Badge variant="outline">
+                            Field {fieldWizardIndex + 1} of {fieldWizardFields.length}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+                          <div className="space-y-2">
+                            <p className="text-lg font-semibold leading-tight">{wizardField.label}</p>
+                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                              <span>Current type: {wizardField.fieldType}</span>
+                              <span>Page {wizardField.page}</span>
+                              <span>{wizardField.boundingBox ? 'Placed on PDF' : 'Not mapped yet'}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Use this guided step for repeated schedule items too. If a field is one of the tick/cross/NA/LIM/NV entries, choose <span className="font-medium">Tick/Cross/NA/LIM/NV</span>.
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 md:justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setFieldWizardIndex((currentIndex) => Math.max(currentIndex - 1, 0))}
+                              disabled={fieldWizardIndex === 0}
+                            >
+                              Previous
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setFieldWizardIndex((currentIndex) => Math.min(currentIndex + 1, fieldWizardFields.length - 1))}
+                              disabled={fieldWizardIndex >= fieldWizardFields.length - 1}
+                            >
+                              Skip
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                          <Button type="button" variant="outline" className="justify-start" onClick={() => applyWizardFieldType(wizardField, 'state_enum')}>
+                            Tick/Cross/NA/LIM/NV
+                          </Button>
+                          <Button type="button" variant="outline" className="justify-start" onClick={() => applyWizardFieldType(wizardField, 'text')}>
+                            Plain text
+                          </Button>
+                          <Button type="button" variant="outline" className="justify-start" onClick={() => applyWizardFieldType(wizardField, 'dropdown')}>
+                            Dropdown options
+                          </Button>
+                          <Button type="button" variant="outline" className="justify-start" onClick={() => applyWizardFieldType(wizardField, 'date')}>
+                            Date picker
+                          </Button>
+                          <Button type="button" variant="outline" className="justify-start" onClick={() => applyWizardFieldType(wizardField, 'numeric')}>
+                            Numeric value
+                          </Button>
+                          <Button type="button" variant="outline" className="justify-start" onClick={() => applyWizardFieldType(wizardField, 'auto_reference')}>
+                            Auto-generated reference
+                          </Button>
+                          <Button type="button" variant="outline" className="justify-start" onClick={() => applyWizardFieldType(wizardField, 'address')}>
+                            UK address
+                          </Button>
+                          <Button type="button" variant="outline" className="justify-start" onClick={() => applyWizardFieldType(wizardField, 'postcode')}>
+                            UK postcode
+                          </Button>
+                          <Button type="button" variant="outline" className="justify-start" onClick={() => applyWizardFieldType(wizardField, 'uk_phone')}>
+                            UK phone number
+                          </Button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="button" variant="secondary" size="sm" onClick={() => applyAiSuggestion(wizardField)}>
+                            <Wand2 className="mr-2 h-4 w-4" />
+                            Ask AI For This Field
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedFieldId(wizardField.id);
+                              setTemplateTab('preview-origin');
+                            }}
+                          >
+                            Review Placement
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="template-field-search">Search fields</Label>
+                      <Input
+                        id="template-field-search"
+                        title="Filter fields by label, type, hint, or page number"
+                        value={templateFieldSearch}
+                        onChange={(event) => setTemplateFieldSearch(event.target.value)}
+                        placeholder="Search template fields..."
+                      />
+                      {selected.fields.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Showing {filteredTemplateFields.length} of {selected.fields.length} fields.
+                        </p>
+                      )}
+                    </div>
                     {selected.fields.length === 0 && (
                       <p className="text-sm text-muted-foreground">No fields yet. Add a field or auto-extract them.</p>
                     )}
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                      <SortableContext items={selected.fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
-                        {selected.fields.map((field) => (
+                      <SortableContext items={filteredTemplateFields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
+                        {filteredTemplateFields.map((field) => (
                           <SortableFieldRow
                             key={field.id}
                             field={field}
@@ -1669,16 +2856,593 @@ export default function ReportDisseminatorPage() {
                         ))}
                       </SortableContext>
                     </DndContext>
+                    {selected.fields.length > 0 && filteredTemplateFields.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No template fields match that search.</p>
+                    )}
                   </TabsContent>
                   <TabsContent value="preview-origin" className="mt-4">
-                    <PdfDocumentPreview
-                      pdfBase64={selected.sourcePdfBase64}
-                      fields={selected.fields}
-                      selectedId={selectedFieldId}
-                      onSelectField={setSelectedFieldId}
-                    />
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+                      <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
+                        {textEditActive ? (
+                          /* — Text Edit panel — */
+                          <div className="space-y-3 rounded-md border border-blue-400 bg-blue-50/50 p-4 dark:bg-blue-950/30">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-blue-700 dark:text-blue-400">Text Editing</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {textOverlays.length} overlay{textOverlays.length !== 1 ? 's' : ''} added
+                                </p>
+                              </div>
+                              <Button type="button" size="sm" variant="ghost" onClick={() => setTextEditActive(false)}>
+                                Done
+                              </Button>
+                            </div>
+                            <p className="text-sm text-blue-700 dark:text-blue-400">
+                              Click any text on the PDF to select it. Then choose to white it out or replace it with static text or a <code className="text-[10px]">&#123;&#123;handlebars&#125;&#125;</code> variable that fills in automatically.
+                            </p>
+                            {textOverlays.length > 0 && (
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Applied overlays:</p>
+                                <div className="max-h-40 space-y-0.5 overflow-y-auto">
+                                  {textOverlays.map((o, i) => (
+                                    <div key={o.id} className="flex items-center justify-between rounded bg-white px-2 py-1 text-[11px] text-muted-foreground ring-1 ring-gray-200 dark:bg-gray-900">
+                                      <span className="truncate flex-1">
+                                        {i + 1}.{' '}
+                                        {o.replacementText ? (
+                                          <span className="text-blue-700 dark:text-blue-400">&ldquo;{o.replacementText.slice(0, 40)}{o.replacementText.length > 40 ? '…' : ''}&rdquo;</span>
+                                        ) : (
+                                          <span className="italic text-gray-400">white-out</span>
+                                        )}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className="ml-2 text-red-400 hover:text-red-600"
+                                        title="Remove this overlay"
+                                        onClick={() => handleRemoveTextOverlay(o.id)}
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full text-red-500 hover:text-red-600"
+                                  onClick={() => setTextOverlays([])}
+                                >
+                                  Clear all overlays
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ) : step1Active ? (
+                          /* — Step 1: Mark Field Areas panel — */
+                          <div className="space-y-3 rounded-md border border-green-500 bg-green-50/50 p-4 dark:bg-green-950/30">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-green-700 dark:text-green-400">Step 1 — Mark Field Areas</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {step1Blanks.length} area{step1Blanks.length !== 1 ? 's' : ''} detected
+                                </p>
+                              </div>
+                              <Button type="button" size="sm" variant="ghost" onClick={cancelStep1}>
+                                Cancel
+                              </Button>
+                            </div>
+                            <p className="text-sm text-green-700 dark:text-green-400">
+                              Click on each blank data-entry box in the PDF. The app will detect the box boundary and mark it. Click all fields you want to define, then continue.
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={!step1Blanks.length}
+                                onClick={undoStep1Blank}
+                              >
+                                Undo Last
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={!step1Blanks.length}
+                                onClick={startStep2}
+                              >
+                                Continue to Step 2 — Name Fields ({step1Blanks.length})
+                              </Button>
+                            </div>
+                            {step1Blanks.length > 0 && (
+                              <div className="max-h-40 space-y-1 overflow-y-auto text-xs text-muted-foreground">
+                                {step1Blanks.map((b, i) => (
+                                  <p key={i}>
+                                    {i + 1}. Page {b.page} — {Math.round(b.width)}&times;{Math.round(b.height)} pt
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : wizardActive ? (
+                          /* — Wizard Step Through panel — */
+                          <div className="space-y-3 rounded-md border border-teal-500 bg-teal-50/50 p-4 dark:bg-teal-950/30">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-semibold text-teal-700 dark:text-teal-400">
+                                  {step1Blanks.length > 0 ? 'Step 2 — Name Fields' : 'Wizard Step Through'}
+                                </p>
+                                {step1Blanks.length > 0 ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    Field {wizardFieldsAdded + 1} of {step1Blanks.length}
+                                  </p>
+                                ) : wizardFieldsAdded > 0 ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    {wizardFieldsAdded} field{wizardFieldsAdded !== 1 ? 's' : ''} added this session
+                                  </p>
+                                ) : null}
+                              </div>
+                              <Button type="button" size="sm" variant="ghost" onClick={cancelWizardStepThrough}>
+                                Exit
+                              </Button>
+                            </div>
+
+                            {/* Phase: select */}
+                            {wizardPhase === 'select' && (
+                              <p className="text-sm text-teal-700 dark:text-teal-400">
+                                Click on a field area in the PDF to begin defining it.
+                              </p>
+                            )}
+
+                            {/* Phase: name */}
+                            {wizardPhase === 'name' && (
+                              <div className="space-y-3">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Field label</Label>
+                                  <Input
+                                    autoFocus
+                                    placeholder="e.g. Certificate Ref"
+                                    value={wizardDraft.label}
+                                    onChange={(e) => setWizardDraft((d) => ({ ...d, label: e.target.value }))}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' && wizardDraft.label.trim()) setWizardPhase('type');
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button type="button" size="sm" variant="ghost" onClick={() => setWizardPhase('select')}>
+                                    Back
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={!wizardDraft.label.trim()}
+                                    onClick={() => setWizardPhase('type')}
+                                  >
+                                    Next
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Phase: type */}
+                            {wizardPhase === 'type' && (
+                              <div className="space-y-3">
+                                <p className="text-xs text-muted-foreground">Select the data type for this field:</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {FIELD_TYPES.map((ft) => (
+                                    <button
+                                      key={ft.value}
+                                      type="button"
+                                      className={`rounded-md border px-2 py-2 text-left text-xs hover:bg-muted/50 ${
+                                        wizardDraft.fieldType === ft.value
+                                          ? 'border-primary bg-primary/10 font-semibold'
+                                          : 'border-border'
+                                      }`}
+                                      onClick={() => {
+                                        setWizardDraft((d) => ({ ...d, fieldType: ft.value }));
+                                        setWizardPhase('logic');
+                                      }}
+                                    >
+                                      {ft.label}
+                                    </button>
+                                  ))}
+                                </div>
+                                <Button type="button" size="sm" variant="ghost" onClick={() => setWizardPhase('name')}>
+                                  Back
+                                </Button>
+                              </div>
+                            )}
+
+                            {/* Phase: logic */}
+                            {wizardPhase === 'logic' && (
+                              <div className="space-y-3">
+                                {wizardDraft.fieldType === 'state_enum' && (
+                                  <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground">Choose which states are valid:</p>
+                                    {(['tick', 'cross', 'NA', 'LIM', 'NV'] as const).map((opt) => (
+                                      <label key={opt} className="flex cursor-pointer items-center gap-2 text-sm">
+                                        <input
+                                          type="checkbox"
+                                          checked={wizardDraft.stateOptions.includes(opt)}
+                                          onChange={(e) =>
+                                            setWizardDraft((d) => ({
+                                              ...d,
+                                              stateOptions: e.target.checked
+                                                ? [...d.stateOptions, opt]
+                                                : d.stateOptions.filter((s) => s !== opt),
+                                            }))
+                                          }
+                                        />
+                                        {opt === 'tick' ? '✓ Tick' : opt === 'cross' ? '✗ Cross' : opt}
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
+                                {wizardDraft.fieldType === 'dropdown' && (
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Options (one per line)</Label>
+                                    <textarea
+                                      title="Dropdown options — one per line"
+                                      className="w-full rounded-md border bg-background px-2 py-1 text-xs"
+                                      rows={4}
+                                      value={wizardDraft.dropdownOptions.join('\n')}
+                                      onChange={(e) =>
+                                        setWizardDraft((d) => ({
+                                          ...d,
+                                          dropdownOptions: e.target.value.split('\n'),
+                                        }))
+                                      }
+                                    />
+                                  </div>
+                                )}
+                                {(wizardDraft.fieldType === 'text' || wizardDraft.fieldType === 'auto_reference') && (
+                                  <div className="space-y-2">
+                                    <div className="flex gap-2">
+                                      <div className="flex-1 space-y-1">
+                                        <Label className="text-xs">Prefix</Label>
+                                        <Input
+                                          className="h-7 text-xs"
+                                          placeholder="e.g. CERT-"
+                                          value={wizardDraft.prefix}
+                                          onChange={(e) => setWizardDraft((d) => ({ ...d, prefix: e.target.value }))}
+                                        />
+                                      </div>
+                                      <div className="flex-1 space-y-1">
+                                        <Label className="text-xs">Suffix</Label>
+                                        <Input
+                                          className="h-7 text-xs"
+                                          value={wizardDraft.suffix}
+                                          onChange={(e) => setWizardDraft((d) => ({ ...d, suffix: e.target.value }))}
+                                        />
+                                      </div>
+                                    </div>
+                                    {wizardDraft.fieldType === 'auto_reference' && (
+                                      <label className="flex cursor-pointer items-center gap-2 text-sm">
+                                        <input
+                                          type="checkbox"
+                                          checked={wizardDraft.increment}
+                                          onChange={(e) => setWizardDraft((d) => ({ ...d, increment: e.target.checked }))}
+                                        />
+                                        Auto-increment number
+                                      </label>
+                                    )}
+                                  </div>
+                                )}
+                                {isNumericLikeFieldType(wizardDraft.fieldType) && (
+                                  <div className="space-y-2">
+                                    <div className="space-y-1">
+                                      <Label className="text-xs">Unit (optional)</Label>
+                                      <Input
+                                        className="h-7 text-xs"
+                                        placeholder="e.g. Ω, V, mA"
+                                        value={wizardDraft.numericUnit}
+                                        onChange={(e) => setWizardDraft((d) => ({ ...d, numericUnit: e.target.value }))}
+                                      />
+                                    </div>
+                                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                                      <input
+                                        type="checkbox"
+                                        checked={wizardDraft.increment}
+                                        onChange={(e) => setWizardDraft((d) => ({ ...d, increment: e.target.checked }))}
+                                      />
+                                      Whole numbers only
+                                    </label>
+                                  </div>
+                                )}
+                                {!['state_enum', 'dropdown', 'text', 'auto_reference'].includes(wizardDraft.fieldType) &&
+                                  !isNumericLikeFieldType(wizardDraft.fieldType) && (
+                                    <p className="text-xs text-muted-foreground">
+                                      No additional configuration needed for this type.
+                                    </p>
+                                  )}
+                                <div className="flex gap-2">
+                                  <Button type="button" size="sm" variant="ghost" onClick={() => setWizardPhase('type')}>
+                                    Back
+                                  </Button>
+                                  <Button type="button" size="sm" onClick={() => setWizardPhase('confirm')}>
+                                    Next
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Phase: confirm */}
+                            {wizardPhase === 'confirm' && (
+                              <div className="space-y-3">
+                                <div className="space-y-1 rounded-md bg-muted/50 p-3 text-sm">
+                                  <p>
+                                    <span className="text-xs text-muted-foreground">Label: </span>
+                                    {wizardDraft.label}
+                                  </p>
+                                  <p>
+                                    <span className="text-xs text-muted-foreground">Type: </span>
+                                    {FIELD_TYPES.find((ft) => ft.value === wizardDraft.fieldType)?.label}
+                                  </p>
+                                  <p>
+                                    <span className="text-xs text-muted-foreground">Page: </span>
+                                    {wizardDraft.page}
+                                  </p>
+                                  {wizardDraft.prefix && (
+                                    <p>
+                                      <span className="text-xs text-muted-foreground">Prefix: </span>
+                                      {wizardDraft.prefix}
+                                    </p>
+                                  )}
+                                  {wizardDraft.suffix && (
+                                    <p>
+                                      <span className="text-xs text-muted-foreground">Suffix: </span>
+                                      {wizardDraft.suffix}
+                                    </p>
+                                  )}
+                                  {wizardDraft.increment && (
+                                    <p className="text-xs text-teal-600 dark:text-teal-400">
+                                      Auto-increment / whole numbers enabled
+                                    </p>
+                                  )}
+                                  {wizardDraft.numericUnit && (
+                                    <p>
+                                      <span className="text-xs text-muted-foreground">Unit: </span>
+                                      {wizardDraft.numericUnit}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button type="button" size="sm" variant="ghost" onClick={() => setWizardPhase('logic')}>
+                                    Back
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={!wizardDraft.boundingBox || !wizardDraft.label.trim()}
+                                    onClick={confirmWizardField}
+                                  >
+                                    {step2Queue.length > 0 ? 'Save & Name Next' : 'Add & Define Next'}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={!wizardDraft.boundingBox || !wizardDraft.label.trim()}
+                                    onClick={() => {
+                                      confirmWizardField();
+                                      setWizardActive(false);
+                                      setStep2Queue([]);
+                                      setStep1Blanks([]);
+                                    }}
+                                  >
+                                    {step1Blanks.length > 0 ? 'Save & Finish' : 'Finish Wizard'}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            <div className="space-y-3 rounded-md border p-4">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-sm font-medium">Manual Placement</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Auto Detect lets you click text to infer its bounds. Manual Box lets you draw and adjust a box with handles.
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {placedFieldCount} of {selected.fields.length} fields placed, {unplacedFields.length} remaining.
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  <Select value={placementMode} onValueChange={(value: 'auto' | 'manual') => setPlacementMode(value)}>
+                                    <SelectTrigger className="w-[160px]" title="Choose whether mapping clicks auto-detect text bounds or use a manual box">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="auto">Auto Detect</SelectItem>
+                                      <SelectItem value="manual">Manual Box</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={manualPlacementMode ? 'default' : 'outline'}
+                                    disabled={!selected?.fields.length}
+                                    title={selected?.fields.length ? 'Enable placement mode and target the selected or next unplaced field' : 'Add or extract fields before using placement mode'}
+                                    onClick={toggleManualPlacementMode}
+                                  >
+                                    {manualPlacementMode ? 'Disable Mapping Mode' : 'Enable Mapping Mode'}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={!mappingUndoStack.length}
+                                    title="Undo the last mapping assignment (Cmd/Ctrl+Z)"
+                                    onClick={undoLastMapping}
+                                  >
+                                    Undo
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={!selectedField?.boundingBox}
+                                    onClick={clearSelectedFieldPlacement}
+                                  >
+                                    Clear Placement
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    title="Step through each field one by one: click its area on the PDF, name it, choose its type and configure logic"
+                                    onClick={startWizardStepThrough}
+                                  >
+                                    <Wand2 className="mr-1.5 h-3 w-3" />
+                                    Wizard
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    title="Click all blank entry boxes on the PDF — the app detects each boundary and marks it. Then name them all in Step 2."
+                                    onClick={startStep1}
+                                  >
+                                    Step 1: Mark Fields
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={textEditActive ? 'default' : 'outline'}
+                                    title="Select text in the PDF to white-out or replace with static text or dynamic {{handlebars}} values"
+                                    onClick={() => setTextEditActive((v) => !v)}
+                                  >
+                                    Edit Text
+                                  </Button>
+                                </div>
+                              </div>
+                              {selectedField && (
+                                <div className="space-y-1 text-xs text-muted-foreground">
+                                  <p>
+                                    Selected field: {selectedField.label}
+                                    {selectedField.boundingBox ? ` on page ${selectedField.page}` : ' has no placement yet'}
+                                    {manualPlacementMode
+                                      ? unplacedFields.some((field) => field.id !== selectedField.id)
+                                        ? '. After placing it, mapping moves to the next unplaced field automatically.'
+                                        : '. This is the last unplaced field.'
+                                      : ''}
+                                  </p>
+                                  {!selectedField.boundingBox && selectedFieldPlacementSuggestion && (
+                                    <p>
+                                      Suggested placement: page {selectedFieldPlacementSuggestion.pageNumber},{' '}
+                                      {selectedFieldPlacementSuggestion.relation === 'right_of_label'
+                                        ? 'just to the right of'
+                                        : 'just below'}{' '}
+                                      "{selectedFieldPlacementSuggestion.anchorText}".
+                                    </p>
+                                  )}
+                                  {!selectedField.boundingBox && placementSuggestions[selectedField.id] === undefined && (
+                                    <p>Finding a likely label match in the PDF to suggest where this field should be mapped.</p>
+                                  )}
+                                </div>
+                              )}
+                              {manualPlacementMode && (
+                                <p className="text-xs text-muted-foreground">
+                                  Mapping mode shows the raw PDF by disabling preview redaction temporarily.
+                                  {placementMode === 'auto'
+                                    ? ' Click the relevant text area to infer a box automatically.'
+                                    : ' Drag out a box, then move or resize it with handles if needed.'}
+                                </p>
+                              )}
+                              {!selectedField && selected?.fields.length > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  Enable mapping mode will automatically choose the next unplaced field if none is selected.
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                Shortcuts: <span className="font-medium">n</span> next unplaced field, <span className="font-medium">c</span> clear placement, <span className="font-medium">⌘Z</span> undo last mapping.
+                              </p>
+                            </div>
+
+                            <div className="space-y-3 rounded-md border p-4 lg:max-h-[calc(100vh-14rem)] lg:overflow-auto">
+                              <div>
+                                <p className="text-sm font-medium">Fields</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Unplaced fields are listed first so you can work through the remaining placements quickly.
+                                </p>
+                              </div>
+                              <div className="space-y-2">
+                                {placementFields.map((field) => {
+                                  const isSelected = field.id === selectedFieldId;
+                                  const isPlaced = Boolean(field.boundingBox);
+                                  return (
+                                    <button
+                                      key={field.id}
+                                      type="button"
+                                      className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
+                                        isSelected ? 'border-primary bg-primary/5' : 'border-border'
+                                      }`}
+                                      onClick={() => setSelectedFieldId(field.id)}
+                                    >
+                                      <div className="flex items-center justify-between gap-3">
+                                        <span className="font-medium">{field.label}</span>
+                                        <span className={`text-[10px] uppercase tracking-wide ${isPlaced ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                          {isPlaced ? 'placed' : 'unplaced'}
+                                        </span>
+                                      </div>
+                                      <div className="mt-1 text-[11px] text-muted-foreground">
+                                        {field.boundingBox ? `Page ${field.page}` : 'No placement yet'}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="space-y-3 min-w-0">
+                        <RedactionLogicControls value={redactionOptions} onChange={setRedactionOptions} />
+                        <p className="text-xs text-muted-foreground">
+                          Preview Source helps verify that extracted fields are on the right page and roughly aligned with the original PDF.
+                        </p>
+                        <PdfDocumentPreview
+                          pdfBase64={selected.sourcePdfBase64}
+                          fields={selected.fields}
+                          redactionOptions={sourcePreviewRedactionOptions}
+                          selectedId={selectedFieldId}
+                          onSelectField={setSelectedFieldId}
+                          manualPlacementField={
+                            wizardActive && wizardPhase === 'select'
+                              ? { id: '__wizard__', label: 'Click to place new field' }
+                              : manualPlacementMode && selectedField
+                                ? { id: selectedField.id, label: selectedField.label }
+                                : null
+                          }
+                          placementMode={wizardActive ? 'auto' : placementMode}
+                          suggestedPlacement={
+                            !wizardActive && manualPlacementMode && selectedField && !selectedField.boundingBox
+                              ? selectedFieldPlacementSuggestion
+                              : null
+                          }
+                          onAssignBoundingBox={
+                            wizardActive && wizardPhase === 'select'
+                              ? handleWizardBoundingBoxSelect
+                              : assignBoundingBoxToSelectedField
+                          }
+                          step1Mode={step1Active}
+                          step1Blanks={step1Blanks}
+                          onStep1Click={handleStep1Click}
+                          onStep1Update={handleStep1Update}
+                          textEditMode={textEditActive}
+                          textOverlays={textOverlays}
+                          onAddTextOverlay={handleAddTextOverlay}
+                          onUpdateTextOverlay={handleUpdateTextOverlay}
+                          onRemoveTextOverlay={handleRemoveTextOverlay}
+                        />
+                      </div>
+                    </div>
                   </TabsContent>
                   <TabsContent value="preview-template" className="mt-4 space-y-3">
+                    <RedactionLogicControls value={redactionOptions} onChange={setRedactionOptions} />
                     <p className="text-sm text-muted-foreground">
                       This preview renders the actual generated form layout from the uploaded source PDF with interactive
                       inputs for every extracted field.
@@ -1687,6 +3451,7 @@ export default function ReportDisseminatorPage() {
                       pdfBase64={selected.sourcePdfBase64}
                       fields={selected.fields}
                       values={previewValues}
+                      redactionOptions={redactionOptions}
                       onValueChange={updatePreviewValue}
                       selectedId={selectedFieldId}
                       onSelectField={setSelectedFieldId}
@@ -1716,6 +3481,7 @@ export default function ReportDisseminatorPage() {
                 <div className="space-y-2">
                   <Label>Template notes</Label>
                   <Textarea
+                    title="Internal notes about assumptions, extraction quality, and reviewer guidance"
                     value={selected.wizardData?.notes || ''}
                     onChange={(e) =>
                       setSelected({
@@ -1748,14 +3514,14 @@ export default function ReportDisseminatorPage() {
                 )}
 
                 <div className="flex flex-wrap justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => {
+                  <Button type="button" title="Save the current template as a separate named copy" variant="outline" onClick={() => {
                     setSaveTemplateName(selected.name);
                     setSaveDialogOpen(true);
                   }} disabled={savingTemplate}>
                     <Save className="w-4 h-4 mr-2" />
                     Save As Template
                   </Button>
-                  <Button type="button" onClick={updateTemplate} disabled={savingTemplate}>
+                  <Button type="button" title="Save changes to this template, cloning first if the template is published" onClick={updateTemplate} disabled={savingTemplate}>
                     <Save className="w-4 h-4 mr-2" />
                     {savingTemplate ? 'Saving…' : 'Update Template'}
                   </Button>
@@ -1775,6 +3541,7 @@ export default function ReportDisseminatorPage() {
                   <div className="space-y-2">
                     <Label>Report title</Label>
                     <Input
+                      title="Name used to identify this saved report instance"
                       value={selectedReport.name}
                       onChange={(e) =>
                         setSelectedReport({ ...selectedReport, name: e.target.value })
@@ -1789,7 +3556,7 @@ export default function ReportDisseminatorPage() {
                         setSelectedReport({ ...selectedReport, status: value })
                       }
                     >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger title="Lifecycle state for this saved report"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="draft">draft</SelectItem>
                         <SelectItem value="completed">completed</SelectItem>
@@ -1799,13 +3566,14 @@ export default function ReportDisseminatorPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Based on template</Label>
-                    <Input value={`${selectedReport.templateName} v${selectedReport.templateVersion}`} disabled />
+                    <Input title="Template version this report was created from" value={`${selectedReport.templateName} v${selectedReport.templateVersion}`} disabled />
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Report description</Label>
                   <Input
+                    title="Optional context specific to this saved report"
                     value={selectedReport.description || ''}
                     onChange={(e) =>
                       setSelectedReport({ ...selectedReport, description: e.target.value })
@@ -1814,35 +3582,50 @@ export default function ReportDisseminatorPage() {
                   />
                 </div>
 
-                <Tabs defaultValue="report-form" className="w-full">
+                <Tabs value={reportTab} onValueChange={setReportTab} className="w-full">
                   <TabsList>
-                    <TabsTrigger value="report-form">
+                    <TabsTrigger value="report-form" title="Rendered facsimile form for this saved report">
                       <Eye className="w-4 h-4 mr-2" />
                       Rendered Form
                     </TabsTrigger>
-                    <TabsTrigger value="report-fields">
+                    <TabsTrigger value="report-fields" title="Flat list of all fields for direct editing">
                       <List className="w-4 h-4 mr-2" />
                       All Fields
                     </TabsTrigger>
-                    <TabsTrigger value="report-source">
+                    <TabsTrigger value="report-source" title="Original source PDF with field overlays for review">
                       <Eye className="w-4 h-4 mr-2" />
                       Source PDF
                     </TabsTrigger>
                   </TabsList>
                   <TabsContent value="report-form" className="mt-4 space-y-3">
+                    <RedactionLogicControls value={redactionOptions} onChange={setRedactionOptions} />
                     <p className="text-sm text-muted-foreground">
                       This is the saved report instance. Values entered here belong to this report, not the reusable template.
                     </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="report-field-search">Search report fields</Label>
+                      <Input
+                        id="report-field-search"
+                        title="Filter report fields by label, type, hint, or page number"
+                        value={reportFieldSearch}
+                        onChange={(event) => setReportFieldSearch(event.target.value)}
+                        placeholder="Search report fields..."
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Showing {filteredReportFields.length} of {selectedReport.fields.length} report fields.
+                      </p>
+                    </div>
                     <PdfFormDocumentPreview
                       pdfBase64={selectedReport.sourcePdfBase64}
                       fields={selectedReport.fields}
                       values={selectedReport.values}
+                      redactionOptions={redactionOptions}
                       onValueChange={updateReportValue}
                       selectedId={selectedFieldId}
                       onSelectField={setSelectedFieldId}
                     />
 
-                    {reportUnplacedFields.length > 0 && (
+                    {filteredReportUnplacedFields.length > 0 && (
                       <div className="space-y-3 rounded-md border p-4">
                         <div>
                           <p className="text-sm font-medium">Unplaced Fields</p>
@@ -1851,7 +3634,7 @@ export default function ReportDisseminatorPage() {
                           </p>
                         </div>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                          {reportUnplacedFields.map((field) => (
+                          {filteredReportUnplacedFields.map((field) => (
                             <div key={field.id} className="space-y-1">
                               <Label>{field.label}</Label>
                               {renderInlineFieldInput(field, selectedReport.values, updateReportValue)}
@@ -1860,10 +3643,13 @@ export default function ReportDisseminatorPage() {
                         </div>
                       </div>
                     )}
+                    {reportUnplacedFields.length > 0 && filteredReportUnplacedFields.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No unplaced report fields match that search.</p>
+                    )}
                   </TabsContent>
                   <TabsContent value="report-fields" className="mt-4">
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      {selectedReport.fields.map((field) => (
+                      {filteredReportFields.map((field) => (
                         <div key={field.id} className="space-y-1 rounded-md border p-3">
                           <div className="flex items-center justify-between gap-2">
                             <Label>{field.label}</Label>
@@ -1873,11 +3659,16 @@ export default function ReportDisseminatorPage() {
                         </div>
                       ))}
                     </div>
+                    {filteredReportFields.length === 0 && (
+                      <p className="mt-3 text-sm text-muted-foreground">No report fields match that search.</p>
+                    )}
                   </TabsContent>
                   <TabsContent value="report-source" className="mt-4">
+                    <RedactionLogicControls value={redactionOptions} onChange={setRedactionOptions} />
                     <PdfDocumentPreview
                       pdfBase64={selectedReport.sourcePdfBase64}
                       fields={selectedReport.fields}
+                      redactionOptions={redactionOptions}
                       selectedId={selectedFieldId}
                       onSelectField={setSelectedFieldId}
                     />
@@ -1887,6 +3678,7 @@ export default function ReportDisseminatorPage() {
                 <div className="space-y-2">
                   <Label>Report notes</Label>
                   <Textarea
+                    title="Notes saved only against this report instance"
                     value={selectedReport.notes || ''}
                     onChange={(e) =>
                       setSelectedReport({ ...selectedReport, notes: e.target.value })
@@ -1906,7 +3698,7 @@ export default function ReportDisseminatorPage() {
                 )}
 
                 <div className="flex justify-end">
-                  <Button type="button" onClick={saveReport} disabled={savingReport}>
+                  <Button type="button" title="Save values and notes for this saved report" onClick={openSaveReportDialog} disabled={savingReport}>
                     <Save className="w-4 h-4 mr-2" />
                     {savingReport ? 'Saving…' : 'Save Report'}
                   </Button>
@@ -1962,10 +3754,10 @@ export default function ReportDisseminatorPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg">
             <div className="space-y-2">
-              <h2 className="text-lg font-semibold">Create Saved Report</h2>
+              <h2 className="text-lg font-semibold">Create Draft Report</h2>
               <p className="text-sm text-muted-foreground">
-                This creates a real saved report instance from the current template snapshot. Future edits to the template
-                will not overwrite this report.
+                This creates a saved draft report from the current template snapshot and opens it in the report editor.
+                Future edits to the template will not overwrite this report.
               </p>
             </div>
 
@@ -2006,7 +3798,48 @@ export default function ReportDisseminatorPage() {
                 Cancel
               </Button>
               <Button type="button" onClick={createReportFromTemplate} disabled={creatingReport}>
-                {creatingReport ? 'Creating…' : 'Create Report'}
+                {creatingReport ? 'Creating…' : 'Create Draft'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {saveReportDialogOpen && selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg">
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold">Save Report</h2>
+              <p className="text-sm text-muted-foreground">
+                Choose the name to save this report under before persisting its values and notes.
+              </p>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <Label htmlFor="save-report-name">Report name</Label>
+              <Input
+                id="save-report-name"
+                value={saveReportName}
+                onChange={(e) => setSaveReportName(e.target.value)}
+                placeholder="Enter report name"
+                autoFocus
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSaveReportDialogOpen(false);
+                  setSaveReportName('');
+                }}
+                disabled={savingReport}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={saveReport} disabled={savingReport}>
+                {savingReport ? 'Saving…' : 'Save Report'}
               </Button>
             </div>
           </div>

@@ -7,7 +7,7 @@ import { getUser, getTeamForUser } from '@/lib/db/queries'; // Keep other import
 import { logActivity } from '../../lib/db/queries'; // Use relative path for logActivity
 import { redirect } from 'next/navigation';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { generateCertificatePDF, CertificateData } from '@/lib/pdf/generator';
 
 // Customer schemas and actions
@@ -88,7 +88,8 @@ export const updateCustomer = validatedActionWithUser(
 
 // Certificate schemas and actions
 const createCertificateSchema = z.object({
-  customerId: z.string().transform((val) => parseInt(val, 10)),
+  customerId: z.string().optional().or(z.literal('')),
+  customerName: z.string().optional().or(z.literal('')),
   certificateType: z.string(),
   certificateNumber: z.string().min(1, 'Certificate number is required'),
   siteName: z.string().optional().or(z.literal('')),
@@ -112,14 +113,59 @@ export const createCertificate = validatedActionWithUser(
     if (formData) {
       for (const [key, value] of formData.entries()) {
         // Skip the main certificate fields that are stored separately
-        if (!['customerId', 'certificateType', 'certificateNumber', 'siteName', 'siteAddress', 'inspectionDate', 'nextInspectionDate', 'inspectorName'].includes(key)) {
+        if (!['customerId', 'customerName', 'certificateType', 'certificateNumber', 'siteName', 'siteAddress', 'inspectionDate', 'nextInspectionDate', 'inspectorName'].includes(key)) {
           collectedFormData[key] = value;
         }
       }
     }
 
+    const rawCustomerId = (data.customerId || '').trim();
+    const rawCustomerName = (data.customerName || '').trim();
+    const customerNameFromLegacyField = /^[0-9]+$/.test(rawCustomerId) ? '' : rawCustomerId;
+    const resolvedCustomerName = rawCustomerName || customerNameFromLegacyField;
+
+    let resolvedCustomerId: number | null = null;
+
+    if (/^[0-9]+$/.test(rawCustomerId)) {
+      const numericCustomerId = parseInt(rawCustomerId, 10);
+      const existingById = await db
+        .select({ id: customers.id })
+        .from(customers)
+        .where(and(eq(customers.id, numericCustomerId), eq(customers.teamId, team.id)))
+        .limit(1);
+
+      if (existingById.length > 0) {
+        resolvedCustomerId = existingById[0].id;
+      }
+    }
+
+    if (!resolvedCustomerId) {
+      if (!resolvedCustomerName) {
+        return { error: 'Customer name is required' };
+      }
+
+      const existingByName = await db
+        .select({ id: customers.id })
+        .from(customers)
+        .where(and(eq(customers.teamId, team.id), eq(customers.name, resolvedCustomerName)))
+        .limit(1);
+
+      if (existingByName.length > 0) {
+        resolvedCustomerId = existingByName[0].id;
+      } else {
+        const [createdCustomer] = await db
+          .insert(customers)
+          .values({
+            teamId: team.id,
+            name: resolvedCustomerName,
+          })
+          .returning({ id: customers.id });
+        resolvedCustomerId = createdCustomer.id;
+      }
+    }
+
     const newCertificateData: NewCertificate = {
-      customerId: data.customerId,
+      customerId: resolvedCustomerId,
       certificateType: data.certificateType,
       certificateNumber: data.certificateNumber,
       siteName: data.siteName || null,

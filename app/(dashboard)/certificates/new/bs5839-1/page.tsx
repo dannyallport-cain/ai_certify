@@ -6,22 +6,36 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { createCertificate } from '../../../actions';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
 import GuidedModeModal, { Step } from '@/components/GuidedModeModal';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
+import { DateDropdownField } from '@/components/DateDropdownField';
 import { NextVisitField } from '@/components/NextVisitField';
+import { PreviewModal } from '@/components/PreviewModal';
+import { AddressAutocompleteField } from '@/components/AddressAutocompleteField';
+import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
+import { OrganisationAutocompleteField } from '@/components/OrganisationAutocompleteField';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+const SERVICE_INTERVALS = [
+  { label: '3 Months', months: 3 },
+  { label: '6 Months', months: 6 },
+  { label: '12 Months', months: 12 },
+] as const;
+
 export default function BS5839_1CertificatePage() {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const getTodayDate = () => new Date().toISOString().split('T')[0];
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
   const [selectedCustomer, setSelectedCustomer] = useState('');
-  const { data: customers = [] } = useSWR('/api/customers', fetcher);
+  const { data: customersData } = useSWR('/api/customers', fetcher);
+  const customers = Array.isArray(customersData) ? customersData : [];
   const [guidedOpen, setGuidedOpen] = useState(false);
   const [certificateNumber, setCertificateNumber] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
@@ -34,6 +48,12 @@ export default function BS5839_1CertificatePage() {
   const [nextInspectionDate, setNextInspectionDate] = useState('');
   const [visitDate, setVisitDate] = useState('');
   const [nextVisitDate, setNextVisitDate] = useState('');
+  const [serviceInterval, setServiceInterval] = useState<(typeof SERVICE_INTERVALS)[number]['label'] | ''>('');
+  const [formError, setFormError] = useState('');
+
+  const serviceIntervalMonths = SERVICE_INTERVALS.find(
+    (interval) => interval.label === serviceInterval,
+  )?.months;
 
   const generateCertificateNumber = () => {
     const date = new Date();
@@ -50,17 +70,23 @@ export default function BS5839_1CertificatePage() {
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true);
+    setFormError('');
     try {
       // Add certificateType based on the form type
       formData.append('certificateType', 'BS5839-1');
       
       const result = await createCertificate({}, formData);
       if (result?.error) {
-        console.error('Error creating certificate:', result.error);
+        if (isSessionExpiredError(result.error)) {
+          router.push(getSignInRedirectPath('/certificates/new/bs5839-1'));
+          return;
+        }
+        setFormError(result.error);
       }
       // If no error, the action will redirect automatically
     } catch (error) {
       console.error('Error creating certificate:', error);
+      setFormError('Unable to create certificate. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -90,6 +116,56 @@ export default function BS5839_1CertificatePage() {
     setGuidedOpen(false);
   };
 
+  const handlePreviewOpen = () => {
+    if (!formRef.current) return;
+    
+    // Extract form data from the DOM
+    const formElement = formRef.current;
+    const formData = new FormData(formElement);
+    
+    // Find the selected customer object
+    const customerId = String(formData.get('customerId') || '');
+    const customerName = String(formData.get('customerName') || '');
+    const customersArray = Array.isArray(customers) ? customers : [];
+    const customer = customersArray.find((c: any) => String(c.id) === customerId) ||
+      customersArray.find((c: any) => c.name === customerName);
+    
+    // Build preview data
+    const preview = {
+      certificateNumber: String(formData.get('certificateNumber') || ''),
+      certificateType: 'BS5839_1',
+      siteName: String(formData.get('siteName') || ''),
+      siteAddress: String(formData.get('siteAddress') || ''),
+      inspectionDate: String(formData.get('inspectionDate') || ''),
+      nextInspectionDate: String(formData.get('nextInspectionDate') || ''),
+      inspectorName: String(formData.get('inspectorName') || ''),
+      inspectorQualification: String(formData.get('inspectorQualification') || 'Certified Fire Safety Engineer'),
+      status: 'draft',
+      formData: {
+        systemType: String(formData.get('systemType') || ''),
+        numberOfZones: String(formData.get('numberOfZones') || ''),
+        numberOfDevices: String(formData.get('numberOfDevices') || ''),
+        controlPanelMake: String(formData.get('controlPanelMake') || ''),
+        controlPanelModel: String(formData.get('controlPanelModel') || ''),
+        totalDetectors: String(formData.get('totalDetectors') || ''),
+        totalCallPoints: String(formData.get('totalCallPoints') || ''),
+        totalSounders: String(formData.get('totalSounders') || ''),
+        inspectionType: 'Initial Assessment',
+      },
+      customer: {
+        name: customer?.name || customerName || 'Not specified',
+        email: customer?.email || '',
+        phone: customer?.phone || '',
+        address: customer?.address || '',
+        postcode: customer?.postcode || '',
+        contactPerson: customer?.contactPerson || '',
+      },
+      items: [],
+    };
+    
+    setPreviewData(preview);
+  };
+
   return (
     <>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -114,7 +190,12 @@ export default function BS5839_1CertificatePage() {
         </div>
 
         <div className="max-w-4xl space-y-6">
-          <form action={handleSubmit} className="space-y-6">
+          <form ref={formRef} action={handleSubmit} className="space-y-6">
+            {formError && (
+              <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {formError}
+              </p>
+            )}
             {/* Guided mode fills inputs automatically */}
             <input type="hidden" name="certificateType" value="BS5839-1" />
             
@@ -135,38 +216,41 @@ export default function BS5839_1CertificatePage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customerId">Customer</Label>
-                  <select
-                    id="customerId"
-                    name="customerId"
-                    value={selectedCustomer}
+                  <Label htmlFor="customerName">Customer</Label>
+                  <input type="hidden" name="customerId" value={selectedCustomer} />
+                  <Input
+                    id="customerName"
+                    name="customerName"
+                    list="customers-list-bs5839-1"
+                    value={selectedCustomerName}
                     onChange={(e) => {
                       const value = e.target.value;
-                      setSelectedCustomer(value);
-                      const customer = customers.find((c: any) => String(c.id) === value);
-                      setSelectedCustomerName(customer?.name || '');
+                      setSelectedCustomerName(value);
+                      const normalizedValue = value.trim().toLowerCase();
+                      const exactMatch = customers.find((c: any) => c.name?.trim().toLowerCase() === normalizedValue);
+                      const prefixMatches = customers.filter((c: any) => c.name?.trim().toLowerCase().startsWith(normalizedValue));
+                      const customer = exactMatch || (normalizedValue && prefixMatches.length === 1 ? prefixMatches[0] : null);
+                      setSelectedCustomer(customer ? String(customer.id) : '');
 
-                      if (!siteName && (customer?.name || customer?.address)) {
-                        setSiteName(customer?.name || customer?.address || '');
+                      if (customer && !siteName && (customer.name || customer.address)) {
+                        setSiteName(customer.name || customer.address || '');
                         setIsSiteNameAuto(true);
                       }
 
-                      if (!siteAddress && customer?.address) {
+                      if (customer && !siteAddress && customer.address) {
                         setSiteAddress(customer.address);
                         setIsSiteAddressAuto(true);
                       }
                     }}
                     required
-                    aria-label="Select a customer"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <option value="">Select a customer</option>
+                    aria-label="Type or select a customer name"
+                    placeholder="Type customer name"
+                  />
+                  <datalist id="customers-list-bs5839-1">
                     {customers.map((customer: any) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </option>
+                      <option key={customer.id} value={customer.name} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </CardContent>
             </Card>
@@ -180,14 +264,18 @@ export default function BS5839_1CertificatePage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="siteName">Site/Building Name</Label>
-                  <Input
+                  <OrganisationAutocompleteField
                     id="siteName"
                     name="siteName"
                     placeholder="Enter site or building name"
                     value={siteName}
-                    onChange={(e) => {
-                      setSiteName(e.target.value);
+                    onChange={(v) => {
+                      setSiteName(v);
                       setIsSiteNameAuto(false);
+                    }}
+                    onAddressPick={(address) => {
+                      setSiteAddress(address);
+                      setIsSiteAddressAuto(true);
                     }}
                     className={isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
                     title={isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined}
@@ -200,17 +288,16 @@ export default function BS5839_1CertificatePage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="siteAddress">Site Address</Label>
-                  <textarea
+                  <AddressAutocompleteField
                     id="siteAddress"
                     name="siteAddress"
                     placeholder="Enter full site address"
-                    rows={3}
                     value={siteAddress}
-                    onChange={(e) => {
-                      setSiteAddress(e.target.value);
+                    onChange={(newValue) => {
+                      setSiteAddress(newValue);
                       setIsSiteAddressAuto(false);
                     }}
-                    className={`flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isSiteAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}`}
+                    className={isSiteAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
                     title={isSiteAddressAuto ? 'Auto-populated from selected customer address. Edit if needed.' : undefined}
                   />
                   {isSiteAddressAuto && (
@@ -230,34 +317,26 @@ export default function BS5839_1CertificatePage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="inspectionDate">Inspection Date *</Label>
-                    <Input
-                      id="inspectionDate"
-                      name="inspectionDate"
-                      type="date"
-                      value={inspectionDate}
-                      onChange={(e) => {
-                        setInspectionDate(e.target.value);
-                        setIsInspectionDateAuto(false);
-                      }}
-                      required
-                      className={isInspectionDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
-                      title={isInspectionDateAuto ? 'Auto-populated with today\'s date. Edit if inspection occurred on a different date.' : undefined}
-                    />
-                    {isInspectionDateAuto && (
-                      <p
-                        className="text-xs text-amber-700"
-                        title="This assumed date is auto-filled to speed up data entry."
-                      >
-                        Auto-populated with today&apos;s date. Hover the field for details.
-                      </p>
-                    )}
-                  </div>
+                  <DateDropdownField
+                    id="inspectionDate"
+                    name="inspectionDate"
+                    label="Inspection Date"
+                    value={inspectionDate}
+                    onChange={(newDate) => {
+                      setInspectionDate(newDate);
+                      setIsInspectionDateAuto(false);
+                    }}
+                    required
+                    isAutoPopulated={isInspectionDateAuto}
+                    autoTitle="Auto-populated with today's date. Edit if inspection occurred on a different date."
+                    autoHelpText="Auto-populated with today's date. Hover the field for details."
+                  />
                   <NextVisitField
                     visitDate={inspectionDate}
                     value={nextVisitDate}
                     onChange={setNextVisitDate}
+                    periodMonths={serviceIntervalMonths}
+                    showPeriodSelect={false}
                     required
                     label="Next Visit Due"
 
@@ -407,6 +486,8 @@ export default function BS5839_1CertificatePage() {
                     <select
                       id="serviceInterval"
                       name="serviceInterval"
+                      value={serviceInterval}
+                      onChange={(e) => setServiceInterval(e.target.value as (typeof SERVICE_INTERVALS)[number]['label'] | '')}
                       title="Select service interval"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
@@ -489,6 +570,10 @@ export default function BS5839_1CertificatePage() {
             </Card>
 
             <div className="flex gap-2">
+              {previewData && <PreviewModal data={previewData} />}
+              <Button type="button" variant="outline" onClick={handlePreviewOpen}>
+                Preview
+              </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Creating Certificate..." : "Create Certificate"}
               </Button>

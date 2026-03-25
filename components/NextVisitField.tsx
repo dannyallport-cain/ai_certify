@@ -59,6 +59,8 @@ interface NextVisitFieldProps {
   onChange: (value: string) => void;
   required?: boolean;
   label?: string;
+  periodMonths?: number;
+  showPeriodSelect?: boolean;
 }
 
 export function NextVisitField({
@@ -66,7 +68,9 @@ export function NextVisitField({
   value,
   onChange,
   required = true,
-  label = 'Next Visit Due'
+  label = 'Next Visit Due',
+  periodMonths,
+  showPeriodSelect = true,
 }: NextVisitFieldProps) {
   const [date, setDate] = useState<Date | undefined>(value ? new Date(value) : undefined);
   const [isAutoPopulated, setIsAutoPopulated] = useState(false);
@@ -74,6 +78,18 @@ export function NextVisitField({
   useEffect(() => {
     setDate(value ? new Date(value) : undefined);
   }, [value]);
+
+  useEffect(() => {
+    if (!visitDate || !periodMonths) return;
+
+    const newDate = new Date(visitDate);
+    newDate.setMonth(newDate.getMonth() + periodMonths);
+
+    const adjustedDate = getPreviousWorkingDay(newDate);
+    setDate(adjustedDate);
+    onChange(adjustedDate.toISOString().split('T')[0]);
+    setIsAutoPopulated(true);
+  }, [visitDate, periodMonths, onChange]);
 
   const setNextVisitDate = (monthsToAdd: number) => {
     if (!visitDate) return;
@@ -100,21 +116,23 @@ export function NextVisitField({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className={cn('flex items-center', showPeriodSelect ? 'justify-between' : 'justify-start')}>
         <Label htmlFor="nextVisitDate">{label} {required && '*'}</Label>
-        <Select
-          onValueChange={(value) => setNextVisitDate(Number(value))}
-          disabled={!visitDate}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Select period" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="3">3 months</SelectItem>
-            <SelectItem value="6">6 months</SelectItem>
-            <SelectItem value="12">12 months</SelectItem>
-          </SelectContent>
-        </Select>
+        {showPeriodSelect && (
+          <Select
+            onValueChange={(value) => setNextVisitDate(Number(value))}
+            disabled={!visitDate}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">3 months</SelectItem>
+              <SelectItem value="6">6 months</SelectItem>
+              <SelectItem value="12">12 months</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
       <Popover>
         <PopoverTrigger asChild>
@@ -125,7 +143,7 @@ export function NextVisitField({
               !date && "text-muted-foreground",
               isAutoPopulated && "border-amber-300 bg-amber-50"
             )}
-            title={isAutoPopulated ? 'Auto-populated from the visit date and selected period. You can still pick a custom date.' : undefined}
+            title={isAutoPopulated ? 'Auto-populated from the visit date and reinspection period. You can still pick a custom date.' : undefined}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -174,7 +192,7 @@ export function NextVisitField({
             className="text-xs text-amber-700"
             title="This date is automatically calculated from the visit date, period, and UK working-day adjustment."
           >
-            Auto-populated from visit date + period. Hover the date field for details.
+            Auto-populated from visit date and period. Hover the date field for details.
           </p>
         )}
     </div>

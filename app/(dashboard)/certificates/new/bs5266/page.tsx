@@ -15,7 +15,11 @@ import { ArrowLeft, Lightbulb, Battery, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import GuidedModeModal, { Step } from '@/components/GuidedModeModal';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
+import { DateDropdownField } from '@/components/DateDropdownField';
 import { NextVisitField } from '@/components/NextVisitField';
+import { AddressAutocompleteField } from '@/components/AddressAutocompleteField';
+import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
+import { OrganisationAutocompleteField } from '@/components/OrganisationAutocompleteField';
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then(res => {
@@ -30,7 +34,8 @@ export default function BS5266CertificatePage() {
   const getTodayDate = () => new Date().toISOString().split('T')[0]
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState('');
-  const { data: customers = [], error } = useSWR('/api/customers', fetcher);
+  const { data: customersData } = useSWR('/api/customers', fetcher);
+  const customers = Array.isArray(customersData) ? customersData : [];
   const [guidedOpen, setGuidedOpen] = useState(false);
   const [certificateNumber, setCertificateNumber] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
@@ -44,20 +49,27 @@ export default function BS5266CertificatePage() {
   const [visitDate, setVisitDate] = useState(getTodayDate());
   const [isVisitDateAuto, setIsVisitDateAuto] = useState(true);
   const [nextVisitDate, setNextVisitDate] = useState('');
+  const [formError, setFormError] = useState('');
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true)
+    setFormError('')
     try {
       // Add certificateType based on the form type
       formData.append('certificateType', 'BS5266')
       
       const result = await createCertificate({}, formData)
       if (result?.error) {
-        console.error('Error creating certificate:', result.error)
+        if (isSessionExpiredError(result.error)) {
+          router.push(getSignInRedirectPath('/certificates/new/bs5266'))
+          return
+        }
+        setFormError(result.error)
       }
       // If no error, the action will redirect automatically
     } catch (error) {
       console.error('Error creating certificate:', error)
+      setFormError('Unable to create certificate. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -89,14 +101,22 @@ export default function BS5266CertificatePage() {
 
   const handleGuidedComplete = async (values: Record<string, string>) => {
     setIsSubmitting(true);
+    setFormError('');
     try {
       const formData = new FormData();
       Object.entries(values).forEach(([key, val]) => formData.append(key, val));
       formData.append('certificateType', 'BS5266');
       const result = await createCertificate({}, formData);
-      if (result?.error) console.error('Guided error:', result.error);
+      if (result?.error) {
+        if (isSessionExpiredError(result.error)) {
+          router.push(getSignInRedirectPath('/certificates/new/bs5266'));
+          return;
+        }
+        setFormError(result.error);
+      }
     } catch (err) {
       console.error(err);
+      setFormError('Unable to create certificate. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -126,6 +146,11 @@ export default function BS5266CertificatePage() {
         </div>
 
         <form action={handleSubmit} className="space-y-6">
+          {formError && (
+            <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {formError}
+            </p>
+          )}
           <input type="hidden" name="certificateType" value="BS5266" />
           
           {/* Basic Information */}
@@ -145,40 +170,38 @@ export default function BS5266CertificatePage() {
                 siteName={siteName}
               />
               <div>
-                <Label htmlFor="customerId">Customer *</Label>
-                <Select 
-                  name="customerId" 
-                  required
-                  value={selectedCustomer}
-                  onValueChange={(value) => {
-                    setSelectedCustomer(value);
-                    const customer = customers.find((c: any) => c.id.toString() === value);
-                    setSelectedCustomerName(customer?.name || '');
-                    if (!siteName && (customer?.name || customer?.address)) {
-                      setSiteName(customer?.name || customer?.address || '');
+                <Label htmlFor="customerName">Customer *</Label>
+                <input type="hidden" name="customerId" value={selectedCustomer} />
+                <Input
+                  id="customerName"
+                  name="customerName"
+                  list="customers-list-bs5266"
+                  value={selectedCustomerName}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSelectedCustomerName(value);
+                    const normalizedValue = value.trim().toLowerCase();
+                    const exactMatch = customers.find((c: any) => c.name?.trim().toLowerCase() === normalizedValue);
+                    const prefixMatches = customers.filter((c: any) => c.name?.trim().toLowerCase().startsWith(normalizedValue));
+                    const customer = exactMatch || (normalizedValue && prefixMatches.length === 1 ? prefixMatches[0] : null);
+                    setSelectedCustomer(customer ? String(customer.id) : '');
+                    if (customer && !siteName && (customer.name || customer.address)) {
+                      setSiteName(customer.name || customer.address || '');
                       setIsSiteNameAuto(true);
                     }
-                    if (!siteAddress && customer?.address) {
+                    if (customer && !siteAddress && customer.address) {
                       setSiteAddress(customer.address);
                       setIsSiteAddressAuto(true);
                     }
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.isArray(customers) ? customers.map((customer) => (
-                      <SelectItem key={customer.id} value={customer.id.toString()}>
-                        {customer.name}
-                      </SelectItem>
-                    )) : (
-                      <SelectItem value="" disabled>
-                        {error ? 'Error loading customers' : 'Loading customers...'}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                  required
+                  placeholder="Type customer name"
+                />
+                <datalist id="customers-list-bs5266">
+                  {customers.map((customer: any) => (
+                    <option key={customer.id} value={customer.name} />
+                  ))}
+                </datalist>
               </div>
             </CardContent>
           </Card>
@@ -192,15 +215,19 @@ export default function BS5266CertificatePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="siteName">Site Name *</Label>
-                  <Input
+                  <OrganisationAutocompleteField
                     id="siteName"
                     name="siteName"
                     placeholder="Building or site name"
                     required
                     value={siteName}
-                    onChange={(e) => {
-                      setSiteName(e.target.value)
+                    onChange={(v) => {
+                      setSiteName(v)
                       setIsSiteNameAuto(false)
+                    }}
+                    onAddressPick={(address) => {
+                      setSiteAddress(address)
+                      setIsSiteAddressAuto(true)
                     }}
                     className={isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
                     title={isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined}
@@ -213,13 +240,13 @@ export default function BS5266CertificatePage() {
                 </div>
                 <div>
                   <Label htmlFor="siteAddress">Site Address</Label>
-                  <Input
+                  <AddressAutocompleteField
                     id="siteAddress"
                     name="siteAddress"
                     placeholder="Full address"
                     value={siteAddress}
-                    onChange={(e) => {
-                      setSiteAddress(e.target.value)
+                    onChange={(newValue) => {
+                      setSiteAddress(newValue)
                       setIsSiteAddressAuto(false)
                     }}
                     className={isSiteAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
@@ -395,27 +422,20 @@ export default function BS5266CertificatePage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <Label htmlFor="inspectionDate">Inspection Date *</Label>
-                  <Input
+                  <DateDropdownField
                     id="inspectionDate"
                     name="inspectionDate"
-                    type="date"
+                    label="Inspection Date"
                     value={inspectionDate}
-                    onChange={(e) => {
-                      setInspectionDate(e.target.value)
+                    onChange={(newDate) => {
+                      setInspectionDate(newDate)
                       setIsInspectionDateAuto(false)
                     }}
-                    className={isInspectionDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
-                    title={isInspectionDateAuto ? 'Auto-populated with today\'s date. Edit if required.' : undefined}
+                    required
+                    isAutoPopulated={isInspectionDateAuto}
+                    autoTitle="Auto-populated with today's date. Edit if required."
+                    autoHelpText="Auto-populated with today's date. Hover the field for details."
                   />
-                  {isInspectionDateAuto && (
-                    <p
-                      className="text-xs text-amber-700"
-                      title="This assumed date is auto-filled to reduce repeated entry."
-                    >
-                      Auto-populated with today&apos;s date. Hover the field for details.
-                    </p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="visitDate">Visit Date *</Label>

@@ -354,7 +354,7 @@ export class ServiceM8Client_API {
     
     const formData = new FormData();
     formData.append('job_uuid', jobUuid);
-    formData.append('file', new Blob([file], { type: mimeType }), fileName);
+    formData.append('file', new Blob([new Uint8Array(file)], { type: mimeType }), fileName);
     formData.append('active', '1');
 
     const response = await fetch(url, {

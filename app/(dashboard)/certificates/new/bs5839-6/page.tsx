@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,17 +14,24 @@ import { ArrowLeft, Home, Shield, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import GuidedModeModal, { Step } from '@/components/GuidedModeModal';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
+import { DateDropdownField } from '@/components/DateDropdownField';
 import { NextVisitField } from '@/components/NextVisitField';
+import { PreviewModal } from '@/components/PreviewModal';
+import { AddressAutocompleteField } from '@/components/AddressAutocompleteField';
+import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
 import useSWR from "swr"
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function BS5839_6CertificatePage() {
   const router = useRouter()
+  const formRef = useRef<HTMLFormElement>(null)
   const getTodayDate = () => new Date().toISOString().split('T')[0]
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [previewData, setPreviewData] = useState<any>(null)
   const [selectedCustomer, setSelectedCustomer] = useState('')
-  const { data: customers = [] } = useSWR('/api/customers', fetcher)
+  const { data: customersData } = useSWR('/api/customers', fetcher)
+  const customers = Array.isArray(customersData) ? customersData : []
   const [guidedOpen, setGuidedOpen] = useState(false);
   const [certificateNumber, setCertificateNumber] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
@@ -33,17 +40,24 @@ export default function BS5839_6CertificatePage() {
   const [visitDate, setVisitDate] = useState(getTodayDate());
   const [isVisitDateAuto, setIsVisitDateAuto] = useState(true);
   const [nextVisitDate, setNextVisitDate] = useState('');
+  const [formError, setFormError] = useState('');
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true)
+    setFormError('')
     try {
       const result = await createCertificate({}, formData)
       if (result?.error) {
-        console.error('Error creating certificate:', result.error)
+        if (isSessionExpiredError(result.error)) {
+          router.push(getSignInRedirectPath('/certificates/new/bs5839-6'))
+          return
+        }
+        setFormError(result.error)
       }
       // If no error, the action will redirect automatically
     } catch (error) {
       console.error('Error creating certificate:', error)
+      setFormError('Unable to create certificate. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -68,6 +82,51 @@ export default function BS5839_6CertificatePage() {
     formData.append('certificateType', 'BS5839-6');
     handleSubmit(formData);
     setGuidedOpen(false);
+  };
+
+  const handlePreviewOpen = () => {
+    if (!formRef.current) return;
+    
+    const formElement = formRef.current;
+    const formData = new FormData(formElement);
+    
+    const customerId = String(formData.get('customerId') || '');
+    const customerName = String(formData.get('customerName') || '');
+    const customersArray = Array.isArray(customers) ? customers : [];
+    const customer = customersArray.find((c: any) => String(c.id) === customerId) ||
+      customersArray.find((c: any) => c.name === customerName);
+    
+    const preview = {
+      certificateNumber: String(formData.get('certificateNumber') || ''),
+      certificateType: 'BS5839_6',
+      siteName: String(formData.get('siteName') || ''),
+      siteAddress: '',
+      inspectionDate: String(formData.get('visitDate') || ''),
+      nextInspectionDate: String(formData.get('nextVisitDate') || ''),
+      inspectorName: String(formData.get('inspectorName') || ''),
+      inspectorQualification: String(formData.get('inspectorQualification') || 'Certified Fire Safety Engineer'),
+      status: 'draft',
+      formData: {
+        propertyType: String(formData.get('propertyType') || ''),
+        gradeOfSystem: String(formData.get('systemGrade') || ''),
+        numberOfSmokeSensors: String(formData.get('smokeDetectors') || ''),
+        numberOfHeatSensors: String(formData.get('heatDetectors') || ''),
+        numberOfCOSensors: String(formData.get('coDetectors') || ''),
+        bedrooms: String(formData.get('bedrooms') || ''),
+        occupancy: String(formData.get('occupancy') || ''),
+      },
+      customer: {
+        name: customer?.name || customerName || 'Not specified',
+        email: customer?.email || '',
+        phone: customer?.phone || '',
+        address: customer?.address || '',
+        postcode: customer?.postcode || '',
+        contactPerson: customer?.contactPerson || '',
+      },
+      items: [],
+    };
+    
+    setPreviewData(preview);
   };
 
   return (
@@ -95,7 +154,12 @@ export default function BS5839_6CertificatePage() {
           </div>
         </div>
 
-        <form action={handleSubmit} className="space-y-6">
+        <form ref={formRef} action={handleSubmit} className="space-y-6">
+          {formError && (
+            <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {formError}
+            </p>
+          )}
           <input type="hidden" name="certificateType" value="BS5839-6" />
           
           {/* Basic Information */}
@@ -115,32 +179,34 @@ export default function BS5839_6CertificatePage() {
                 siteName={siteName}
               />
               <div>
-                <Label htmlFor="customerId">Customer *</Label>
-                <Select 
-                  name="customerId" 
-                  required
-                  value={selectedCustomer}
-                  onValueChange={(value) => {
-                    setSelectedCustomer(value);
-                    const customer = customers.find((c: any) => c.id.toString() === value);
-                    setSelectedCustomerName(customer?.name || '');
-                    if (!siteName && (customer?.address || customer?.name)) {
-                      setSiteName(customer?.address || customer?.name || '');
+                <Label htmlFor="customerName">Customer *</Label>
+                <input type="hidden" name="customerId" value={selectedCustomer} />
+                <Input
+                  id="customerName"
+                  name="customerName"
+                  list="customers-list-bs5839-6"
+                  value={selectedCustomerName}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSelectedCustomerName(value);
+                    const normalizedValue = value.trim().toLowerCase();
+                    const exactMatch = customers.find((c: any) => c.name?.trim().toLowerCase() === normalizedValue);
+                    const prefixMatches = customers.filter((c: any) => c.name?.trim().toLowerCase().startsWith(normalizedValue));
+                    const customer = exactMatch || (normalizedValue && prefixMatches.length === 1 ? prefixMatches[0] : null);
+                    setSelectedCustomer(customer ? String(customer.id) : '');
+                    if (customer && !siteName && (customer.address || customer.name)) {
+                      setSiteName(customer.address || customer.name || '');
                       setIsSiteNameAuto(true);
                     }
                   }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map((customer: any) => (
-                      <SelectItem key={customer.id} value={customer.id.toString()}>
-                        {customer.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  required
+                  placeholder="Type customer name"
+                />
+                <datalist id="customers-list-bs5839-6">
+                  {customers.map((customer: any) => (
+                    <option key={customer.id} value={customer.name} />
+                  ))}
+                </datalist>
               </div>
             </CardContent>
           </Card>
@@ -157,14 +223,14 @@ export default function BS5839_6CertificatePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="siteName">Property Address *</Label>
-                  <Input
+                  <AddressAutocompleteField
                     id="siteName"
                     name="siteName"
                     placeholder="Property address"
                     required
                     value={siteName}
-                    onChange={(e) => {
-                      setSiteName(e.target.value)
+                    onChange={(newValue) => {
+                      setSiteName(newValue)
                       setIsSiteNameAuto(false)
                     }}
                     className={isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
@@ -329,28 +395,20 @@ export default function BS5839_6CertificatePage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <Label htmlFor="visitDate">Visit Date *</Label>
-                  <Input
+                  <DateDropdownField
                     id="visitDate"
                     name="visitDate"
-                    type="date"
+                    label="Visit Date"
                     value={visitDate}
-                    onChange={(e) => {
-                      setVisitDate(e.target.value)
+                    onChange={(newDate) => {
+                      setVisitDate(newDate)
                       setIsVisitDateAuto(false)
                     }}
                     required
-                    className={isVisitDateAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
-                    title={isVisitDateAuto ? 'Auto-populated with today\'s date. Edit if required.' : undefined}
+                    isAutoPopulated={isVisitDateAuto}
+                    autoTitle="Auto-populated with today's date. Edit if required."
+                    autoHelpText="Auto-populated with today's date. Hover the field for details."
                   />
-                  {isVisitDateAuto && (
-                    <p
-                      className="text-xs text-amber-700"
-                      title="This assumed date is auto-filled to reduce repeated entry."
-                    >
-                      Auto-populated with today&apos;s date. Hover the field for details.
-                    </p>
-                  )}
                 </div>
                 <NextVisitField
                   visitDate={visitDate}
@@ -466,6 +524,10 @@ export default function BS5839_6CertificatePage() {
           </Card>
 
           <div className="flex justify-end space-x-4">
+            {previewData && <PreviewModal data={previewData} />}
+            <Button type="button" variant="outline" onClick={handlePreviewOpen}>
+              Preview
+            </Button>
             <Link href="/certificates/new">
               <Button variant="outline">Cancel</Button>
             </Link>

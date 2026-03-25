@@ -37,8 +37,8 @@ export default function PricingPage() {
               {
                 name: "Starter",
                 price: "Free",
-                description: "Perfect for individuals and small teams just getting started.",
-                features: ["Up to 5 certificates/month", "Basic templates", "Email support", "1 User"],
+                description: "Try the platform at no cost. Certificates include a watermark.",
+                features: ["Up to 5 certificates/month", "Watermarked certificates", "Basic templates", "1 User", "Community support only"],
                 cta: "Start Free",
                 highlight: false
               },

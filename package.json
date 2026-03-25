@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:clean-disseminator-preview-values": "npx tsx scripts/clean-disseminator-preview-values.ts",
     "backup:env": "bash scripts/backup-env.sh"
   },
   "dependencies": {

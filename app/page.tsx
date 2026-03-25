@@ -13,6 +13,8 @@ import {
   FileCheck, 
   Lock, 
   Globe,
+  Layers,
+  Edit3,
   Menu,
   X
 } from 'lucide-react';
@@ -47,7 +49,7 @@ export default function LandingPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                 </span>
-                New: AI-Powered Verification
+                New: Visual Report Template Builder
               </div>
               
               <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight tracking-tight">
@@ -165,7 +167,7 @@ export default function LandingPage() {
               {
                 icon: FileCheck,
                 title: "Smart Generation",
-                desc: "Create compliant certificates in seconds with our intelligent templates.",
+                desc: "Upload any existing PDF report template. Build it once, generate personalised documents for every job in seconds.",
                 color: "text-blue-500",
                 bg: "bg-blue-50 dark:bg-blue-900/20"
               },
@@ -178,8 +180,8 @@ export default function LandingPage() {
               },
               {
                 icon: Zap,
-                title: "AI Automation",
-                desc: "Let AI handle the repetitive tasks while you focus on inspections.",
+                title: "AI Field Detection",
+                desc: "Automatically detect blank input fields in any PDF and map each one to job, client, or company data — no manual marking needed.",
                 color: "text-amber-500",
                 bg: "bg-amber-50 dark:bg-amber-900/20"
               },
@@ -191,16 +193,16 @@ export default function LandingPage() {
                 bg: "bg-emerald-50 dark:bg-emerald-900/20"
               },
               {
-                icon: BarChart3,
-                title: "Analytics Dashboard",
-                desc: "Gain insights into your operations with real-time reporting tools.",
+                icon: Edit3,
+                title: "Text & Branding Editor",
+                desc: "White-out or replace any text, header, footer, or logo in your PDF. Insert dynamic \u007b\u007bhandlebars\u007d\u007d tokens to auto-fill client and job details at generation time.",
                 color: "text-purple-500",
                 bg: "bg-purple-50 dark:bg-purple-900/20"
               },
               {
-                icon: Globe,
-                title: "Access Anywhere",
-                desc: "Cloud-based platform accessible from any device, anywhere in the world.",
+                icon: Layers,
+                title: "Visual Template Builder",
+                desc: "Point-and-click field placement with resizable handles, drag-to-draw, and a guided wizard — no coding required.",
                 color: "text-cyan-500",
                 bg: "bg-cyan-50 dark:bg-cyan-900/20"
               }
@@ -240,18 +242,18 @@ export default function LandingPage() {
             {[
               {
                 step: "01",
-                title: "Input Data",
-                desc: "Enter inspection details manually or import from your existing tools."
+                title: "Upload Your Template",
+                desc: "Upload any existing PDF report. Our editor lets you visually map fields, white-out logos or footers, and personalise text in minutes."
               },
               {
                 step: "02",
-                title: "AI Processing",
-                desc: "Our AI validates data against regulations and generates the certificate."
+                title: "Map & Personalise",
+                desc: "Auto-detect blank fields or draw them manually. Insert \u007b\u007bhandlebars\u007d\u007d tokens so every report is automatically filled with the right job, client, and company details."
               },
               {
                 step: "03",
-                title: "Issue & Track",
-                desc: "Send to clients instantly and track status in your dashboard."
+                title: "Generate & Deliver",
+                desc: "Produce a fully personalised, branded report for any job in seconds. Send to the client or store securely in the cloud."
               }
             ].map((item, i) => (
               <div key={i} className="relative flex flex-col items-center text-center">
