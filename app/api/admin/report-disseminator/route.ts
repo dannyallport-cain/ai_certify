@@ -58,6 +58,9 @@ export async function GET() {
         sourceFileName: reportDisseminatorTemplates.sourceFileName,
         sourceMimeType: reportDisseminatorTemplates.sourceMimeType,
         wizardData: reportDisseminatorTemplates.wizardData,
+        publishedAt: reportDisseminatorTemplates.publishedAt,
+        archivedAt: reportDisseminatorTemplates.archivedAt,
+        parentTemplateId: reportDisseminatorTemplates.parentTemplateId,
         createdAt: reportDisseminatorTemplates.createdAt,
         updatedAt: reportDisseminatorTemplates.updatedAt,
       })

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Upload, Wand2, Save, Eye, List, Globe, Info, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Plus, Upload, Wand2, Save, Eye, List, Globe, Info, PanelLeftClose, PanelLeftOpen, Archive, Copy, Send, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -76,6 +76,11 @@ type DisseminatorTemplate = {
     aiSuggestionsEnabled?: boolean;
     previewValues?: Record<string, string>;
   };
+  publishedAt?: string | null;
+  archivedAt?: string | null;
+  parentTemplateId?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type DisseminatorReportListItem = {
@@ -1800,6 +1805,112 @@ export default function ReportDisseminatorPage() {
     }
   };
 
+  const publishTemplate = async () => {
+    if (!selected) return;
+    if (selected.status === 'published') {
+      toast.error('Template is already published');
+      return;
+    }
+    if (selected.status === 'archived') {
+      toast.error('Cannot publish an archived template');
+      return;
+    }
+    if (!selected.fields.length) {
+      toast.error('Add fields before publishing');
+      return;
+    }
+    if (!window.confirm(`Publish "${selected.name}"?\n\nPublished templates are immutable and can be used to create reports.\nTo make changes later, you will need to clone it first.`)) return;
+
+    setSavingTemplate(true);
+    try {
+      const res = await fetch(`/api/admin/report-disseminator/${selected.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fields: selected.fields,
+          wizardData: stripTemplatePreviewValues(selected).wizardData,
+          description: selected.description || '',
+          name: selected.name,
+          status: 'published',
+        }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error || 'Failed to publish template');
+
+      setSelected(stripTemplatePreviewValues(payload));
+      upsertTemplateSummary(payload);
+      toast.success('Template published');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to publish');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const cloneTemplate = async () => {
+    if (!selected) return;
+    if (!window.confirm(`Clone "${selected.name}" into a new editable draft?\n\nThe current version will be archived.`)) return;
+
+    setSavingTemplate(true);
+    try {
+      const res = await fetch(`/api/admin/report-disseminator/${selected.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intent: 'clone' }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error || 'Failed to clone template');
+
+      setTemplates((current) =>
+        current.map((item) =>
+          item.id === selected.id ? { ...item, status: 'archived' as TemplateStatus } : item
+        )
+      );
+      setSelected(stripTemplatePreviewValues(payload));
+      upsertTemplateSummary(payload);
+      setSelectedId(payload.id);
+      toast.success('Cloned into a new draft');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to clone');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const archiveTemplate = async () => {
+    if (!selected) return;
+    if (selected.status === 'archived') {
+      toast.error('Template is already archived');
+      return;
+    }
+    if (!window.confirm(`Archive "${selected.name}"?\n\nArchived templates can no longer be edited or used to create new reports.`)) return;
+
+    setSavingTemplate(true);
+    try {
+      const res = await fetch(`/api/admin/report-disseminator/${selected.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intent: 'archive' }),
+      });
+
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error || 'Failed to archive template');
+
+      setSelected(stripTemplatePreviewValues(payload));
+      upsertTemplateSummary(payload);
+      toast.success('Template archived');
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to archive');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
   const openCreateReportDialog = () => {
     if (!selected) return;
     if (!selected.fields.length) {
@@ -1965,6 +2076,7 @@ export default function ReportDisseminatorPage() {
 
   const wizardStep = selected?.wizardData?.currentStep || 1;
   const currentWizardStep = WIZARD_STEP_DETAILS[wizardStep as keyof typeof WIZARD_STEP_DETAILS] || WIZARD_STEP_DETAILS[1];
+  const templateReadOnly = selected?.status === 'published' || selected?.status === 'archived';
   const unplacedFields = useMemo(
     () => selected?.fields.filter((field) => !field.boundingBox) || [],
     [selected]
@@ -2568,8 +2680,17 @@ export default function ReportDisseminatorPage() {
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <Badge variant="secondary">v{template.version}</Badge>
-                    <Badge variant={template.status === 'published' ? 'default' : 'outline'}>{template.status}</Badge>
+                    <Badge variant={template.status === 'published' ? 'default' : template.status === 'archived' ? 'secondary' : 'outline'}>{template.status}</Badge>
+                    {template.parentTemplateId && (
+                      <Badge variant="outline" className="text-[10px]">cloned</Badge>
+                    )}
                   </div>
+                  {(template.publishedAt || template.archivedAt) && (
+                    <div className="mt-1 text-[10px] text-muted-foreground space-y-0.5">
+                      {template.publishedAt && <p>Published {new Date(template.publishedAt).toLocaleDateString()}</p>}
+                      {template.archivedAt && <p>Archived {new Date(template.archivedAt).toLocaleDateString()}</p>}
+                    </div>
+                  )}
                 </button>
               ))}
             </CardContent>
@@ -2680,6 +2801,22 @@ export default function ReportDisseminatorPage() {
 
             {editorMode === 'template' && selected && (
               <>
+                {templateReadOnly && (
+                  <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm">
+                    <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <div>
+                      <p className="font-medium text-amber-800 dark:text-amber-300">
+                        {selected.status === 'published' ? 'Published template — read-only' : 'Archived template — read-only'}
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-400/70">
+                        {selected.status === 'published'
+                          ? 'Clone this template to create a new editable draft.'
+                          : 'Archived templates cannot be edited.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-md border bg-muted/30 p-4 space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -2694,22 +2831,11 @@ export default function ReportDisseminatorPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-2">
                     <Label>Template title</Label>
-                    <Input title="Name displayed in the templates list and used for new reports" value={selected.name} onChange={(e) => setSelected({ ...selected, name: e.target.value })} />
+                    <Input title="Name displayed in the templates list and used for new reports" value={selected.name} onChange={(e) => setSelected({ ...selected, name: e.target.value })} disabled={templateReadOnly} />
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
-                    <Select
-                      value={selected.status}
-                      onValueChange={(value: TemplateStatus) => setSelected({ ...selected, status: value })}
-                    >
-                      <SelectTrigger title="Lifecycle state for this reusable template"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="draft">draft</SelectItem>
-                        <SelectItem value="review">review</SelectItem>
-                        <SelectItem value="published">published</SelectItem>
-                        <SelectItem value="archived">archived</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input title="Current lifecycle state" value={selected.status} disabled />
                   </div>
                   <div className="space-y-2">
                     <Label>Source</Label>
@@ -2717,16 +2843,24 @@ export default function ReportDisseminatorPage() {
                   </div>
                 </div>
 
+                {(selected.publishedAt || selected.archivedAt || selected.parentTemplateId) && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    {selected.publishedAt && <span>Published: {new Date(selected.publishedAt).toLocaleDateString()}</span>}
+                    {selected.archivedAt && <span>Archived: {new Date(selected.archivedAt).toLocaleDateString()}</span>}
+                    {selected.parentTemplateId && <span>Cloned from template #{selected.parentTemplateId}</span>}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" title="Scan the PDF and build an initial field list using extraction and AI analysis" variant="default" size="sm" onClick={autoExtractAllFields} disabled={extracting || !file || !selected}>
+                  <Button type="button" title="Scan the PDF and build an initial field list using extraction and AI analysis" variant="default" size="sm" onClick={autoExtractAllFields} disabled={extracting || !file || !selected || templateReadOnly}>
                     <Wand2 className="w-4 h-4 mr-1" />
                     {extracting ? 'Extracting Fields...' : 'Auto Extract'}
                   </Button>
-                  <Button type="button" title="Insert a blank field when extraction missed something" onClick={addField} variant="outline" size="sm" disabled={!selected}>
+                  <Button type="button" title="Insert a blank field when extraction missed something" onClick={addField} variant="outline" size="sm" disabled={!selected || templateReadOnly}>
                     <Plus className="w-4 h-4 mr-1" />
                     Add Field Manually
                   </Button>
-                  <Button type="button" title="Create a saved report instance from the current template definition" onClick={openCreateReportDialog} variant="outline" size="sm" disabled={!selected.fields.length}>
+                  <Button type="button" title="Create a saved report instance from the current template definition" onClick={openCreateReportDialog} variant="outline" size="sm" disabled={!selected.fields.length || selected.status === 'archived'}>
                     <Plus className="w-4 h-4 mr-1" />
                     Create Draft Report
                   </Button>
@@ -3518,6 +3652,7 @@ export default function ReportDisseminatorPage() {
                       })
                     }
                     placeholder="Capture assumptions and field intent notes..."
+                    disabled={templateReadOnly}
                   />
                 </div>
 
@@ -3542,17 +3677,43 @@ export default function ReportDisseminatorPage() {
                 )}
 
                 <div className="flex flex-wrap justify-end gap-2">
-                  <Button type="button" title="Save the current template as a separate named copy" variant="outline" onClick={() => {
-                    setSaveTemplateName(selected.name);
-                    setSaveDialogOpen(true);
-                  }} disabled={savingTemplate}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save As Template
-                  </Button>
-                  <Button type="button" title="Save changes to this template, cloning first if the template is published" onClick={updateTemplate} disabled={savingTemplate}>
-                    <Save className="w-4 h-4 mr-2" />
-                    {savingTemplate ? 'Saving…' : 'Update Template'}
-                  </Button>
+                  {selected.status === 'published' && (
+                    <Button type="button" title="Clone this published template into a new editable draft" variant="default" onClick={cloneTemplate} disabled={savingTemplate}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Clone to Draft
+                    </Button>
+                  )}
+                  {!templateReadOnly && (
+                    <>
+                      <Button type="button" title="Archive this template so it can no longer be edited or used" variant="outline" onClick={archiveTemplate} disabled={savingTemplate}>
+                        <Archive className="w-4 h-4 mr-2" />
+                        Archive
+                      </Button>
+                      <Button type="button" title="Save the current template as a separate named copy" variant="outline" onClick={() => {
+                        setSaveTemplateName(selected.name);
+                        setSaveDialogOpen(true);
+                      }} disabled={savingTemplate}>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save As
+                      </Button>
+                      <Button type="button" title="Save changes to this template" onClick={updateTemplate} disabled={savingTemplate}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {savingTemplate ? 'Saving…' : 'Save Draft'}
+                      </Button>
+                      {(selected.status === 'draft' || selected.status === 'review') && (
+                        <Button type="button" title="Publish this template — it will become immutable" variant="default" onClick={publishTemplate} disabled={savingTemplate || !selected.fields.length}>
+                          <Send className="w-4 h-4 mr-2" />
+                          Publish
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  {selected.status === 'archived' && (
+                    <Button type="button" title="Clone this archived template into a new editable draft" variant="default" onClick={cloneTemplate} disabled={savingTemplate}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Clone to Draft
+                    </Button>
+                  )}
                 </div>
               </>
             )}
