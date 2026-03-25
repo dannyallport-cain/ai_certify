@@ -278,6 +278,7 @@ export function PdfPageCanvas({
     if (!pdfBase64 || !canvasRef.current) return;
 
     let cancelled = false;
+    let loadingTask: { destroy: () => void; promise: Promise<any> } | null = null;
 
     (async () => {
       try {
@@ -296,7 +297,7 @@ export function PdfPageCanvas({
         const bytes = new Uint8Array(binStr.length);
         for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
 
-        const loadingTask = pdfjsLib.getDocument({ data: bytes });
+        loadingTask = pdfjsLib.getDocument({ data: bytes });
         const pdf = await loadingTask.promise;
         if (cancelled) return;
 
@@ -367,12 +368,14 @@ export function PdfPageCanvas({
           }
         }
       } catch (err) {
-        console.error('[PdfPageCanvas] render error', err);
+        // Suppress the expected cancellation error when the task is destroyed on cleanup.
+        if (!cancelled) console.error('[PdfPageCanvas] render error', err);
       }
     })();
 
     return () => {
       cancelled = true;
+      loadingTask?.destroy();
     };
   }, [
     pdfBase64,
@@ -391,7 +394,12 @@ export function PdfPageCanvas({
     transformerRef.current.getLayer()?.batchDraw();
   }, [manualPlacementField, selectedId, fields]);
 
-  // Attach pending transformer to the pending rect node whenever pendingRect changes.
+  // Attach pending transformer to the pending rect node when it appears/disappears.
+  // We intentionally depend only on the boolean presence (not the rect values) so that
+  // resize operations don't re-attach the transformer on every onTransformEnd update —
+  // the transformer always re-reads the node dimensions directly and doesn't need
+  // re-attachment just because the rect's coordinates changed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!pendingTransformerRef.current) return;
     if (pendingRect && pendingKonvaRectRef.current) {
@@ -400,7 +408,7 @@ export function PdfPageCanvas({
       pendingTransformerRef.current.nodes([]);
     }
     pendingTransformerRef.current.getLayer()?.batchDraw();
-  }, [pendingRect]);
+  }, [pendingRect !== null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Attach step1 transformer to the selected existing blank node.
   useEffect(() => {
@@ -418,7 +426,8 @@ export function PdfPageCanvas({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step1SelectedIdx, step1Blanks.length]);
 
-  // Attach step1 pending transformer to its rect node.
+  // Attach step1 pending transformer to its rect node (same logic as pendingTransformerRef).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!step1PendingTransRef.current) return;
     if (step1PendingRect && step1PendingKonvaRef.current) {
@@ -427,7 +436,7 @@ export function PdfPageCanvas({
       step1PendingTransRef.current.nodes([]);
     }
     step1PendingTransRef.current.getLayer()?.batchDraw();
-  }, [step1PendingRect]);
+  }, [step1PendingRect !== null]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clear step1 selection and pending when step1Mode exits.
   useEffect(() => {
@@ -614,6 +623,10 @@ export function PdfPageCanvas({
 
     if (!manualPlacementField) return;
     if (placementMode === 'auto') {
+      // Only trigger detection on clicks directly on the stage background.
+      // Clicks on the pending rect, transformer anchors, or circle handle must
+      // not override the current pending rect or they'll cause resets mid-adjust.
+      if (event?.target !== stageRef.current) return;
       const pointer = stageRef.current.getPointerPosition();
       if (!pointer) return;
 
@@ -898,10 +911,10 @@ export function PdfPageCanvas({
                       setPendingRect({ left: node.x(), top: node.y(), width: nextWidth, height: nextHeight });
                     }}
                   />
-                  {/* Move handle — drag this dot to reposition the whole rect */}
+                  {/* Move handle — drag this dot to reposition the whole rect (sits above the rect) */}
                   <Circle
                     x={pendingRect.left + pendingRect.width / 2}
-                    y={pendingRect.top + pendingRect.height / 2}
+                    y={Math.max(pendingRect.top - 16, 0)}
                     radius={7}
                     fill="#16a34a"
                     opacity={0.85}
@@ -985,11 +998,11 @@ export function PdfPageCanvas({
                         });
                       }}
                     />
-                    {/* Move handle for each blank */}
+                    {/* Move handle for each blank (sits above the rect) */}
                     {step1Mode && (
                       <Circle
                         x={bx + bw / 2}
-                        y={by + bh / 2}
+                        y={Math.max(by - 14, 0)}
                         radius={7}
                         fill={isSelected ? '#059669' : '#0d9488'}
                         opacity={0.8}
@@ -1072,10 +1085,10 @@ export function PdfPageCanvas({
                       setStep1PendingRect({ left: node.x(), top: node.y(), width: nw, height: nh });
                     }}
                   />
-                  {/* Move handle for pending step1 area */}
+                  {/* Move handle for pending step1 area (sits above the rect) */}
                   <Circle
                     x={step1PendingRect.left + step1PendingRect.width / 2}
-                    y={step1PendingRect.top + step1PendingRect.height / 2}
+                    y={Math.max(step1PendingRect.top - 16, 0)}
                     radius={7}
                     fill="#0d9488"
                     opacity={0.85}

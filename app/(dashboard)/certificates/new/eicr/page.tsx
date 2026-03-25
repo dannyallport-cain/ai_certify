@@ -19,6 +19,11 @@ import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors'
 import { OrganisationAutocompleteField } from '@/components/OrganisationAutocompleteField';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2 } from 'lucide-react';
+import {
+  InspectionScheduleSection,
+  type InspCode,
+  type InspScheduleValue,
+} from '@/components/InspectionScheduleSection';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -26,6 +31,8 @@ interface Observation {
   id: string;
   description: string;
   code: 'C1' | 'C2' | 'C3' | 'FI';
+  /** Set when auto-generated from the inspection schedule */
+  fromInspRef?: string;
 }
 
 const codeColors: Record<string, string> = {
@@ -74,6 +81,69 @@ export default function EICRCertificatePage() {
   const [meansOfEarthing, setMeansOfEarthing] = useState("Distributor's facility");
   const [observations, setObservations] = useState<Observation[]>([]);
   const [evidenceOfAdditions, setEvidenceOfAdditions] = useState('No');
+  const [inspSchedule, setInspSchedule] = useState<InspScheduleValue>({
+    codes: {},
+    comments: {},
+  });
+
+  // When an inspection code changes to C1/C2, auto-add an observation and vice-versa
+  const handleInspCodeChange = (
+    ref: string,
+    desc: string,
+    newCode: InspCode,
+    prevCode: InspCode,
+  ) => {
+    setInspSchedule((prev) => ({
+      ...prev,
+      codes: { ...prev.codes, [ref]: newCode },
+    }));
+
+    const wasAlert = prevCode === 'C1' || prevCode === 'C2';
+    const isAlert  = newCode  === 'C1' || newCode  === 'C2';
+    const autoId   = `auto-insp-${ref}`;
+
+    if (isAlert && !wasAlert) {
+      // Add a new auto observation
+      setObservations((prev) => [
+        ...prev,
+        {
+          id: autoId,
+          description: `Inspection Item ${ref}: ${desc}`,
+          code: newCode as 'C1' | 'C2',
+          fromInspRef: ref,
+        },
+      ]);
+    } else if (!isAlert && wasAlert) {
+      // Remove the auto observation (only if it hasn't been manually edited)
+      setObservations((prev) =>
+        prev.filter((o) => o.fromInspRef !== ref),
+      );
+    } else if (isAlert && wasAlert && newCode !== prevCode) {
+      // C1 ↔ C2 code swap – update code in existing observation
+      setObservations((prev) =>
+        prev.map((o) =>
+          o.fromInspRef === ref
+            ? { ...o, code: newCode as 'C1' | 'C2' }
+            : o,
+        ),
+      );
+    }
+  };
+
+  const handleInspCommentChange = (ref: string, comment: string) => {
+    setInspSchedule((prev) => ({
+      ...prev,
+      comments: { ...prev.comments, [ref]: comment },
+    }));
+    // Keep auto-observation description in sync with the comment
+    setObservations((prev) =>
+      prev.map((o) =>
+        o.fromInspRef === ref
+          ? { ...o, description: comment || `Inspection Item ${ref}` }
+          : o,
+      ),
+    );
+  };
 
   const generateCertificateNumber = () => {
     const date = new Date();
@@ -120,6 +190,7 @@ export default function EICRCertificatePage() {
         recommendations: codeLabels[o.code],
       })));
       formData.set('items', obsJson);
+      formData.set('inspectionSchedule', JSON.stringify(inspSchedule));
 
       const result = await createCertificate({}, formData);
       if (result?.error) {
@@ -544,6 +615,24 @@ export default function EICRCertificatePage() {
                 </div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* ── Section 13: Inspection Schedule ── */}
+        <Card>
+          <CardHeader>
+            <CardTitle>13 · Inspection Schedule — Domestic &amp; Similar Premises (≤ 100 A)</CardTitle>
+            <CardDescription>
+              Click any Outcome cell to cycle through codes: blank → N/A → ✓ → C1 → C2 → C3 → LIM → NV.
+              Selecting C1 or C2 automatically adds an entry in Section 7 (Observations).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InspectionScheduleSection
+              value={inspSchedule}
+              onCodeChange={handleInspCodeChange}
+              onCommentChange={handleInspCommentChange}
+            />
           </CardContent>
         </Card>
 

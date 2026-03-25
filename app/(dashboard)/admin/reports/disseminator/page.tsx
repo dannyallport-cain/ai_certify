@@ -949,9 +949,9 @@ export default function ReportDisseminatorPage() {
       if (!res.ok) throw new Error('Failed to load templates');
       const data = await res.json();
       setTemplates(data);
-      if (!selectedId && data.length > 0) {
-        setSelectedId(data[0].id);
-      }
+      // Use functional update so we read the *current* selectedId state,
+      // not the stale closure value captured when this async function was created.
+      setSelectedId((current) => (!current && data.length > 0 ? data[0].id : current));
     } catch (error) {
       console.error(error);
       toast.error('Failed to load report disseminator templates');
@@ -1826,11 +1826,15 @@ export default function ReportDisseminatorPage() {
     // Build blank initial values — auto-generated refs keep their value (read-only),
     // all other fields start empty so the report is a clean blank form.
     const blankValues: Record<string, string> = {};
+    const todayISO = new Date().toISOString().slice(0, 10); // YYYY-MM-DD for <input type="date">
     for (const field of selected.fields) {
-      blankValues[field.id] =
-        field.fieldType === 'auto_reference'
-          ? generateAutoReferenceValue(selected.id, field)
-          : '';
+      if (field.fieldType === 'auto_reference') {
+        blankValues[field.id] = generateAutoReferenceValue(selected.id, field);
+      } else if (field.fieldType === 'date') {
+        blankValues[field.id] = todayISO;
+      } else {
+        blankValues[field.id] = '';
+      }
     }
 
     setCreatingReport(true);
@@ -2338,13 +2342,37 @@ export default function ReportDisseminatorPage() {
   const updateReportValue = (fieldId: string, value: string) => {
     setSelectedReport((currentReport) => {
       if (!currentReport) return currentReport;
-      return {
-        ...currentReport,
-        values: {
-          ...currentReport.values,
-          [fieldId]: value,
-        },
-      };
+      const nextValues = { ...currentReport.values, [fieldId]: value };
+
+      // Auto-populate linked Section 7 observations for C1/C2/C3 codes
+      const changedField = currentReport.fields?.find((f: ReportField) => f.id === fieldId);
+      if (changedField?.fieldType === 'state_enum' && changedField.linkedConfig) {
+        const { relatedFieldId, relatedSection } = changedField.linkedConfig;
+        const isDeficiency = value === 'C1' || value === 'C2' || value === 'C3';
+
+        if (relatedSection === 'section7_observations' && relatedFieldId) {
+          // Find target observation row fields by matching relatedFieldId prefix
+          // Convention: observation row fields share id prefix, e.g. "obs_row_1_code", "obs_row_1_desc"
+          const codeFieldId = `${relatedFieldId}_code`;
+          const descFieldId = `${relatedFieldId}_desc`;
+          const refFieldId = `${relatedFieldId}_ref`;
+
+          if (isDeficiency) {
+            // Auto-populate the observation row
+            const refLabel = changedField.label.match(/^[\d.]+/)?.[0] ?? changedField.label;
+            nextValues[refFieldId] = refLabel;
+            nextValues[descFieldId] = changedField.plainTextHint || changedField.label;
+            nextValues[codeFieldId] = value;
+          } else {
+            // Clear auto-populated row when code changes away from C1/C2/C3
+            nextValues[refFieldId] = '';
+            nextValues[descFieldId] = '';
+            nextValues[codeFieldId] = '';
+          }
+        }
+      }
+
+      return { ...currentReport, values: nextValues };
     });
   };
 
@@ -3711,7 +3739,7 @@ export default function ReportDisseminatorPage() {
 
       {saveDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg">
+          <div className="w-full max-w-md rounded-lg border bg-white dark:bg-gray-900 p-6 shadow-lg">
             <div className="space-y-2">
               <h2 className="text-lg font-semibold">Save As Template</h2>
               <p className="text-sm text-muted-foreground">
@@ -3752,7 +3780,7 @@ export default function ReportDisseminatorPage() {
 
       {createReportDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg">
+          <div className="w-full max-w-md rounded-lg border bg-white dark:bg-gray-900 p-6 shadow-lg">
             <div className="space-y-2">
               <h2 className="text-lg font-semibold">Create Draft Report</h2>
               <p className="text-sm text-muted-foreground">
@@ -3807,7 +3835,7 @@ export default function ReportDisseminatorPage() {
 
       {saveReportDialogOpen && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg">
+          <div className="w-full max-w-md rounded-lg border bg-white dark:bg-gray-900 p-6 shadow-lg">
             <div className="space-y-2">
               <h2 className="text-lg font-semibold">Save Report</h2>
               <p className="text-sm text-muted-foreground">

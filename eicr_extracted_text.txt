@@ -1,0 +1,707 @@
+
+=== PAGE 1 ===
+DOMESTIC ELECTRICAL INSTALLATION
+CONDITION REPORT
+Requirements For Electrical Installations - BS 7671 IET Wiring Regulations
+Report Reference:
+DETAILS OF THE PERSON ORDERING THE REPORT
+REASON FOR PRODUCING THIS REPORT
+DETAILS OF THE INSTALLATION WHICH IS THE SUBJECT OF THIS REPORT
+EXTENT AND LIMITATIONS OF INSPECTION AND TESTING
+SUMMARY OF THE CONDITION OF THE INSTALLATION
+RECOMMENDATIONS
+'   Client:
+Address:
+'   Reason for producing this report:
+Date(s) on which inspection and testing was carried out:
+'   Installation Address:
+Estimated age of wiring system:   years
+Evidence of additions/
+alterations:
+if yes, estimated age:   years
+Installation records available? (Regulation 651.1)   Date of last inspection:
+'   Extent of the electrical installation covered by this report:
+Agreed limitations including the reasons (see Regulation 653.2):
+Agreed with:
+Operational limitations including the reasons:
+The inspection and testing detailed in this report and accompanying schedules have been carried out in accordance with BS
+7671:2018 (IET Wiring Regulations) as amended to 2020.
+It should be noted that cables concealed within trunking and conduits, under floors, in roof spaces, and generally within the fabric
+of the building or underground, have not been inspected unless specifically agreed between the client and inspector prior to the
+inspection. An inspection should be made within an accessible roof space housing other electrical equipment.
+'   See page 3 for a summary of the general condition of the installation in terms of electrical safety.
+Overall assessment of the installation in terms of it's suitability for
+continued use*:
+* An unsatisfactory assessment indicates that dangerous (Code C1) and/or potentially dangerous (Code C2)
+conditions have been identified.
+Where the overall assessment of the suitability of the installation for continued use on page 1 is stated as 'UNSATISFACTORY',
+I/We recommend that any observations classified as 'Code 1 - Danger Present' or 'Code 2 - Potentially dangerous' are acted upon
+as a matter of urgency.
+Investigation without delay is recommended for observations identified as 'FI - Further Investigation Required'.
+Observations classified as 'Code 3 - Improvement recommended' should be given due consideration.
+Subject to the necessary remedial action being taken, I/we recommend that
+the installation is further inspected and tested by:
+Note: The proposed date for the next inspection should take into consideration the frequency and quality of maintenance that the
+installation can reasonably be expected to receive during its intended life. The period should be agreed between relevant parties.
+1
+2
+3
+4
+5
+6
+This form is based on the model shown in Appendix 6 of BS 7671:2018.
+CE202706
+Page: 1 of 7
+Cain Enabled Engineering Ltd
+office@cain-enabled.co.uk
+Vincente Dos Santos
+146 Fitzwarren Street, Salford, M6 5RS
+Landlords safety report.
+13/02/2025
+Vincente Dos Santos, 146 Fitzwarren Street, Salford, M6 5RS
+20   No   N/A
+No   N/A
+100% of the installation.
+No Lifting of floor boards or inspection of loft space. Characteristics of primary supply overcurrent device. No testing of HVAC control cables. No testing of
+unverified circuits.
+Client
+N/A
+SATISFACTORY
+5 Years or change of tenant/owner
+
+=== PAGE 2 ===
+OBSERVATIONS AND RECOMMENDATIONS FOR ACTIONS TO BE TAKEN
+'   Referring to the attached schedules of inspection and test results, and subject to the limitations specified on page 1
+of this report under 'Extent of the Installation and Limitations of Inspection and Testing':
+There are no items adversely affecting electrical safety
+or
+The following observations and recommendations are made
+One of the following codes, as appropriate, has been allocated to each of the observations made above to indicate to the person(s)
+responsible for the installation the degree of urgency for remedial action.
+C1   Danger Present
+Risk of injury. Immediate
+remedial action required
+C2   Potentially dangerous
+Urgent remedial action
+required
+C3   Improvement
+recommended
+FI   Further investigation
+required without delay
+Immediate remedial action required for items:
+Urgent remedial action required for items:
+Improvement recommended for items:
+Further investigation required for items:
+7
+This form is based on the model shown in Appendix 6 of BS 7671:2018.   Ref: CE202706   Page: 2 of 7
+Cain Enabled Engineering Ltd
+office@cain-enabled.co.uk
+Item No   Observations
+Classification
+Code
+N/A
+4
+N/A
+N/A
+N/A
+N/A
+
+=== PAGE 3 ===
+GENERAL CONDITION OF THE INSTALLATION
+DECLARATION
+TEST INSTRUMENTS
+SUPPLY CHARACTERISTICS AND EARTHING ARRANGEMENTS
+PARTICULARS OF INSTALLATION REFERRED TO IN THE REPORT
+'   General condition of the installation (in terms of electrical safety):
+'   I/We, being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our
+signatures below), particulars of which are described above, having exercised reasonable skill and care when carrying out the
+inspection and testing, hereby declare that the information in this report, including the observations and the attached schedules,
+provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations
+in section 4 of this report.
+Trading Title:
+Address:   Registration Number
+(if applicable):
+Telephone Number:
+For the INSPECTION, TESTING AND ASSESSMENT of the report:
+Name:   Position:   Signature:   Date:
+'   Details of Test Instruments used (state serial and/or asset numbers):
+Multi-functional:
+Insulation resistance:
+Continuity:
+Earth electrode resistance:
+Earth fault loop impedance:
+RCD:
+Earthing
+Arrangements
+TN-S
+TN-C-S
+TT
+Number and Type of Live
+Conductors
+1-phase
+(2 wire):
+3-phase
+(3 wire):
+Other:
+1-phase
+(3 wire):
+3-phase
+(4 wire):
+Confirmation of supply polarity:
+Nature of Supply Parameters
+Nominal
+voltage(s):
+U:   Uo:
+Nominal frequency, f:
+Prospective fault
+current, lpf:
+External earth fault
+loop impedance, Ze:
+Supply Protective Device
+BS(EN):
+Type:
+Rated current:
+Short-circuit
+capacity:
+'   Means of Earthing
+Distributor's
+facility:
+Installation
+earth electrode:
+Details of Installation Earth Electrode (where applicable)
+Type:
+Resistance
+to Earth:
+Location:
+Method of
+measurement:
+Maximum Demand (Load):
+Protective measure(s)
+against electric shock:
+Main Switch / Switch-Fuse / Circuit-Breaker / RCD
+Type
+BS(EN):
+Number
+of poles:
+Current rating:
+Fuse/device rating
+or setting:
+Voltage rating:
+Supply
+conductors
+material:
+Supply
+conductors
+csa:
+If RCD main switch:
+Rated residual
+operating current (l ∆ n):
+Rated time delay:
+Measured operating
+time (at l ∆ n):
+Earthing and Protective Bonding Conductors
+Earthing conductor
+Conductor
+material:
+csa:
+Connection/
+continuity
+verified:
+Main protective bonding conductors
+Conductor
+material:
+csa:
+Connection/
+continuity
+verified:
+Bonding of extraneous-conductive parts
+To water installation
+pipes:
+To gas installation
+pipes:
+To oil installation
+pipes:
+To lightning
+protection:
+To structural
+steel:
+To other service(s):
+8
+9
+10
+11
+12
+Postcode:
+This form is based on the model shown in Appendix 6 of BS 7671:2018.   Ref: CE202706   Page: 3 of 7
+Cain Enabled Engineering Ltd
+office@cain-enabled.co.uk
+Adequate.
+Cain Enabled Ltd
+Piccadilly Business Centre
+Aldow Enterprise Park
+Manchester
+M12 6AE
+611716000
+01246 387 450
+Daniel Allport   Qualified Supervisor   13/02/2025
+511666155
+N/A
+N/A
+N/A
+N/A
+N/A
+4
+N/A
+N/A
+4   N/A
+N/A   N/A
+N/A
+4
+240   V   230   V
+50   Hz
+1.1   kA
+0.28   Ω
+1361 Fuse HBC
+2
+100   A
+33   kA
+4
+N/A
+N/A
+N/A   Ω
+N/A
+N/A
+100 Amps   ADS
+60947-3 Isolator
+2
+100   A
+100   A
+240   V
+Copper
+25   2 mm
+N/A   mA
+N/A   ms
+N/A   ms
+Copper   16   2 mm   4
+Copper   10   2 mm   4
+4   4
+N/A   N/A
+N/A   N/A
+
+=== PAGE 4 ===
+INSPECTION SCHEDULE FOR DOMESTIC & SIMILAR PREMISES WITH UP TO 100A SUPPLY 13
+This form is based on the model shown in Appendix 6 of BS 7671:2018.   Ref: CE202706   Page: 4 of 7
+Cain Enabled Engineering Ltd
+office@cain-enabled.co.uk
+Item   Description   Comments   Outcome
+1.0   EXTERNAL CONDITION OF INTAKE EQUIPMENT (VISUAL INSPECTION ONLY)
+1.1   Service cable   N/A   4
+1.2   Service head   N/A   4
+1.3   Earthing arrangement   N/A   4
+1.4   Meter tails   N/A   4
+1.5   Metering equipment   N/A   4
+1.6   Isolator (where present)   N/A   N/A
+2.0   PRESENCE OF ADEQUATE ARRANGEMENTS FOR OTHER SOURCES
+SUCH AS MICROGENERATORS (551.6; 551.7)
+N/A   N/A
+3.0   EARTHING / BONDING ARRANGEMENTS (411.3; Chap 54)
+3.1   Presence and condition of distributor's earthing arrangement (542.1.2.1;
+542.1.2.2)
+N/A   4
+3.2   Presence and condition of earth electrode connection where applicable
+(542.1.2.3)
+N/A   N/A
+3.3   Provision of earthing/bonding labels at all appropriate locations
+(514.13.1)
+N/A   4
+3.4   Confirmation of earthing conductor size (542.3; 543.1.1)   N/A   4
+3.5   Accessibility and condition of earthing conductor at MET (543.3.2)   N/A   4
+3.6   Confirmation of main protective bonding conductor sizes (544.1)   N/A   4
+3.7   Condition and accessibility of main protective bonding conductor
+connections (543.3.2; 544.1.2)
+N/A   4
+3.8   Accessibility and condition of other protective bonding connections
+(543.3.1; 543.3.2)
+N/A   N/A
+4.0   CONSUMER UNIT(S) / DISTRIBUTION BOARD(S)
+4.1   Adequacy of working space/accessibility to consumer unit/distribution
+board (132.12; 513.1)
+N/A   4
+4.2   Security of fixing (134.1.1)   N/A   4
+4.3   Condition of enclosure(s) in terms of IP rating etc (416.2)   N/A   4
+4.4   Condition of enclosure(s) in terms of fire rating etc (421.1.201; 526.5)   N/A   4
+4.5   Enclosure not damaged/deteriorated so as to impair safety (651.2)   N/A   4
+4.6   Presence of main linked switch (as required by 462.1.201)   N/A   4
+4.7   Operation of main switch (functional check) (643.10)   N/A   4
+4.8   Manual operation of circuit-breakers and RCDs to prove disconnection
+(643.10)
+N/A   4
+4.9   Correct identification of circuit details and protective devices (514.8.1;
+514.9.1)
+N/A   4
+4.10   Presence of RCD six-monthly test notice at or near consumer
+unit/distribution board (514.12.2)
+N/A   N/A
+4.11   Presence of non-standard (mixed) cable colour warning notice at or near
+consumer unit/distribution board (514.14)
+N/A   4
+4.12   Presence of alternative supply warning notice at or near consumer
+unit/distribution board (514.15)
+N/A   N/A
+4.13   Presence of other required labelling (please specify) (Section 514)   N/A   N/A
+4.14   Compatibility of protective devices, bases and other components; correct
+type and rating (No signs of unacceptable thermal damage, arcing or
+overheating) (411.3.2; 411.4; 411.5; 411.6; Sections 432, 433)
+N/A   4
+OUTCOMES
+Acceptable
+condition   4
+Unacceptable
+condition
+C1 or C2
+Improvement
+recommended
+C3
+Further
+investigation
+FI
+Not
+verified
+N/V   Limitation   LIM
+Not
+applicable
+N/A
+
+=== PAGE 5 ===
+INSPECTION SCHEDULE FOR DOMESTIC & SIMILAR PREMISES WITH UP TO 100A SUPPLY 14
+This form is based on the model shown in Appendix 6 of BS 7671:2018.   Ref: CE202706   Page: 5 of 7
+Cain Enabled Engineering Ltd
+office@cain-enabled.co.uk
+Item   Description   Comments   Outcome
+4.15   Single-pole switching or protective devices in line conductor only
+(132.14.1; 530.3.3)
+N/A   4
+4.16   Protection against mechanical damage where cables enter consumer
+unit/distribution board (132.14.1; 522.8.1; 522.8.5; 522.8.11)
+N/A   4
+4.17   Protection against electromagnetic effects where cables enter consumer
+unit/distribution board/enclosures (521.5.1)
+N/A   4
+4.18   RCD(s) provided for fault protection - includes RCBOs (411.4.204;
+411.5.2; 531.2)
+N/A   N/A
+4.19   RCD(s) provided for additional protection/requirements - includes RCBOs
+(411.3.3; 415.1)
+N/A   4
+4.20   Confirmation of indication that SPD is functional (651.4)   N/A   N/A
+4.21   Confirmation that ALL conductor connections, including connections to
+busbars, are correctly located in terminals and are tight and secure
+(526.1)
+N/A   4
+4.22   Adequate arrangements where a generating set operates as a switched
+alternative to the public supply (551.6)
+N/A   N/A
+4.23   Adequate arrangements where a generating set operates in parallel with
+the public supply (551.7)
+N/A   N/A
+5.0   FINAL CIRCUITS
+5.1   Identification of conductors (514.3.1)   N/A   4
+5.2   Cables correctly supported throughout their run (521.10.202; 522.8.5)   N/A   4
+5.3   Condition of insulation of live parts (416.1)   N/A   4
+5.4   Non-sheathed cables protected by enclosure in conduit, ducting or
+trunking (521.10.1)
+N/A   4
+5.4.1   To include the integrity of conduit and trunking systems (metallic and
+plastic)
+N/A   4
+5.5   Adequacy of cables for current-carrying capacity with regard for the type
+and nature of installation (Section 523)
+N/A   4
+5.6   Coordination between conductors and overload protective devices (433.1;
+533.2.1)
+N/A   4
+5.7   Adequacy of protective devices: type and rated current for fault
+protection (411.3)
+N/A   4
+5.8   Presence and adequacy of circuit protective conductors (411.3.1; Section
+543)
+N/A   4
+5.9   Wiring system(s) appropriate for the type and nature of the installation
+and external influences (Section 522)
+N/A   4
+5.10   Concealed cables installed in prescribed zones (see Section 4. Extent and
+Limitations) (522.6.202)
+N/A   LIM
+5.11   Cables concealed under floors, above ceilings or in walls/partitions,
+adequately protected against damage (see Section 4. Extent and
+Limitations) (522.6.204)
+N/A   4
+5.12   Provision of additional requirements for protection by RCD not exceeding 30mA:
+5.12.1   For all socket-outlets of rating 32A or less, unless an exception is
+permitted (411.3.3)
+N/A   4
+5.12.2   For the supply of mobile equipment not exceeding 32A rating for use
+outdoors (411.3.3)
+N/A   4
+5.12.3   For cables concealed in walls at a depth of less than 50mm (522.6.202;
+522.6.203)
+N/A   4
+5.12.4   For cables concealed in walls/partitions containing metal parts regardless
+of depth (522.6.203)
+N/A   4
+5.12.5   Final circuits supplying luminaires within domestic (household) premises
+(411.3.4)
+N/A   4
+OUTCOMES
+Acceptable
+condition   4
+Unacceptable
+condition
+C1 or C2
+Improvement
+recommended
+C3
+Further
+investigation
+FI
+Not
+verified
+N/V   Limitation   LIM
+Not
+applicable
+N/A
+
+=== PAGE 6 ===
+INSPECTION SCHEDULE FOR DOMESTIC & SIMILAR PREMISES WITH UP TO 100A SUPPLY 15
+This form is based on the model shown in Appendix 6 of BS 7671:2018.   Ref: CE202706   Page: 6 of 7
+Cain Enabled Engineering Ltd
+office@cain-enabled.co.uk
+Item   Description   Comments   Outcome
+5.13   Provision of fire barriers, sealing arrangements and protection against
+thermal effects (Section 527)
+N/A   4
+5.14   Band II cables segregated/separated from Band I cables (528.1)   N/A   4
+5.15   Cables segregated/separated from communications cabling (528.2)   N/A   4
+5.16   Cables segregated/separated from non-electrical services (528.3)   N/A   4
+5.17   Termination of cables at enclosures - indicate extent of sampling in Section 4 of the report
+(Section 526)
+5.17.1   Connections soundly made and under no undue strain (526.6)   N/A   4
+5.17.2   No basic insulation of a conductor visible outside enclosure (526.8)   N/A   N/A
+5.17.3   Connections of live conductors adequately enclosed (526.5)   N/A   4
+5.17.4   Adequately connected at point of entry to enclosure (glands, bushes etc.)
+(522.8.5)
+N/A   4
+5.18   Condition of accessories including socket-outlets, switches and joint
+boxes (651.2(v))
+N/A   4
+5.19   Suitability of accessories for external influences (512.2)   N/A   4
+5.20   Adequacy of working space/accessibility to equipment (132.12; 513.1)   N/A   4
+5.21   Single-pole switching or protective devices in line conductors only
+(132.14.1, 530.3.3)
+N/A   4
+6.0   LOCATION(S) CONTAINING A BATH OR SHOWER
+6.1   Additional protection for all low voltage (LV) circuits by RCD not
+exceeding 30mA (701.411.3.3)
+N/A   4
+6.2   Where used as a protective measure, requirements for SELV or PELV met
+(701.414.4.5)
+N/A   N/A
+6.3   Shaver sockets comply with BS EN 61558-2-5 formerly BS 3535
+(701.512.3)
+N/A   4
+6.4   Presence of supplementary bonding conductors, unless not required by
+BS 7671:2018 (701.415.2)
+N/A   4
+6.5   Low voltage (e.g. 230 volt) socket-outlets sited at least 3m from zone 1
+(701.512.3)
+N/A   4
+6.6   Suitability of equipment for external influences for installed location in
+terms of IP rating (701.512.2)
+N/A   4
+6.7   Suitability of accessories and controlgear etc. for a particular zone
+(701.512.3)
+N/A   4
+6.8   Suitability of current-using equipment for particular position within the
+location (701.55)
+N/A   4
+7.0   OTHER PART 7 SPECIAL INSTALLATIONS OR LOCATIONS
+List all other special installation or locations present, if any. (Record separately the results of particular inspections)
+7.1   N/A   N/A   N/A
+7.2   N/A   N/A   N/A
+7.3   N/A   N/A   N/A
+7.4   N/A   N/A   N/A
+7.5   N/A   N/A   N/A
+7.6   N/A   N/A   N/A
+7.7   N/A   N/A   N/A
+7.8   N/A   N/A   N/A
+7.9   N/A   N/A   N/A
+7.10   N/A   N/A   N/A
+OUTCOMES
+Acceptable
+condition   4
+Unacceptable
+condition
+C1 or C2
+Improvement
+recommended
+C3
+Further
+investigation
+FI
+Not
+verified
+N/V   Limitation   LIM
+Not
+applicable
+N/A
+
+=== PAGE 7 ===
+SCHEDULE OF CIRCUIT DETAILS AND TEST RESULTS
+'   Designation of
+consumer unit:
+Location:
+Prospective fault
+current:
+16
+This form is based on the model shown in Appendix 6 of BS 7671:2018.   Ref: CE202706   Page: 7 of 7
+Cain Enabled Engineering Ltd
+office@cain-enabled.co.uk
+Circuit number
+Circuit designation
+Type of wiring Reference Method Number of points served
+Live
+mm 2
+Circuit
+conductors:
+csa
+cpc
+mm 2
+Max disconnect time permitted by BS7671
+s
+BS(EN)
+Type No Rating
+A
+Overcurrent protective
+devices
+Capacity
+kA
+RCD
+Operating current, l
+∆
+n
+mA
+Maximum Z
+s
+permitted by BS7671
+Ω
+r 1
+(Line)
+r n
+(Neutral)
+Ring final circuits only
+(measured end to end)
+r 2
+(cpc)
+R 1 +R 2
+Circuit impedances (Ohms)
+All circuits
+(one column to
+be completed)
+R 2 Live - Live
+M Ω
+Live - Earth
+M Ω
+Insulation
+resistance
+Test voltage
+V
+Polarity
+4
+Maximum measured earth fault loop impedance Zs
+Ω
+Disconnection time
+ms
+RCD
+Test button operation
+4
+AFDD
+Test button operation
+4
+1   Lights Down   A   101   1.5   1.0   0.4   60898   B   6   6   30   7.28   0.92   N/A   > 200   500   4   1.08   0.36   4   N/A
+1   Lights Up   A   101   1.5   1.0   0.4   60898   B   6   6   30   7.28   0.71   N/A   > 200   500   4   0.97   0.36   4   N/A
+1   Smoke Detectors   A   101   1.5   1.0   0.4   60898   B   6   6   30   7.28   0.71   N/A   > 200   500   4   0.97   0.36   4   N/A
+Boiler   A   101   2.5   1.5   0.4   60898   B   16   6   30   2.73   0.61   N/A   > 200   500   4   0.76   0.36   4   N/A
+2   Ring Circuit Down   A   101   2.5   1.5   0.4   60898   B   32   6   30   1.37   0.16   N/A   > 200   500   4   0.48   0.36   4   N/A
+2   Ring Circuit Up   A   101   2.5   1.5   0.4   60898   B   32   6   30   1.37   0.20   N/A   > 200   500   4   0.52   0.36   4   N/A
+2   Ring Circuit Kitchen   A   101   2.5   1.5   0.4   60898   B   32   6   30   1.37   0.16   N/A   > 200   500   4   0.46   0.36   4   N/A
+2   Ring Circuit Down   A   101   2.5   1.5   0.4   60898   B   32   6   30   1.37   0.18   N/A   > 200   500   4   0.48   0.36   4   N/A
+2   Cooker   A   101   6   2.5   0.4   60898   B   32   6   30   1.37   0.35   N/A   > 200   500   4   0.43   0.36   4   N/A
+2   Shower   A   101   6   2.5   0.4   60898   B   32   6   30   1.37   0.24   N/A   > 200   500   4   0.51   0.36   4   N/A
+A   B   C   D   E   F   G   H   O - Other
+CODES FOR
+TYPE OF
+WIRING
+Thermoplastic
+insulated/sheathed
+cables
+Thermoplastic
+cables in
+metallic conduit
+Thermoplastic
+cables in
+nonmetallic conduit
+Thermoplastic
+cables in
+metallic trunking
+Thermoplastic
+cables in
+nonmetallic trunking
+Thermoplastic
+/SWA cables
+Thermosetting
+/SWA cables
+Mineral
+insulated cables
+D.B.1   Meter Cupboard   1.2   kA
+N/A
+
+=== PAGE 8 ===
+DOMESTIC ELECTRICAL INSTALLATION CONDITION REPORT
+GUIDANCE FOR RECIPIENTS
+(to be appended to the Report)
+This Report is an important and valuable document which should be retained for future
+reference.
+1. The purpose of this Report is to confirm, so far as reasonably practicable, whether or not the
+electrical installation is in a satisfactory condition for continued service (see Section 5). The Report
+should identify any damage, deterioration, defects and/or conditions which may give rise to danger.
+2. The person ordering the Report should have received the 'original' Report and the inspector should
+have retained a duplicate.
+3. The 'original' Report should be retained in a safe place and be made available to any person
+inspecting or undertaking work on the electrical installation in the future. If the property is vacated,
+this Report will provide the new owner/occupier with details of the condition of the electrical installation
+at the time the Report was issued.
+4. Where the installation incorporates a residual current device (RCD) there should be a notice at or
+near the device stating that it should be tested six-monthly. For safety reasons it is important that this
+instruction is followed.
+5. Section 4 (Extent and Limitations) should identify fully the extent of the installation covered by this
+Report and any limitations on the inspection and testing. The inspector should have agreed these
+aspects with the person ordering the Report and with other interested parties (licensing authority,
+insurance company, mortgage provider and the like) before the inspection was carried out.
+6. Some operational limitations such as inability to gain access to parts of the installation or an item of
+equipment may have been encountered during the inspection. The inspector should have noted these
+in Section 4.
+7. For items classified in Section 7 as C1 ('Danger present'), the safety of those using the installation is
+at risk, and it is recommended that a skilled person or persons competent in electrical installation work
+undertakes the necessary remedial work immediately.
+8. For items classified in Section 7 as C2 ('Potentially dangerous'), the safety of those using the
+installation may be at risk and it is recommended that a skilled person or persons competent in
+electrical installation work undertakes the necessary remedial work as a matter of urgency.
+9. Where it has been stated in Section 7 that an observation requires further investigation (code FI)
+the inspection has revealed an apparent deficiency which may result in a code C1 or C2, and could not,
+due to the extent or limitations of the inspection, be fully identified. Such observations should be
+investigated without delay. A further examination of the installation will be necessary, to determine the
+nature and extent of the apparent deficiency (see Section 6).
+10. For safety reasons, the electrical installation should be re-inspected at appropriate intervals by a
+skilled person or persons, competent in such work . The recommended date by which the next
+inspection is due is stated in Section 6 of the Report under 'Recommendations' and on a label at or
+near to the consumer unit/ distribution board.

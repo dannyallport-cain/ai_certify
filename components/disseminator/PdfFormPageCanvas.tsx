@@ -34,6 +34,21 @@ type Props = {
   onSelectField?: (id: string) => void;
 };
 
+// Colour palette for state_enum cycling buttons
+const STATE_ENUM_STYLE: Record<string, { label: string; bg: string; text: string }> = {
+  '':     { label: '—',   bg: 'bg-white/55',       text: 'text-gray-400' },
+  'tick': { label: '✓',   bg: 'bg-green-50',       text: 'text-green-800' },
+  '✓':   { label: '✓',   bg: 'bg-green-50',       text: 'text-green-800' },
+  'cross':{ label: '✗',   bg: 'bg-red-50',         text: 'text-red-800' },
+  'NA':   { label: 'N/A', bg: 'bg-gray-100',       text: 'text-gray-600' },
+  'N/A':  { label: 'N/A', bg: 'bg-gray-100',       text: 'text-gray-600' },
+  'C1':   { label: 'C1',  bg: 'bg-red-100',        text: 'text-red-800' },
+  'C2':   { label: 'C2',  bg: 'bg-orange-100',     text: 'text-orange-800' },
+  'C3':   { label: 'C3',  bg: 'bg-blue-100',       text: 'text-blue-800' },
+  'LIM':  { label: 'LIM', bg: 'bg-amber-50',       text: 'text-amber-800' },
+  'NV':   { label: 'NV',  bg: 'bg-slate-100',      text: 'text-slate-700' },
+};
+
 export function PdfFormPageCanvas({
   pdfBase64,
   pageNumber = 1,
@@ -75,6 +90,7 @@ export function PdfFormPageCanvas({
     if (!pdfBase64 || !canvasRef.current) return;
 
     let cancelled = false;
+    let loadingTask: { destroy: () => void; promise: Promise<any> } | null = null;
 
     (async () => {
       try {
@@ -92,7 +108,8 @@ export function PdfFormPageCanvas({
           bytes[i] = binaryString.charCodeAt(i);
         }
 
-        const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+        loadingTask = pdfjsLib.getDocument({ data: bytes });
+        const pdf = await loadingTask.promise;
         if (cancelled) return;
 
         const page = await pdf.getPage(pageNumber);
@@ -157,12 +174,13 @@ export function PdfFormPageCanvas({
           }
         }
       } catch (error) {
-        console.error('[PdfFormPageCanvas] render error', error);
+        if (!cancelled) console.error('[PdfFormPageCanvas] render error', error);
       }
     })();
 
     return () => {
       cancelled = true;
+      loadingTask?.destroy();
     };
   }, [
     pdfBase64,
@@ -213,21 +231,25 @@ export function PdfFormPageCanvas({
     }
 
     if (field.fieldType === 'state_enum') {
+      const cycle = field.stateOptions ?? [...DEFAULT_STATE_OPTIONS];
+      const cycleWithBlank = ['', ...cycle] as string[];
+      const nextValue = () => {
+        const idx = cycleWithBlank.indexOf(value);
+        return cycleWithBlank[(idx + 1) % cycleWithBlank.length];
+      };
+      const cfg = STATE_ENUM_STYLE[value] ?? STATE_ENUM_STYLE[''];
       return (
-        <select
-          className={commonClassName}
-          title={field.label}
-          value={value}
-          onChange={(event) => onValueChange(field.id, event.target.value)}
-          onFocus={() => onSelectField?.(field.id)}
+        <button
+          type="button"
+          className={`h-full w-full text-[11px] font-bold border-0 outline-none cursor-pointer select-none transition-colors duration-100 ${cfg.bg} ${cfg.text}`}
+          title={`${field.label} — click to cycle`}
+          onClick={() => {
+            onValueChange(field.id, nextValue());
+            onSelectField?.(field.id);
+          }}
         >
-          <option value="">{field.label}</option>
-          {(field.stateOptions || [...DEFAULT_STATE_OPTIONS]).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+          {cfg.label}
+        </button>
       );
     }
 
