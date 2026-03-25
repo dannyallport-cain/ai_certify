@@ -690,7 +690,7 @@ function safeString(value: any): string {
 // Generates a full 8-page report matching BS 7671:2018 Appendix 6 model form
 
 function generateEICRPDF(certificate: CertificateData): Uint8Array {
-  const totalPages = 8;
+  const totalPages = 7;
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -808,8 +808,37 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     pdf.setDrawColor(0, 0, 0);
   };
 
+  // Section index tabs (BS 7671 form: section numbers shown on right margin of each page)
+  let currentPageSections: string[] = [];
+
+  const drawSectionTabs = () => {
+    if (currentPageSections.length === 0) return;
+    const tabW = 8;
+    const tabX = pageWidth - tabW - 0.5;
+    const tabAreaStart = 5;
+    const tabAreaEnd = pageHeight - 13;
+    const tabAreaH = tabAreaEnd - tabAreaStart;
+    const tabH = tabAreaH / currentPageSections.length;
+
+    pdf.setLineWidth(0.4);
+    currentPageSections.forEach((sec, i) => {
+      const ty = tabAreaStart + i * tabH;
+      pdf.setFillColor(light[0], light[1], light[2]);
+      pdf.setDrawColor(navy[0], navy[1], navy[2]);
+      pdf.rect(tabX, ty, tabW, tabH, 'FD');
+      pdf.setTextColor(navy[0], navy[1], navy[2]);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(sec.length > 2 ? 7 : 9);
+      text(sec, tabX + tabW / 2, ty + tabH / 2 + 2.5, { align: 'center' });
+    });
+    pdf.setTextColor(0, 0, 0);
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setLineWidth(0.3);
+  };
+
   // Page footer with reference, page number, company info
-  const addPageFooter = () => {
+  const addPageFooter = (showPageNum = true) => {
+    drawSectionTabs();
     const footerY = pageHeight - 10;
     pdf.setFontSize(6.5);
     pdf.setFont('helvetica', 'italic');
@@ -817,7 +846,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     text('This form is based on the model shown in Appendix 6 of BS 7671:2018.', margin, footerY);
     pdf.setFont('helvetica', 'normal');
     text(`Ref: ${ss(certificate.certificateNumber)}`, margin, footerY + 4);
-    text(`Page: ${currentPage} of ${totalPages}`, pageWidth / 2, footerY + 4, { align: 'center' });
+    if (showPageNum) {
+      text(`Page: ${currentPage} of ${totalPages}`, pageWidth / 2, footerY + 4, { align: 'center' });
+    }
     // Company name & email aligned right in footer area
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(navy[0], navy[1], navy[2]);
@@ -943,6 +974,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // ════════════════════════════════════════════════════════════
   // PAGE 1 – Cover page (sections 1-6)
   // ════════════════════════════════════════════════════════════
+  currentPageSections = ['1', '2', '3', '4', '5', '6'];
 
   // Report title block
   filledRect(margin, y, W, 16, navy);
@@ -1040,8 +1072,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // PAGE 2 – Observations (section 7)
   // ════════════════════════════════════════════════════════════
   newPage();
+  currentPageSections = ['7'];
 
-  sectionHeader('K', 'OBSERVATIONS');
+  sectionHeader('7', 'OBSERVATIONS AND RECOMMENDATIONS FOR ACTIONS TO BE TAKEN');
 
   // Introductory text
   italicNote("Referring to the attached schedules of inspection and test results, and subject to the limitations specified on page 1 of this report under 'Extent of the Installation and Limitations of Inspection and Testing':");
@@ -1049,59 +1082,64 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   const observations = certificate.items?.filter(i => i.description) || [];
 
-  if (observations.length === 0) {
-    checkPage(8);
-    filledRect(margin, y, W, 7, green);
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'bold');
-    text('There are no items adversely affecting electrical safety', margin + 3, y + 5);
-    pdf.setTextColor(0, 0, 0);
-    y += 9;
-  } else {
-    // Observation table header
-    const obsColWidths = { num: 18, desc: W - 36, code: 18 };
-    checkPage(7);
-    filledRect(margin, y, W, 7, tableHeaderBg);
-    borderedRect(margin, y, W, 7);
-    pdf.setTextColor(0, 0, 0);
+  // Height reserved below the table for the classification key + summary rows section.
+  // Accounts for: spacing (2) + "or" note (5.4) + "following obs" note (5.4) +
+  // spacing (2) + "one of the following codes" note (8) + key box (26) + 4 summary rows (24)
+  const SECTION_K_BOTTOM_RESERVE = 75;
+  const tableBottomAnchor = maxContentY - SECTION_K_BOTTOM_RESERVE;
+
+  // Observation table — always rendered so it fills the page
+  const obsColWidths = { num: 18, desc: W - 36, code: 18 };
+  checkPage(7);
+  filledRect(margin, y, W, 7, tableHeaderBg);
+  borderedRect(margin, y, W, 7);
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'bold');
+  text('Item No', margin + 2, y + 5);
+  text('Observations', margin + obsColWidths.num + 2, y + 5);
+  text('Classification\nCode', margin + W - obsColWidths.code + 1, y + 3);
+  pdf.setTextColor(0, 0, 0);
+  y += 7;
+
+  // Render actual observation rows
+  observations.forEach((obs, idx) => {
+    const code = ss(obs.defects) || 'C3';
+    const codeClr: Record<string, [number,number,number]> = {
+      C1: red, C2: orange, C3: navy, FI: purple
+    };
+    const clr = codeClr[code] || navy;
+    const descLines = pdf.splitTextToSize(ss(obs.description), obsColWidths.desc - 4);
+    const h = Math.max(7, descLines.length * 3.2 + 3);
+    checkPage(h);
+
+    if (idx % 2 === 1) filledRect(margin, y, W, h, [245, 248, 252]);
+    borderedRect(margin, y, W, h);
+    vLine(margin + obsColWidths.num, y, h);
+    vLine(margin + W - obsColWidths.code, y, h);
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
-    text('Item No', margin + 2, y + 5);
-    text('Observations', margin + obsColWidths.num + 2, y + 5);
-    text('Classification\nCode', margin + W - obsColWidths.code + 1, y + 3);
-    pdf.setTextColor(0, 0, 0);
-    y += 7;
-
-    observations.forEach((obs, idx) => {
-      const code = ss(obs.defects) || 'C3';
-      const codeClr: Record<string, [number,number,number]> = {
-        C1: red, C2: orange, C3: navy, FI: purple
-      };
-      const clr = codeClr[code] || navy;
-      const descLines = pdf.splitTextToSize(ss(obs.description), obsColWidths.desc - 4);
-      const h = Math.max(7, descLines.length * 3.2 + 3);
-      checkPage(h);
-
-      if (idx % 2 === 1) filledRect(margin, y, W, h, [245, 248, 252]);
-      borderedRect(margin, y, W, h);
-      vLine(margin + obsColWidths.num, y, h);
-      vLine(margin + W - obsColWidths.code, y, h);
-      pdf.setFontSize(7);
-      pdf.setFont('helvetica', 'bold');
-      text(String(idx + 1), margin + obsColWidths.num / 2, y + h / 2 + 1.5, { align: 'center' });
-      pdf.setFont('helvetica', 'normal');
-      descLines.forEach((line: string, i: number) => {
-        text(line, margin + obsColWidths.num + 2, y + 4 + i * 3.2);
-      });
-      // Code badge
-      filledRect(margin + W - obsColWidths.code + 0.15, y + 0.15, obsColWidths.code - 0.3, h - 0.3, clr);
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFont('helvetica', 'bold');
-      text(code, margin + W - obsColWidths.code / 2, y + h / 2 + 1.5, { align: 'center' });
-      pdf.setTextColor(0, 0, 0);
-      y += h;
+    text(String(idx + 1), margin + obsColWidths.num / 2, y + h / 2 + 1.5, { align: 'center' });
+    pdf.setFont('helvetica', 'normal');
+    descLines.forEach((line: string, i: number) => {
+      text(line, margin + obsColWidths.num + 2, y + 4 + i * 3.2);
     });
+    // Code badge
+    filledRect(margin + W - obsColWidths.code + 0.15, y + 0.15, obsColWidths.code - 0.3, h - 0.3, clr);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    text(code, margin + W - obsColWidths.code / 2, y + h / 2 + 1.5, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
+    y += h;
+  });
+
+  // Fill remaining table height with empty rows so the table reaches the classification key
+  const emptyRowH = 7;
+  while (y + emptyRowH <= tableBottomAnchor) {
+    borderedRect(margin, y, W, emptyRowH);
+    vLine(margin + obsColWidths.num, y, emptyRowH);
+    vLine(margin + W - obsColWidths.code, y, emptyRowH);
+    y += emptyRowH;
   }
 
   y += 2;
@@ -1154,18 +1192,17 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // PAGE 3 – General condition, Declaration, Test Instruments, Supply (sections 8-12)
   // ════════════════════════════════════════════════════════════
   newPage();
+  currentPageSections = ['8', '9', '10', '11', '12'];
 
   // Section 8 – General condition
   sectionHeader('8', 'General Condition of the Installation');
   row('General condition of the installation (in terms of electrical safety):', ss(fd.generalCondition) || 'Adequate.');
-  y += 1;
 
   // Section 9 – Declaration
   sectionHeader('9', 'Declaration');
   const declarationText =
     'I/We, being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our signatures below), particulars of which are described above, having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, including the observations and the attached schedules, provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations in section 4 of this report.';
   textBlock(declarationText, 6.2);
-  y += 0.5;
 
   const declarationTwoColRow = (leftLabel: string, leftValue: string, rightLabel: string, rightValue: string) => {
     const colW = W / 2;
@@ -1219,7 +1256,6 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   subHeader('For the INSPECTION, TESTING AND ASSESSMENT of the report:');
   declarationTwoColRow('Name:', ss(certificate.inspectorName), 'Position:', ss(fd.inspectorPosition) || 'Qualified Supervisor');
   declarationTwoColRow('Signature:', '', 'Date:', formatDate(certificate.inspectionDate || null));
-  y += 0.5;
 
   // Test Instruments (Section 10)
   sectionHeader('10', 'Test Instruments');
@@ -1229,7 +1265,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     const halfW = W / 2;
     const labelW = 42;
     const valW = halfW - labelW;
-    const rh = 6;
+    const rh = 5;
 
     const instrumentPairs = [
       [{ lbl: 'Multi-functional:', val: ss(fd.instrumentMultiFunction) || ss(fd.multiFunction) || '' }, { lbl: 'Earth electrode resistance:', val: ss(fd.instrumentEarthElectrode) || 'N/A' }],
@@ -1252,14 +1288,13 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       y += rh;
     });
   }
-  y += 1;
 
   // Section 11 – Supply Characteristics and Earthing Arrangements
-  sectionHeader('I', 'Supply Characteristics and Earthing Arrangements');
+  sectionHeader('11', 'Supply Characteristics and Earthing Arrangements');
 
   // ── Three-panel side-by-side layout matching original report ──
   {
-    const panelH = 55; // total height of the 3-panel block
+    const panelH = 52; // total height of the 3-panel block
     checkPage(panelH);
 
     const col1W = W * 0.34; // Earthing arrangements + Live conductors
@@ -1291,11 +1326,11 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       const checked = earthing.toUpperCase().replace(/-/g, '').includes(et.replace(/-/g, '').toUpperCase()) || earthing === et;
       text(checked ? '[X]' : '[  ]', col1x + 4, ey + 2.5);
       text(et, col1x + 12, ey + 2.5);
-      ey += 4;
+      ey += 3.5;
     });
     text('Other:', col1x + 4, ey + 2.5);
     text(earthTypes.some(et => earthing.includes(et)) ? '' : earthing, col1x + 16, ey + 2.5);
-    ey += 5;
+    ey += 4;
 
     hLine(col1x, ey, col1W);
     ey += 1;
@@ -1311,7 +1346,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       const checked = supply.includes(st);
       text(checked ? '[X]' : '[  ]', col1x + 4, ey + 2.5);
       text(st + ':', col1x + 12, ey + 2.5);
-      ey += 4;
+      ey += 3.5;
     });
 
     // Confirmation of supply polarity at bottom of panel 1
@@ -1375,7 +1410,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       dy += 5;
     });
 
-    y = panelY + panelH + 1;
+    y = panelY + panelH;
   }
 
   // ════════════════════════════════════════════════════════════
@@ -1383,7 +1418,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // ════════════════════════════════════════════════════════════
 
   // Section J – Particulars of Installation Referred to in the Report
-  sectionHeader('J', 'Particulars of Installation Referred to in the Report');
+  sectionHeader('12', 'Particulars of Installation Referred to in the Report');
 
   // ── Row 1: Means of Earthing (full width) + electrode details ──
   {
@@ -1457,7 +1492,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       dy += 5;
     });
 
-    y = py + panelH + 1;
+    y = py + panelH;
   }
 
   // ── Row 3: Two-panel — Main Switch Details | RCD / Supply Conductors ──
@@ -1514,7 +1549,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       pdf.setFont('helvetica', 'normal');
       text(r.val, rx + halfW * 0.6, ry + 3);
       hLine(rx, ry + 4.5, halfW);
-      ry += 5;
+      ry += 4.5;
     });
 
     // Sub-panel: Earthing conductor
@@ -1523,7 +1558,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     filledRect(rx + 0.15, ry + 0.15, halfW - 0.3, 5, light);
     pdf.setFont('helvetica', 'bold');
     text('Earthing Conductor', rx + 2, ry + 3.5);
-    ry += 5.5;
+    ry += 5;
 
     const ecRows = [
       { lbl: 'Material:', val: ss(fd.earthingConductorMaterial) || 'Copper' },
@@ -1539,7 +1574,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       ry += 4.5;
     });
 
-    y = py + panelH + 1;
+    y = py + panelH;
   }
 
   // ── Row 4: Two-panel — Main Bonding Conductor | Bonding of Extraneous Parts ──
@@ -1742,9 +1777,11 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     newPage();
 
     const scheduleTitle = 'INSPECTION SCHEDULE FOR DOMESTIC & SIMILAR PREMISES WITH UP TO 100A SUPPLY';
+    let inspSectionNum = 13;
+    currentPageSections = ['13'];
 
     // Section number for inspection
-    sectionHeader('13', scheduleTitle);
+    sectionHeader(String(inspSectionNum), scheduleTitle);
 
     // Column widths for inspection table
     const refW = 12;
@@ -1805,12 +1842,14 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
         const descLines = pdf.splitTextToSize(item.desc || 'N/A', descW - 4);
         const rowH = Math.max(5.5, descLines.length * 2.5 + 2);
 
-        // Check if we need a new page
-        if (y + rowH > maxContentY) {
+        // Check if we need a new page (reserve 12mm for outcomes legend at bottom)
+        if (y + rowH + 12 > maxContentY) {
           // Add outcomes legend before page break
           addOutcomesLegend();
+          inspSectionNum++;
           newPage();
-          sectionHeader('', scheduleTitle);
+          currentPageSections = [String(inspSectionNum)];
+          sectionHeader(String(inspSectionNum), scheduleTitle);
           drawTableHeader();
         }
 
@@ -1841,7 +1880,6 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   };
 
   const addOutcomesLegend = () => {
-    checkPage(12);
     y += 2;
     filledRect(margin, y, W, 8, [240, 245, 250]);
     borderedRect(margin, y, W, 8);
@@ -1940,29 +1978,33 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // Column definitions matching BS 7671 Appendix 6 model form
   // Each column: { label, w (proportional weight), group, rotate (boolean) }
   const cols = [
-    { label: 'Circuit\nnumber',       w: 8,  group: '' },
-    { label: 'Circuit\ndesignation',  w: 24, group: '' },
-    { label: 'Type of\nwiring',       w: 8,  group: '' },
-    { label: 'Ref.\nmethod',          w: 7,  group: '' },
-    { label: 'No. of\npoints',        w: 7,  group: '' },
-    { label: 'Live (mm²)',            w: 7,  group: 'Circuit conductors: csa', rotate: true },
-    { label: 'cpc (mm²)',             w: 7,  group: 'Circuit conductors: csa', rotate: true },
-    { label: 'Max disc. time (s)',    w: 7,  group: '', rotate: true },
-    { label: 'BS(EN)',                w: 10, group: 'Overcurrent protective devices', rotate: true },
-    { label: 'Type',                  w: 7,  group: 'Overcurrent protective devices', rotate: true },
-    { label: 'Rating (A)',            w: 7,  group: 'Overcurrent protective devices', rotate: true },
-    { label: 'Cap. (kA)',             w: 7,  group: 'Overcurrent protective devices', rotate: true },
-    { label: 'RCD IΔn (mA)',          w: 7,  group: 'RCD', rotate: true },
-    { label: 'Max Zs (Ω)',            w: 8,  group: 'Circuit impedances', rotate: true },
-    { label: 'R1+R2 (Ω)',             w: 9,  group: 'Circuit impedances', rotate: true },
-    { label: 'R2 (Ω)',                w: 8,  group: 'Circuit impedances', rotate: true },
-    { label: 'Live-Live (MΩ)',        w: 10, group: 'Insulation resistance', rotate: true },
-    { label: 'Live-Earth (MΩ)',       w: 10, group: 'Insulation resistance', rotate: true },
-    { label: 'Test voltage (V)',      w: 7,  group: 'Insulation resistance', rotate: true },
-    { label: 'Pol.',                  w: 6,  group: '' },
-    { label: 'Max Zs measured (Ω)',   w: 9,  group: '', rotate: true },
-    { label: 'RCD op. time (ms)',     w: 8,  group: 'RCD', rotate: true },
-    { label: 'RCD test btn',          w: 7,  group: 'RCD', rotate: true },
+    { label: 'Circuit\nnumber',           w: 8,  group: '' },
+    { label: 'Circuit\ndesignation',      w: 24, group: '' },
+    { label: 'Type of\nwiring',           w: 8,  group: '' },
+    { label: 'Ref.\nmethod',              w: 7,  group: '' },
+    { label: 'No. of\npoints',            w: 7,  group: '' },
+    { label: 'Live\n(mm²)',               w: 7,  group: 'Circuit conductors: csa', rotate: true },
+    { label: 'cpc\n(mm²)',                w: 7,  group: 'Circuit conductors: csa', rotate: true },
+    { label: 'Max disc.\ntime (s)',        w: 7,  group: '', rotate: true },
+    { label: 'BS(EN)',                     w: 10, group: 'Overcurrent protective devices', rotate: true },
+    { label: 'Type',                       w: 7,  group: 'Overcurrent protective devices', rotate: true },
+    { label: 'Rating\n(A)',                w: 7,  group: 'Overcurrent protective devices', rotate: true },
+    { label: 'Cap.\n(kA)',                 w: 7,  group: 'Overcurrent protective devices', rotate: true },
+    { label: 'RCD\nI\u0394n (mA)',         w: 7,  group: 'RCD', rotate: true },
+    { label: 'Max Zs\nperm. (\u03A9)',     w: 8,  group: '', rotate: true },
+    { label: 'r1\n(Line)',                 w: 8,  group: 'Ring final circuits only', rotate: true },
+    { label: 'rn\n(Neutral)',              w: 8,  group: 'Ring final circuits only', rotate: true },
+    { label: 'r2\n(cpc)',                  w: 8,  group: 'Ring final circuits only', rotate: true },
+    { label: 'R1+R2\n(\u03A9)',            w: 9,  group: 'Circuit impedances: all circuits', rotate: true },
+    { label: 'R2\n(\u03A9)',               w: 8,  group: 'Circuit impedances: all circuits', rotate: true },
+    { label: 'Live-Live\n(M\u03A9)',       w: 9,  group: 'Insulation resistance', rotate: true },
+    { label: 'Live-Earth\n(M\u03A9)',      w: 9,  group: 'Insulation resistance', rotate: true },
+    { label: 'Test\nvoltage (V)',           w: 7,  group: 'Insulation resistance', rotate: true },
+    { label: 'Pol.',                       w: 6,  group: '' },
+    { label: 'Max Zs\nmeasured (\u03A9)',  w: 9,  group: '', rotate: true },
+    { label: 'Disc.\ntime (ms)',           w: 8,  group: 'RCD', rotate: true },
+    { label: 'RCD\ntest btn',             w: 7,  group: 'RCD', rotate: true },
+    { label: 'AFDD\ntest btn',            w: 7,  group: 'AFDD', rotate: true },
   ];
 
   // Scale columns to fill landscape width
@@ -2150,8 +2192,11 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     ss(circuit.capacity) || '',
     ss(circuit.rcdRating) || '',
     ss(circuit.maxZs) || '',
-    ss(circuit.r1r2) || '',
-    ss(circuit.r2) || '',
+    ss(circuit.r1Line) || '',            // ring final circuits only: r1 (Line)
+    ss(circuit.rnNeutral) || '',         // ring final circuits only: rn (Neutral)
+    ss(circuit.r2Cpc) || '',             // ring final circuits only: r2 (cpc)
+    ss(circuit.r1r2) || '',              // all circuits: R1+R2
+    ss(circuit.r2) || '',                // all circuits: R2
     ss(circuit.insResLL) || '',
     ss(circuit.insResLE) || '',
     ss(circuit.testVoltage) || '',
@@ -2159,6 +2204,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     ss(circuit.measuredZs) || '',
     ss(circuit.discTime) || '',
     ss(circuit.rcdTestButton) || '',
+    ss(circuit.afddTestButton) || '',    // AFDD test button
   ];
 
   const totalRows = Math.max(circuits.length, minRows);
@@ -2224,11 +2270,12 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   addLandscapeFooter();
 
   // ════════════════════════════════════════════════════════════
-  // PAGE 8 – Guidance for Recipients (back to portrait)
+  // PAGE 8 – Guidance for Recipients (back to portrait, appendix)
   // ════════════════════════════════════════════════════════════
   pdf.addPage('a4', 'p'); // explicit portrait after landscape page
   currentPage++;
   y = margin;
+  currentPageSections = []; // guidance page is an appendix – no section tabs, no page counter
 
   // Title
   filledRect(margin, y, W, 10, navy);
@@ -2276,7 +2323,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     y += h;
   });
 
-  addPageFooter();
+  addPageFooter(false); // guidance page is an appendix – no page numbering
 
   return new Uint8Array(pdf.output('arraybuffer'));
 }

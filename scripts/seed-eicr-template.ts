@@ -218,8 +218,8 @@ const eicrTemplate = {
     },
   ],
   colors: {
-    primary: '#1a3a5c',
-    secondary: '#2c5282',
+    primary: '#C8102E',
+    secondary: '#C8102E',
     accent: '#ffc107',
     background: '#ffffff',
     text: '#1a202c',
