@@ -28,6 +28,18 @@ import {
   validatedActionWithUser
 } from '@/lib/auth/middleware';
 
+function getSafeRedirectPath(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  if (!value.startsWith('/') || value.startsWith('//')) {
+    return null;
+  }
+
+  return value;
+}
+
 async function logActivity(
   teamId: number | null | undefined,
   userId: number,
@@ -97,6 +109,11 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
     return createCheckoutSession({ team: foundTeam, priceId });
+  }
+
+  const safeRedirectPath = getSafeRedirectPath(redirectTo);
+  if (safeRedirectPath) {
+    redirect(safeRedirectPath);
   }
 
   // Role-based redirect
@@ -223,6 +240,11 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   if (redirectTo === 'checkout') {
     const priceId = formData.get('priceId') as string;
     return createCheckoutSession({ team: createdTeam, priceId });
+  }
+
+  const safeRedirectPath = getSafeRedirectPath(redirectTo);
+  if (safeRedirectPath) {
+    redirect(safeRedirectPath);
   }
 
   redirect('/dashboard');

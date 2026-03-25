@@ -537,7 +537,7 @@ export function generateCertificatePDF(certificate: CertificateData): Uint8Array
     addText('Date:', clientX + 5, signatureY + 27);
   }
 
-  return pdf.output('arraybuffer') as Uint8Array;
+  return new Uint8Array(pdf.output('arraybuffer'));
 }
 
 // Helper functions
@@ -671,7 +671,7 @@ function getDefaultInspectionType(type: string): string {
   return types[type] || 'Inspection';
 }
 
-function formatDate(dateString: string | null): string {
+function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return 'Not specified';
   try {
     const date = new Date(dateString);
@@ -2278,5 +2278,5 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   addPageFooter();
 
-  return pdf.output('arraybuffer') as Uint8Array;
+  return new Uint8Array(pdf.output('arraybuffer'));
 }

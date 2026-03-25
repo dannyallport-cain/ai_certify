@@ -3,6 +3,8 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { reportDisseminatorReports } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { enrichFieldsWithAcroFormPlacements } from '@/lib/report-disseminator/pdf-acroform';
+import { sanitizeStoredPdfBase64 } from '@/lib/report-disseminator/pdf-sanitize';
 import {
   type ReportDisseminatorField,
   reportDisseminatorReportUpdateSchema,
@@ -61,7 +63,34 @@ export async function GET(
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
 
-    return NextResponse.json(report[0], { headers: NO_STORE_HEADERS });
+    const sanitizedPdf = await sanitizeStoredPdfBase64(report[0].sourcePdfBase64);
+    const enrichedFields = await enrichFieldsWithAcroFormPlacements(
+      (report[0].fields ?? []) as ReportDisseminatorField[],
+      sanitizedPdf.base64,
+    );
+
+    if (sanitizedPdf.changed || enrichedFields.changed) {
+      const cleaned = await db
+        .update(reportDisseminatorReports)
+        .set({
+          fields: enrichedFields.fields,
+          sourcePdfBase64: sanitizedPdf.base64,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(reportDisseminatorReports.id, id), eq(reportDisseminatorReports.teamId, teamId)))
+        .returning();
+
+      return NextResponse.json(cleaned[0], { headers: NO_STORE_HEADERS });
+    }
+
+    return NextResponse.json(
+      {
+        ...report[0],
+        fields: enrichedFields.fields,
+        sourcePdfBase64: sanitizedPdf.base64,
+      },
+      { headers: NO_STORE_HEADERS }
+    );
   } catch (error) {
     console.error('Error fetching report disseminator report:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

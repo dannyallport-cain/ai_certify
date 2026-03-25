@@ -125,8 +125,19 @@ async function createSampleUsers() {
       createdUsers.push(newUser);
       console.log(`Created user: ${userData.email}`);
     } else {
-      createdUsers.push(existingUser[0]);
-      console.log(`User ${userData.email} already exists`);
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          name: userData.name,
+          role: userData.role,
+          passwordHash: await hashPassword(userData.password),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existingUser[0].id))
+        .returning();
+
+      createdUsers.push(updatedUser);
+      console.log(`Updated existing user credentials: ${userData.email}`);
     }
   }
 

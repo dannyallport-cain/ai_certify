@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Eye, Copy } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, Copy, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -31,10 +32,12 @@ interface DisseminatorTemplate {
 }
 
 export default function TemplatesPage() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<CertificateTemplate[]>([]);
   const [disseminatorTemplates, setDisseminatorTemplates] = useState<DisseminatorTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [creatingReportForId, setCreatingReportForId] = useState<number | null>(null);
 
   const certificateTypes = [
     { value: 'all', label: 'All Types' },
@@ -102,6 +105,12 @@ export default function TemplatesPage() {
       console.error('Error deleting template:', error);
       toast.error(error.message || 'Failed to delete template');
     }
+  };
+
+  const createReportFromDisseminatorTemplate = (template: DisseminatorTemplate) => {
+    if (creatingReportForId) return;
+    setCreatingReportForId(template.id);
+    router.push(`/admin/reports/disseminator?templateId=${template.id}&action=create-report`);
   };
 
   const handleDuplicateTemplate = async (template: CertificateTemplate) => {
@@ -314,11 +323,24 @@ export default function TemplatesPage() {
                       Updated {new Date(template.updatedAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <Link href="/admin/reports/disseminator" className="block">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Open In Disseminator
+                  <div className="flex gap-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="flex-1"
+                      disabled={creatingReportForId === template.id || template.status === 'archived'}
+                      title={template.status === 'archived' ? 'Archived templates cannot be used to create new reports' : 'Create a blank report from this template, ready to fill in'}
+                      onClick={() => createReportFromDisseminatorTemplate(template)}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      {creatingReportForId === template.id ? 'Creating…' : 'New Report'}
                     </Button>
-                  </Link>
+                    <Link href="/admin/reports/disseminator">
+                      <Button variant="outline" size="sm" title="Open this template in the Disseminator editor">
+                        Edit
+                      </Button>
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
             ))}
