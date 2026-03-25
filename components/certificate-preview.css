@@ -1,0 +1,11 @@
+/* Certificate Preview Styles */
+
+.certificate-preview-page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 20mm;
+}
+
+.certificate-preview-signature-box {
+  min-height: 40px;
+}

@@ -2,7 +2,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/landing/Header';
 import { Footer } from '@/components/landing/Footer';
-import { ArrowRight, CheckCircle2, Shield, Zap, BarChart3, Users, FileText, Lock, Globe, Clock } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Shield, Zap, BarChart3, Users, FileText, Lock, Globe, Clock, Layers, Edit3 } from 'lucide-react';
 
 export default function FeaturesPage() {
   return (
@@ -49,6 +49,28 @@ export default function FeaturesPage() {
               image: "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?auto=format&fit=crop&q=80&w=2070"
             },
             {
+              title: "Visual Report Template Builder",
+              description: "Transform any existing PDF into a living, reusable template. Upload your report, mark field areas by clicking or drawing boxes, and let our AI automatically detect blank input regions using intelligent boundary analysis. Every field can be mapped to a specific data source — no coding, no PDF editing tools required.",
+              benefits: ["AI auto-detects blank fields in any PDF", "Point-and-click field placement with resizable handles", "Guided wizard maps each field to job or client data"],
+              icon: Layers,
+              color: "text-blue-500",
+              bg: "bg-blue-50 dark:bg-blue-900/20",
+              image: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+              title: "Dynamic Text & Branding Editor",
+              description: "Take full control of every piece of text in your PDF templates. Select any word, heading, footer, or logo and choose to white it out, replace it with custom text, or insert dynamic handlebars tokens that automatically fill in the right details at generation time — from job addresses to engineer names and company contact info.",
+              benefits: [
+                "White-out or replace any text, footer, logo, or graphic",
+                "Insert \u007b\u007bjob.address\u007d\u007d, \u007b\u007bclient.name\u007d\u007d, \u007b\u007bcompany.phone\u007d\u007d and 14+ more tokens",
+                "Full control: font, size, colour, weight, style & alignment"
+              ],
+              icon: Edit3,
+              color: "text-purple-500",
+              bg: "bg-purple-50 dark:bg-purple-900/20",
+              image: "https://images.unsplash.com/photo-1542744095-291d1f67b221?auto=format&fit=crop&q=80&w=2070"
+            },
+            {
               title: "Secure Cloud Storage",
               description: "Keep your certificates safe and accessible anywhere. Our bank-grade encryption ensures your sensitive data remains protected.",
               benefits: ["AES-256 encryption", "Automatic backups", "Role-based access control"],
@@ -60,10 +82,10 @@ export default function FeaturesPage() {
             {
               title: "Real-time Analytics",
               description: "Gain valuable insights into your certification operations. Track issuance rates, expiry dates, and team performance.",
-              benefits: ["Customizable dashboards", "Exportable reports", "Trend analysis"],
+              benefits: ["Customisable dashboards", "Exportable reports", "Trend analysis"],
               icon: BarChart3,
-              color: "text-purple-500",
-              bg: "bg-purple-50 dark:bg-purple-900/20",
+              color: "text-indigo-500",
+              bg: "bg-indigo-50 dark:bg-indigo-900/20",
               image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2070"
             }
           ].map((feature, index) => (

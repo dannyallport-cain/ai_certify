@@ -3,6 +3,8 @@ import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { reportDisseminatorReports, reportDisseminatorTemplates } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { enrichFieldsWithAcroFormPlacements } from '@/lib/report-disseminator/pdf-acroform';
+import { sanitizeStoredPdfBase64 } from '@/lib/report-disseminator/pdf-sanitize';
 import { type ReportDisseminatorField, reportDisseminatorReportSchema } from '@/lib/report-disseminator/schema';
 
 const ALLOWED_ADMIN_ROLES = new Set(['supersystemAdmin', 'systemAdmin', 'owner']);
@@ -100,13 +102,18 @@ export async function POST(request: NextRequest) {
     }
 
     const currentTemplate = template[0];
+    const sanitizedPdf = await sanitizeStoredPdfBase64(currentTemplate.sourcePdfBase64);
+    const enrichedFields = await enrichFieldsWithAcroFormPlacements(
+      (currentTemplate.fields ?? []) as ReportDisseminatorField[],
+      sanitizedPdf.base64,
+    );
     const snapshot = parsed.data.snapshot ?? {
       templateName: currentTemplate.name,
       templateVersion: currentTemplate.version,
       sourceFileName: currentTemplate.sourceFileName,
       sourceMimeType: currentTemplate.sourceMimeType,
-      sourcePdfBase64: currentTemplate.sourcePdfBase64,
-      fields: (currentTemplate.fields ?? []) as ReportDisseminatorField[],
+      sourcePdfBase64: sanitizedPdf.base64,
+      fields: enrichedFields.fields,
     };
 
     if (!Array.isArray(snapshot.fields) || snapshot.fields.length === 0) {

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { SESSION_EXPIRED_ERROR } from '@/lib/auth/errors';
 import { redirect } from 'next/navigation';
 
 export type ActionState = {
@@ -39,14 +40,14 @@ export function validatedActionWithUser<S extends z.ZodType<any, any>, T>(
   action: ValidatedActionWithUserFunction<S, T>
 ) {
   return async (prevState: ActionState, formData: FormData) => {
-    const user = await getUser();
+    const user = await getUser().catch(() => null);
     if (!user) {
-      throw new Error('User is not authenticated');
+      return { error: SESSION_EXPIRED_ERROR } as T | ActionState;
     }
 
     const result = schema.safeParse(Object.fromEntries(formData));
     if (!result.success) {
-      return { error: result.error.errors[0].message };
+      return { error: result.error.errors[0].message } as T | ActionState;
     }
 
     return action(result.data, formData, user);

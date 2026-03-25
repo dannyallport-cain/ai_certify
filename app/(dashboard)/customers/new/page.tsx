@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
 import { createCustomer } from '../../actions';
 import { useState } from 'react';
 import Link from 'next/link';
@@ -12,17 +13,24 @@ import { useRouter } from 'next/navigation';
 export default function NewCustomerPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true);
+    setFormError('');
     try {
       const result = await createCustomer({}, formData);
       if (result?.error) {
-        console.error('Error creating customer:', result.error);
+        if (isSessionExpiredError(result.error)) {
+          router.push(getSignInRedirectPath('/customers/new'));
+          return;
+        }
+        setFormError(result.error);
       }
       // If no error, the action will redirect automatically
     } catch (error) {
       console.error('Error creating customer:', error);
+      setFormError('Unable to create customer. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -53,6 +61,11 @@ export default function NewCustomerPage() {
         </CardHeader>
         <CardContent>
           <form action={handleSubmit} className="space-y-4">
+            {formError && (
+              <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {formError}
+              </p>
+            )}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name">Company Name *</Label>
