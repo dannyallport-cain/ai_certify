@@ -79,6 +79,8 @@ export default function EICRCertificatePage() {
   const [overallAssessment, setOverallAssessment] = useState('SATISFACTORY');
   const [earthingArrangement, setEarthingArrangement] = useState('TN-C-S');
   const [meansOfEarthing, setMeansOfEarthing] = useState("Distributor's facility");
+  const [supplyConductorCSA, setSupplyConductorCSA] = useState('25');
+  const [supplyConductorCSACustom, setSupplyConductorCSACustom] = useState('');
   const [observations, setObservations] = useState<Observation[]>([]);
   const [evidenceOfAdditions, setEvidenceOfAdditions] = useState('No');
   const [inspSchedule, setInspSchedule] = useState<InspScheduleValue>({

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { isAdminRole } from '@/lib/auth/roles';
 import { getUser } from '@/lib/db/queries';
 import { analyzeFieldDefinition } from '@/lib/report-disseminator/field-analysis';
 
@@ -10,12 +9,14 @@ const requestSchema = z.object({
   label: z.string().min(1),
   fieldType: z.string().optional(),
   context: z.string().optional(),
+  maxOptions: z.number().int().min(1).max(40).default(12),
 });
 
 const responseSchema = z.object({
   normalizedLabel: z.string().min(1),
   suggestedFieldType: z.enum(['dropdown', 'state_enum', 'text']).default('text'),
   options: z.array(z.string().min(1)).default([]),
+  suggestedDefault: z.string().optional(),
   notes: z.string().optional(),
   sources: z
     .array(
@@ -30,9 +31,6 @@ const responseSchema = z.object({
 export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isAdminRole(user.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
 
   const apiKey = process.env.AI_GATEWAY_API_KEY;
   const model = process.env.AI_GATEWAY_SEARCH_MODEL || 'openai/gpt-5.4';
@@ -72,18 +70,21 @@ export async function POST(request: NextRequest) {
         normalizedLabel: analysis.label,
         fieldType: parsed.data.fieldType || analysis.fieldType,
         context: parsed.data.context,
+        maxOptions: parsed.data.maxOptions,
       }),
     }),
   });
 
   const rawResponseText = await response.text();
   if (!response.ok) {
+    // Pass through 402 (payment required / credits exhausted) so the client can surface a helpful message
+    const statusToReturn = response.status === 402 ? 402 : 500;
     return NextResponse.json(
       {
         error: `Online option research failed with status ${response.status}.`,
         details: rawResponseText.slice(0, 1200),
       },
-      { status: 500 },
+      { status: statusToReturn },
     );
   }
 
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
       parsedPayload.options
         .map((option) => option.trim())
         .filter(Boolean)
-        .slice(0, 12)
+        .slice(0, parsed.data.maxOptions)
         .map((option) => [option.toLowerCase(), option]),
     ).values(),
   );
@@ -120,6 +121,9 @@ export async function POST(request: NextRequest) {
     options: dedupedOptions,
     notes: parsedPayload.notes || '',
     sources: dedupedSources,
+    suggestedDefault: parsedPayload.suggestedDefault && dedupedOptions.includes(parsedPayload.suggestedDefault)
+      ? parsedPayload.suggestedDefault
+      : undefined,
     model,
   });
 }
@@ -129,22 +133,49 @@ function buildPrompt({
   normalizedLabel,
   fieldType,
   context,
+  maxOptions,
 }: {
   label: string;
   normalizedLabel: string;
   fieldType: string;
   context?: string;
+  maxOptions: number;
 }) {
+  const isSentenceBuilder = fieldType === 'sentence_builder';
+  const isDropdown = fieldType === 'dropdown';
+
   return [
-    'Research likely answer options or dropdown options for a form field using web search.',
+    isSentenceBuilder
+      ? 'Research common sentence-level text snippets for a "sentence builder" form field using web search.'
+      : 'Research likely answer options or dropdown options for a form field using web search.',
     'Return only valid JSON with this shape:',
-    '{"normalizedLabel":"Supply Type","suggestedFieldType":"dropdown","options":["TN-S","TN-C-S (PME)"],"notes":"short note","sources":[{"title":"Source title","url":"https://example.com"}]}',
-    'Use suggestedFieldType "dropdown" when there is a meaningful option list.',
-    'Use suggestedFieldType "state_enum" only for condition-style answers that truly map to the built-in values tick, cross, NA, LIM, NV.',
-    'If the field is better as free text, return suggestedFieldType "text" and an empty options array.',
+    isSentenceBuilder
+      ? '{"normalizedLabel":"Agreed Limitations","suggestedFieldType":"dropdown","options":["No limitations agreed.","Limited to consumer unit and distribution board only.","Periodic inspection — no additions or alterations carried out."],"suggestedDefault":"No limitations agreed.","notes":"short note","sources":[{"title":"Source title","url":"https://example.com"}]}'
+      : '{"normalizedLabel":"Supply Type","suggestedFieldType":"dropdown","options":["TN-S","TN-C-S (PME)"],"suggestedDefault":"TN-C-S (PME)","notes":"short note","sources":[{"title":"Source title","url":"https://example.com"}]}',
+    isSentenceBuilder
+      ? 'This is a sentence builder field — users select pre-written sentence snippets to compose a longer text answer.'
+      : null,
+    isSentenceBuilder
+      ? `Find up to ${maxOptions} common full-sentence examples that would appear in UK electrical installation certificates for this field.`
+      : null,
+    isSentenceBuilder
+      ? 'You MUST return suggestedFieldType "dropdown" with the sentence snippets as the options array. Never return an empty options array.'
+      : isDropdown
+        ? `This field is already a dropdown — the user explicitly wants a list of options. You MUST return suggestedFieldType "dropdown" with up to ${maxOptions} practical options. Do not return "text" or an empty options array.`
+        : 'Use suggestedFieldType "dropdown" when there is a meaningful option list.',
+    !isSentenceBuilder
+      ? 'Use suggestedFieldType "state_enum" only for condition-style answers that truly map to the built-in values tick, cross, NA, LIM, NV.'
+      : null,
+    !isSentenceBuilder && !isDropdown
+      ? 'If the field is better as free text, return suggestedFieldType "text" and an empty options array.'
+      : null,
     'Prefer UK terminology and official/common industry forms when the field appears UK-specific.',
-    'Keep options concise, deduplicated, and practically usable in a form builder.',
+    isSentenceBuilder
+      ? 'Each snippet should be a complete, practical sentence suitable for use in a UK electrical certificate.'
+      : 'Keep options concise, deduplicated, and practically usable in a form builder.',
+    `Return no more than ${maxOptions} options total.`,
     'Include 1 to 5 helpful sources when you found a meaningful option list.',
+    'Include a "suggestedDefault" field: the single most commonly applicable option from the list, or omit it if there is no clear common default.',,
     `Original field label: ${label}`,
     `Normalized field label: ${normalizedLabel}`,
     `Current field type: ${fieldType}`,

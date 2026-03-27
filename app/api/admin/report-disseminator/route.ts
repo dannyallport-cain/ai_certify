@@ -3,9 +3,10 @@ import { desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { reportDisseminatorTemplates } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { isAdminRole } from '@/lib/auth/roles';
 import { sanitizeStoredPdfBase64 } from '@/lib/report-disseminator/pdf-sanitize';
+import { stripe } from '@/lib/payments/stripe';
 
-const ALLOWED_ADMIN_ROLES = new Set(['supersystemAdmin', 'systemAdmin', 'owner']);
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
@@ -39,10 +40,6 @@ export async function GET() {
     const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!ALLOWED_ADMIN_ROLES.has(user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const teamId = await resolveTeamId();
@@ -105,8 +102,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!ALLOWED_ADMIN_ROLES.has(user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Non-admin users must pay £5 per template creation
+    if (!isAdminRole(user.role)) {
+      const paymentSessionId = request.headers.get('x-payment-session-id');
+      if (!paymentSessionId) {
+        return NextResponse.json({ error: 'Payment required', code: 'PAYMENT_REQUIRED' }, { status: 402 });
+      }
+      const session = await stripe.checkout.sessions.retrieve(paymentSessionId);
+      if (
+        session.payment_status !== 'paid' ||
+        session.metadata?.type !== 'template_creation' ||
+        session.metadata?.userId !== user.id.toString()
+      ) {
+        return NextResponse.json({ error: 'Invalid or unpaid payment session' }, { status: 402 });
+      }
     }
 
     const teamId = await resolveTeamId();

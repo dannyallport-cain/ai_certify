@@ -24,7 +24,7 @@ export const users = pgTable('users', {
   customEmailSignature: text('custom_email_signature'),
   passwordHash: text('password_hash').notNull(),
   teamId: integer('team_id').references(() => teams.id, { onDelete: 'cascade' }),
-  role: userRoleEnum('role').notNull().default('member'),
+  role: userRoleEnum('role').notNull().default('user'),
   status: userStatusEnum('status').notNull().default('active'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),

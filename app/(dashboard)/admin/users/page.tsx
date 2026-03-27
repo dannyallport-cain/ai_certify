@@ -32,7 +32,7 @@ export default function UsersPage() {
   const [createForm, setCreateForm] = useState({
     name: '',
     email: '',
-    role: 'member' as UserRole,
+    role: 'user' as UserRole,
     customPassword: '',
     useCustomPassword: false,
   });
@@ -101,7 +101,7 @@ export default function UsersPage() {
       setCreateForm({
         name: '',
         email: '',
-        role: 'member',
+        role: 'user',
         customPassword: '',
         useCustomPassword: false,
       });
@@ -428,7 +428,7 @@ export default function UsersPage() {
                     setCreateForm({
                       name: '',
                       email: '',
-                      role: 'member',
+                      role: 'user',
                       customPassword: '',
                       useCustomPassword: false,
                     });

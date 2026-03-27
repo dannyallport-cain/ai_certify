@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { calculateMaxZs } from '../utils/calculate-zs';
 
 export interface TemplateConfig {
   colors: {
@@ -2132,7 +2133,8 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   y += headerH;
 
   // ── Draw one data row as a fully-gridded table row ──
-  const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boolean) => {
+
+const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boolean) => {
     // Alternating row background
     if (isAlt) {
       filledRect(margin, rowY, lsW, rowH, [245, 248, 252]);
@@ -2148,6 +2150,15 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(0, 0, 0);
 
+    // Extract deviceType (col 9), rating (col 10), measuredZs (col 24)
+    const deviceType = values[9]?.trim() || '';
+    const rating = values[10]?.trim().replace(/A/i, '') || '';
+    const measuredZsRaw = values[24]?.trim() || '';
+    const maxZsComputed = calculateMaxZs(deviceType, rating);
+    const measuredZsNum = parseFloat(measuredZsRaw.replace(/[ΩΩ]|ohms/i, '')) || 0;
+    const maxZsNum = parseFloat(maxZsComputed.replace(/Ω|ohms/i, '')) || Infinity;
+    const zsPass = measuredZsNum > 0 && measuredZsNum <= maxZsNum;
+
     values.forEach((val, ci) => {
       const cp = colPositions[ci];
 
@@ -2156,6 +2167,23 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
         pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
         pdf.setLineWidth(0.2);
         pdf.line(cp.x, rowY, cp.x, rowY + rowH);
+      }
+
+      let cellColor: [number,number,number] | null = null;
+
+      // ZS PASS/FAIL highlighting: measuredZs column (24)
+      if (ci === 24 && measuredZsRaw) {
+        cellColor = zsPass ? green : red;
+      }
+
+      // Background fill for ZS cell
+      if (cellColor) {
+        filledRect(cp.x + 0.5, rowY + 0.5, cp.w - 1, rowH - 1, cellColor);
+        pdf.setTextColor(255, 255, 255);  // white text on colored bg
+        pdf.setFont('helvetica', 'bold');
+      } else {
+        pdf.setTextColor(0, 0, 0);
+        pdf.setFont('helvetica', 'normal');
       }
 
       // Cell text - center-align numeric values, left-align text
@@ -2168,6 +2196,10 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
         // Center-align all other values
         text(ss(val), cp.x + cp.w / 2, rowY + rowH / 2 + 1.2, { align: 'center' });
       }
+
+      // Restore normal styling after ZS cell
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont('helvetica', 'normal');
     });
 
     pdf.setDrawColor(0, 0, 0);

@@ -26,6 +26,15 @@ export async function POST(request: NextRequest) {
       const subscription = event.data.object as Stripe.Subscription;
       await handleSubscriptionChange(subscription);
       break;
+    case 'checkout.session.completed': {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (session.metadata?.type === 'template_creation') {
+        console.log(
+          `Template creation payment completed: user=${session.metadata.userId}, session=${session.id}`
+        );
+      }
+      break;
+    }
     default:
       console.log(`Unhandled event type ${event.type}`);
   }

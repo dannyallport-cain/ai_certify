@@ -359,7 +359,7 @@ export default function ServiceM8Page() {
                 <CardHeader>
                   <CardTitle>Sync Settings</CardTitle>
                   <CardDescription>
-                    Configure how data syncs between Fire Certify and ServiceM8.
+                    Configure how data syncs between AI-Certificates and ServiceM8.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument } from 'pdf-lib';
 import { z } from 'zod';
 import { createRequire } from 'module';
-import { isAdminRole } from '@/lib/auth/roles';
 import { getUser } from '@/lib/db/queries';
 import {
   analyzeFieldDefinition,
@@ -27,9 +26,6 @@ const gatewayResponseSchema = z.object({
 export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!isAdminRole(user.role)) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
 
   const apiKey = process.env.AI_GATEWAY_API_KEY;
   const model = process.env.AI_GATEWAY_MODEL || 'anthropic/claude-sonnet-4.6';

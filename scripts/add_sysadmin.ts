@@ -8,7 +8,7 @@ async function addSysAdmin() {
   const email = 'sysadmin@riskassessorpro.com';
   const name = 'System Admin';
   const password = 'Verify123!!!';
-  const role: UserRole = 'systemAdmin';
+  const role: UserRole = 'admin';
 
   // 1. Ensure System team exists
   const systemTeamName = 'System';
@@ -46,7 +46,7 @@ async function addSysAdmin() {
     await db.insert(teamMembers).values({
       userId: sysadminUser.id,
       teamId: systemTeam.id,
-      role: 'systemAdmin',
+      role: 'admin',
     });
     console.log('Sysadmin added to System team.');
   } else {

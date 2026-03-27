@@ -1,28 +1,18 @@
 export const USER_ROLES = [
-  'supersystemAdmin',
-  'systemAdmin',
-  'support',
-  'owner',
-  'member',
-  'client',
+  'admin',
+  'user',
 ] as const;
 
 export const ADMIN_ROLES = [
-  'supersystemAdmin',
-  'systemAdmin',
-  'owner',
+  'admin',
 ] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
 export type AdminRole = (typeof ADMIN_ROLES)[number];
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
-  supersystemAdmin: 'Super System Admin',
-  systemAdmin: 'System Admin',
-  support: 'Support',
-  owner: 'Owner',
-  member: 'Member',
-  client: 'Client',
+  admin: 'Admin',
+  user: 'User',
 };
 
 export function isUserRole(role: string): role is UserRole {
@@ -30,5 +20,5 @@ export function isUserRole(role: string): role is UserRole {
 }
 
 export function isAdminRole(role: string | null | undefined): role is AdminRole {
-  return role !== null && role !== undefined && (ADMIN_ROLES as readonly string[]).includes(role);
+  return role === 'admin';
 }
