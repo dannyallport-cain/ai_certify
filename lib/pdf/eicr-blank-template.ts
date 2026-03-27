@@ -16,6 +16,7 @@
  */
 
 import type { CertificateData } from './generator';
+import { calculateMaxZs, type DeviceType, DEVICE_TYPE_OPTIONS } from '../utils/calculate-zs';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -62,8 +63,8 @@ export interface EICRCircuitRow {
   maxDiscTime: string;
   /** BS EN standard (e.g. 60898) */
   bsen: string;
-  /** Protective device type (B / C / D / BS 88 etc.) */
-  deviceType: string;
+  /** Protective device type (B / C / D / RCBO / BS88 / TT) — drives auto maxZs */
+  deviceType: DeviceType;
   /** Rated current (A) */
   rating: string;
   /** Short-circuit capacity (kA) */
@@ -229,13 +230,13 @@ export const BLANK_CIRCUIT_ROW: EICRCircuitRow = {
   refMethod: '',
   liveCsa: '',
   cpcCsa: '',
-  maxDiscTime: '',
-  bsen: '',
-  deviceType: '',
-  rating: '',
+  maxDiscTime: '0.4',  // default 0.4s for ADS
+  bsen: '60898',
+  deviceType: 'MCB Type B' as DeviceType,  // demo for auto-calc
+  rating: '32',  // demo for auto-calc
   capacity: '',
   rcdRating: '',
-  maxZs: '',
+  maxZs: calculateMaxZs('MCB Type B', '32'),  // "1.44Ω" — auto-calculated demo
   r1Line: '',
   rnNeutral: '',
   r2Cpc: '',
@@ -245,7 +246,7 @@ export const BLANK_CIRCUIT_ROW: EICRCircuitRow = {
   insResLE: '',
   testVoltage: '500',   // default test voltage for LV installations
   polarity: '',
-  measuredZs: '',
+  measuredZs: '1.20',  // demo: PASS (1.20 < 1.44)
   discTime: '',
   rcdTestButton: '',
   afddTestButton: '',
@@ -363,9 +364,45 @@ export const BLANK_INSPECTION_SCHEDULE: InspectionSchedule = {
 // BLANK FORM DATA
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Generate an array of N empty circuit rows */
+/** Generate an array of N circuit rows with 3x demo data */
 function blankCircuits(count = 20): EICRCircuitRow[] {
-  return Array.from({ length: count }, () => ({ ...BLANK_CIRCUIT_ROW }));
+  const demos: EICRCircuitRow[] = [
+    // Demo 1: MCB B32 → 1.44Ω
+    {
+      ...BLANK_CIRCUIT_ROW,
+      circuitNumber: '1',
+      designation: 'Lighting 1st Floor',
+      deviceType: 'MCB Type B' as DeviceType,
+      rating: '32',
+      maxZs: calculateMaxZs('MCB Type B', '32'),
+      measuredZs: '1.15',  // PASS
+    },
+    // Demo 2: RCBO C16 → 1.92Ω  
+    {
+      ...BLANK_CIRCUIT_ROW,
+      circuitNumber: '2',
+      designation: 'Ring Socket Kitchen',
+      deviceType: 'RCBO Type C' as DeviceType,
+      rating: '16',
+      maxZs: calculateMaxZs('RCBO Type C', '16'),
+      measuredZs: '1.75',  // PASS
+      rcdRating: '30',
+    },
+    // Demo 3: BS88 Fuse 20A → 2.30Ω
+    {
+      ...BLANK_CIRCUIT_ROW,
+      circuitNumber: '3', 
+      designation: 'Radial Socket Utility',
+      deviceType: 'BS88 Fuse' as DeviceType,
+      rating: '20',
+      maxZs: calculateMaxZs('BS88 Fuse', '20'),
+      measuredZs: '2.65',  // FAIL → triggers validation warning
+    },
+  ];
+  
+  // Pad remaining with blanks
+  const blanks = Array.from({ length: Math.max(0, count - 3) }, () => ({ ...BLANK_CIRCUIT_ROW }));
+  return [...demos, ...blanks];
 }
 
 export const BLANK_EICR_FORM_DATA: EICRFormData = {
@@ -524,6 +561,32 @@ export function deriveOverallAssessment(observations: EICRObservation[]): 'SATIS
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Validate single circuit row (Zs compliance + basics).
+ */
+function validateCircuitRow(row: Partial<EICRCircuitRow>): string[] {
+  const errors: string[] = [];
+
+  // Basic presence
+  if (!String(row.deviceType ?? '').trim()) errors.push('Device type required');
+  if (!String(row.rating ?? '').trim()) errors.push('Rating required');
+  const maxZsStr = String(row.maxZs ?? '');
+  const measuredZsStr = String(row.measuredZs ?? '');
+
+  if (!maxZsStr.trim()) errors.push('Max Zs required');
+  if (!measuredZsStr.trim()) return errors;  // measuredZs optional
+
+  // Zs compliance check
+  const maxZsNum = parseFloat(maxZsStr.replace(/[ΩΩ]/g, ''));
+  const measuredNum = parseFloat(measuredZsStr.replace(/[ΩΩ]/g, ''));
+  
+  if (!isNaN(maxZsNum) && !isNaN(measuredNum) && measuredNum > maxZsNum * 1.05) {  // 5% tolerance
+    errors.push(`FAIL: Measured Zs ${measuredNum.toFixed(2)}Ω > Max ${maxZsNum.toFixed(2)}Ω`);
+  }
+
+  return errors;
+}
+
+/**
  * Runs lightweight field-presence validation against an EICRFormData object.
  * Returns an array of human-readable error strings (empty = valid).
  *
@@ -568,6 +631,16 @@ export function validateEICRFormData(
   // Supply characteristics
   req(data.earthingArrangements,           'Earthing Arrangements');
   req(data.externalEarthFaultLoopImpedance, 'External Earth Fault Loop Impedance (Ze)');
+
+  // NEW: Circuit Zs validation
+  if (data.circuits) {
+    data.circuits.forEach((row, index) => {
+      const rowErrors = validateCircuitRow(row);
+      if (rowErrors.length) {
+        errors.push(`Circuit ${index + 1}: ${rowErrors.join('; ')}`);
+      }
+    });
+  }
 
   return errors;
 }

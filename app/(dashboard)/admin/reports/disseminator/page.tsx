@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Plus, Upload, Wand2, Save, Eye, List, Globe, Info, PanelLeftClose, PanelLeftOpen, Archive, Copy, Send, Lock } from 'lucide-react';
+import { Plus, Upload, Wand2, Save, Eye, List, Globe, Info, PanelLeftClose, PanelLeftOpen, Archive, Copy, Send, Lock, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   DndContext,
@@ -36,12 +36,35 @@ import {
   DEFAULT_STATE_OPTIONS,
   isNumericLikeFieldType,
   type DisseminatorFieldType,
+  type InspectionPeriodConfig,
+  type InspectionPeriod,
+  computeNextInspectionDate,
 } from '@/lib/report-disseminator/field-analysis';
+import type { DeviceType } from '@/lib/utils/calculate-zs';
+import { 
+  calculateMaxZs, 
+  DEVICE_TYPE_OPTIONS, 
+  getValidRatingsForType, 
+  isValidZsCombo 
+} from '@/lib/utils/calculate-zs';
 import { validateUkPostcode } from '@/lib/report-disseminator/postcode';
+import { GuidancePanel } from '@/components/disseminator/GuidancePanel';
+import { getStepGuidance, getFieldGuidance, type DisseminatorStep } from '@/lib/report-disseminator/advisor';
 
 type FieldType = DisseminatorFieldType;
 type TemplateStatus = 'draft' | 'review' | 'published' | 'archived';
 type ReportStatus = 'draft' | 'completed' | 'archived';
+
+/** A single exclusion rule stored on a field. */
+type ExcludeRule = {
+  fieldId: string;
+  /** If set and non-empty, only triggers when the excluding field's value matches one of these.
+   *  If absent/empty, any non-empty value triggers exclusion. */
+  whenValues?: string[];
+  /** If set and non-empty, only these specific option values in the target field are removed/filtered.
+   *  If absent/empty, the entire target field is locked to N/A. */
+  excludeValues?: string[];
+};
 
 type ReportField = {
   id: string;
@@ -51,13 +74,29 @@ type ReportField = {
   required: boolean;
   plainTextHint?: string;
   dropdownOptions?: string[];
+  dropdownDefault?: string;
   stateOptions?: Array<'tick' | 'cross' | 'NA' | 'LIM' | 'NV'>;
   addressConfig?: { mode: 'uk_address' | 'uk_postcode_format' };
   postcodeConfig?: { country: 'GB'; validateAddress: boolean };
   phoneConfig?: { country: 'GB' };
   numericConfig?: { min?: number; max?: number; resolution?: number; unit?: string };
   linkedConfig?: { relatedSection: string; relatedFieldId: string; relationType: 'mirrors' | 'derived_from' | 'depends_on' };
+  inspectionPeriodConfig?: InspectionPeriodConfig;
   boundingBox?: { x: number; y: number; width: number; height: number };
+  // Exclusion rules: grey out / set fields to N/A when this field changes
+  excludes?: ExcludeRule[];
+  // Max options to return from Search Online Options (default 12, max 40)
+  searchOptionsMax?: number;
+};
+
+type IncomingExclusion = {
+  key: string;
+  sourceField: ReportField;
+  sourceValue: string;
+  whenValues?: string[];
+  excludeValues?: string[];
+  affectsWholeField: boolean;
+  isTriggered: boolean;
 };
 
 type DisseminatorTemplate = {
@@ -266,6 +305,7 @@ function stripTemplatePreviewValues(template: DisseminatorTemplate): Disseminato
 }
 
 const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
+  { value: 'auto_zs', label: 'Auto-calculated Max Zs (BS7671)' },
   { value: 'auto_reference', label: 'Auto-generated ref' },
   { value: 'date', label: 'Date' },
   { value: 'text', label: 'Plain text' },
@@ -278,6 +318,8 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
   { value: 'resistance', label: 'Resistance reading' },
   { value: 'voltage', label: 'Voltage reading' },
   { value: 'linked_text', label: 'Related section text' },
+  { value: 'sentence_builder', label: 'Text + sentence snippets' },
+  { value: 'inspection_date_plus_period', label: 'Inspection date plus period' },
 ];
 
 const AUTO_OPTION_RESEARCH_LIMIT = 8;
@@ -591,12 +633,14 @@ function RedactionLogicControls({
 
 function SortableFieldRow({
   field,
+  allFields,
   onUpdate,
   onAiSuggest,
   onSearchOnlineOptions,
   searchingOnlineOptions,
 }: {
   field: ReportField;
+  allFields: ReportField[];
   onUpdate: (patch: Partial<ReportField>) => void;
   onAiSuggest: () => void;
   onSearchOnlineOptions: () => void;
@@ -608,6 +652,7 @@ function SortableFieldRow({
 
   const [postcodeTest, setPostcodeTest] = useState('');
   const [postcodeResult, setPostcodeResult] = useState<{ valid: boolean; error?: string } | null>(null);
+  const [excludesOpen, setExcludesOpen] = useState(false);
 
   const testPostcode = async () => {
     if (!postcodeTest.trim()) return;
@@ -637,7 +682,7 @@ function SortableFieldRow({
 
       <div className="space-y-2">
         <Label>Field label</Label>
-        <Input title="Human-readable label shown to users in the generated form" value={field.label} onChange={(e) => onUpdate({ label: e.target.value })} />
+        <Input className="bg-amber-50 ring-1 ring-amber-200 dark:bg-amber-950/30 dark:ring-amber-700" title="Human-readable label shown to users in the generated form" value={field.label} onChange={(e) => onUpdate({ label: e.target.value })} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -663,22 +708,72 @@ function SortableFieldRow({
           <Wand2 className="w-4 h-4 mr-1" />
           AI Suggest
         </Button>
-        {(field.fieldType === 'dropdown' || field.fieldType === 'text' || field.fieldType === 'state_enum') && (
-          <Button type="button" variant="outline" size="sm" onClick={onSearchOnlineOptions} disabled={searchingOnlineOptions}>
-            <Globe className="w-4 h-4 mr-1" />
-            {searchingOnlineOptions ? 'Searching…' : 'Search Online Options'}
-          </Button>
+        {(field.fieldType === 'dropdown' || field.fieldType === 'text' || field.fieldType === 'state_enum' || field.fieldType === 'sentence_builder') && (
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={onSearchOnlineOptions} disabled={searchingOnlineOptions}>
+              <Globe className="w-4 h-4 mr-1" />
+              {searchingOnlineOptions ? 'Searching…' : 'Search Online Options'}
+            </Button>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={1}
+                max={40}
+                title="Maximum number of options to return from Search Online Options"
+                className="w-14 rounded border border-input bg-background px-2 py-1 text-sm"
+                placeholder="12"
+                value={field.searchOptionsMax ?? ''}
+                onChange={(e) => onUpdate({ searchOptionsMax: e.target.value === '' ? undefined : Math.min(40, Math.max(1, Number(e.target.value))) })}
+              />
+              <span className="text-xs text-muted-foreground">max</span>
+            </div>
+          </>
         )}
       </div>
 
       {field.fieldType === 'dropdown' && (
         <div className="space-y-2">
-          <Label>Dropdown options (comma-separated)</Label>
-          <Input
-            title="Comma-separated list of options for this dropdown field"
-            value={(field.dropdownOptions || []).join(', ')}
-            onChange={(e) => onUpdate({ dropdownOptions: e.target.value.split(',').map((v) => v.trim()).filter(Boolean) })}
+          <Label>Dropdown options (one per line)</Label>
+          <Textarea
+            title="Dropdown options — one per line"
+            placeholder="Option A&#10;Option B&#10;Option C"
+            value={(field.dropdownOptions || []).join('\n')}
+            onChange={(e) => onUpdate({ dropdownOptions: e.target.value.split('\n') })}
+            onBlur={(e) => onUpdate({ dropdownOptions: e.target.value.split('\n').map((v) => v.trim()).filter(Boolean) })}
+            rows={4}
           />
+          {(field.dropdownOptions || []).length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Default value</Label>
+              <select
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+                title="Default value pre-filled when a new report is created from this template"
+                value={field.dropdownDefault || ''}
+                onChange={(e) => onUpdate({ dropdownDefault: e.target.value || undefined })}
+              >
+                <option value="">(blank — no default)</option>
+                {(field.dropdownOptions || []).map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+
+      {field.fieldType === 'sentence_builder' && (
+        <div className="space-y-2">
+          <Label>Sentence snippets (one per line)</Label>
+          <Textarea
+            placeholder="Enter each pre-made sentence on a new line…"
+            value={(field.dropdownOptions || []).join('\n')}
+            onChange={(e) => onUpdate({ dropdownOptions: e.target.value.split('\n') })}
+            onBlur={(e) => onUpdate({ dropdownOptions: e.target.value.split('\n').map((v) => v.trim()).filter(Boolean) })}
+            rows={4}
+          />
+          <p className="text-xs text-muted-foreground">
+            Users can pick these sentences from a dropdown to append them to the field text.
+          </p>
         </div>
       )}
 
@@ -826,6 +921,189 @@ function SortableFieldRow({
           </Select>
         </div>
       )}
+
+      {field.fieldType === 'inspection_date_plus_period' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Inspection date field</Label>
+            <select
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              title="The date field in this template that records the inspection date"
+              value={field.inspectionPeriodConfig?.inspectionDateFieldId || ''}
+              onChange={(e) => onUpdate({
+                inspectionPeriodConfig: {
+                  period: field.inspectionPeriodConfig?.period || '1y',
+                  inspectionDateFieldId: e.target.value,
+                },
+              })}
+            >
+              <option value="">— select a date field —</option>
+              {allFields.filter((f) => f.fieldType === 'date' && f.id !== field.id).map((f) => (
+                <option key={f.id} value={f.id}>{f.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Period</Label>
+            <select
+              className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+              title="How many years after the inspection date this next-inspection date falls"
+              value={field.inspectionPeriodConfig?.period || '1y'}
+              onChange={(e) => onUpdate({
+                inspectionPeriodConfig: {
+                  period: e.target.value as InspectionPeriod,
+                  inspectionDateFieldId: field.inspectionPeriodConfig?.inspectionDateFieldId || '',
+                },
+              })}
+            >
+              <option value="1y">1 year</option>
+              <option value="3y">3 years</option>
+              <option value="5y">5 years</option>
+              <option value="10y">10 years</option>
+              <option value="custom">Custom (user picks date)</option>
+            </select>
+          </div>
+          {!field.inspectionPeriodConfig?.inspectionDateFieldId && (
+            <p className="text-xs text-amber-600 md:col-span-2">
+              Select the inspection date field above so the next date can be computed automatically.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Excludes — when this field has a matching value, listed fields are greyed out and set to N/A */}
+      <div className="rounded-md border">
+        <button
+          type="button"
+          className="flex w-full items-center justify-between px-3 py-2 text-left"
+          onClick={() => setExcludesOpen((o) => !o)}
+        >
+          <span className="text-sm font-medium">
+            Excludes other fields
+            {(field.excludes?.length ?? 0) > 0 && (
+              <span className="ml-2 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
+                {field.excludes!.length}
+              </span>
+            )}
+          </span>
+          <span className="text-xs text-muted-foreground">{excludesOpen ? '▲' : '▼'}</span>
+        </button>
+        {excludesOpen && (() => {
+          // Options that the *excluding* field (this field) can have — used for conditional whenValues
+          const excluderOptions =
+            (field.fieldType === 'dropdown' || field.fieldType === 'sentence_builder')
+              ? (field.dropdownOptions || [])
+              : field.fieldType === 'state_enum'
+              ? (field.stateOptions || [...DEFAULT_STATE_OPTIONS])
+              : [];
+
+          return (
+            <div className="space-y-2 border-t px-3 pb-3 pt-2">
+              <p className="text-xs text-muted-foreground">
+                When this field has a matching value, ticked fields are excluded. Configure which trigger values apply (list 1) and which specific options to remove in the target field (list 2). No options selected in list 2 = entire field locked to N/A.
+              </p>
+              <div className="max-h-60 space-y-1 overflow-y-auto">
+                {allFields.filter((f) => f.id !== field.id).map((f) => {
+                  const rule = (field.excludes || []).find((r) => r.fieldId === f.id);
+                  const isChecked = !!rule;
+                  const whenValues = rule?.whenValues || [];
+                  const excludeValues = rule?.excludeValues || [];
+                  // Options available in the TARGET field (for the "exclude these options" list)
+                  const targetFieldOptions =
+                    (f.fieldType === 'dropdown' || f.fieldType === 'sentence_builder')
+                      ? (f.dropdownOptions || [])
+                      : f.fieldType === 'state_enum'
+                      ? (f.stateOptions || [...DEFAULT_STATE_OPTIONS])
+                      : [];
+
+                  return (
+                    <div key={f.id} className="space-y-1">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            const current = field.excludes || [];
+                            onUpdate({
+                              excludes: e.target.checked
+                                ? [...current, { fieldId: f.id }]
+                                : current.filter((r) => r.fieldId !== f.id),
+                            });
+                          }}
+                        />
+                        <span className="truncate" title={f.id}>{f.label}</span>
+                        <span className="ml-auto shrink-0 text-xs text-muted-foreground">{f.fieldType}</span>
+                      </label>
+                      {/* List 1: which values of THIS field trigger the exclusion */}
+                      {isChecked && excluderOptions.length > 0 && (
+                        <div className="ml-5 space-y-0.5 rounded border bg-muted/30 px-2 py-1.5">
+                          <p className="mb-1 text-xs font-medium text-muted-foreground">
+                            Trigger values (this field){whenValues.length === 0 ? ': any' : ':'}
+                          </p>
+                          {excluderOptions.map((opt) => (
+                            <label key={opt} className="flex items-center gap-2 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={whenValues.includes(opt)}
+                                onChange={(e) => {
+                                  const updated = e.target.checked
+                                    ? [...whenValues, opt]
+                                    : whenValues.filter((v) => v !== opt);
+                                  onUpdate({
+                                    excludes: (field.excludes || []).map((r) =>
+                                      r.fieldId === f.id
+                                        ? { ...r, whenValues: updated.length ? updated : undefined }
+                                        : r
+                                    ),
+                                  });
+                                }}
+                              />
+                              <span>{opt}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      {/* List 2: which options in the TARGET field are excluded when triggered */}
+                      {isChecked && targetFieldOptions.length > 0 && (
+                        <div className="ml-5 space-y-0.5 rounded border bg-blue-50/50 px-2 py-1.5 dark:bg-blue-950/20">
+                          <p className="mb-1 text-xs font-medium text-muted-foreground">
+                            Options to remove from <em>{f.label}</em>
+                            {excludeValues.length === 0 ? ' (none = lock entire field)' : ':'}
+                          </p>
+                          {targetFieldOptions.map((opt) => (
+                            <label key={opt} className="flex items-center gap-2 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={excludeValues.includes(opt)}
+                                onChange={(e) => {
+                                  const updated = e.target.checked
+                                    ? [...excludeValues, opt]
+                                    : excludeValues.filter((v) => v !== opt);
+                                  onUpdate({
+                                    excludes: (field.excludes || []).map((r) =>
+                                      r.fieldId === f.id
+                                        ? { ...r, excludeValues: updated.length ? updated : undefined }
+                                        : r
+                                    ),
+                                  });
+                                }}
+                              />
+                              <span>{opt}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {allFields.filter((f) => f.id !== field.id).length === 0 && (
+                  <p className="text-xs text-muted-foreground">No other fields in this template.</p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
       </div>
     </>
   );
@@ -872,9 +1150,100 @@ export default function ReportDisseminatorPage() {
   const [reportFieldSearch, setReportFieldSearch] = useState('');
   const [fieldWizardIndex, setFieldWizardIndex] = useState(0);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
   const [placementMode, setPlacementMode] = useState<'auto' | 'manual'>('auto');
   const [placementSuggestions, setPlacementSuggestions] = useState<Record<string, PlacementSuggestion | null>>({});
   const [mappingUndoStack, setMappingUndoStack] = useState<Array<{ fieldId: string; previousBoundingBox: ReportField['boundingBox']; previousPage: number }>>([]);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Refs used by the auto-save interval — avoided in state to prevent re-renders
+  const autoSaveDirtyTemplate = useRef(false);
+  const autoSaveDirtyReport = useRef(false);
+  const autoSaveSelectedRef = useRef<typeof selected>(null);
+  const autoSaveReportRef = useRef<typeof selectedReport>(null);
+  const autoSaveEditorModeRef = useRef<typeof editorMode>('template');
+
+  // Keep refs in sync with current state
+  useEffect(() => { autoSaveSelectedRef.current = selected; }, [selected]);
+  useEffect(() => { autoSaveReportRef.current = selectedReport; }, [selectedReport]);
+  useEffect(() => { autoSaveEditorModeRef.current = editorMode; }, [editorMode]);
+
+  // Mark dirty when template changes (skip first mount — selectedId not yet set)
+  const isInitialTemplateLoad = useRef(true);
+  useEffect(() => {
+    if (isInitialTemplateLoad.current) { isInitialTemplateLoad.current = false; return; }
+    if (selected) autoSaveDirtyTemplate.current = true;
+  }, [selected]);
+
+  // Mark dirty when report values/notes change
+  const isInitialReportLoad = useRef(true);
+  useEffect(() => {
+    if (isInitialReportLoad.current) { isInitialReportLoad.current = false; return; }
+    if (selectedReport) autoSaveDirtyReport.current = true;
+  }, [selectedReport]);
+
+  // ── Auto-save every 10 seconds ────────────────────────────────────────
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const mode = autoSaveEditorModeRef.current;
+
+      if (mode === 'template') {
+        const tmpl = autoSaveSelectedRef.current;
+        if (!autoSaveDirtyTemplate.current || !tmpl || tmpl.status !== 'draft') return;
+        autoSaveDirtyTemplate.current = false;
+        setAutoSaveStatus('saving');
+        try {
+          const res = await fetch(`/api/admin/report-disseminator/${tmpl.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fields: tmpl.fields,
+              wizardData: stripTemplatePreviewValues(tmpl).wizardData,
+              description: tmpl.description || '',
+              name: tmpl.name,
+              status: tmpl.status,
+            }),
+          });
+          if (!res.ok) { setAutoSaveStatus('error'); return; }
+          setAutoSaveStatus('saved');
+        } catch {
+          setAutoSaveStatus('error');
+        }
+      } else {
+        const report = autoSaveReportRef.current;
+        if (!autoSaveDirtyReport.current || !report) return;
+        autoSaveDirtyReport.current = false;
+        setAutoSaveStatus('saving');
+        try {
+          const res = await fetch(`/api/admin/report-disseminator/reports/${report.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: report.name,
+              description: report.description || '',
+              status: report.status,
+              values: report.values,
+              notes: report.notes || '',
+            }),
+          });
+          if (!res.ok) { setAutoSaveStatus('error'); return; }
+          setAutoSaveStatus('saved');
+        } catch {
+          setAutoSaveStatus('error');
+        }
+      }
+    }, 10_000);
+
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Admin-only AI cost warning ────────────────────────────────────────
+  const showAiCostWarning = (label: string, estimatedCost: string) => {
+    if (userRole !== 'admin') return;
+    toast.error(`AI call: ${label} — est. ${estimatedCost}`, { duration: 4000 });
+  };
 
   // ── Wizard Step Through ──────────────────────────────────────────────
   type WizardPhase = 'select' | 'name' | 'type' | 'logic' | 'confirm';
@@ -1027,6 +1396,16 @@ export default function ReportDisseminatorPage() {
   useEffect(() => {
     loadTemplates();
     loadReports();
+    // Fetch current user role for paywall logic
+    fetch('/api/user').then(r => r.ok ? r.json() : null).then(u => {
+      if (u?.role) setUserRole(u.role);
+    });
+    // Check for payment success from Stripe redirect
+    const paymentSuccess = searchParams.get('payment_success');
+    if (paymentSuccess) {
+      setPaymentSessionId(paymentSuccess);
+      toast.success('Payment successful! You can now create your template.');
+    }
   }, []);
 
   useEffect(() => {
@@ -1090,7 +1469,9 @@ export default function ReportDisseminatorPage() {
           existingValue ??
           (field.fieldType === 'auto_reference'
             ? generateAutoReferenceValue(selected.id, field)
-            : '');
+            : field.fieldType === 'inspection_date_plus_period'
+            ? ''
+            : field.dropdownDefault || '');
       }
       return nextValues;
     });
@@ -1105,20 +1486,53 @@ export default function ReportDisseminatorPage() {
       return;
     }
 
+    // Non-admin users need to pay £5 via Stripe Checkout
+    if (userRole && userRole !== 'admin' && !paymentSessionId) {
+      setCreating(true);
+      try {
+        const checkoutRes = await fetch('/api/stripe/template-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ templateName: name.trim() }),
+        });
+        const checkoutData = await checkoutRes.json();
+        if (!checkoutRes.ok || !checkoutData.url) {
+          throw new Error(checkoutData?.error || 'Failed to start payment');
+        }
+        window.location.href = checkoutData.url;
+        return;
+      } catch (error: any) {
+        console.error(error);
+        toast.error(error.message || 'Payment initiation failed');
+        setCreating(false);
+        return;
+      }
+    }
+
     const formData = new FormData();
     formData.append('name', name.trim());
     formData.append('description', description.trim());
     formData.append('file', file);
+
+    const headers: Record<string, string> = {};
+    if (paymentSessionId) {
+      headers['x-payment-session-id'] = paymentSessionId;
+    }
 
     setCreating(true);
     try {
       const res = await fetch('/api/admin/report-disseminator', {
         method: 'POST',
         body: formData,
+        headers,
       });
 
       const payload = await res.json();
       if (!res.ok) {
+        if (payload?.code === 'PAYMENT_REQUIRED') {
+          toast.error('Payment is required to create templates. Please complete checkout.');
+          return;
+        }
         throw new Error(payload?.error || 'Failed to create template');
       }
 
@@ -1128,6 +1542,7 @@ export default function ReportDisseminatorPage() {
       setName('');
       setDescription('');
       setFile(null);
+      setPaymentSessionId(null);
       setEditorMode('template');
       await loadTemplates();
       setSelectedId(payload.id);
@@ -1222,6 +1637,7 @@ export default function ReportDisseminatorPage() {
           method: 'POST',
           body: makePdfFormData(),
         });
+        showAiCostWarning('AI Gateway field analysis', '~£0.04');
         console.log('🔵 AI Gateway response status:', gatewayRes.status);
         
         if (gatewayRes.ok) {
@@ -1460,6 +1876,7 @@ export default function ReportDisseminatorPage() {
       phoneConfig: undefined,
       numericConfig: undefined,
       linkedConfig: undefined,
+      inspectionPeriodConfig: undefined,
     };
 
     if (fieldType === 'dropdown') {
@@ -1496,6 +1913,13 @@ export default function ReportDisseminatorPage() {
         relatedSection: '',
         relatedFieldId: '',
         relationType: 'depends_on',
+      };
+    }
+
+    if (fieldType === 'inspection_date_plus_period') {
+      patch.inspectionPeriodConfig = field.inspectionPeriodConfig || {
+        period: '1y',
+        inspectionDateFieldId: '',
       };
     }
 
@@ -1584,8 +2008,9 @@ export default function ReportDisseminatorPage() {
         return;
       }
       updateField(field.id, result.patch);
+      const defaultNote = result.suggestedDefault ? ` · default: "${result.suggestedDefault}"` : ' · no default set';
       toast.success(
-        `Applied ${result.optionCount} researched option${result.optionCount === 1 ? '' : 's'}${result.sourceCount ? ` from ${result.sourceCount} source${result.sourceCount === 1 ? '' : 's'}` : ''}`,
+        `Applied ${result.optionCount} researched option${result.optionCount === 1 ? '' : 's'}${result.sourceCount ? ` from ${result.sourceCount} source${result.sourceCount === 1 ? '' : 's'}` : ''}${defaultNote}`,
       );
     } catch (error: any) {
       console.error(error);
@@ -1605,7 +2030,7 @@ export default function ReportDisseminatorPage() {
   const researchOnlineOptionsForField = async (
     field: ReportField,
     options: { notifyNoResults?: boolean } = {}
-  ): Promise<{ patch: Partial<ReportField>; optionCount: number; sourceCount: number } | null> => {
+  ): Promise<{ patch: Partial<ReportField>; optionCount: number; sourceCount: number; suggestedDefault?: string } | null> => {
     if (!selected) return null;
     if (!field.label.trim()) {
       if (options.notifyNoResults) {
@@ -1621,11 +2046,16 @@ export default function ReportDisseminatorPage() {
         label: field.label,
         fieldType: field.fieldType,
         context: `${selected.name} | ${selected.sourceFileName}`,
+        maxOptions: field.searchOptionsMax ?? 12,
       }),
     });
+    showAiCostWarning(`Option search: ${field.label}`, '~£0.03');
 
     const payload = await res.json();
     if (!res.ok) {
+      if (res.status === 402) {
+        throw new Error('AI Gateway credits are exhausted or payment is required. Check your AI_GATEWAY_API_KEY billing.');
+      }
       throw new Error(payload?.error || 'Failed to research option list');
     }
 
@@ -1644,16 +2074,26 @@ export default function ReportDisseminatorPage() {
       patch.fieldType = 'state_enum';
       patch.stateOptions = [...DEFAULT_STATE_OPTIONS];
       patch.dropdownOptions = undefined;
+      patch.dropdownDefault = undefined;
+    } else if (field.fieldType === 'sentence_builder') {
+      // Keep sentence_builder type; populate dropdownOptions as snippets
+      patch.dropdownOptions = payload.options;
+      patch.stateOptions = undefined;
+      // sentence_builder has no dropdownDefault concept
     } else {
+      // text, dropdown, or any other type → convert to dropdown with the found options
       patch.fieldType = 'dropdown';
       patch.dropdownOptions = payload.options;
       patch.stateOptions = undefined;
+      // Use AI-suggested default if available, otherwise leave blank
+      patch.dropdownDefault = payload.suggestedDefault ?? undefined;
     }
 
     return {
       patch,
       optionCount: payload.options.length,
       sourceCount: Array.isArray(payload.sources) ? payload.sources.length : 0,
+      suggestedDefault: payload.suggestedDefault as string | undefined,
     };
   };
 
@@ -1941,10 +2381,12 @@ export default function ReportDisseminatorPage() {
     for (const field of selected.fields) {
       if (field.fieldType === 'auto_reference') {
         blankValues[field.id] = generateAutoReferenceValue(selected.id, field);
+      } else if (field.fieldType === 'inspection_date_plus_period') {
+        blankValues[field.id] = ''; // always blank on creation; auto-computed when inspection date is set
       } else if (field.fieldType === 'date') {
         blankValues[field.id] = todayISO;
       } else {
-        blankValues[field.id] = '';
+        blankValues[field.id] = field.dropdownDefault || '';
       }
     }
 
@@ -2077,6 +2519,33 @@ export default function ReportDisseminatorPage() {
   const wizardStep = selected?.wizardData?.currentStep || 1;
   const currentWizardStep = WIZARD_STEP_DETAILS[wizardStep as keyof typeof WIZARD_STEP_DETAILS] || WIZARD_STEP_DETAILS[1];
   const templateReadOnly = selected?.status === 'published' || selected?.status === 'archived';
+
+  const STEP_TO_DISSEMINATOR_STEP: Record<number, DisseminatorStep> = { 1: 'extract', 2: 'fields', 3: 'fields', 4: 'preview' };
+  const guidanceStep = STEP_TO_DISSEMINATOR_STEP[wizardStep] || 'fields';
+  const guidanceItems = useMemo(() => {
+    const stepItems = getStepGuidance(guidanceStep);
+    const fieldSummaries = (selected?.fields || []).map((f) => ({
+      id: f.id,
+      label: f.label,
+      fieldType: f.fieldType,
+      required: f.required,
+      hasBoundingBox: !!f.boundingBox,
+      hasDropdownOptions: (f.dropdownOptions?.length || 0) > 0,
+      hasStateOptions: (f.stateOptions?.length || 0) > 0,
+    }));
+    const fieldItems = getFieldGuidance(fieldSummaries);
+    return [...stepItems, ...fieldItems];
+  }, [guidanceStep, selected?.fields]);
+
+  const guidancePanelFields = useMemo(() =>
+    (selected?.fields || []).map((f) => ({
+      label: f.label,
+      fieldType: f.fieldType,
+      required: f.required,
+      hasBoundingBox: !!f.boundingBox,
+    })),
+  [selected?.fields]);
+
   const unplacedFields = useMemo(
     () => selected?.fields.filter((field) => !field.boundingBox) || [],
     [selected]
@@ -2445,10 +2914,36 @@ export default function ReportDisseminatorPage() {
   };
 
   const updatePreviewValue = (fieldId: string, value: string) => {
-    setPreviewValues((current) => ({
-      ...current,
-      [fieldId]: value,
-    }));
+    setPreviewValues((current) => {
+      const next: Record<string, string> = { ...current, [fieldId]: value };
+      // Cascade-compute inspection_date_plus_period fields whose source is fieldId
+      if (selected) {
+        for (const f of selected.fields) {
+          if (
+            f.fieldType === 'inspection_date_plus_period' &&
+            f.inspectionPeriodConfig?.inspectionDateFieldId === fieldId &&
+            f.inspectionPeriodConfig.period !== 'custom'
+          ) {
+            next[f.id] = value ? computeNextInspectionDate(value, f.inspectionPeriodConfig.period) : '';
+          }
+        }
+        // Exclusion: grey out / restore fields that this field excludes
+        const changedField = selected.fields.find((f) => f.id === fieldId);
+        if (changedField?.excludes?.length) {
+          for (const rule of changedField.excludes) {
+            const triggers = value && (!rule.whenValues?.length || rule.whenValues.includes(value));
+            if (!rule.excludeValues?.length) {
+              // Full-field exclusion: lock to N/A or restore to ''
+              next[rule.fieldId] = triggers ? 'N/A' : '';
+            } else if (triggers && rule.excludeValues.includes(next[rule.fieldId] ?? '')) {
+              // Option-level: only clear the target value if it is one of the excluded options
+              next[rule.fieldId] = '';
+            }
+          }
+        }
+      }
+      return next;
+    });
   };
 
   const updateReportValue = (fieldId: string, value: string) => {
@@ -2484,17 +2979,202 @@ export default function ReportDisseminatorPage() {
         }
       }
 
+      // Exclusion: grey out / restore fields that this field excludes
+      if (changedField?.excludes?.length) {
+        for (const rule of changedField.excludes) {
+          const triggers = value && (!rule.whenValues?.length || rule.whenValues.includes(value));
+          if (!rule.excludeValues?.length) {
+            // Full-field exclusion: lock to N/A or restore to ''
+            nextValues[rule.fieldId] = triggers ? 'N/A' : '';
+          } else if (triggers && rule.excludeValues.includes(nextValues[rule.fieldId] ?? '')) {
+            // Option-level: only clear the target value if it is one of the excluded options
+            nextValues[rule.fieldId] = '';
+          }
+        }
+      }
+
+      // Cascade-compute inspection_date_plus_period fields when their source date changes
+      for (const f of (currentReport.fields ?? []) as ReportField[]) {
+        if (
+          f.fieldType === 'inspection_date_plus_period' &&
+          f.inspectionPeriodConfig?.inspectionDateFieldId === fieldId &&
+          f.inspectionPeriodConfig.period !== 'custom'
+        ) {
+          nextValues[f.id] = nextValues[fieldId]
+            ? computeNextInspectionDate(nextValues[fieldId], f.inspectionPeriodConfig.period)
+            : '';
+        }
+      }
+
       return { ...currentReport, values: nextValues };
     });
   };
 
-  const renderInlineFieldInput = (
+const getIncomingExclusionsForField = (
+    fieldId: string,
+    values: Record<string, string>,
+    allFields?: ReportField[]
+  ): IncomingExclusion[] => {
+    if (!allFields?.length) return [];
+
+    return allFields.flatMap((sourceField) =>
+      (sourceField.excludes || [])
+        .map((rule, index) => ({ rule, index }))
+        .filter(({ rule }) => rule.fieldId === fieldId)
+        .map(({ rule, index }) => {
+          const sourceValue = String(values[sourceField.id] ?? '');
+          const whenValues = rule.whenValues?.filter(Boolean);
+          const excludeValues = rule.excludeValues?.filter(Boolean);
+          const isTriggered = Boolean(sourceValue) && (!whenValues?.length || whenValues.includes(sourceValue));
+
+          return {
+            key: `${sourceField.id}:${index}`,
+            sourceField,
+            sourceValue,
+            whenValues,
+            excludeValues,
+            affectsWholeField: !excludeValues?.length,
+            isTriggered,
+          } satisfies IncomingExclusion;
+        })
+    );
+  };
+
+const renderIncomingExclusionSummary = (
     field: ReportField,
     values: Record<string, string>,
-    onValueChange: (fieldId: string, value: string) => void
+    allFields?: ReportField[]
+  ) => {
+    const incomingExclusions = getIncomingExclusionsForField(field.id, values, allFields);
+    if (!incomingExclusions.length) return null;
+
+    return (
+      <div className="mt-2 rounded-md border border-amber-200/70 bg-amber-50/40 px-2 py-1.5 text-[11px] text-amber-900">
+        <p className="font-medium">Applicable exclusions for this field</p>
+        <div className="mt-1 space-y-1">
+          {incomingExclusions.map((rule) => (
+            <div key={rule.key} className="rounded border border-amber-200/60 bg-white/60 px-2 py-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">From: {rule.sourceField.label}</span>
+                <span className={`rounded px-1 py-0.5 text-[10px] ${rule.isTriggered ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                  {rule.isTriggered ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <p className="mt-0.5 text-amber-900/90">
+                Trigger: {rule.whenValues?.length ? rule.whenValues.join(', ') : 'any non-empty value'}
+                {rule.sourceValue ? ` (current: ${rule.sourceValue})` : ' (current: empty)'}
+              </p>
+              <p className="text-amber-900/90">
+                Effect: {rule.affectsWholeField ? 'lock field to N/A' : `exclude options: ${rule.excludeValues!.join(', ')}`}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+const renderInlineFieldInput = (
+    field: ReportField,
+    values: Record<string, string>,
+    onValueChange: (fieldId: string, value: string) => void,
+    allFields?: ReportField[]
   ) => {
     const commonClassName = 'w-full rounded border border-input bg-background px-3 py-2 text-sm';
     const value = values[field.id] || '';
+
+    const incomingExclusions = getIncomingExclusionsForField(field.id, values, allFields);
+    const activeFullFieldExclusions = incomingExclusions.filter((rule) => rule.isTriggered && rule.affectsWholeField);
+
+    // Check if this field is fully excluded (excludeValues absent/empty → entire field locked to N/A)
+    if (activeFullFieldExclusions.length > 0) {
+      const sourceLabels = activeFullFieldExclusions.map((rule) => rule.sourceField.label);
+      return (
+        <div className="relative">
+          <input
+            disabled
+            className={`${commonClassName} cursor-not-allowed bg-muted text-muted-foreground`}
+            value="N/A"
+            title={`Excluded by: ${sourceLabels.join(', ')}`}
+          />
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            Excluded — active rule source{sourceLabels.length > 1 ? 's' : ''}: {sourceLabels.join(', ')}
+          </span>
+        </div>
+      );
+    }
+    // Compute options that should be hidden in this field due to option-level exclude rules on other fields
+    const excludedOptions: string[] = Array.from(
+      new Set(
+        incomingExclusions
+          .filter((rule) => rule.isTriggered && !rule.affectsWholeField)
+          .flatMap((rule) => rule.excludeValues || [])
+      )
+    );
+
+if (field.fieldType === 'auto_zs') {
+      const deviceType = values[`${field.id}_deviceType`] || '';
+      const rating = values[`${field.id}_rating`] || '';
+      const maxZs = calculateMaxZs(deviceType, rating);
+      const validCombo = isValidZsCombo(deviceType, rating);
+      
+      return (
+        <div className="grid grid-cols-2 gap-2 space-y-2 [&_.text-destructive]:text-red-500">
+          <div>
+            <Label className="text-xs">Device Type</Label>
+            <select
+              className={commonClassName}
+              title={`${field.label} device type`}
+              value={deviceType}
+              onChange={(e) => onValueChange(`${field.id}_deviceType`, e.target.value)}
+            >
+              <option value="">Select type</option>
+              {DEVICE_TYPE_OPTIONS.map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs">Rating</Label>
+            <select
+              className={commonClassName}
+              title={`${field.label} rating`}
+              value={rating}
+              onChange={(e) => onValueChange(`${field.id}_rating`, e.target.value)}
+              disabled={!deviceType}
+            >
+              <option value="">Select rating</option>
+              {deviceType && getValidRatingsForType(deviceType).map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-span-2 space-y-1">
+            <Label className="text-xs font-mono">Max Zs Permitted (BS7671)</Label>
+            <Input
+              className={`font-mono text-sm font-semibold border-2 ${
+                validCombo 
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                  : deviceType && rating 
+                    ? 'bg-red-50 border-red-200 text-red-800' 
+                    : 'bg-slate-50 border-slate-200'
+              }`}
+              value={maxZs}
+              readOnly
+              title={`BS7671 Table 41.3: ${deviceType} ${rating} → ${maxZs}`}
+            />
+            {deviceType && rating && !validCombo && (
+              <p className="text-xs text-destructive">
+                ⚠️ Invalid device/rating combination
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Compare with measured Zs below
+            </p>
+          </div>
+        </div>
+      );
+    }
 
     if (field.fieldType === 'dropdown') {
       return (
@@ -2506,12 +3186,48 @@ export default function ReportDisseminatorPage() {
           onFocus={() => setSelectedFieldId(field.id)}
         >
           <option value="">Select {field.label}</option>
-          {(field.dropdownOptions || []).map((option) => (
+          {(field.dropdownOptions || []).filter((o) => !excludedOptions.includes(o)).map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
           ))}
         </select>
+      );
+    }
+
+    if (field.fieldType === 'sentence_builder') {
+      const snippets = field.dropdownOptions || [];
+      return (
+        <div className="space-y-1">
+          {snippets.length > 0 && (
+            <select
+              className={commonClassName}
+              title={`Add a snippet to ${field.label}`}
+              value=""
+              onChange={(event) => {
+                if (event.target.value) {
+                  const current = values[field.id] || '';
+                  onValueChange(field.id, current ? `${current} ${event.target.value}` : event.target.value);
+                }
+              }}
+              onFocus={() => setSelectedFieldId(field.id)}
+            >
+              <option value="">+ Add snippet…</option>
+              {snippets.filter((s) => !excludedOptions.includes(s)).map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          )}
+          <Input
+            className="w-full"
+            title={field.label}
+            type="text"
+            placeholder={field.plainTextHint || field.label}
+            value={value}
+            onChange={(event) => onValueChange(field.id, event.target.value)}
+            onFocus={() => setSelectedFieldId(field.id)}
+          />
+        </div>
       );
     }
 
@@ -2525,7 +3241,7 @@ export default function ReportDisseminatorPage() {
           onFocus={() => setSelectedFieldId(field.id)}
         >
           <option value="">Select {field.label}</option>
-          {(field.stateOptions || [...DEFAULT_STATE_OPTIONS]).map((option) => (
+          {(field.stateOptions || [...DEFAULT_STATE_OPTIONS]).filter((o) => !excludedOptions.includes(o)).map((option) => (
             <option key={option} value={option}>
               {option}
             </option>
@@ -2541,6 +3257,21 @@ export default function ReportDisseminatorPage() {
           value={value}
           title={field.label}
           readOnly
+          onFocus={() => setSelectedFieldId(field.id)}
+        />
+      );
+    }
+
+    if (field.fieldType === 'inspection_date_plus_period') {
+      const isCustom = field.inspectionPeriodConfig?.period === 'custom';
+      return (
+        <Input
+          className={`w-full${!isCustom ? ' bg-muted text-muted-foreground' : ''}`}
+          title={isCustom ? field.label : `${field.label} (auto-computed)`}
+          type="date"
+          value={value}
+          readOnly={!isCustom}
+          onChange={isCustom ? (event) => onValueChange(field.id, event.target.value) : undefined}
           onFocus={() => setSelectedFieldId(field.id)}
         />
       );
@@ -2608,7 +3339,7 @@ export default function ReportDisseminatorPage() {
           </div>
           <Button type="button" title="Create a new template from the uploaded source PDF" onClick={createTemplate} className="md:col-span-1" disabled={creating}>
             <Upload className="w-4 h-4 mr-2" />
-            {creating ? 'Uploading…' : 'Upload & Create'}
+            {creating ? 'Processing…' : userRole && userRole !== 'admin' && !paymentSessionId ? 'Pay £5 & Create' : 'Upload & Create'}
           </Button>
           <p className="text-xs text-muted-foreground md:col-span-4">
             Upload creates the template shell. Field extraction, mapping, validation, and review happen in the builder below.
@@ -2621,7 +3352,7 @@ export default function ReportDisseminatorPage() {
         </CardContent>
       </Card>
 
-      <div className={`grid grid-cols-1 gap-6 ${isSidebarCollapsed ? 'lg:grid-cols-[56px_minmax(0,1fr)]' : 'lg:grid-cols-3'}`}>
+              <div className={`grid grid-cols-1 gap-6 ${isSidebarCollapsed ? 'lg:grid-cols-[56px_minmax(0,1fr)]' : 'lg:grid-cols-3'}`}>
         {isSidebarCollapsed ? (
         <div className="hidden lg:block">
           <div className="sticky top-6">
@@ -2689,6 +3420,34 @@ export default function ReportDisseminatorPage() {
                     <div className="mt-1 text-[10px] text-muted-foreground space-y-0.5">
                       {template.publishedAt && <p>Published {new Date(template.publishedAt).toLocaleDateString()}</p>}
                       {template.archivedAt && <p>Archived {new Date(template.archivedAt).toLocaleDateString()}</p>}
+                    </div>
+                  )}
+                  {(template.status === 'draft' || template.status === 'review') && (
+                    <div className="mt-2">
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditorMode('template');
+                          setSelectedId(template.id);
+                          setSelectedFieldId(null);
+                          navigateToTemplateEditor(template.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.stopPropagation();
+                            setEditorMode('template');
+                            setSelectedId(template.id);
+                            setSelectedFieldId(null);
+                            navigateToTemplateEditor(template.id);
+                          }
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit
+                      </span>
                     </div>
                   )}
                 </button>
@@ -2816,6 +3575,14 @@ export default function ReportDisseminatorPage() {
                     </div>
                   </div>
                 )}
+
+                <GuidancePanel
+                  items={guidanceItems}
+                  templateName={selected.name}
+                  wizardStep={wizardStep}
+                  fields={guidancePanelFields}
+                  isAdmin={userRole === 'admin'}
+                />
 
                 <div className="rounded-md border bg-muted/30 p-4 space-y-2">
                   <div className="flex items-center justify-between gap-3">
@@ -3010,6 +3777,7 @@ export default function ReportDisseminatorPage() {
                           <SortableFieldRow
                             key={field.id}
                             field={field}
+                            allFields={selected.fields}
                             onUpdate={(patch) => updateField(field.id, patch)}
                             onAiSuggest={() => applyAiSuggestion(field)}
                             onSearchOnlineOptions={() => searchOnlineOptions(field)}
@@ -3631,7 +4399,8 @@ export default function ReportDisseminatorPage() {
                           {unplacedFields.map((field) => (
                             <div key={field.id} className="space-y-1">
                               <Label>{field.label}</Label>
-                              {renderInlineFieldInput(field, previewValues, updatePreviewValue)}
+                              {renderInlineFieldInput(field, previewValues, updatePreviewValue, selected.fields)}
+                              {renderIncomingExclusionSummary(field, previewValues, selected.fields)}
                             </div>
                           ))}
                         </div>
@@ -3676,7 +4445,12 @@ export default function ReportDisseminatorPage() {
                   </div>
                 )}
 
-                <div className="flex flex-wrap justify-end gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {editorMode === 'template' && !templateReadOnly && autoSaveStatus !== 'idle' && (
+                    <span className={`text-xs mr-2 ${autoSaveStatus === 'saving' ? 'text-muted-foreground' : autoSaveStatus === 'saved' ? 'text-green-600' : 'text-destructive'}`}>
+                      {autoSaveStatus === 'saving' ? 'Auto-saving…' : autoSaveStatus === 'saved' ? 'Auto-saved' : 'Auto-save failed'}
+                    </span>
+                  )}
                   {selected.status === 'published' && (
                     <Button type="button" title="Clone this published template into a new editable draft" variant="default" onClick={cloneTemplate} disabled={savingTemplate}>
                       <Copy className="w-4 h-4 mr-2" />
@@ -3826,7 +4600,8 @@ export default function ReportDisseminatorPage() {
                           {filteredReportUnplacedFields.map((field) => (
                             <div key={field.id} className="space-y-1">
                               <Label>{field.label}</Label>
-                              {renderInlineFieldInput(field, selectedReport.values, updateReportValue)}
+                              {renderInlineFieldInput(field, selectedReport.values, updateReportValue, selectedReport.fields)}
+                              {renderIncomingExclusionSummary(field, selectedReport.values, selectedReport.fields)}
                             </div>
                           ))}
                         </div>
@@ -3844,7 +4619,8 @@ export default function ReportDisseminatorPage() {
                             <Label>{field.label}</Label>
                             <Badge variant="outline">{field.fieldType}</Badge>
                           </div>
-                          {renderInlineFieldInput(field, selectedReport.values, updateReportValue)}
+                          {renderInlineFieldInput(field, selectedReport.values, updateReportValue, selectedReport.fields)}
+                          {renderIncomingExclusionSummary(field, selectedReport.values, selectedReport.fields)}
                         </div>
                       ))}
                     </div>
@@ -3886,7 +4662,12 @@ export default function ReportDisseminatorPage() {
                   </div>
                 )}
 
-                <div className="flex justify-end">
+                <div className="flex items-center justify-end gap-2">
+                  {editorMode === 'report' && autoSaveStatus !== 'idle' && (
+                    <span className={`text-xs mr-2 ${autoSaveStatus === 'saving' ? 'text-muted-foreground' : autoSaveStatus === 'saved' ? 'text-green-600' : 'text-destructive'}`}>
+                      {autoSaveStatus === 'saving' ? 'Auto-saving…' : autoSaveStatus === 'saved' ? 'Auto-saved' : 'Auto-save failed'}
+                    </span>
+                  )}
                   <Button type="button" title="Save values and notes for this saved report" onClick={openSaveReportDialog} disabled={savingReport}>
                     <Save className="w-4 h-4 mr-2" />
                     {savingReport ? 'Saving…' : 'Save Report'}

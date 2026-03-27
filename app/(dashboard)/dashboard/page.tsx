@@ -2,10 +2,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Award, FileText, Users } from 'lucide-react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { DashboardClient } from './components/DashboardClient';
-import { getCertificatesForTeam, getCustomersForTeam } from '@/lib/db/queries';
+import { getCertificatesForTeam, getCustomersForTeam, getUser } from '@/lib/db/queries';
 
 export default async function DashboardPage() {
+  const user = await getUser();
+  if (!user) {
+    redirect('/sign-in');
+  }
+
   const [certificates, customers] = await Promise.all([
     getCertificatesForTeam(),
     getCustomersForTeam()

@@ -21,6 +21,13 @@ export const reportFieldSchema = z.object({
   plainTextHint: z.string().optional(),
   boundingBox: boundingBoxSchema.optional(),
   dropdownOptions: z.array(z.string().min(1)).optional(),
+  dropdownDefault: z.string().optional(),
+  inspectionPeriodConfig: z
+    .object({
+      period: z.enum(['1y', '3y', '5y', '10y', 'custom']),
+      inspectionDateFieldId: z.string(),
+    })
+    .optional(),
   addressConfig: z
     .object({
       mode: z.enum(['uk_address', 'uk_postcode_format']),
@@ -53,6 +60,19 @@ export const reportFieldSchema = z.object({
       relationType: z.enum(['mirrors', 'derived_from', 'depends_on']),
     })
     .optional(),
+  // Rules for fields that should be greyed out (set to 'N/A') when this field changes.
+  // whenValues: if set and non-empty, only triggers when the value matches one of these; otherwise any non-empty value triggers.
+  excludes: z
+    .array(
+      z.object({
+        fieldId: z.string().min(1),
+        whenValues: z.array(z.string()).optional(),
+        excludeValues: z.array(z.string()).optional(),
+      })
+    )
+    .optional(),
+  // Max options to return from Search Online Options (default 12, max 40)
+  searchOptionsMax: z.number().int().min(1).max(40).optional(),
 });
 
 export const reportDisseminatorTemplateSchema = z.object({

@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { reportDisseminatorReports } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { isAdminRole } from '@/lib/auth/roles';
 import { enrichFieldsWithAcroFormPlacements } from '@/lib/report-disseminator/pdf-acroform';
 import { sanitizeStoredPdfBase64 } from '@/lib/report-disseminator/pdf-sanitize';
 import {
@@ -10,7 +11,6 @@ import {
   reportDisseminatorReportUpdateSchema,
 } from '@/lib/report-disseminator/schema';
 
-const ALLOWED_ADMIN_ROLES = new Set(['supersystemAdmin', 'systemAdmin', 'owner']);
 const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
 const resolveTeamId = async () => {
@@ -39,10 +39,6 @@ export async function GET(
     const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!ALLOWED_ADMIN_ROLES.has(user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const teamId = await resolveTeamId();
@@ -105,10 +101,6 @@ export async function PUT(
     const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!ALLOWED_ADMIN_ROLES.has(user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const teamId = await resolveTeamId();

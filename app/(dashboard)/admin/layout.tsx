@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { isAdminRole } from '@/lib/auth/roles';
+import { usePathname } from 'next/navigation';
 import { 
   Shield, 
   Users, 
@@ -23,6 +24,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Routes accessible to non-admin (user role) users
+  const isUserAccessibleRoute = pathname.startsWith('/admin/reports/disseminator');
 
   useEffect(() => {
     checkAdminAccess();
@@ -33,7 +38,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       const response = await fetch('/api/auth/user');
       if (response.ok) {
         const userData = await response.json();
-        if (isAdminRole(userData.role)) {
+        if (isAdminRole(userData.role) || isUserAccessibleRoute) {
           setUser(userData);
         } else {
           router.push('/dashboard');

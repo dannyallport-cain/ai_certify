@@ -1,6 +1,7 @@
 import { generateCertificatePDF } from '../lib/pdf/generator';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
+import { calculateMaxZs } from '../lib/utils/calculate-zs';
 
 const sampleCertificate = {
   id: 1,
@@ -12,7 +13,7 @@ const sampleCertificate = {
   nextInspectionDate: '2027-03-15',
   inspectorName: 'Daniel Allport',
   status: 'completed',
-  formData: {
+    formData: {
     // Company / Declaration (Section 9)
     tradingTitle: 'Cain Enabled Engineering Ltd',
     companyAddress: 'Piccadilly Business Centre, 8 Piccadilly, Manchester, M12 6AE',
@@ -52,7 +53,7 @@ const sampleCertificate = {
     // Section 8 – general condition
     generalCondition: 'The installation was found to be in a generally good condition, adequate for continued use. A number of C3 observations were made that should be attended to at the earliest opportunity to ensure continued safety.',
 
-    // Section 10 – supply characteristics
+    // Section 10 – supply characteristics — DEMO AUTO-Zs
     earthingArrangements: 'TN-C-S',
     natureOfSupply: '3-phase (4 wire) ac',
     nominalVoltageU: '400',
@@ -71,6 +72,62 @@ const sampleCertificate = {
     meansOfEarthing: "Distributor's facility",
     maximumDemand: '100 Amps',
     protectiveMeasures: 'ADS (Automatic Disconnection of Supply)',
+
+    // NEW: Section 16 Circuit Schedule (3 demo rows w/ auto-calculated maxZs)
+    circuits: [
+      // MCB B32A: maxZs=1.44Ω ✓ PASS 1.15Ω
+      {
+        circuitNumber: 'DB1-01',
+        designation: 'Main Lighting Radial',
+        wiringType: 'A',
+        refMethod: 'C',
+        liveCsa: '1.5',
+        cpcCsa: '1.5',
+        maxDiscTime: '0.4',
+        bsen: '60898',
+        deviceType: 'MCB Type B',
+        rating: '32',
+        maxZs: calculateMaxZs('MCB Type B', '32'),  // "1.44Ω"
+        measuredZs: '1.15',
+        r1r2: '0.28',
+        r2: '0.15',
+      },
+      // RCBO C16A: maxZs=1.92Ω ✓ PASS 1.75Ω
+      {
+        circuitNumber: 'DB1-02', 
+        designation: 'Kitchen Ring Socket',
+        wiringType: 'A',
+        refMethod: 'C',
+        liveCsa: '2.5',
+        cpcCsa: '2.5',
+        maxDiscTime: '0.4',
+        bsen: '61009',
+        deviceType: 'RCBO Type C',
+        rating: '16',
+        rcdRating: '30mA',
+        maxZs: calculateMaxZs('RCBO Type C', '16'),  // "1.92Ω"
+        measuredZs: '1.75',
+        r1r2: '0.32',
+        r2: '0.18',
+      },
+      // BS88 20A: maxZs=2.30Ω ✗ FAIL 2.65Ω
+      {
+        circuitNumber: 'DB1-03',
+        designation: 'Utility Radial Socket', 
+        wiringType: 'A',
+        refMethod: 'C',
+        liveCsa: '2.5',
+        cpcCsa: '1.0',
+        maxDiscTime: '0.4',
+        bsen: '60269',
+        deviceType: 'BS88 Fuse',
+        rating: '20',
+        maxZs: calculateMaxZs('BS88 Fuse', '20'),  // "2.30Ω"
+        measuredZs: '2.65',  // FAIL — triggers validation warning
+        r1r2: '0.45',
+        r2: '0.22',
+      },
+    ],
   },
   customer: {
     name: 'Highfield Hall Community Centre',

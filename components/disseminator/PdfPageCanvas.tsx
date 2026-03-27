@@ -921,8 +921,7 @@ export function PdfPageCanvas({
                     draggable
                     dragBoundFunc={(pos: { x: number; y: number }) => pos}
                     onDragStart={() => { pendingKonvaRectRef.current?.startDrag(); }}
-                    onDragEnd={(_e: any) => {
-                      _e.target.stopDrag();
+                    onDragEnd={() => {
                       const r = pendingKonvaRectRef.current;
                       if (r) setPendingRect((pr) => pr ? { ...pr, left: r.x(), top: r.y() } : null);
                     }}
@@ -1013,8 +1012,7 @@ export function PdfPageCanvas({
                           setStep1SelectedIdx(i);
                           step1KonvaRefs.current.get(i)?.startDrag();
                         }}
-                        onDragEnd={(_e: any) => {
-                          _e.target.stopDrag();
+                        onDragEnd={() => {
                           const rect = step1KonvaRefs.current.get(i);
                           if (rect) {
                             onStep1Update?.(i, {

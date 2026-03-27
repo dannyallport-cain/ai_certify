@@ -4,11 +4,11 @@ const nextConfig = {
     ppr: true,
     clientSegmentCache: true,
   },
+  turbopack: {
+    root: process.cwd(),
+  },
   typescript: {
     ignoreBuildErrors: true
-  },
-  eslint: {
-    ignoreDuringBuilds: true
   },
   images: {
     remotePatterns: [

@@ -12,7 +12,7 @@ export default function NewUserPage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<UserRole>('member');
+  const [role, setRole] = useState<UserRole>('user');
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

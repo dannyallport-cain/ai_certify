@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DEFAULT_STATE_OPTIONS, isNumericLikeFieldType, type DisseminatorFieldType } from '@/lib/report-disseminator/field-analysis';
+import { DEFAULT_STATE_OPTIONS, isNumericLikeFieldType, type DisseminatorFieldType, type InspectionPeriodConfig, computeNextInspectionDate, calculateMaxZs, DEVICE_TYPE_OPTIONS, getValidRatingsForType } from '@/lib/report-disseminator/field-analysis';
 import { buildCanvasFallbackRedactions, buildFieldLabelRedactions, buildPdfValueRedactions } from '@/components/disseminator/pdfRedaction';
 
 type FieldType = DisseminatorFieldType;
@@ -15,6 +15,7 @@ type FormField = {
   dropdownOptions?: string[];
   stateOptions?: Array<'tick' | 'cross' | 'NA' | 'LIM' | 'NV'>;
   numericConfig?: { min?: number; max?: number; resolution?: number; unit?: string };
+  inspectionPeriodConfig?: InspectionPeriodConfig;
   boundingBox?: { x: number; y: number; width: number; height: number } | null;
 };
 
@@ -264,6 +265,127 @@ export function PdfFormPageCanvas({
           onChange={(event) => onValueChange(field.id, event.target.value)}
           onFocus={() => onSelectField?.(field.id)}
         />
+      );
+    }
+
+    if (field.fieldType === 'inspection_date_plus_period') {
+      const isCustom = field.inspectionPeriodConfig?.period === 'custom';
+      const computedValue =
+        !isCustom && field.inspectionPeriodConfig?.inspectionDateFieldId
+          ? computeNextInspectionDate(
+              values[field.inspectionPeriodConfig.inspectionDateFieldId] || '',
+              field.inspectionPeriodConfig.period
+            )
+          : value;
+      return (
+        <input
+          className={`${commonClassName}${!isCustom ? ' bg-slate-100 text-slate-500' : ''}`}
+          type="date"
+          title={isCustom ? field.label : `${field.label} (auto)`}
+          value={isCustom ? value : computedValue}
+          readOnly={!isCustom}
+          onChange={isCustom ? (event) => onValueChange(field.id, event.target.value) : undefined}
+          onFocus={() => onSelectField?.(field.id)}
+        />
+      );
+    }
+
+
+
+if (field.fieldType === 'auto_zs') {
+  const deviceTypeFieldId = `${field.id}_deviceType`;
+  const ratingFieldId = `${field.id}_rating`;
+  const deviceType = String(values[deviceTypeFieldId] ?? '');
+  const rating = String(values[ratingFieldId] ?? '');
+  const maxZs = calculateMaxZs(deviceType, rating);
+  const isValid = maxZs !== 'N/A';
+
+  const validRatings = getValidRatingsForType(deviceType);
+
+  return (
+    <div className="flex h-full w-full flex-col space-y-1">
+      <div className="flex flex-col space-y-1 text-[9px]">
+        <label className="font-medium text-slate-700">Device Type</label>
+        <select
+          className="h-6 w-full rounded border px-1 text-slate-900 outline-none"
+          value={deviceType}
+          onChange={(e) => {
+            onValueChange(deviceTypeFieldId, e.target.value);
+            // Clear rating when type changes
+            onValueChange(ratingFieldId, '');
+          }}
+          onFocus={() => onSelectField?.(deviceTypeFieldId)}
+        >
+          <option value="">Select Type</option>
+          {DEVICE_TYPE_OPTIONS.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="flex flex-col space-y-1 text-[9px]">
+        <label className="font-medium text-slate-700">Rating</label>
+        <select
+          className="h-6 w-full rounded border px-1 text-slate-900 outline-none"
+          value={rating}
+          onChange={(e) => onValueChange(ratingFieldId, e.target.value)}
+          onFocus={() => onSelectField?.(ratingFieldId)}
+          disabled={!deviceType}
+        >
+          <option value="">{deviceType ? 'Select Rating' : 'Select Type First'}</option>
+          {validRatings.map((r) => (
+            <option key={r} value={r}>
+              {r}A
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className={`text-center font-mono text-[11px] font-bold ${
+        isValid ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+      } rounded px-1 py-0.5`}>
+        Max Zs: {maxZs}
+        {!isValid && <span className="ml-1">⚠️</span>}
+      </div>
+    </div>
+  );
+}
+
+if (field.fieldType === 'sentence_builder') {
+      const snippets = field.dropdownOptions || [];
+      return (
+        <div className="flex h-full w-full flex-col">
+          {snippets.length > 0 && (
+            <select
+              className="shrink-0 border-b bg-white/90 px-1 text-[9px] text-slate-700 outline-none"
+              title="Pick a sentence snippet to append"
+              value=""
+              onChange={(event) => {
+                if (event.target.value) {
+                  const current = values[field.id] || '';
+                  onValueChange(field.id, current ? `${current} ${event.target.value}` : event.target.value);
+                  onSelectField?.(field.id);
+                }
+              }}
+            >
+              <option value="">+ snippet…</option>
+              {snippets.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          )}
+          <input
+            className={`${commonClassName} flex-1`}
+            type="text"
+            placeholder={field.plainTextHint || field.label}
+            required={field.required}
+            value={value}
+            onChange={(event) => onValueChange(field.id, event.target.value)}
+            onFocus={() => onSelectField?.(field.id)}
+          />
+        </div>
       );
     }
 

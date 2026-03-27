@@ -100,10 +100,10 @@ async function createSampleUsers() {
     role: UserRole;
     password: string;
   }> = [
-    { email: 'owner@test.com', name: 'John Owner', role: 'owner', password: 'admin123' },
-    { email: 'manager@test.com', name: 'Sarah Manager', role: 'support', password: 'manager123' },
-    { email: 'inspector@test.com', name: 'Mike Inspector', role: 'client', password: 'inspector123' },
-    { email: 'member@test.com', name: 'Lisa Member', role: 'member', password: 'member123' }
+    { email: 'owner@test.com', name: 'John Owner', role: 'admin', password: 'admin123' },
+    { email: 'manager@test.com', name: 'Sarah Manager', role: 'user', password: 'manager123' },
+    { email: 'inspector@test.com', name: 'Mike Inspector', role: 'user', password: 'inspector123' },
+    { email: 'member@test.com', name: 'Lisa Member', role: 'user', password: 'member123' }
   ];
 
   const createdUsers = [];
@@ -188,10 +188,10 @@ async function createSampleTeams(users: any[]) {
 async function createTeamMembers(users: any[], teams: any[]) {
   const membershipData = [
     { teamId: teams[0].id, userId: users[0].id, role: 'owner' },
-    { teamId: teams[0].id, userId: users[1].id, role: 'manager' },
-    { teamId: teams[0].id, userId: users[2].id, role: 'inspector' },
+    { teamId: teams[0].id, userId: users[1].id, role: 'member' },
+    { teamId: teams[0].id, userId: users[2].id, role: 'member' },
     { teamId: teams[0].id, userId: users[1].id, role: 'owner' },
-    { teamId: teams[2].id, userId: users[2].id, role: 'manager' },
+    { teamId: teams[2].id, userId: users[2].id, role: 'member' },
     { teamId: teams[0].id, userId: users[3].id, role: 'member' }
   ];
 
@@ -558,7 +558,7 @@ async function createSampleInvitations(teams: any[], users: any[]) {
       teamId: teams[0].id,
       email: 'pending@test.com',
       token: randomUUID(),
-      role: 'inspector',
+      role: 'member',
       invitedBy: users[0].id,
       status: 'pending'
     },
