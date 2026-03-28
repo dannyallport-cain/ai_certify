@@ -183,6 +183,32 @@ export const createCertificate = validatedActionWithUser(
       .values(newCertificateData)
       .returning();
 
+    // Insert observations/items submitted via the form into the certificateItems table
+    const rawItems = collectedFormData.items;
+    if (rawItems) {
+      try {
+        const parsedItems: Array<Record<string, any>> = typeof rawItems === 'string'
+          ? JSON.parse(rawItems)
+          : rawItems;
+        if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+          await db.insert(certificateItems).values(
+            parsedItems.map((item, idx) => ({
+              certificateId: certificate.id,
+              itemType: item.itemType || 'observation',
+              location: item.location || null,
+              description: item.description || null,
+              status: item.status || 'satisfactory',
+              defects: item.defects || null,
+              recommendations: item.recommendations || null,
+              sortOrder: idx,
+            }))
+          );
+        }
+      } catch {
+        // Non-critical – proceed without items if parsing fails
+      }
+    }
+
     await logActivity(team.id, user.id, ActivityType.CREATE_CERTIFICATE);
 
     redirect(`/certificates/${certificate.id}`);

@@ -1,7 +1,18 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { CertificateType } from '@/lib/db/schema';
+import { CertificateType, certificateTemplates } from '@/lib/db/schema';
+import { db } from '@/lib/db/drizzle';
+import { getTeamForUser } from '@/lib/db/queries';
+import { and, asc, eq } from 'drizzle-orm';
+
+type TemplateRecord = {
+  id: number;
+  name: string;
+  certificateType: string;
+  description: string | null;
+  isDefault: boolean | null;
+};
 
 const certificateTypes = [
   {
@@ -48,7 +59,59 @@ const certificateTypes = [
   }
 ];
 
-export default function NewCertificatePage() {
+const certificateTypePaths: Record<string, string> = {
+  BS5839_1: 'bs5839-1',
+  BS5839_6: 'bs5839-6',
+  BS5266: 'bs5266',
+  FIRE_EXTINGUISHER: 'fire-extinguisher',
+  DRY_RISER: 'dry-riser',
+  EICR: 'eicr',
+  'BS5839-1': 'bs5839-1',
+  'BS5839-6': 'bs5839-6',
+};
+
+const certificateTypeLabels: Record<string, string> = {
+  BS5839_1: 'BS5839-1',
+  BS5839_6: 'BS5839-6',
+  BS5266: 'BS5266',
+  FIRE_EXTINGUISHER: 'Fire Extinguisher',
+  DRY_RISER: 'Dry Riser',
+  EICR: 'EICR',
+  'BS5839-1': 'BS5839-1',
+  'BS5839-6': 'BS5839-6',
+};
+
+function getTemplatePath(certificateType: string) {
+  return certificateTypePaths[certificateType] || certificateType.toLowerCase();
+}
+
+async function getActiveTemplatesForCurrentTeam(): Promise<TemplateRecord[]> {
+  const team = await getTeamForUser();
+  if (!team) {
+    return [];
+  }
+
+  return await db
+    .select({
+      id: certificateTemplates.id,
+      name: certificateTemplates.name,
+      certificateType: certificateTemplates.certificateType,
+      description: certificateTemplates.description,
+      isDefault: certificateTemplates.isDefault,
+    })
+    .from(certificateTemplates)
+    .where(
+      and(
+        eq(certificateTemplates.teamId, team.id),
+        eq(certificateTemplates.isActive, true),
+      ),
+    )
+    .orderBy(asc(certificateTemplates.certificateType), asc(certificateTemplates.name));
+}
+
+export default async function NewCertificatePage() {
+  const templates = await getActiveTemplatesForCurrentTeam();
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
@@ -67,21 +130,9 @@ export default function NewCertificatePage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {certificateTypes.map((certType) => {
-          const getUrlPath = (type: string) => {
-            switch (type) {
-              case 'BS5839_1': return 'bs5839-1'
-              case 'BS5839_6': return 'bs5839-6'
-              case 'BS5266': return 'bs5266'
-              case 'FIRE_EXTINGUISHER': return 'fire-extinguisher'
-              case 'DRY_RISER': return 'dry-riser'
-              case 'EICR': return 'eicr'
-              default: return type.toLowerCase()
-            }
-          }
-          
           return (
           <Card key={certType.type} className={`cursor-pointer transition-all duration-200 ${certType.color}`}>
-            <Link href={`/certificates/new/${getUrlPath(certType.type)}`}>
+            <Link href={`/certificates/new/${getTemplatePath(certType.type)}`}>
               <CardHeader>
                 <div className="flex items-center space-x-2">
                   <span className="text-2xl">{certType.icon}</span>
@@ -99,6 +150,47 @@ export default function NewCertificatePage() {
           </Card>
           )
         })}
+      </div>
+
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Available Templates</CardTitle>
+            <CardDescription>
+              Templates from your template list for this team.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {templates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No active templates found. Create one in Admin → Templates, then return here.
+              </p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {templates.map((template) => (
+                  <Link
+                    key={template.id}
+                    href={`/certificates/new/${getTemplatePath(template.certificateType)}?templateId=${template.id}`}
+                    className="rounded-lg border p-4 transition-colors hover:bg-accent"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium text-sm leading-tight">{template.name}</p>
+                      {template.isDefault ? (
+                        <span className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800">Default</span>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {certificateTypeLabels[template.certificateType] || template.certificateType}
+                    </p>
+                    {template.description ? (
+                      <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{template.description}</p>
+                    ) : null}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="mt-8">

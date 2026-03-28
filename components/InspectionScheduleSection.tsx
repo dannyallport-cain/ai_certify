@@ -17,6 +17,25 @@ export interface InspGroup {
   items: { ref: string; desc: string }[];
 }
 
+type BulkOutcome = 'tick' | 'cross' | 'NA' | 'NV' | 'LIM';
+
+const BULK_OUTCOME_MAP: Record<BulkOutcome, InspCode> = {
+  tick: '✓',
+  // For EICR schedules, "cross" maps to C2 (unsatisfactory outcome).
+  cross: 'C2',
+  NA: 'N/A',
+  NV: 'NV',
+  LIM: 'LIM',
+};
+
+const BULK_OUTCOME_LABEL: Record<BulkOutcome, string> = {
+  tick: '✓',
+  cross: '✗',
+  NA: 'N/A',
+  NV: 'NV',
+  LIM: 'LIM',
+};
+
 export const SCHEDULE_GROUPS: InspGroup[] = [
   {
     section: '1.0',
@@ -228,6 +247,11 @@ interface Props {
 }
 
 export function InspectionScheduleSection({ value, onCodeChange, onCommentChange }: Props) {
+  const autoSizeCommentBox = (element: HTMLTextAreaElement) => {
+    element.style.height = 'auto';
+    element.style.height = `${Math.max(element.scrollHeight, 28)}px`;
+  };
+
   const cycleCode = (ref: string, desc: string) => {
     const prev = value.codes[ref] ?? '';
     const idx = INSP_CODE_CYCLE.indexOf(prev);
@@ -235,10 +259,27 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
     onCodeChange(ref, desc, next, prev);
   };
 
+  const applyBulkOutcome = (group: InspGroup, outcome: BulkOutcome) => {
+    const nextCode = BULK_OUTCOME_MAP[outcome];
+
+    if (group.items.length === 0) {
+      const prev = value.codes[group.section] ?? '';
+      onCodeChange(group.section, group.title, nextCode, prev);
+      return;
+    }
+
+    for (const item of group.items) {
+      const prev = value.codes[item.ref] ?? '';
+      if (prev !== nextCode) {
+        onCodeChange(item.ref, item.desc, nextCode, prev);
+      }
+    }
+  };
+
   return (
     <div className="space-y-3">
       {/* Column header */}
-      <div className="grid grid-cols-[3rem_1fr_5rem_5rem] gap-x-2 px-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+      <div className="grid grid-cols-[3rem_1fr_8rem_5rem] gap-x-2 px-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
         <span>Item</span>
         <span>Description</span>
         <span className="text-center">Comments</span>
@@ -248,17 +289,32 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
       {SCHEDULE_GROUPS.map((group) => (
         <div key={group.section} className="border border-gray-200 rounded-md overflow-hidden">
           {/* Group heading */}
-          <div className="bg-blue-50 border-b border-blue-200 px-3 py-1.5 flex items-baseline gap-2">
-            <span className="text-xs font-bold text-blue-900">{group.section}</span>
-            <span className="text-xs font-semibold text-blue-800">{group.title}</span>
-            {group.items.length === 0 && (
-              <div className="ml-auto">
+          <div className="bg-blue-50 border-b border-blue-200 px-3 py-1.5 flex items-start gap-2">
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-blue-900">{group.section}</span>
+              <span className="ml-2 text-xs font-semibold text-blue-800">{group.title}</span>
+            </div>
+
+            <div className="ml-auto flex flex-wrap justify-end gap-1">
+              {(['tick', 'cross', 'NA', 'NV', 'LIM'] as BulkOutcome[]).map((outcome) => (
+                <button
+                  key={`${group.section}-${outcome}`}
+                  type="button"
+                  onClick={() => applyBulkOutcome(group, outcome)}
+                  className="rounded border border-blue-300 bg-white px-2 py-0.5 text-[10px] font-semibold text-blue-900 hover:bg-blue-100"
+                  title={`Set all outcomes in section ${group.section} to ${BULK_OUTCOME_LABEL[outcome]}`}
+                >
+                  {BULK_OUTCOME_LABEL[outcome]}
+                </button>
+              ))}
+
+              {group.items.length === 0 && (
                 <CodeButton
                   code={value.codes[group.section] ?? ''}
                   onCycle={() => cycleCode(group.section, group.title)}
                 />
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Items */}
@@ -270,7 +326,7 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
               <div
                 key={item.ref}
                 className={`
-                  grid grid-cols-[3rem_1fr_5rem_5rem] gap-x-2 items-center
+                  grid grid-cols-[3rem_1fr_8rem_5rem] gap-x-2 items-center
                   px-2 py-1 text-xs border-b border-gray-100 last:border-b-0
                   ${isHighlighted ? 'bg-red-50' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                 `}
@@ -278,34 +334,26 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
                 {/* Ref */}
                 <span className="font-mono text-gray-500">{item.ref}</span>
 
-                {/* Description + optional comment textarea */}
-                <div className="space-y-1">
+                {/* Description */}
+                <div>
                   <span className={item.desc ? '' : 'italic text-gray-400'}>
                     {item.desc || '(blank – for special locations)'}
                   </span>
-                  {/* Show comment box if code is C1/C2/C3/LIM/NV */}
-                  {(code === 'C1' || code === 'C2' || code === 'C3' || code === 'LIM' || code === 'NV') && (
-                    <textarea
-                      rows={2}
-                      className="w-full text-xs border border-gray-300 rounded p-1 resize-y"
-                      placeholder={
-                        code === 'C1' ? 'Describe the danger present…'
-                        : code === 'C2' ? 'Describe the potentially dangerous condition…'
-                        : code === 'C3' ? 'Describe the improvement needed…'
-                        : code === 'LIM' ? 'State the limitation…'
-                        : 'State why not verified…'
-                      }
-                      value={comment}
-                      onChange={(e) => onCommentChange(item.ref, e.target.value)}
-                    />
-                  )}
                 </div>
 
-                {/* Comments cell (shows comment summary when collapsed) */}
-                <div className="text-center text-gray-500 truncate">
-                  {comment && !(code === 'C1' || code === 'C2' || code === 'C3' || code === 'LIM' || code === 'NV')
-                    ? comment
-                    : null}
+                {/* Comments column: dedicated plain-text area */}
+                <div className="flex justify-center">
+                  <textarea
+                    rows={1}
+                    className="w-full h-7 text-xs border border-gray-300 rounded p-1 resize-y"
+                    placeholder="Add plain-text comment"
+                    value={comment}
+                    onChange={(e) => {
+                      onCommentChange(item.ref, e.target.value);
+                      autoSizeCommentBox(e.currentTarget);
+                    }}
+                    onInput={(e) => autoSizeCommentBox(e.currentTarget)}
+                  />
                 </div>
 
                 {/* Outcome cycling button */}

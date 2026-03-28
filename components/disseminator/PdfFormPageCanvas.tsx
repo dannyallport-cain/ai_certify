@@ -308,6 +308,7 @@ if (field.fieldType === 'auto_zs') {
         <label className="font-medium text-slate-700">Device Type</label>
         <select
           className="h-6 w-full rounded border px-1 text-slate-900 outline-none"
+          title={`${field.label} device type`}
           value={deviceType}
           onChange={(e) => {
             onValueChange(deviceTypeFieldId, e.target.value);
@@ -329,6 +330,7 @@ if (field.fieldType === 'auto_zs') {
         <label className="font-medium text-slate-700">Rating</label>
         <select
           className="h-6 w-full rounded border px-1 text-slate-900 outline-none"
+          title={`${field.label} rating`}
           value={rating}
           onChange={(e) => onValueChange(ratingFieldId, e.target.value)}
           onFocus={() => onSelectField?.(ratingFieldId)}
@@ -355,36 +357,26 @@ if (field.fieldType === 'auto_zs') {
 
 if (field.fieldType === 'sentence_builder') {
       const snippets = field.dropdownOptions || [];
+      const datalistId = `sentence-snippets-${field.id}`;
       return (
-        <div className="flex h-full w-full flex-col">
-          {snippets.length > 0 && (
-            <select
-              className="shrink-0 border-b bg-white/90 px-1 text-[9px] text-slate-700 outline-none"
-              title="Pick a sentence snippet to append"
-              value=""
-              onChange={(event) => {
-                if (event.target.value) {
-                  const current = values[field.id] || '';
-                  onValueChange(field.id, current ? `${current} ${event.target.value}` : event.target.value);
-                  onSelectField?.(field.id);
-                }
-              }}
-            >
-              <option value="">+ snippet…</option>
-              {snippets.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          )}
+        <div className="h-full w-full">
           <input
-            className={`${commonClassName} flex-1`}
+            className={commonClassName}
             type="text"
+            list={snippets.length ? datalistId : undefined}
             placeholder={field.plainTextHint || field.label}
             required={field.required}
             value={value}
             onChange={(event) => onValueChange(field.id, event.target.value)}
             onFocus={() => onSelectField?.(field.id)}
           />
+          {snippets.length > 0 && (
+            <datalist id={datalistId}>
+              {snippets.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+          )}
         </div>
       );
     }

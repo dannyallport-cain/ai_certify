@@ -704,16 +704,17 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   // ── Colour palette (driven by template when available) ──
   const tc = certificate.templateConfig?.colors;
-  const navy   = tc?.primary    ? hexToRgb(tc.primary)   : [26,  58, 92]  as [number, number, number];
-  const light  = tc?.primary    ? lighten(hexToRgb(tc.primary), 0.88) : [235, 242, 250] as [number, number, number];
+  const brandRed = tc?.primary ? hexToRgb(tc.primary) : [200, 16, 46] as [number, number, number];
+  const light  = tc?.secondary ? lighten(hexToRgb(tc.secondary), 0.9) : [248, 248, 246] as [number, number, number];
   const gold   = tc?.accent     ? hexToRgb(tc.accent)    : [255, 193, 7]  as [number, number, number];
   const green  = [40,  167, 69] as [number, number, number];  // outcome – always green
   const red    = [220, 53,  69] as [number, number, number];  // outcome – always red
   const orange = [255, 140, 0]  as [number, number, number];  // outcome – always orange
   const purple = [100, 55, 155] as [number, number, number];  // outcome – always purple
+  const charcoal = [70, 70, 70] as [number, number, number];
   const white  = tc?.background ? hexToRgb(tc.background) : [255, 255, 255] as [number, number, number];
-  const borderGrey = tc?.secondary ? lighten(hexToRgb(tc.secondary), 0.45) : [180, 190, 200] as [number, number, number];
-  const tableHeaderBg = tc?.secondary ? lighten(hexToRgb(tc.secondary), 0.75) : [230, 235, 240] as [number, number, number];
+  const borderGrey = tc?.secondary ? lighten(hexToRgb(tc.secondary), 0.55) : [165, 165, 165] as [number, number, number];
+  const tableHeaderBg = tc?.secondary ? lighten(hexToRgb(tc.secondary), 0.84) : [237, 237, 237] as [number, number, number];
 
   const W = pageWidth - 2 * margin;
   const companyName = ss(fd.tradingTitle) || 'Cain Enabled Engineering Ltd';
@@ -825,9 +826,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     currentPageSections.forEach((sec, i) => {
       const ty = tabAreaStart + i * tabH;
       pdf.setFillColor(light[0], light[1], light[2]);
-      pdf.setDrawColor(navy[0], navy[1], navy[2]);
+      pdf.setDrawColor(brandRed[0], brandRed[1], brandRed[2]);
       pdf.rect(tabX, ty, tabW, tabH, 'FD');
-      pdf.setTextColor(navy[0], navy[1], navy[2]);
+      pdf.setTextColor(brandRed[0], brandRed[1], brandRed[2]);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(sec.length > 2 ? 7 : 9);
       text(sec, tabX + tabW / 2, ty + tabH / 2 + 2.5, { align: 'center' });
@@ -852,7 +853,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     }
     // Company name & email aligned right in footer area
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(navy[0], navy[1], navy[2]);
+    pdf.setTextColor(brandRed[0], brandRed[1], brandRed[2]);
     text(companyName, pageWidth - margin, footerY, { align: 'right' });
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(6);
@@ -880,10 +881,10 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     }
   };
 
-  // Section header bar (navy with white text)
+  // Section header bar (NICEIC-style red with white text)
   const sectionHeader = (num: string, title: string) => {
     checkPage(9);
-    filledRect(margin, y, W, 8, navy);
+    filledRect(margin, y, W, 8, brandRed);
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'bold');
@@ -896,7 +897,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // Section sub-header (lighter)
   const subHeader = (title: string) => {
     checkPage(7);
-    filledRect(margin, y, W, 7, [200, 215, 230]);
+    filledRect(margin, y, W, 7, tableHeaderBg);
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0, 0, 0);
@@ -978,7 +979,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   currentPageSections = ['1', '2', '3', '4', '5', '6'];
 
   // Report title block
-  filledRect(margin, y, W, 16, navy);
+  filledRect(margin, y, W, 16, brandRed);
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
@@ -1107,14 +1108,14 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   observations.forEach((obs, idx) => {
     const code = ss(obs.defects) || 'C3';
     const codeClr: Record<string, [number,number,number]> = {
-      C1: red, C2: orange, C3: navy, FI: purple
+      C1: red, C2: orange, C3: charcoal, FI: purple
     };
-    const clr = codeClr[code] || navy;
+    const clr = codeClr[code] || charcoal;
     const descLines = pdf.splitTextToSize(ss(obs.description), obsColWidths.desc - 4);
     const h = Math.max(7, descLines.length * 3.2 + 3);
     checkPage(h);
 
-    if (idx % 2 === 1) filledRect(margin, y, W, h, [245, 248, 252]);
+    if (idx % 2 === 1) filledRect(margin, y, W, h, light);
     borderedRect(margin, y, W, h);
     vLine(margin + obsColWidths.num, y, h);
     vLine(margin + W - obsColWidths.code, y, h);
@@ -1157,7 +1158,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   const codeItems = [
     { code: 'C1', label: 'Danger Present', detail: 'Risk of injury. Immediate\nremedial action required', clr: red },
     { code: 'C2', label: 'Potentially dangerous', detail: 'Urgent remedial action\nrequired', clr: orange },
-    { code: 'C3', label: 'Improvement\nrecommended', detail: '', clr: navy },
+    { code: 'C3', label: 'Improvement\nrecommended', detail: '', clr: charcoal },
     { code: 'FI', label: '', detail: 'Further investigation\nrequired without delay', clr: purple },
   ];
   const codeBoxY = y;
@@ -1190,7 +1191,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   // Page 2 footer
   // ════════════════════════════════════════════════════════════
-  // PAGE 3 – General condition, Declaration, Test Instruments, Supply (sections 8-12)
+  // PAGE 3 – General condition, declaration, instruments, supply and particulars
   // ════════════════════════════════════════════════════════════
   newPage();
   currentPageSections = ['8', '9', '10', '11', '12'];
@@ -1200,7 +1201,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   row('General condition of the installation (in terms of electrical safety):', ss(fd.generalCondition) || 'Adequate.');
 
   // Section 9 – Declaration
-  sectionHeader('9', 'Declaration');
+  sectionHeader('9', 'Declaration for the Inspection, Testing and Assessment');
   const declarationText =
     'I/We, being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our signatures below), particulars of which are described above, having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, including the observations and the attached schedules, provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations in section 4 of this report.';
   textBlock(declarationText, 6.2);
@@ -1259,14 +1260,14 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   declarationTwoColRow('Signature:', '', 'Date:', formatDate(certificate.inspectionDate || null));
 
   // Test Instruments (Section 10)
-  sectionHeader('10', 'Test Instruments');
-  italicNote('Details of Test Instruments used (state serial and/or asset numbers):');
+  sectionHeader('10', 'Details of Test Instruments Used');
+  italicNote('Details of test instruments used (state serial and/or asset numbers):');
   {
     // Two-column instrument grid matching the original report layout
     const halfW = W / 2;
     const labelW = 42;
     const valW = halfW - labelW;
-    const rh = 5;
+    const rh = 4.4;
 
     const instrumentPairs = [
       [{ lbl: 'Multi-functional:', val: ss(fd.instrumentMultiFunction) || ss(fd.multiFunction) || '' }, { lbl: 'Earth electrode resistance:', val: ss(fd.instrumentEarthElectrode) || 'N/A' }],
@@ -1280,22 +1281,22 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
         const x0 = margin + ci * halfW;
         borderedRect(x0, y, halfW, rh);
         filledRect(x0 + 0.15, y + 0.15, labelW - 0.3, rh - 0.3, light);
-        pdf.setFontSize(6.5);
+        pdf.setFontSize(6.1);
         pdf.setFont('helvetica', 'bold');
-        text(cell.lbl, x0 + 2, y + rh / 2 + 1.5);
+        text(cell.lbl, x0 + 2, y + rh / 2 + 1.2);
         pdf.setFont('helvetica', 'normal');
-        text(cell.val, x0 + labelW + 2, y + rh / 2 + 1.5);
+        text(cell.val, x0 + labelW + 2, y + rh / 2 + 1.2);
       });
       y += rh;
     });
   }
 
   // Section 11 – Supply Characteristics and Earthing Arrangements
-  sectionHeader('11', 'Supply Characteristics and Earthing Arrangements');
+  sectionHeader('11', 'Supply Characteristics and Earthing Arrangements at the Origin');
 
   // ── Three-panel side-by-side layout matching original report ──
   {
-    const panelH = 52; // total height of the 3-panel block
+    const panelH = 46;
     checkPage(panelH);
 
     const col1W = W * 0.34; // Earthing arrangements + Live conductors
@@ -1312,58 +1313,58 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     borderedRect(col3x, panelY, col3W, panelH);
 
     // ── PANEL 1: Earthing Arrangements + Live Conductors ──
-    filledRect(col1x + 0.15, panelY + 0.15, col1W - 0.3, 5.7, light);
-    pdf.setFontSize(6);
+    filledRect(col1x + 0.15, panelY + 0.15, col1W - 0.3, 5.2, light);
+    pdf.setFontSize(5.6);
     pdf.setFont('helvetica', 'bold');
-    text('Earthing Arrangements', col1x + 2, panelY + 4);
-    hLine(col1x, panelY + 6, col1W);
+    text('Earthing Arrangement', col1x + 2, panelY + 3.7);
+    hLine(col1x, panelY + 5.5, col1W);
 
     const earthing = ss(fd.earthingArrangements) || 'TN-C-S';
     const earthTypes = ['TN-S', 'TN-C-S', 'TT'];
-    let ey = panelY + 8;
-    pdf.setFontSize(5.5);
+    let ey = panelY + 7;
+    pdf.setFontSize(5.2);
     pdf.setFont('helvetica', 'normal');
     earthTypes.forEach((et) => {
       const checked = earthing.toUpperCase().replace(/-/g, '').includes(et.replace(/-/g, '').toUpperCase()) || earthing === et;
-      text(checked ? '[X]' : '[  ]', col1x + 4, ey + 2.5);
-      text(et, col1x + 12, ey + 2.5);
-      ey += 3.5;
+      text(checked ? '[X]' : '[  ]', col1x + 4, ey + 2.2);
+      text(et, col1x + 12, ey + 2.2);
+      ey += 3.1;
     });
-    text('Other:', col1x + 4, ey + 2.5);
-    text(earthTypes.some(et => earthing.includes(et)) ? '' : earthing, col1x + 16, ey + 2.5);
-    ey += 4;
+    text('Other:', col1x + 4, ey + 2.2);
+    text(earthTypes.some(et => earthing.includes(et)) ? '' : earthing, col1x + 16, ey + 2.2);
+    ey += 3.4;
 
     hLine(col1x, ey, col1W);
-    ey += 1;
-    filledRect(col1x + 0.15, ey, col1W - 0.3, 5, light);
+    ey += 0.5;
+    filledRect(col1x + 0.15, ey, col1W - 0.3, 4.5, light);
     pdf.setFont('helvetica', 'bold');
-    text('Number and Type of Live Conductors', col1x + 2, ey + 3.5);
-    ey += 6;
+    text('Number and Type of Live Conductors', col1x + 2, ey + 3.2);
+    ey += 5.2;
 
     const supply = ss(fd.natureOfSupply) || '1-phase (2 wire)';
     const supplyOpts = ['1-phase (2 wire)', '3-phase (3 wire)', '1-phase (3 wire)', '3-phase (4 wire)'];
     pdf.setFont('helvetica', 'normal');
     supplyOpts.forEach((st) => {
       const checked = supply.includes(st);
-      text(checked ? '[X]' : '[  ]', col1x + 4, ey + 2.5);
-      text(st + ':', col1x + 12, ey + 2.5);
-      ey += 3.5;
+      text(checked ? '[X]' : '[  ]', col1x + 4, ey + 2.2);
+      text(st + ':', col1x + 12, ey + 2.2);
+      ey += 3.1;
     });
 
     // Confirmation of supply polarity at bottom of panel 1
-    hLine(col1x, panelY + panelH - 6, col1W);
-    pdf.setFontSize(5.5);
+    hLine(col1x, panelY + panelH - 5, col1W);
+    pdf.setFontSize(5.1);
     pdf.setFont('helvetica', 'bold');
-    text('Confirmation of supply polarity:', col1x + 2, panelY + panelH - 2);
+    text('Confirmation of supply polarity:', col1x + 2, panelY + panelH - 1.7);
     pdf.setFont('helvetica', 'normal');
-    text(ss(fd.supplyPolarityConfirmed) || 'Yes', col1x + col1W - 15, panelY + panelH - 2);
+    text(ss(fd.supplyPolarityConfirmed) || 'Yes', col1x + col1W - 15, panelY + panelH - 1.7);
 
     // ── PANEL 2: Nature of Supply Parameters ──
-    filledRect(col2x + 0.15, panelY + 0.15, col2W - 0.3, 5.7, light);
+    filledRect(col2x + 0.15, panelY + 0.15, col2W - 0.3, 5.2, light);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(6);
-    text('Nature of Supply Parameters', col2x + 2, panelY + 4);
-    hLine(col2x, panelY + 6, col2W);
+    pdf.setFontSize(5.6);
+    text('Supply Parameters', col2x + 2, panelY + 3.7);
+    hLine(col2x, panelY + 5.5, col2W);
 
     const supplyParams = [
       { lbl: 'Nominal voltage(s): U:', val: `${ss(fd.nominalVoltageU) || '240'} V` },
@@ -1373,24 +1374,24 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       { lbl: 'External earth fault loop impedance, Ze:', val: ss(fd.externalEarthFaultLoopImpedance) ? `${ss(fd.externalEarthFaultLoopImpedance)} ohms` : 'N/A' },
     ];
 
-    let py = panelY + 8;
-    pdf.setFontSize(5.5);
+    let py = panelY + 7;
+    pdf.setFontSize(5.1);
     supplyParams.forEach((sp) => {
       const lblW = col2W * 0.64;
-      hLine(col2x, py + 4.5, col2W);
+      hLine(col2x, py + 4.1, col2W);
       pdf.setFont('helvetica', 'bold');
-      text(sp.lbl, col2x + 2, py + 3.5);
+      text(sp.lbl, col2x + 2, py + 3.1);
       pdf.setFont('helvetica', 'normal');
-      text(sp.val, col2x + lblW + 2, py + 3.5);
-      py += 5;
+      text(sp.val, col2x + lblW + 2, py + 3.1);
+      py += 4.4;
     });
 
     // ── PANEL 3: Supply Protective Device ──
-    filledRect(col3x + 0.15, panelY + 0.15, col3W - 0.3, 5.7, light);
+    filledRect(col3x + 0.15, panelY + 0.15, col3W - 0.3, 5.2, light);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(6);
-    text('Supply Protective Device', col3x + 2, panelY + 4);
-    hLine(col3x, panelY + 6, col3W);
+    pdf.setFontSize(5.6);
+    text("Distributor's Protective Device", col3x + 2, panelY + 3.7);
+    hLine(col3x, panelY + 5.5, col3W);
 
     const deviceParams = [
       { lbl: 'BS(EN):', val: ss(fd.supplyProtectiveDeviceStandard) || '1361 Fuse HBC' },
@@ -1399,16 +1400,16 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       { lbl: 'Short-circuit capacity:', val: ss(fd.shortCircuitCapacity) ? `${ss(fd.shortCircuitCapacity)} kA` : '' },
     ];
 
-    let dy = panelY + 8;
-    pdf.setFontSize(5.5);
+    let dy = panelY + 7;
+    pdf.setFontSize(5.1);
     deviceParams.forEach((dp) => {
       const lblW = col3W * 0.5;
-      hLine(col3x, dy + 4.5, col3W);
+      hLine(col3x, dy + 4.1, col3W);
       pdf.setFont('helvetica', 'bold');
-      text(dp.lbl, col3x + 2, dy + 3.5);
+      text(dp.lbl, col3x + 2, dy + 3.1);
       pdf.setFont('helvetica', 'normal');
-      text(dp.val, col3x + lblW + 2, dy + 3.5);
-      dy += 5;
+      text(dp.val, col3x + lblW + 2, dy + 3.1);
+      dy += 4.4;
     });
 
     y = panelY + panelH;
@@ -1418,79 +1419,79 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // Particulars of Installation (section J)
   // ════════════════════════════════════════════════════════════
 
-  // Section J – Particulars of Installation Referred to in the Report
-  sectionHeader('12', 'Particulars of Installation Referred to in the Report');
+  // Section 12 – Particulars of Installation Referred to in this Report
+  sectionHeader('12', 'Particulars of Installation Referred to in this Report');
 
   // ── Row 1: Means of Earthing (full width) + electrode details ──
   {
     const meansDistributor = (ss(fd.meansOfEarthing) || '').toLowerCase().includes('distributor');
     const meansElectrode = (ss(fd.meansOfEarthing) || '').toLowerCase().includes('electrode');
-    checkPage(8);
-    borderedRect(margin, y, W, 7);
-    filledRect(margin + 0.15, y + 0.15, W * 0.25, 6.7, light);
-    pdf.setFontSize(6);
+    checkPage(7);
+    borderedRect(margin, y, W, 6);
+    filledRect(margin + 0.15, y + 0.15, W * 0.25, 5.7, light);
+    pdf.setFontSize(5.6);
     pdf.setFont('helvetica', 'bold');
-    text('Means of Earthing', margin + 2, y + 4.5);
+    text('Means of Earthing', margin + 2, y + 3.9);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(5.5);
-    text(meansDistributor ? '[X]' : '[  ]', margin + W * 0.26, y + 4.5);
-    text("Distributor's facility", margin + W * 0.30, y + 4.5);
-    text(meansElectrode ? '[X]' : '[  ]', margin + W * 0.55, y + 4.5);
-    text('Installation earth electrode', margin + W * 0.59, y + 4.5);
-    y += 7;
+    pdf.setFontSize(5.1);
+    text(meansDistributor ? '[X]' : '[  ]', margin + W * 0.26, y + 3.9);
+    text("Distributor's facility", margin + W * 0.30, y + 3.9);
+    text(meansElectrode ? '[X]' : '[  ]', margin + W * 0.55, y + 3.9);
+    text('Installation earth electrode', margin + W * 0.59, y + 3.9);
+    y += 6;
   }
 
   // ── Row 2: Two-panel — Earth Electrode Details | Maximum Demand / Protective Measures ──
   {
     const halfW = W / 2;
-    const panelH = 22;
+    const panelH = 19;
     checkPage(panelH);
     const py = y;
 
     // Left panel: Earth Electrode Details
     borderedRect(margin, py, halfW, panelH);
-    filledRect(margin + 0.15, py + 0.15, halfW - 0.3, 5.7, light);
-    pdf.setFontSize(5.5);
+    filledRect(margin + 0.15, py + 0.15, halfW - 0.3, 5, light);
+    pdf.setFontSize(5.2);
     pdf.setFont('helvetica', 'bold');
-    text('Details of Earth Electrode (where applicable)', margin + 2, py + 4);
-    hLine(margin, py + 6, halfW);
+    text('Earth Electrode Details (where applicable)', margin + 2, py + 3.6);
+    hLine(margin, py + 5.2, halfW);
 
     const electrodeRows = [
       { lbl: 'Type:', val: ss(fd.earthElectrodeType) || 'N/A' },
       { lbl: 'Resistance to Earth:', val: ss(fd.earthElectrodeResistance) ? `${ss(fd.earthElectrodeResistance)} ohms` : 'N/A' },
       { lbl: 'Location:', val: ss(fd.earthElectrodeLocation) || 'N/A' },
     ];
-    let ey = py + 7;
+    let ey = py + 6;
     electrodeRows.forEach((r) => {
       pdf.setFont('helvetica', 'bold');
-      text(r.lbl, margin + 2, ey + 3);
+      text(r.lbl, margin + 2, ey + 2.7);
       pdf.setFont('helvetica', 'normal');
-      text(r.val, margin + halfW * 0.45, ey + 3);
-      hLine(margin, ey + 4.5, halfW);
-      ey += 5;
+      text(r.val, margin + halfW * 0.45, ey + 2.7);
+      hLine(margin, ey + 4, halfW);
+      ey += 4.2;
     });
 
     // Right panel: Max Demand + Protective Measures
     const rx = margin + halfW;
     borderedRect(rx, py, halfW, panelH);
-    filledRect(rx + 0.15, py + 0.15, halfW - 0.3, 5.7, light);
+    filledRect(rx + 0.15, py + 0.15, halfW - 0.3, 5, light);
     pdf.setFont('helvetica', 'bold');
-    text('Demand & Protective Measures', rx + 2, py + 4);
-    hLine(rx, py + 6, halfW);
+    text('Maximum Demand / Protective Measures', rx + 2, py + 3.6);
+    hLine(rx, py + 5.2, halfW);
 
     const demandRows = [
       { lbl: 'Maximum Demand (Load):', val: ss(fd.maximumDemand) || '100 Amps' },
       { lbl: 'Protective measure(s):', val: ss(fd.protectiveMeasures) || 'ADS' },
       { lbl: 'Method of measurement:', val: ss(fd.earthElectrodeMeasurementMethod) || 'N/A' },
     ];
-    let dy = py + 7;
+    let dy = py + 6;
     demandRows.forEach((r) => {
       pdf.setFont('helvetica', 'bold');
-      text(r.lbl, rx + 2, dy + 3);
+      text(r.lbl, rx + 2, dy + 2.7);
       pdf.setFont('helvetica', 'normal');
-      text(r.val, rx + halfW * 0.55, dy + 3);
-      hLine(rx, dy + 4.5, halfW);
-      dy += 5;
+      text(r.val, rx + halfW * 0.55, dy + 2.7);
+      hLine(rx, dy + 4, halfW);
+      dy += 4.2;
     });
 
     y = py + panelH;
@@ -1499,17 +1500,17 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // ── Row 3: Two-panel — Main Switch Details | RCD / Supply Conductors ──
   {
     const halfW = W / 2;
-    const panelH = 40;
+    const panelH = 34;
     checkPage(panelH);
     const py = y;
 
     // Left panel: Main Switch
     borderedRect(margin, py, halfW, panelH);
-    filledRect(margin + 0.15, py + 0.15, halfW - 0.3, 5.7, light);
-    pdf.setFontSize(5.5);
+    filledRect(margin + 0.15, py + 0.15, halfW - 0.3, 5, light);
+    pdf.setFontSize(5.2);
     pdf.setFont('helvetica', 'bold');
-    text('Main Switch / Switch-Fuse / Circuit-Breaker / RCD', margin + 2, py + 4);
-    hLine(margin, py + 6, halfW);
+    text('Main Switch / Switch-Fuse / Circuit-Breaker / RCD', margin + 2, py + 3.6);
+    hLine(margin, py + 5.2, halfW);
 
     const switchRows = [
       { lbl: 'Type BS(EN):', val: ss(fd.mainSwitchType) || ss(fd.mainSwitchBSEN) || '60947-3 Isolator' },
@@ -1520,46 +1521,46 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       { lbl: 'Supply conductors:', val: ss(fd.supplyConductorMaterial) || 'Copper' },
       { lbl: 'Supply conductors csa:', val: ss(fd.supplyConductorCSA) ? `${ss(fd.supplyConductorCSA)} mm\u00B2` : '25 mm\u00B2' },
     ];
-    let sy = py + 7;
+    let sy = py + 6;
     switchRows.forEach((r) => {
       pdf.setFont('helvetica', 'bold');
-      text(r.lbl, margin + 2, sy + 3);
+      text(r.lbl, margin + 2, sy + 2.7);
       pdf.setFont('helvetica', 'normal');
-      text(r.val, margin + halfW * 0.45, sy + 3);
-      hLine(margin, sy + 4.5, halfW);
-      sy += 4.5;
+      text(r.val, margin + halfW * 0.45, sy + 2.7);
+      hLine(margin, sy + 4, halfW);
+      sy += 4;
     });
 
     // Right panel: RCD details + If RCD main switch
     const rx = margin + halfW;
     borderedRect(rx, py, halfW, panelH);
-    filledRect(rx + 0.15, py + 0.15, halfW - 0.3, 5.7, light);
+    filledRect(rx + 0.15, py + 0.15, halfW - 0.3, 5, light);
     pdf.setFont('helvetica', 'bold');
-    text('If RCD Main Switch', rx + 2, py + 4);
-    hLine(rx, py + 6, halfW);
+    text('RCD Main Switch Details', rx + 2, py + 3.6);
+    hLine(rx, py + 5.2, halfW);
 
     const rcdRows = [
       { lbl: 'Rated residual current (I\u0394n):', val: ss(fd.rcdRatedResidualCurrent) ? `${ss(fd.rcdRatedResidualCurrent)} mA` : 'N/A' },
       { lbl: 'Rated time delay:', val: ss(fd.rcdRatedTimeDelay) ? `${ss(fd.rcdRatedTimeDelay)} ms` : 'N/A' },
       { lbl: 'Measured operating time:', val: ss(fd.rcdMeasuredTime) ? `${ss(fd.rcdMeasuredTime)} ms` : 'N/A' },
     ];
-    let ry = py + 7;
+    let ry = py + 6;
     rcdRows.forEach((r) => {
       pdf.setFont('helvetica', 'bold');
-      text(r.lbl, rx + 2, ry + 3);
+      text(r.lbl, rx + 2, ry + 2.7);
       pdf.setFont('helvetica', 'normal');
-      text(r.val, rx + halfW * 0.6, ry + 3);
-      hLine(rx, ry + 4.5, halfW);
-      ry += 4.5;
+      text(r.val, rx + halfW * 0.6, ry + 2.7);
+      hLine(rx, ry + 4, halfW);
+      ry += 4;
     });
 
     // Sub-panel: Earthing conductor
-    ry += 1;
+    ry += 0.5;
     hLine(rx, ry, halfW);
-    filledRect(rx + 0.15, ry + 0.15, halfW - 0.3, 5, light);
+    filledRect(rx + 0.15, ry + 0.15, halfW - 0.3, 4.4, light);
     pdf.setFont('helvetica', 'bold');
-    text('Earthing Conductor', rx + 2, ry + 3.5);
-    ry += 5;
+    text('Earthing Conductor', rx + 2, ry + 3.1);
+    ry += 4.6;
 
     const ecRows = [
       { lbl: 'Material:', val: ss(fd.earthingConductorMaterial) || 'Copper' },
@@ -1568,11 +1569,11 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     ];
     ecRows.forEach((r) => {
       pdf.setFont('helvetica', 'bold');
-      text(r.lbl, rx + 2, ry + 3);
+      text(r.lbl, rx + 2, ry + 2.7);
       pdf.setFont('helvetica', 'normal');
-      text(r.val, rx + halfW * 0.35, ry + 3);
-      hLine(rx, ry + 4.5, halfW);
-      ry += 4.5;
+      text(r.val, rx + halfW * 0.35, ry + 2.7);
+      hLine(rx, ry + 4, halfW);
+      ry += 4;
     });
 
     y = py + panelH;
@@ -1581,40 +1582,40 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // ── Row 4: Two-panel — Main Bonding Conductor | Bonding of Extraneous Parts ──
   {
     const halfW = W / 2;
-    const panelH = 30;
+    const panelH = 25;
     checkPage(panelH);
     const py = y;
 
     // Left panel: Main Bonding Conductor
     borderedRect(margin, py, halfW, panelH);
-    filledRect(margin + 0.15, py + 0.15, halfW - 0.3, 5.7, light);
-    pdf.setFontSize(5.5);
+    filledRect(margin + 0.15, py + 0.15, halfW - 0.3, 5, light);
+    pdf.setFontSize(5.2);
     pdf.setFont('helvetica', 'bold');
-    text('Main Protective Bonding Conductor', margin + 2, py + 4);
-    hLine(margin, py + 6, halfW);
+    text('Main Protective Bonding Conductor', margin + 2, py + 3.6);
+    hLine(margin, py + 5.2, halfW);
 
     const bondRows = [
       { lbl: 'Material:', val: ss(fd.mainBondingMaterial) || 'Copper' },
       { lbl: 'CSA:', val: ss(fd.mainBondingCSA) ? `${ss(fd.mainBondingCSA)} mm\u00B2` : '10 mm\u00B2' },
       { lbl: 'Verified:', val: ss(fd.mainBondingVerified) || 'Yes' },
     ];
-    let by = py + 7;
+    let by = py + 6;
     bondRows.forEach((r) => {
       pdf.setFont('helvetica', 'bold');
-      text(r.lbl, margin + 2, by + 3);
+      text(r.lbl, margin + 2, by + 2.7);
       pdf.setFont('helvetica', 'normal');
-      text(r.val, margin + halfW * 0.35, by + 3);
-      hLine(margin, by + 4.5, halfW);
-      by += 5;
+      text(r.val, margin + halfW * 0.35, by + 2.7);
+      hLine(margin, by + 4, halfW);
+      by += 4.2;
     });
 
     // Right panel: Bonding of extraneous-conductive parts
     const rx = margin + halfW;
     borderedRect(rx, py, halfW, panelH);
-    filledRect(rx + 0.15, py + 0.15, halfW - 0.3, 5.7, light);
+    filledRect(rx + 0.15, py + 0.15, halfW - 0.3, 5, light);
     pdf.setFont('helvetica', 'bold');
-    text('Bonding of Extraneous-Conductive Parts', rx + 2, py + 4);
-    hLine(rx, py + 6, halfW);
+    text('Bonding to Extraneous-Conductive-Parts', rx + 2, py + 3.6);
+    hLine(rx, py + 5.2, halfW);
 
     const bondParts = [
       { lbl: 'Water installation pipes:', val: ss(fd.bondingWater) || 'Yes' },
@@ -1623,17 +1624,17 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       { lbl: 'Lightning protection:', val: ss(fd.bondingLightning) || 'N/A' },
       { lbl: 'Structural steel:', val: ss(fd.bondingSteel) || 'N/A' },
     ];
-    let bpy = py + 7;
+    let bpy = py + 6;
     bondParts.forEach((r) => {
       pdf.setFont('helvetica', 'bold');
-      text(r.lbl, rx + 2, bpy + 3);
+      text(r.lbl, rx + 2, bpy + 2.7);
       pdf.setFont('helvetica', 'normal');
-      text(r.val, rx + halfW * 0.55, bpy + 3);
-      hLine(rx, bpy + 4.5, halfW);
-      bpy += 4.5;
+      text(r.val, rx + halfW * 0.55, bpy + 2.7);
+      hLine(rx, bpy + 4, halfW);
+      bpy += 4;
     });
 
-    y = py + panelH + 1;
+    y = py + panelH;
   }
 
   addPageFooter();
@@ -1770,8 +1771,12 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     },
   ];
 
-  // Get inspection data from formData
-  const inspData = (fd.inspectionSchedule || {}) as Record<string, { comment?: string; outcome?: string }>;
+  // Get inspection data from formData (stored as JSON string via FormData.set)
+  let _inspRaw = fd.inspectionSchedule || {};
+  if (typeof _inspRaw === 'string') {
+    try { _inspRaw = JSON.parse(_inspRaw); } catch { _inspRaw = {}; }
+  }
+  const inspData = _inspRaw as Record<string, { comment?: string; outcome?: string }>;
 
   // Render inspection schedule across pages
   const renderInspectionSchedule = () => {
@@ -1785,91 +1790,111 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     sectionHeader(String(inspSectionNum), scheduleTitle);
 
     // Column widths for inspection table
-    const refW = 12;
-    const descW = W - refW - 25 - 18; // remaining for description
-    const commentW = 25;
-    const outcomeW = 18;
+    const refW = 11;
+    const commentW = 22;
+    const outcomeW = 15;
+    const descW = W - refW - commentW - outcomeW;
 
     // Table header
     const drawTableHeader = () => {
-      checkPage(8);
-      filledRect(margin, y, W, 7, tableHeaderBg);
-      borderedRect(margin, y, W, 7);
+      checkPage(7);
+      filledRect(margin, y, W, 6, tableHeaderBg);
+      borderedRect(margin, y, W, 6);
       pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(6.5);
+      pdf.setFontSize(6);
       pdf.setFont('helvetica', 'bold');
-      text('Item', margin + 2, y + 5);
-      text('Description', margin + refW + 2, y + 5);
-      text('Comments', margin + refW + descW + 2, y + 5);
-      text('Outcome', margin + W - outcomeW + 2, y + 5);
+      text('Item', margin + 2, y + 4.2);
+      text('Description', margin + refW + 2, y + 4.2);
+      text('Comments', margin + refW + descW + 2, y + 4.2);
+      text('Outcome', margin + W - outcomeW + 1.5, y + 4.2);
       pdf.setTextColor(0, 0, 0);
-      y += 7;
+      y += 6;
+    };
+
+    const startInspectionSchedulePage = () => {
+      inspSectionNum++;
+      newPage();
+      currentPageSections = [String(inspSectionNum)];
+      sectionHeader(String(inspSectionNum), scheduleTitle);
+      drawTableHeader();
     };
 
     drawTableHeader();
 
     inspectionSchedule.forEach((section) => {
+      const forceSectionBreak =
+        (section.section === '5.0' && inspSectionNum === 13) ||
+        (section.section === '6.0' && inspSectionNum === 14);
+
+      if (forceSectionBreak) {
+        startInspectionSchedulePage();
+      }
+
       // Section row
-      checkPage(7);
-      filledRect(margin, y, W, 6, [220, 230, 240]);
-      borderedRect(margin, y, W, 6);
-      pdf.setFontSize(6);
+      pdf.setFontSize(5.4);
       pdf.setFont('helvetica', 'bold');
+      const titleLines = pdf.splitTextToSize(section.title, descW - 2);
+      const sectionH = Math.max(5.2, titleLines.length * 2.2 + 1.8);
+      if (y + sectionH > maxContentY) {
+        startInspectionSchedulePage();
+      }
+      filledRect(margin, y, W, sectionH, light);
+      borderedRect(margin, y, W, sectionH);
       const sectionLabel = section.items.length === 0
         ? `${section.section}  ${section.title}`
         : `${section.section}`;
       text(sectionLabel, margin + 2, y + 4);
       if (section.items.length > 0) {
-        const titleLines = pdf.splitTextToSize(section.title, descW - 2);
-    titleLines.forEach((tLine: string, i: number) => {
-          text(tLine, margin + refW + 2, y + 4 + i * 2.5);
+        titleLines.forEach((tLine: string, i: number) => {
+          text(tLine, margin + refW + 2, y + 3.6 + i * 2.2);
         });
       }
       // section outcome if no items
       if (section.items.length === 0) {
         const secData = inspData[section.section];
         pdf.setFont('helvetica', 'normal');
-        text(secData?.outcome || 'N/A', margin + W - outcomeW + 2, y + 4);
+        text(secData?.outcome || 'N/A', margin + W - outcomeW / 2, y + sectionH / 2 + 1, { align: 'center' });
       }
-      y += 6;
+      y += sectionH;
 
       section.items.forEach((item) => {
         const itemData = inspData[item.ref] || {};
-        const comment = itemData.comment || item.comment || 'N/A';
+        const comment = ss(itemData.comment || item.comment || '');
         const outcome = itemData.outcome || item.outcome || (item.desc ? '\u2713' : 'N/A');
 
-        pdf.setFontSize(6);
+        pdf.setFontSize(5.2);
         pdf.setFont('helvetica', 'normal');
-        const descLines = pdf.splitTextToSize(item.desc || 'N/A', descW - 4);
-        const rowH = Math.max(5.5, descLines.length * 2.5 + 2);
+        const descLines = pdf.splitTextToSize(item.desc || 'N/A', descW - 3);
+        const commentLines = comment ? pdf.splitTextToSize(comment, commentW - 3) : [''];
+        const rowH = Math.max(4.8, Math.max(descLines.length, commentLines.length) * 2.15 + 1.6);
 
-        // Check if we need a new page (reserve 12mm for outcomes legend at bottom)
-        if (y + rowH + 12 > maxContentY) {
-          // Add outcomes legend before page break
-          addOutcomesLegend();
-          inspSectionNum++;
-          newPage();
-          currentPageSections = [String(inspSectionNum)];
-          sectionHeader(String(inspSectionNum), scheduleTitle);
-          drawTableHeader();
+        if (y + rowH > maxContentY) {
+          startInspectionSchedulePage();
         }
 
+        if ((Number(item.ref.replace(/[^0-9]/g, '')) || 0) % 2 === 0) {
+          filledRect(margin, y, W, rowH, white);
+        } else {
+          filledRect(margin, y, W, rowH, [250, 250, 250]);
+        }
         borderedRect(margin, y, W, rowH);
         vLine(margin + refW, y, rowH);
         vLine(margin + refW + descW, y, rowH);
         vLine(margin + W - outcomeW, y, rowH);
 
-        pdf.setFontSize(6);
-        text(item.ref, margin + 2, y + rowH / 2 + 1);
+        pdf.setFontSize(5.2);
+        text(item.ref, margin + 2, y + rowH / 2 + 0.9);
         descLines.forEach((dLine: string, i: number) => {
-          text(dLine, margin + refW + 2, y + 3 + i * 2.5);
+          text(dLine, margin + refW + 1.5, y + 3 + i * 2.15);
         });
-        text(comment, margin + refW + descW + 2, y + rowH / 2 + 1);
+        commentLines.forEach((cLine: string, i: number) => {
+          text(cLine, margin + refW + descW + 1.5, y + 3 + i * 2.15);
+        });
 
         // Outcome - use tick mark for acceptable
         pdf.setFont('helvetica', 'bold');
         const outcomeDisplay = outcome === '\u2713' ? '\u2713' : outcome;
-        text(outcomeDisplay, margin + W - outcomeW + 5, y + rowH / 2 + 1);
+        text(outcomeDisplay, margin + W - outcomeW / 2, y + rowH / 2 + 0.9, { align: 'center' });
         pdf.setFont('helvetica', 'normal');
 
         y += rowH;
@@ -1881,31 +1906,24 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   };
 
   const addOutcomesLegend = () => {
-    y += 2;
-    filledRect(margin, y, W, 8, [240, 245, 250]);
-    borderedRect(margin, y, W, 8);
-    pdf.setFontSize(5.5);
+    y += 1.5;
+    const legendText = '✓ Acceptable   C1 Danger present   C2 Potentially dangerous   C3 Improvement recommended   FI Further investigation   NV Not verified   LIM Limitation   N/A Not applicable';
+    pdf.setFontSize(5.2);
+    const legendLines = pdf.splitTextToSize(legendText, W - 26);
+    const legendH = Math.max(6.5, legendLines.length * 2.2 + 2);
+    if (y + legendH > maxContentY) {
+      return;
+    }
+    filledRect(margin, y, W, legendH, light);
+    borderedRect(margin, y, W, legendH);
+    pdf.setFontSize(5.2);
     pdf.setFont('helvetica', 'bold');
-    text('OUTCOMES', margin + 2, y + 3);
+    text('OUTCOME CODES', margin + 2, y + 4);
     pdf.setFont('helvetica', 'normal');
-
-    const legendItems = [
-      { symbol: '\u2713', label: 'Acceptable\ncondition' },
-      { label: 'Unacceptable\ncondition\nC1 or C2' },
-      { label: 'Improvement\nrecommended\nC3' },
-      { label: 'Further\ninvestigation\nFI' },
-      { label: 'Not\nverified\nN/V' },
-      { label: 'Limitation\nLIM' },
-      { label: 'Not\napplicable\nN/A' },
-    ];
-    const lW = (W - 28) / legendItems.length;
-    legendItems.forEach((item, i) => {
-      const lx = margin + 26 + i * lW;
-      pdf.setFontSize(5);
-      const lines = pdf.splitTextToSize(item.label, lW - 2);
-      pdf.text(lines, lx, y + 3);
+    legendLines.forEach((line: string, i: number) => {
+      text(line, margin + 24, y + 4 + i * 2.2);
     });
-    y += 8;
+    y += legendH;
   };
 
   renderInspectionSchedule();
@@ -1933,7 +1951,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     text(`Ref: ${ss(certificate.certificateNumber)}`, margin, footerY + 4);
     text(`Page: ${currentPage} of ${totalPages}`, lsPageW / 2, footerY + 4, { align: 'center' });
     pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(navy[0], navy[1], navy[2]);
+    pdf.setTextColor(brandRed[0], brandRed[1], brandRed[2]);
     text(companyName, lsPageW - margin, footerY, { align: 'right' });
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(6);
@@ -1942,7 +1960,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   };
 
   // ── Section title bar ──
-  filledRect(margin, y, lsW, 8, navy);
+  filledRect(margin, y, lsW, 8, brandRed);
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
@@ -1974,38 +1992,48 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   y += 8;
 
   // ── Circuit test results table ──
-  const circuits = (fd.circuits || []) as Array<Record<string, any>>;
+  let parsedCircuits = fd.circuits;
+  if (typeof parsedCircuits === 'string') {
+    try {
+      parsedCircuits = JSON.parse(parsedCircuits);
+    } catch (e) {
+      parsedCircuits = [];
+    }
+  }
+  const circuits = (Array.isArray(parsedCircuits) ? parsedCircuits : []) as Array<Record<string, any>>;
 
-  // Column definitions matching BS 7671 Appendix 6 model form
-  // Each column: { label, w (proportional weight), group, rotate (boolean) }
+  // Column definitions matching BS 7671 Appendix 6 model form (NICEIC layout)
+  // group    = tier-1 merged header label
+  // subgroup = tier-2 merged sub-header label (only for Circuit impedances section)
+  // rotate   = render individual label rotated 90°
   const cols = [
-    { label: 'Circuit\nnumber',           w: 8,  group: '' },
-    { label: 'Circuit\ndesignation',      w: 24, group: '' },
-    { label: 'Type of\nwiring',           w: 8,  group: '' },
-    { label: 'Ref.\nmethod',              w: 7,  group: '' },
-    { label: 'No. of\npoints',            w: 7,  group: '' },
-    { label: 'Live\n(mm²)',               w: 7,  group: 'Circuit conductors: csa', rotate: true },
-    { label: 'cpc\n(mm²)',                w: 7,  group: 'Circuit conductors: csa', rotate: true },
-    { label: 'Max disc.\ntime (s)',        w: 7,  group: '', rotate: true },
-    { label: 'BS(EN)',                     w: 10, group: 'Overcurrent protective devices', rotate: true },
-    { label: 'Type',                       w: 7,  group: 'Overcurrent protective devices', rotate: true },
-    { label: 'Rating\n(A)',                w: 7,  group: 'Overcurrent protective devices', rotate: true },
-    { label: 'Cap.\n(kA)',                 w: 7,  group: 'Overcurrent protective devices', rotate: true },
-    { label: 'RCD\nI\u0394n (mA)',         w: 7,  group: 'RCD', rotate: true },
-    { label: 'Max Zs\nperm. (\u03A9)',     w: 8,  group: '', rotate: true },
-    { label: 'r1\n(Line)',                 w: 8,  group: 'Ring final circuits only', rotate: true },
-    { label: 'rn\n(Neutral)',              w: 8,  group: 'Ring final circuits only', rotate: true },
-    { label: 'r2\n(cpc)',                  w: 8,  group: 'Ring final circuits only', rotate: true },
-    { label: 'R1+R2\n(\u03A9)',            w: 9,  group: 'Circuit impedances: all circuits', rotate: true },
-    { label: 'R2\n(\u03A9)',               w: 8,  group: 'Circuit impedances: all circuits', rotate: true },
-    { label: 'Live-Live\n(M\u03A9)',       w: 9,  group: 'Insulation resistance', rotate: true },
-    { label: 'Live-Earth\n(M\u03A9)',      w: 9,  group: 'Insulation resistance', rotate: true },
-    { label: 'Test\nvoltage (V)',           w: 7,  group: 'Insulation resistance', rotate: true },
-    { label: 'Pol.',                       w: 6,  group: '' },
-    { label: 'Max Zs\nmeasured (\u03A9)',  w: 9,  group: '', rotate: true },
-    { label: 'Disc.\ntime (ms)',           w: 8,  group: 'RCD', rotate: true },
-    { label: 'RCD\ntest btn',             w: 7,  group: 'RCD', rotate: true },
-    { label: 'AFDD\ntest btn',            w: 7,  group: 'AFDD', rotate: true },
+    { label: 'Circuit\nnumber',                          w: 8,  group: '',                            subgroup: '' },
+    { label: 'Circuit\ndesignation',                     w: 24, group: '',                            subgroup: '' },
+    { label: 'Type of\nwiring',                          w: 8,  group: '',                            subgroup: '' },
+    { label: 'Ref.\nmethod',                             w: 7,  group: '',                            subgroup: '' },
+    { label: 'No. of\npoints\nserved',                   w: 7,  group: '',                            subgroup: '' },
+    { label: 'Live\n(mm\u00B2)',                         w: 7,  group: 'Circuit conductors: csa',     subgroup: '', rotate: true },
+    { label: 'cpc\n(mm\u00B2)',                          w: 7,  group: 'Circuit conductors: csa',     subgroup: '', rotate: true },
+    { label: 'Max disc.\ntime (s)',                       w: 7,  group: '',                            subgroup: '', rotate: true },
+    { label: 'BS(EN)',                                   w: 10, group: 'Overcurrent protective devices', subgroup: '', rotate: true },
+    { label: 'Type\nNo',                                 w: 7,  group: 'Overcurrent protective devices', subgroup: '', rotate: true },
+    { label: 'Rating\n(A)',                              w: 7,  group: 'Overcurrent protective devices', subgroup: '', rotate: true },
+    { label: 'Cap.\n(kA)',                               w: 7,  group: 'Overcurrent protective devices', subgroup: '', rotate: true },
+    { label: 'Operating\ncurrent\nI\u0394n (mA)',        w: 7,  group: 'RCD',                         subgroup: '', rotate: true },
+    { label: 'Max Zs\nperm.\n\u03A9',                   w: 8,  group: '',                            subgroup: '', rotate: true },
+    { label: 'r1\n(Line)',                               w: 8,  group: 'Circuit impedances (Ohms)',   subgroup: 'Ring final circuits only\n(measured end to end)', rotate: true },
+    { label: 'rn\n(Neutral)',                            w: 8,  group: 'Circuit impedances (Ohms)',   subgroup: 'Ring final circuits only\n(measured end to end)', rotate: true },
+    { label: 'r2\n(cpc)',                                w: 8,  group: 'Circuit impedances (Ohms)',   subgroup: 'Ring final circuits only\n(measured end to end)', rotate: true },
+    { label: 'R1+R2\n\u03A9',                           w: 9,  group: 'Circuit impedances (Ohms)',   subgroup: 'All circuits', rotate: true },
+    { label: 'R2\n\u03A9',                               w: 8,  group: 'Circuit impedances (Ohms)',   subgroup: 'All circuits', rotate: true },
+    { label: 'Live-Live\nM\u03A9',                      w: 9,  group: 'Insulation resistance',       subgroup: '', rotate: true },
+    { label: 'Live-Earth\nM\u03A9',                     w: 9,  group: 'Insulation resistance',       subgroup: '', rotate: true },
+    { label: 'Test\nvoltage (V)',                        w: 7,  group: 'Insulation resistance',       subgroup: '', rotate: true },
+    { label: 'Polarity',                                 w: 6,  group: '',                            subgroup: '' },
+    { label: 'Max Zs\nmeasured\n\u03A9',                 w: 9,  group: '',                            subgroup: '', rotate: true },
+    { label: 'Disc.\ntime (ms)',                         w: 8,  group: 'RCD',                         subgroup: '', rotate: true },
+    { label: 'Test btn',                        w: 7,  group: 'RCD',                         subgroup: '', rotate: true },
+    { label: 'AFDD\ntest btn',                  w: 7,  group: 'AFDD',                        subgroup: '', rotate: true },
   ];
 
   // Scale columns to fill landscape width
@@ -2023,103 +2051,161 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     });
   }
 
-  // ── Identify column groups for the merged header row ──
-  const groups: Array<{ label: string; startIdx: number; endIdx: number }> = [];
-  {
-    let prevGroup = '';
-    cols.forEach((c, i) => {
-      if (c.group && c.group === prevGroup) {
-        groups[groups.length - 1].endIdx = i;
-      } else if (c.group) {
-        groups.push({ label: c.group, startIdx: i, endIdx: i });
-      }
-      prevGroup = c.group;
-    });
-  }
-
-  // ── Draw the multi-tier table header ──
+  // ── Draw the 3-tier table header (matches BS 7671 Appendix 6 / NICEIC layout) ──
+  //   tier 1: group labels (Circuit conductors: csa, Overcurrent…, RCD, Circuit impedances, Insulation…)
+  //   tier 2: sub-group labels (Ring final circuits only | All circuits) – only for Circuit impedances
+  //   tier 3: individual rotated column labels
   const drawTableHeader = (atY: number) => {
-    const groupRowH = 7;   // Top tier: group labels
-    const subRowH = 34;    // Bottom tier: individual column labels (longer for rotated text)
-    const totalHeaderH = groupRowH + subRowH;
+    const t1H = 4.5;   // tier-1 height (group labels)
+    const t2H = 5;     // tier-2 height (sub-group labels)
+    const t3H = 18;    // tier-3 height (individual labels, rotated)
+    const totalHeaderH = t1H + t2H + t3H;
 
-    // Background fill for entire header
+    // ── Background ──
     filledRect(margin, atY, lsW, totalHeaderH, tableHeaderBg);
-    pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
-    pdf.rect(margin, atY, lsW, totalHeaderH);
 
-    // ── Tier 1: Group labels ──
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFontSize(5);
-    pdf.setFont('helvetica', 'bold');
-
-    groups.forEach((g) => {
-      const startX = colPositions[g.startIdx].x;
-      const endX = colPositions[g.endIdx].x + colPositions[g.endIdx].w;
-      const spanW = endX - startX;
-
-      // Group label centered
-      const labelLines = pdf.splitTextToSize(g.label, spanW - 2);
-      const labelH = labelLines.length * 2.5;
-      labelLines.forEach((line: string, i: number) => {
-        text(line, startX + spanW / 2, atY + (groupRowH - labelH) / 2 + 2.5 + i * 2.5, { align: 'center' });
+    // ── Build contiguous tier-1 groups (same .group value) ──
+    const t1Groups: Array<{ label: string; x1: number; x2: number }> = [];
+    {
+      let prev = '';
+      cols.forEach((c, i) => {
+        const cp = colPositions[i];
+        if (c.group && c.group === prev) {
+          t1Groups[t1Groups.length - 1].x2 = cp.x + cp.w;
+        } else if (c.group) {
+          t1Groups.push({ label: c.group, x1: cp.x, x2: cp.x + cp.w });
+        }
+        prev = c.group;
       });
+    }
 
-      // Bottom border of group row
-      pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
-      pdf.setLineWidth(0.3);
-      pdf.line(startX, atY + groupRowH, endX, atY + groupRowH);
+    // ── Build contiguous tier-2 sub-groups (same .subgroup within same .group) ──
+    const t2Groups: Array<{ label: string; x1: number; x2: number }> = [];
+    {
+      let prevKey = '';
+      cols.forEach((c, i) => {
+        const cp = colPositions[i];
+        const key = c.subgroup ? `${c.group}::${c.subgroup}` : '';
+        if (key && key === prevKey) {
+          t2Groups[t2Groups.length - 1].x2 = cp.x + cp.w;
+        } else if (key) {
+          t2Groups.push({ label: c.subgroup, x1: cp.x, x2: cp.x + cp.w });
+        }
+        prevKey = key;
+      });
+    }
+
+    // ── Horizontal tier separators (only drawn within grouped column spans) ──
+    pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
+    pdf.setLineWidth(0.3);
+    t1Groups.forEach((g) => {
+      pdf.line(g.x1, atY + t1H,        g.x2, atY + t1H);         // tier1 / tier2 separator
+      pdf.line(g.x1, atY + t1H + t2H,  g.x2, atY + t1H + t2H);  // tier2 / tier3 separator
     });
 
-    // ── Tier 2: Individual column labels ──
+    // ── Tier-1: group labels ──
+    pdf.setFontSize(4.6);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 0, 0);
+    pdf.setCharSpace(0.1);
+    t1Groups.forEach((g) => {
+      const spanW = g.x2 - g.x1;
+      const lines = pdf.splitTextToSize(g.label, spanW - 1.5);
+      const blockH = lines.length * 2.3;
+      const startY = atY + (t1H - blockH) / 2 + 2;
+      lines.forEach((line: string, i: number) => {
+        text(line, g.x1 + spanW / 2, startY + i * 2.3, { align: 'center' });
+      });
+    });
+    pdf.setCharSpace(0);
+
+    // ── Tier-2: sub-group labels ──
+    pdf.setFontSize(4.1);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setCharSpace(0.1);
+    t2Groups.forEach((g) => {
+      const spanW = g.x2 - g.x1;
+      const lines = pdf.splitTextToSize(g.label, spanW - 1.5);
+      const blockH = lines.length * 2.1;
+      const startY = atY + t1H + (t2H - blockH) / 2 + 2;
+      lines.forEach((line: string, i: number) => {
+        text(line, g.x1 + spanW / 2, startY + i * 2.1, { align: 'center' });
+      });
+    });
+    pdf.setCharSpace(0);
+
+    // ── Tier-3: individual column labels + vertical dividers ──
     pdf.setFontSize(4.5);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0, 0, 0);
+
     cols.forEach((c, i) => {
       const cp = colPositions[i];
 
-      // Vertical divider (light color on navy bg)
+      // ── Vertical dividers ──
       if (i > 0) {
+        const prev = cols[i - 1];
+        const sameGroup    = !!c.group && c.group === prev.group;
+        const sameSub      = sameGroup && (c.subgroup ?? '') === (prev.subgroup ?? '');
+        // Divider starts lower the more "inside" the column is
+        const vTop = sameGroup ? (sameSub ? atY + t1H + t2H : atY + t1H) : atY;
         pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
         pdf.setLineWidth(0.3);
-        pdf.line(cp.x, atY, cp.x, atY + totalHeaderH);
+        pdf.line(cp.x, vTop, cp.x, atY + totalHeaderH);
       }
 
-      // Column label text – in the sub-row area
-      pdf.setTextColor(255, 255, 255);
+      // ── Column label ──
       pdf.setFont('helvetica', 'bold');
-      
-      if (c.rotate) {
-        // Render 90 degree rotated text (vertical orientation going upwards)
-        let currentY = atY + totalHeaderH - 1.5;
-        // Shift right slightly to horizontally center the rotated text in the column
-        const currentX = cp.x + cp.w / 2 + 1.2;
-        
-        const parts = c.label.split(/([ΔΩ])/);
-        parts.forEach((part) => {
-          if (part === 'Δ') {
-            pdf.setFont('symbol', 'normal');
-            pdf.text('D', currentX, currentY, { angle: 90 });
-            currentY -= pdf.getTextWidth('D');
-          } else if (part === 'Ω') {
-            pdf.setFont('symbol', 'normal');
-            pdf.text('W', currentX, currentY, { angle: 90 });
-            currentY -= pdf.getTextWidth('W');
-          } else if (part.length > 0) {
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(part, currentX, currentY, { angle: 90 });
-            currentY -= pdf.getTextWidth(part);
-          }
-        });
-        pdf.setFont('helvetica', 'normal'); // restore
-      } else {
-        // Render standard horizontal text
+      if (!c.rotate) {
+        // Ungrouped horizontal columns: label centered in full header height
         const lines = pdf.splitTextToSize(c.label, cp.w - 1.5);
-        lines.forEach((line: string, i: number) => {
-          text(line, cp.x + cp.w / 2, atY + groupRowH + 2.5 + i * 2.5, { align: 'center' });
+        const blockH = lines.length * 2.3;
+        const startY = atY + (totalHeaderH - blockH) / 2 + 2;
+        lines.forEach((line: string, li: number) => {
+          text(line, cp.x + cp.w / 2, startY + li * 2.3, { align: 'center' });
         });
+      } else {
+        // Rotated 90° – each \n-delimited segment is a separate visual "row"
+        // stacked left→right within the column (advancing in page-X).
+        // lineSpacing is capped so all rows always fit within cp.w.
+        const labelLines = c.label.split('\n');
+        const numLines = labelLines.length;
+        const charHeightMm = 4.5 * 0.352778; // ~1.59mm at 4.5pt
+        const lineSpacing = numLines <= 1
+          ? 0
+          : Math.min(2.4, (cp.w - charHeightMm - 0.5) / (numLines - 1));
+        const totalBlockW = (numLines - 1) * lineSpacing + charHeightMm;
+        const firstLineX = cp.x + (cp.w - totalBlockW) / 2 + charHeightMm / 2;
+
+        labelLines.forEach((line, lineIdx) => {
+          const lineX = firstLineX + lineIdx * lineSpacing;
+          // Start at the bottom of the header and render upward
+          let curY = atY + totalHeaderH - 1.5;
+
+          // Handle Δ/Ω special characters requiring font switching
+          const parts = line.split(/([ΔΩ])/);
+          parts.forEach((part) => {
+            if (part === 'Δ') {
+              pdf.setFont('symbol', 'normal');
+              pdf.text('D', lineX, curY, { angle: 90 });
+              curY -= pdf.getTextWidth('D');
+            } else if (part === 'Ω') {
+              pdf.setFont('symbol', 'normal');
+              pdf.text('W', lineX, curY, { angle: 90 });
+              curY -= pdf.getTextWidth('W');
+            } else if (part.length > 0) {
+              pdf.setFont('helvetica', 'bold');
+              pdf.text(part, lineX, curY, { angle: 90 });
+              curY -= pdf.getTextWidth(part);
+            }
+          });
+        });
+        pdf.setFont('helvetica', 'normal');
       }
     });
+    pdf.setCharSpace(0);
 
-    // Outer border of header
+    // ── Outer border (drawn last, on top) ──
     pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
     pdf.setLineWidth(0.4);
     pdf.rect(margin, atY, lsW, totalHeaderH);
@@ -2137,7 +2223,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boolean) => {
     // Alternating row background
     if (isAlt) {
-      filledRect(margin, rowY, lsW, rowH, [245, 248, 252]);
+      filledRect(margin, rowY, lsW, rowH, light);
     }
 
     // Outer row border
@@ -2153,7 +2239,7 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
     // Extract deviceType (col 9), rating (col 10), measuredZs (col 24)
     const deviceType = values[9]?.trim() || '';
     const rating = values[10]?.trim().replace(/A/i, '') || '';
-    const measuredZsRaw = values[24]?.trim() || '';
+    const measuredZsRaw = values[23]?.trim() || '';
     const maxZsComputed = calculateMaxZs(deviceType, rating);
     const measuredZsNum = parseFloat(measuredZsRaw.replace(/[ΩΩ]|ohms/i, '')) || 0;
     const maxZsNum = parseFloat(maxZsComputed.replace(/Ω|ohms/i, '')) || Infinity;
@@ -2171,9 +2257,9 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
 
       let cellColor: [number,number,number] | null = null;
 
-      // ZS PASS/FAIL highlighting: measuredZs column (24)
-      if (ci === 24 && measuredZsRaw) {
-        cellColor = zsPass ? green : red;
+      // ZS FAIL highlighting: measuredZs column (23) — only highlight if it exceeds the limit
+      if (ci === 23 && measuredZsRaw && !zsPass) {
+        cellColor = red;
       }
 
       // Background fill for ZS cell
@@ -2209,10 +2295,25 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
   const dataRowH = 6;
   const minRows = 15; // Show at least 15 rows (empty ones if no data) like the original
 
+  const getWiringCode = (typeStr: string): string => {
+    if (!typeStr) return '';
+    const s = typeStr.toLowerCase();
+    if (s.length === 1 && 'ABCDEFGHOT'.includes(typeStr.toUpperCase())) return typeStr.toUpperCase();
+    if (s.includes('mineral')) return 'H';
+    if ((s.includes('thermosetting') || s.includes('xlpe')) && s.includes('swa')) return 'G';
+    if ((s.includes('thermoplastic') || s.includes('pvc')) && s.includes('swa')) return 'F';
+    if ((s.includes('thermoplastic') || s.includes('pvc')) && (s.includes('nonmetallic trunking') || s.includes('non-metallic trunking'))) return 'E';
+    if ((s.includes('thermoplastic') || s.includes('pvc')) && s.includes('metallic trunking')) return 'D';
+    if ((s.includes('thermoplastic') || s.includes('pvc')) && (s.includes('nonmetallic conduit') || s.includes('non-metallic conduit'))) return 'C';
+    if ((s.includes('thermoplastic') || s.includes('pvc')) && s.includes('metallic conduit')) return 'B';
+    if (s.includes('thermoplastic') || s.includes('pvc') || s.includes('twin') || s.includes('t&e')) return 'A';
+    return String(typeStr).charAt(0).toUpperCase(); // Best effort if not matched exactly
+  };
+
   const circuitValues = (circuit: Record<string, any>, idx: number): string[] => [
     ss(circuit.circuitNumber) || String(idx + 1),
     ss(circuit.designation) || '',
-    ss(circuit.wiringType) || '',
+    getWiringCode(ss(circuit.wiringType)),
     ss(circuit.refMethod) || '',
     ss(circuit.numPoints) || '',
     ss(circuit.liveCsa) || '',
@@ -2267,7 +2368,7 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
 
   // ── Wiring type codes legend ──
   if (y + 20 < lsMaxY) {
-    filledRect(margin, y, lsW, 6, [220, 230, 240]);
+    filledRect(margin, y, lsW, 6, tableHeaderBg);
     borderedRect(margin, y, lsW, 6);
     pdf.setFontSize(6);
     pdf.setFont('helvetica', 'bold');
@@ -2310,7 +2411,7 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
   currentPageSections = []; // guidance page is an appendix – no section tabs, no page counter
 
   // Title
-  filledRect(margin, y, W, 10, navy);
+  filledRect(margin, y, W, 10, brandRed);
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
@@ -2318,7 +2419,7 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
   pdf.setTextColor(0, 0, 0);
   y += 12;
 
-  filledRect(margin, y, W, 8, [220, 230, 240]);
+  filledRect(margin, y, W, 8, tableHeaderBg);
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'bold');
   text('GUIDANCE FOR RECIPIENTS', margin + 3, y + 5.5);
