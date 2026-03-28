@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { use, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { Home, LogOut, FileText, Users, Award, Settings, Shield, Plug } from 'lucide-react';
+import { Home, LogOut, Users, Award, Settings, Shield, Plug, ArrowRightLeft } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,8 +19,43 @@ import { isAdminRole } from '@/lib/auth/roles';
 import useSWR from 'swr';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const ADMIN_VIEW_MODE_KEY = 'admin-dashboard-view-mode';
 
-function UserMenu() {
+type AdminViewMode = 'admin' | 'user';
+
+function getInitialAdminViewMode(): AdminViewMode {
+  if (typeof window === 'undefined') {
+    return 'admin';
+  }
+
+  const storedMode = window.localStorage.getItem(ADMIN_VIEW_MODE_KEY);
+  return storedMode === 'user' ? 'user' : 'admin';
+}
+
+function AdminViewModeToggle({
+  mode,
+  onToggle,
+}: {
+  mode: AdminViewMode;
+  onToggle: () => void;
+}) {
+  const isUserView = mode === 'user';
+
+  return (
+    <Button
+      type="button"
+      variant={isUserView ? 'default' : 'secondary'}
+      size="sm"
+      onClick={onToggle}
+      className="fixed bottom-4 right-4 z-50 rounded-full px-4 shadow-lg"
+    >
+      <ArrowRightLeft className="h-4 w-4" />
+      {isUserView ? 'Switch to Admin View' : 'View as User'}
+    </Button>
+  );
+}
+
+function UserMenu({ adminViewMode }: { adminViewMode: AdminViewMode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data, error } = useSWR<User>('/api/user', fetcher);
   const router = useRouter();
@@ -52,6 +87,8 @@ function UserMenu() {
   }
 
   const user = data;
+  const showAdminLink = isAdminRole(user.role) && adminViewMode === 'admin';
+
   return (
     <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
       <DropdownMenuTrigger>
@@ -95,7 +132,7 @@ function UserMenu() {
             <span>ServiceM8</span>
           </Link>
         </DropdownMenuItem>
-        {isAdminRole(user.role) && (
+        {showAdminLink && (
           <DropdownMenuItem className="cursor-pointer">
             <Link href="/admin" className="flex w-full items-center">
               <Shield className="mr-2 h-4 w-4" />
@@ -116,9 +153,10 @@ function UserMenu() {
   );
 }
 
-function Header() {
+function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
   const router = useRouter();
   const { data: user } = useSWR<User>('/api/user', fetcher);
+  const showAdminLink = isAdminRole(user?.role) && adminViewMode === 'admin';
 
   async function handleLogout() {
     await signOut();
@@ -152,7 +190,7 @@ function Header() {
           >
             Customers
           </Link>
-          {isAdminRole(user?.role) && (
+          {showAdminLink && (
             <Link
               href="/admin"
               className="text-sm font-medium text-gray-700 hover:text-gray-900"
@@ -168,7 +206,7 @@ function Header() {
             </Button>
           )}
           <Suspense fallback={<div className="h-9" />}>
-            <UserMenu />
+            <UserMenu adminViewMode={adminViewMode} />
           </Suspense>
         </div>
       </div>
@@ -177,12 +215,55 @@ function Header() {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const [adminViewMode, setAdminViewMode] = useState<AdminViewMode>('admin');
   const isAdminRoute = pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard/admin');
+  const isSignedInAdmin = isAdminRole(user?.role);
+
+  useEffect(() => {
+    setAdminViewMode(getInitialAdminViewMode());
+  }, []);
+
+  useEffect(() => {
+    if (!isSignedInAdmin && adminViewMode !== 'admin') {
+      setAdminViewMode('admin');
+      window.localStorage.removeItem(ADMIN_VIEW_MODE_KEY);
+    }
+  }, [isSignedInAdmin, adminViewMode]);
+
+  useEffect(() => {
+    if (isSignedInAdmin && adminViewMode === 'user' && isAdminRoute) {
+      router.replace('/dashboard');
+    }
+  }, [isSignedInAdmin, adminViewMode, isAdminRoute, router]);
+
+  function handleToggleAdminViewMode() {
+    if (!isSignedInAdmin) {
+      return;
+    }
+
+    const nextMode: AdminViewMode = adminViewMode === 'admin' ? 'user' : 'admin';
+    setAdminViewMode(nextMode);
+    window.localStorage.setItem(ADMIN_VIEW_MODE_KEY, nextMode);
+
+    if (nextMode === 'user' && isAdminRoute) {
+      router.push('/dashboard');
+      return;
+    }
+
+    if (nextMode === 'admin' && !isAdminRoute) {
+      router.push('/admin');
+    }
+  }
 
   return (
     <section className="flex flex-col min-h-screen">
-      {!isAdminRoute && <Header />}
+      {!isAdminRoute && <Header adminViewMode={adminViewMode} />}
+      {isSignedInAdmin && (
+        <AdminViewModeToggle mode={adminViewMode} onToggle={handleToggleAdminViewMode} />
+      )}
       {children}
     </section>
   );

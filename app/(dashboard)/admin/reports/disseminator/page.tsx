@@ -50,10 +50,19 @@ import {
 import { validateUkPostcode } from '@/lib/report-disseminator/postcode';
 import { GuidancePanel } from '@/components/disseminator/GuidancePanel';
 import { getStepGuidance, getFieldGuidance, type DisseminatorStep } from '@/lib/report-disseminator/advisor';
+import { validateReportValues, type ReportValidationResult } from '@/lib/report-disseminator/report-validation';
 
 type FieldType = DisseminatorFieldType;
 type TemplateStatus = 'draft' | 'review' | 'published' | 'archived';
 type ReportStatus = 'draft' | 'completed' | 'archived';
+
+
+export type ConditionalRule = {
+  id: string;
+  sourceFieldIds: string[];
+  triggerValues: string[];
+  targetValue: string;
+};
 
 /** A single exclusion rule stored on a field. */
 type ExcludeRule = {
@@ -85,6 +94,10 @@ type ReportField = {
   boundingBox?: { x: number; y: number; width: number; height: number };
   // Exclusion rules: grey out / set fields to N/A when this field changes
   excludes?: ExcludeRule[];
+  // Conditional logic rules (e.g., auto-set value based on other fields)
+  conditionalRules?: ConditionalRule[];
+  // Cycling button: click to advance through a fixed list of options
+  cyclingConfig?: { options: string[]; default?: string };
   // Max options to return from Search Online Options (default 12, max 40)
   searchOptionsMax?: number;
 };
@@ -314,6 +327,7 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string }> = [
   { value: 'postcode', label: 'Postcode (UK)' },
   { value: 'uk_phone', label: 'Phone Number (UK)' },
   { value: 'state_enum', label: 'Tick/Cross/NA/LIM/NV' },
+  { value: 'cycling', label: 'Cycling button (click to cycle options)' },
   { value: 'numeric', label: 'Numeric value' },
   { value: 'resistance', label: 'Resistance reading' },
   { value: 'voltage', label: 'Voltage reading' },
@@ -653,6 +667,7 @@ function SortableFieldRow({
   const [postcodeTest, setPostcodeTest] = useState('');
   const [postcodeResult, setPostcodeResult] = useState<{ valid: boolean; error?: string } | null>(null);
   const [excludesOpen, setExcludesOpen] = useState(false);
+  const [conditionalRulesOpen, setConditionalRulesOpen] = useState(false);
 
   const testPostcode = async () => {
     if (!postcodeTest.trim()) return;
@@ -781,6 +796,44 @@ function SortableFieldRow({
         <div className="space-y-2">
           <Label>State options</Label>
           <Input value={(field.stateOptions || [...DEFAULT_STATE_OPTIONS]).join(', ')} disabled />
+        </div>
+      )}
+
+      {field.fieldType === 'cycling' && (
+        <div className="space-y-2">
+          <Label>Cycling options (comma-separated)</Label>
+          <Input
+            title="List of values to cycle through on click, comma-separated"
+            placeholder="✓, ✗, N/A"
+            value={(field.cyclingConfig?.options || []).join(', ')}
+            onChange={(e) => {
+              const opts = e.target.value.split(',').map((v) => v.trim());
+              onUpdate({ cyclingConfig: { options: opts, default: field.cyclingConfig?.default } });
+            }}
+            onBlur={(e) => {
+              const opts = e.target.value.split(',').map((v) => v.trim()).filter(Boolean);
+              onUpdate({ cyclingConfig: { options: opts, default: field.cyclingConfig?.default } });
+            }}
+          />
+          {(field.cyclingConfig?.options || []).filter(Boolean).length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Default value</Label>
+              <select
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm"
+                title="Default value pre-filled when a new report is created from this template"
+                value={field.cyclingConfig?.default || ''}
+                onChange={(e) => onUpdate({ cyclingConfig: { options: field.cyclingConfig?.options || [], default: e.target.value || undefined } })}
+              >
+                <option value="">(blank — no default)</option>
+                {(field.cyclingConfig?.options || []).filter(Boolean).map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Users click this button to cycle through the options in order, wrapping back to the first after the last.
+          </p>
         </div>
       )}
 
@@ -995,6 +1048,8 @@ function SortableFieldRow({
               ? (field.dropdownOptions || [])
               : field.fieldType === 'state_enum'
               ? (field.stateOptions || [...DEFAULT_STATE_OPTIONS])
+              : field.fieldType === 'cycling'
+              ? (field.cyclingConfig?.options || [])
               : [];
 
           return (
@@ -1014,6 +1069,8 @@ function SortableFieldRow({
                       ? (f.dropdownOptions || [])
                       : f.fieldType === 'state_enum'
                       ? (f.stateOptions || [...DEFAULT_STATE_OPTIONS])
+                      : f.fieldType === 'cycling'
+                      ? (f.cyclingConfig?.options || [])
                       : [];
 
                   return (
@@ -1148,6 +1205,8 @@ export default function ReportDisseminatorPage() {
   const [reportTab, setReportTab] = useState('report-form');
   const [templateFieldSearch, setTemplateFieldSearch] = useState('');
   const [reportFieldSearch, setReportFieldSearch] = useState('');
+  const [validatingReport, setValidatingReport] = useState(false);
+  const [reportValidation, setReportValidation] = useState<ReportValidationResult | null>(null);
   const [fieldWizardIndex, setFieldWizardIndex] = useState(0);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -1471,7 +1530,7 @@ export default function ReportDisseminatorPage() {
             ? generateAutoReferenceValue(selected.id, field)
             : field.fieldType === 'inspection_date_plus_period'
             ? ''
-            : field.dropdownDefault || '');
+            : (field.fieldType === 'cycling' ? field.cyclingConfig?.default : field.dropdownDefault) || '');
       }
       return nextValues;
     });
@@ -1871,6 +1930,7 @@ export default function ReportDisseminatorPage() {
       plainTextHint: analysis.plainTextHint,
       dropdownOptions: undefined,
       stateOptions: undefined,
+      cyclingConfig: undefined,
       addressConfig: undefined,
       postcodeConfig: undefined,
       phoneConfig: undefined,
@@ -1885,6 +1945,12 @@ export default function ReportDisseminatorPage() {
 
     if (fieldType === 'state_enum') {
       patch.stateOptions = field.stateOptions?.length ? field.stateOptions : [...DEFAULT_STATE_OPTIONS];
+    }
+
+    if (fieldType === 'cycling') {
+      patch.cyclingConfig = field.cyclingConfig?.options?.length
+        ? field.cyclingConfig
+        : { options: ['\u2713', '\u2717', 'N/A'], default: '\u2713' };
     }
 
     if (fieldType === 'address') {
@@ -2386,7 +2452,7 @@ export default function ReportDisseminatorPage() {
       } else if (field.fieldType === 'date') {
         blankValues[field.id] = todayISO;
       } else {
-        blankValues[field.id] = field.dropdownDefault || '';
+        blankValues[field.id] = (field.fieldType === 'cycling' ? field.cyclingConfig?.default : field.dropdownDefault) || '';
       }
     }
 
@@ -2719,6 +2785,16 @@ export default function ReportDisseminatorPage() {
     return summarizeFields(selectedReport.fields);
   }, [selectedReport]);
 
+  const spellcheckFieldIds = useMemo(() => {
+    if (!selectedReport) return [];
+    return selectedReport.fields
+      .filter((field) =>
+        ['text', 'linked_text', 'sentence_builder', 'address'].includes(field.fieldType) &&
+        String(selectedReport.values[field.id] ?? '').trim()
+      )
+      .map((field) => field.id);
+  }, [selectedReport]);
+
   const assignBoundingBoxToSelectedField = (
     pageNumber: number,
     boundingBox: { x: number; y: number; width: number; height: number }
@@ -2865,6 +2941,7 @@ export default function ReportDisseminatorPage() {
           : analysis.plainTextHint,
       stateOptions: wizardDraft.fieldType === 'state_enum' ? wizardDraft.stateOptions : undefined,
       dropdownOptions: wizardDraft.fieldType === 'dropdown' ? wizardDraft.dropdownOptions : undefined,
+      cyclingConfig: wizardDraft.fieldType === 'cycling' ? { options: ['\u2713', '\u2717', 'N/A'], default: '\u2713' } : undefined,
       numericConfig: isNumericLikeFieldType(wizardDraft.fieldType)
         ? { unit: wizardDraft.numericUnit || undefined, resolution: wizardDraft.increment ? 1 : undefined }
         : undefined,
@@ -2927,6 +3004,24 @@ export default function ReportDisseminatorPage() {
             next[f.id] = value ? computeNextInspectionDate(value, f.inspectionPeriodConfig.period) : '';
           }
         }
+        // Conditional logic rules
+        for (const targetF of selected.fields) {
+          if (targetF.conditionalRules?.length) {
+            for (const rule of targetF.conditionalRules) {
+              if (rule.sourceFieldIds.includes(fieldId)) {
+                // If any of the source fields match the trigger values
+                const match = rule.sourceFieldIds.some(sid => 
+                  rule.triggerValues.includes(next[sid] ?? '')
+                );
+                if (match) {
+                  next[targetF.id] = rule.targetValue;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
         // Exclusion: grey out / restore fields that this field excludes
         const changedField = selected.fields.find((f) => f.id === fieldId);
         if (changedField?.excludes?.length) {
@@ -2947,6 +3042,7 @@ export default function ReportDisseminatorPage() {
   };
 
   const updateReportValue = (fieldId: string, value: string) => {
+    setReportValidation(null);
     setSelectedReport((currentReport) => {
       if (!currentReport) return currentReport;
       const nextValues = { ...currentReport.values, [fieldId]: value };
@@ -2975,6 +3071,25 @@ export default function ReportDisseminatorPage() {
             nextValues[refFieldId] = '';
             nextValues[descFieldId] = '';
             nextValues[codeFieldId] = '';
+          }
+        }
+      }
+
+      // Conditional logic rules
+      if (currentReport?.fields) {
+        for (const targetF of currentReport.fields as ReportField[]) {
+          if (targetF.conditionalRules?.length) {
+            for (const rule of targetF.conditionalRules) {
+              if (rule.sourceFieldIds.includes(fieldId)) {
+                const match = rule.sourceFieldIds.some(sid => 
+                  rule.triggerValues.includes(nextValues[sid] ?? '')
+                );
+                if (match) {
+                  nextValues[targetF.id] = rule.targetValue;
+                  break; // apply first matched rule per target
+                }
+              }
+            }
           }
         }
       }
@@ -3008,6 +3123,50 @@ export default function ReportDisseminatorPage() {
 
       return { ...currentReport, values: nextValues };
     });
+  };
+
+  const runReportValidation = async () => {
+    if (!selectedReport) return;
+
+    setValidatingReport(true);
+    try {
+      const result = await validateReportValues(selectedReport.fields, selectedReport.values);
+      setReportValidation(result);
+
+      const errorCount = result.issues.filter((issue) => issue.severity === 'error').length;
+      const warningCount = result.issues.filter((issue) => issue.severity === 'warning').length;
+
+      if (!result.issues.length) {
+        toast.success('Validation passed. No issues found.');
+      } else if (errorCount > 0) {
+        toast.error(`Validation found ${errorCount} error${errorCount === 1 ? '' : 's'} and ${warningCount} warning${warningCount === 1 ? '' : 's'}.`);
+      } else {
+        toast.info(`Validation found ${warningCount} warning${warningCount === 1 ? '' : 's'}.`);
+      }
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Failed to validate report');
+    } finally {
+      setValidatingReport(false);
+    }
+  };
+
+  const runSpellCheckReview = () => {
+    const focusFieldId = spellcheckFieldIds[0];
+    setReportTab('report-fields');
+
+    if (focusFieldId) {
+      setSelectedFieldId(focusFieldId);
+      window.setTimeout(() => {
+        const escapedId = focusFieldId.replace(/"/g, '\\"');
+        const element = document.querySelector<HTMLElement>(`[data-spellcheck-field-id="${escapedId}"]`);
+        element?.focus();
+      }, 50);
+      toast.info('Spell check review opened. Browser spell check is enabled on report text fields.');
+      return;
+    }
+
+    toast.info('Spell check is enabled, but there are no populated text fields to review yet.');
   };
 
 const getIncomingExclusionsForField = (
@@ -3220,6 +3379,8 @@ if (field.fieldType === 'auto_zs') {
           )}
           <Input
             className="w-full"
+            data-spellcheck-field-id={field.id}
+            spellCheck
             title={field.label}
             type="text"
             placeholder={field.plainTextHint || field.label}
@@ -3247,6 +3408,30 @@ if (field.fieldType === 'auto_zs') {
             </option>
           ))}
         </select>
+      );
+    }
+
+    if (field.fieldType === 'cycling') {
+      const opts = (field.cyclingConfig?.options || ['\u2713', '\u2717', 'N/A']).filter(Boolean);
+      const colorClass =
+        value === '\u2713' ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' :
+        value === '\u2717' ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' :
+        value === 'N/A' ? 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100' :
+        value ? 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100' :
+        'bg-white text-slate-300 border-input hover:bg-slate-50';
+      return (
+        <button
+          type="button"
+          title={`Click to cycle: ${opts.join(' \u2192 ')}`}
+          className={`w-full min-h-[2rem] rounded border px-2 py-1 text-sm font-medium transition-colors ${colorClass}`}
+          onClick={() => {
+            const idx = opts.indexOf(value);
+            onValueChange(field.id, opts[(idx + 1) % opts.length] ?? opts[0]);
+          }}
+          onFocus={() => setSelectedFieldId(field.id)}
+        >
+          {value || opts[0] || '\u2014'}
+        </button>
       );
     }
 
@@ -3281,6 +3466,7 @@ if (field.fieldType === 'auto_zs') {
       return (
         <Input
           className="w-full"
+          data-spellcheck-field-id={field.id}
           title={field.label}
           type="date"
           required={field.required}
@@ -3294,6 +3480,8 @@ if (field.fieldType === 'auto_zs') {
     return (
       <Input
         className="w-full"
+        data-spellcheck-field-id={field.id}
+        spellCheck={field.fieldType === 'text' || field.fieldType === 'linked_text' || field.fieldType === 'address'}
         title={field.label}
         type={isNumericLikeFieldType(field.fieldType) ? 'number' : field.fieldType === 'uk_phone' ? 'tel' : 'text'}
         placeholder={field.plainTextHint || field.label}
@@ -4505,6 +4693,7 @@ if (field.fieldType === 'auto_zs') {
                     <Label>Report title</Label>
                     <Input
                       title="Name used to identify this saved report instance"
+                      spellCheck
                       value={selectedReport.name}
                       onChange={(e) =>
                         setSelectedReport({ ...selectedReport, name: e.target.value })
@@ -4537,6 +4726,7 @@ if (field.fieldType === 'auto_zs') {
                   <Label>Report description</Label>
                   <Input
                     title="Optional context specific to this saved report"
+                    spellCheck
                     value={selectedReport.description || ''}
                     onChange={(e) =>
                       setSelectedReport({ ...selectedReport, description: e.target.value })
@@ -4644,6 +4834,7 @@ if (field.fieldType === 'auto_zs') {
                   <Label>Report notes</Label>
                   <Textarea
                     title="Notes saved only against this report instance"
+                    spellCheck
                     value={selectedReport.notes || ''}
                     onChange={(e) =>
                       setSelectedReport({ ...selectedReport, notes: e.target.value })
@@ -4662,12 +4853,67 @@ if (field.fieldType === 'auto_zs') {
                   </div>
                 )}
 
+                {reportValidation && (
+                  <div className="space-y-3 rounded-md border p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium">Validation Results</p>
+                      <Badge variant="secondary">
+                        {reportValidation.issues.filter((issue) => issue.severity === 'error').length} errors
+                      </Badge>
+                      <Badge variant="outline">
+                        {reportValidation.issues.filter((issue) => issue.severity === 'warning').length} warnings
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Checked {new Date(reportValidation.checkedAt).toLocaleString()} using {reportValidation.references.join(' • ')}.
+                    </p>
+                    {reportValidation.issues.length === 0 ? (
+                      <p className="text-sm text-green-700">No validation issues found.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {reportValidation.issues.map((issue, index) => (
+                          <button
+                            key={`${issue.fieldId}-${index}`}
+                            type="button"
+                            className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
+                              issue.severity === 'error'
+                                ? 'border-red-200 bg-red-50 text-red-900'
+                                : 'border-amber-200 bg-amber-50 text-amber-900'
+                            }`}
+                            onClick={() => {
+                              setReportTab('report-fields');
+                              setSelectedFieldId(issue.fieldId);
+                              window.setTimeout(() => {
+                                const escapedId = issue.fieldId.replace(/"/g, '\\"');
+                                const element = document.querySelector<HTMLElement>(`[data-spellcheck-field-id="${escapedId}"]`);
+                                element?.focus();
+                              }, 50);
+                            }}
+                          >
+                            <span className="font-medium">{issue.label}</span>
+                            <span className="block text-xs uppercase tracking-wide opacity-70">
+                              {issue.severity} • {issue.category}
+                            </span>
+                            <span className="block mt-1">{issue.message}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-end gap-2">
                   {editorMode === 'report' && autoSaveStatus !== 'idle' && (
                     <span className={`text-xs mr-2 ${autoSaveStatus === 'saving' ? 'text-muted-foreground' : autoSaveStatus === 'saved' ? 'text-green-600' : 'text-destructive'}`}>
                       {autoSaveStatus === 'saving' ? 'Auto-saving…' : autoSaveStatus === 'saved' ? 'Auto-saved' : 'Auto-save failed'}
                     </span>
                   )}
+                  <Button type="button" variant="outline" title="Run standards and field-format checks against this saved report" onClick={runReportValidation} disabled={validatingReport}>
+                    {validatingReport ? 'Validating…' : 'Validate'}
+                  </Button>
+                  <Button type="button" variant="outline" title="Open text fields with browser spell check enabled" onClick={runSpellCheckReview}>
+                    Spell Check
+                  </Button>
                   <Button type="button" title="Save values and notes for this saved report" onClick={openSaveReportDialog} disabled={savingReport}>
                     <Save className="w-4 h-4 mr-2" />
                     {savingReport ? 'Saving…' : 'Save Report'}

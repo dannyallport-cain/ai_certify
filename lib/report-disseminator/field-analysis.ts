@@ -16,6 +16,7 @@ export const DISSEMINATOR_FIELD_TYPES = [
   'linked_text',
   'sentence_builder',
   'inspection_date_plus_period',
+  'cycling',
 ] as const;
 
 export type DisseminatorFieldType = (typeof DISSEMINATOR_FIELD_TYPES)[number];
