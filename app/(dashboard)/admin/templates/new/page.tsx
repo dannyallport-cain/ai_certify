@@ -222,6 +222,7 @@ export default function NewTemplatePage() {
     { value: 'BS5266', label: 'BS5266 Emergency Lighting' },
     { value: 'FIRE_EXTINGUISHER', label: 'Portable Fire Extinguisher' },
     { value: 'DRY_RISER', label: 'Dry Riser System' },
+    { value: 'CP12', label: 'CP12 Gas Safety Certificate' },
   ];
 
   const handleSave = async () => {

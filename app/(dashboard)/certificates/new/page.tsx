@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { GasSafeRegisterLogo } from '@/components/GasSafeRegisterLogo';
 import Link from 'next/link';
 import { CertificateType, certificateTemplates } from '@/lib/db/schema';
 import { db } from '@/lib/db/drizzle';
@@ -51,6 +52,13 @@ const certificateTypes = [
     color: 'bg-green-50 border-green-200 hover:bg-green-100'
   },
   {
+    type: CertificateType.CP12,
+    title: 'CP12 Gas Safety Certificate',
+    description: 'Landlord gas safety record covering appliances, flues, ventilation, and safety checks',
+    icon: '🔥',
+    color: 'bg-amber-50 border-amber-200 hover:bg-amber-100'
+  },
+  {
     type: CertificateType.EICR,
     title: 'EICR - Electrical Installation Condition Report',
     description: 'Electrical installation condition report in accordance with BS 7671 IET Wiring Regulations',
@@ -65,6 +73,7 @@ const certificateTypePaths: Record<string, string> = {
   BS5266: 'bs5266',
   FIRE_EXTINGUISHER: 'fire-extinguisher',
   DRY_RISER: 'dry-riser',
+  CP12: 'cp12',
   EICR: 'eicr',
   'BS5839-1': 'bs5839-1',
   'BS5839-6': 'bs5839-6',
@@ -76,6 +85,7 @@ const certificateTypeLabels: Record<string, string> = {
   BS5266: 'BS5266',
   FIRE_EXTINGUISHER: 'Fire Extinguisher',
   DRY_RISER: 'Dry Riser',
+  CP12: 'CP12 Gas Safety',
   EICR: 'EICR',
   'BS5839-1': 'BS5839-1',
   'BS5839-6': 'BS5839-6',
@@ -134,8 +144,12 @@ export default async function NewCertificatePage() {
           <Card key={certType.type} className={`cursor-pointer transition-all duration-200 ${certType.color}`}>
             <Link href={`/certificates/new/${getTemplatePath(certType.type)}`}>
               <CardHeader>
-                <div className="flex items-center space-x-2">
-                  <span className="text-2xl">{certType.icon}</span>
+                <div className="flex items-center space-x-3">
+                  {certType.type === CertificateType.CP12 ? (
+                    <GasSafeRegisterLogo className="h-12 w-16 rounded-lg border-amber-300 p-1.5 shadow-none" sizes="64px" />
+                  ) : (
+                    <span className="text-2xl">{certType.icon}</span>
+                  )}
                   <div>
                     <CardTitle className="text-lg">{certType.title}</CardTitle>
                   </div>
@@ -208,6 +222,7 @@ export default async function NewCertificatePage() {
               <div><strong>BS5266:</strong> Emergency lighting systems</div>
               <div><strong>Fire Extinguisher:</strong> Portable fire extinguisher maintenance</div>
               <div><strong>Dry Riser:</strong> Dry riser system testing and maintenance</div>
+              <div><strong>CP12:</strong> Landlord gas safety checks and appliance records</div>
             </div>
           </CardContent>
         </Card>

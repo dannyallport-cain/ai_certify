@@ -46,6 +46,7 @@ export default function TemplatesPage() {
     { value: 'BS5266', label: 'BS5266 Emergency Lighting' },
     { value: 'FIRE_EXTINGUISHER', label: 'Fire Extinguisher' },
     { value: 'DRY_RISER', label: 'Dry Riser' },
+    { value: 'CP12', label: 'CP12 Gas Safety' },
     { value: 'EICR', label: 'EICR (BS 7671)' },
   ];
 

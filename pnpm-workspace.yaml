@@ -1,3 +1,6 @@
+packages:
+  - 'mobile'
+
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - esbuild

@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "AI Certify Field",
+    "slug": "ai-certify-field",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "aicertifyfield",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#BE0000"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "AI Certify needs camera access to photograph consumer units and circuit labels.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "AI Certify uses your location to automatically fill in the installation address."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AI Certify needs access to your photos to attach images to reports."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aicertify.field",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "AI Certify uses your location to automatically fill in the installation address.",
+        "NSCameraUsageDescription": "AI Certify needs camera access to photograph consumer units and circuit labels."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#BE0000"
+      },
+      "package": "com.aicertify.field",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ai-certify-field"
+      }
+    }
+  }
+}

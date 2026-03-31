@@ -33,6 +33,8 @@ export default async function CertificatesPage() {
         return '🧯';
       case CertificateType.DRY_RISER:
         return '🚰';
+      case CertificateType.CP12:
+        return '🔥';
       default:
         return '📋';
     }

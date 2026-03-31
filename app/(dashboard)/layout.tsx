@@ -93,7 +93,7 @@ function UserMenu({ adminViewMode }: { adminViewMode: AdminViewMode }) {
     <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
       <DropdownMenuTrigger>
         <Avatar className="cursor-pointer size-9">
-          <AvatarImage alt={user.name || ''} />
+          <AvatarImage src={user.avatarUrl || undefined} alt={user.name || user.email || ''} />
           <AvatarFallback>
             {user.email
               ? user.email.split(' ').map((n) => n[0]).join('')

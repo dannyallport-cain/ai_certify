@@ -22,6 +22,9 @@ export default function GuidedModeModal({ open, steps, onClose, onComplete }: Gu
   const [values, setValues] = useState<Record<string, string>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const isRecognitionActiveRef = useRef(false);
+  const pendingRecognitionStartRef = useRef(false);
+  const isOpenRef = useRef(open);
 
   // Speak the bot message
   const speak = (text: string) => {
@@ -31,6 +34,76 @@ export default function GuidedModeModal({ open, steps, onClose, onComplete }: Gu
     }
   };
 
+  const stopRecognition = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+
+    try {
+      recognition.stop();
+    } catch {
+      // Ignore stop errors when recognition is already idle.
+    }
+  };
+
+  const abortRecognition = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+
+    try {
+      recognition.abort();
+    } catch {
+      // Ignore abort errors when recognition is already idle.
+    }
+  };
+
+  const startRecognition = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition || !isOpenRef.current) return;
+
+    if (isRecognitionActiveRef.current) {
+      pendingRecognitionStartRef.current = true;
+      abortRecognition();
+      return;
+    }
+
+    pendingRecognitionStartRef.current = false;
+
+    try {
+      recognition.start();
+    } catch (error) {
+      const isAlreadyStartedError =
+        error instanceof DOMException && error.name === 'InvalidStateError';
+
+      if (!isAlreadyStartedError) {
+        console.error('Unable to start speech recognition:', error);
+      }
+    }
+  };
+
+  const submitValue = (rawValue: string) => {
+    const userText = rawValue.trim();
+    if (!userText) return;
+
+    setMessages((prev) => [...prev, { role: 'user', text: userText }]);
+    setValues((prev) => {
+      const newValues = { ...prev, [steps[currentStep].name]: userText };
+
+      if (currentStep + 1 < steps.length) {
+        setCurrentStep((prevStep) => prevStep + 1);
+      } else {
+        onComplete(newValues);
+        onClose();
+      }
+
+      return newValues;
+    });
+    setInputValue('');
+  };
+
+  useEffect(() => {
+    isOpenRef.current = open;
+  }, [open]);
+
   // Initialize speech recognition
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -39,18 +112,45 @@ export default function GuidedModeModal({ open, steps, onClose, onComplete }: Gu
       recog.continuous = false;
       recog.interimResults = false;
       recog.lang = 'en-US';
+      recog.onstart = () => {
+        isRecognitionActiveRef.current = true;
+      };
+      recog.onend = () => {
+        isRecognitionActiveRef.current = false;
+
+        if (pendingRecognitionStartRef.current && isOpenRef.current) {
+          pendingRecognitionStartRef.current = false;
+          startRecognition();
+        }
+      };
+      recog.onerror = (event: any) => {
+        if (event?.error !== 'no-speech' && event?.error !== 'aborted') {
+          console.error('Speech recognition error:', event);
+        }
+      };
       recog.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
         setInputValue(transcript);
-        handleSend();
+        submitValue(transcript);
       };
       recognitionRef.current = recog;
     }
+
+    return () => {
+      pendingRecognitionStartRef.current = false;
+      stopRecognition();
+      recognitionRef.current = null;
+    };
   }, []);
 
   // On opening or step change, ask the next prompt
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      pendingRecognitionStartRef.current = false;
+      stopRecognition();
+      return;
+    }
+
     const step = steps[currentStep];
     // Randomized prompt variations
     const templates = [
@@ -62,10 +162,13 @@ export default function GuidedModeModal({ open, steps, onClose, onComplete }: Gu
     const prompt = templates[Math.floor(Math.random() * templates.length)];
     setMessages((prev) => [...prev, { role: 'bot', text: prompt }]);
     speak(prompt);
-    // Start speech recognition for STT
-    if (recognitionRef.current) {
-      recognitionRef.current.start();
-    }
+
+    startRecognition();
+
+    return () => {
+      pendingRecognitionStartRef.current = false;
+      stopRecognition();
+    };
   }, [open, currentStep]);
 
   // Scroll to bottom on message update
@@ -76,18 +179,7 @@ export default function GuidedModeModal({ open, steps, onClose, onComplete }: Gu
   }, [messages]);
 
   const handleSend = () => {
-    if (!inputValue.trim()) return;
-    const userText = inputValue.trim();
-    setMessages((prev) => [...prev, { role: 'user', text: userText }]);
-    const newValues = { ...values, [steps[currentStep].name]: userText }; 
-    setValues(newValues);
-    setInputValue('');
-    if (currentStep + 1 < steps.length) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      onComplete(newValues);
-      onClose();
-    }
+    submitValue(inputValue);
   };
 
   if (!open) return null;

@@ -67,10 +67,84 @@ function lighten(rgb: [number, number, number], factor: number): [number, number
   ];
 }
 
+const CP12_GAS_SAFE_LOGO_DATA_URI =
+  'data:image/webp;base64,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' +
+  'WseZ6P9RP1c9zl5Y61iAAAA';
+
 export function generateCertificatePDF(certificate: CertificateData): Uint8Array {
   // Route EICR to a dedicated generator matching the BS 7671 form structure
   if (certificate.certificateType === 'EICR') {
     return generateEICRPDF(certificate);
+  }
+
+  if (certificate.certificateType === 'CP12') {
+    return generateCP12PDF(certificate);
   }
 
   const pdf = new jsPDF();
@@ -358,7 +432,8 @@ export function generateCertificatePDF(certificate: CertificateData): Uint8Array
   yPosition += 20;
 
   // Signature Section
-  checkNewPage(40);
+  const signatureSectionHeight = getSignatureSectionHeight();
+  checkNewPage(signatureSectionHeight);
   addSignatureSection(yPosition);
 
   // Helper function for section headers
@@ -495,47 +570,86 @@ export function generateCertificatePDF(certificate: CertificateData): Uint8Array
     return currentY + 2; // Small padding at bottom
   }
 
+  function getSignatureFieldLines(value: string, maxWidth: number) {
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+
+    const lines = pdf.splitTextToSize(safeString(value) || ' ', maxWidth);
+    return lines.length > 0 ? lines : [' '];
+  }
+
+  function getSignatureFieldHeight(lines: string[]) {
+    return Math.max(4, lines.length * 3.6);
+  }
+
+  function getSignatureSectionHeight() {
+    const boxWidth = (pageWidth - 3 * margin) / 2;
+    const valueX = 31;
+    const valueWidth = boxWidth - valueX - 5;
+    const inspectorNameLines = getSignatureFieldLines(safeString(certificate.inspectorName), valueWidth);
+    const inspectorDateLines = getSignatureFieldLines(formatDate(certificate.inspectionDate), valueWidth);
+    const inspectorContentHeight =
+      getSignatureFieldHeight(inspectorNameLines) +
+      3 +
+      getSignatureFieldHeight(inspectorDateLines);
+
+    return Math.max(35, 18 + inspectorContentHeight + 5);
+  }
+
   // Helper function for signature section
   function addSignatureSection(startY: number) {
     const signatureY = startY;
     const boxWidth = (pageWidth - 3 * margin) / 2;
-    const boxHeight = 35;
-    
-    // Inspector signature with colored background
-    addColoredSection(margin, signatureY, boxWidth, boxHeight);
-    
-    // Inspector header
-    pdf.setFillColor(52, 73, 124);
-    pdf.rect(margin + 2, signatureY + 2, boxWidth - 4, 10, 'F');
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(255, 255, 255);
-    addText('INSPECTOR SIGNATURE:', margin + 5, signatureY + 9);
-    
-    // Inspector details
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('helvetica', 'normal');
-    addText('Name:', margin + 5, signatureY + 20);
-    addText(safeString(certificate.inspectorName), margin + 30, signatureY + 20);
-    addText('Date:', margin + 5, signatureY + 27);
-    addText(formatDate(certificate.inspectionDate), margin + 30, signatureY + 27);
-    
-    // Client signature with colored background
-    const clientX = margin + boxWidth + 10;
-    addColoredSection(clientX, signatureY, boxWidth, boxHeight);
-    
-    // Client header
-    pdf.setFillColor(52, 73, 124);
-    pdf.rect(clientX + 2, signatureY + 2, boxWidth - 4, 10, 'F');
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(255, 255, 255);
-    addText('CLIENT SIGNATURE:', clientX + 5, signatureY + 9);
-    
-    // Client details
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont('helvetica', 'normal');
-    addText('Name:', clientX + 5, signatureY + 20);
-    addText('Date:', clientX + 5, signatureY + 27);
+    const boxHeight = getSignatureSectionHeight();
+    const contentTop = signatureY + 18;
+    const labelX = 5;
+    const valueX = 31;
+    const valueWidth = boxWidth - valueX - 5;
+    const rowGap = 3;
+
+    const drawSignaturePanel = (
+      x: number,
+      title: string,
+      nameValue: string,
+      dateValue: string
+    ) => {
+      const nameLines = getSignatureFieldLines(nameValue, valueWidth);
+      const dateLines = getSignatureFieldLines(dateValue, valueWidth);
+      const nameHeight = getSignatureFieldHeight(nameLines);
+
+      addColoredSection(x, signatureY, boxWidth, boxHeight);
+
+      pdf.setFillColor(52, 73, 124);
+      pdf.rect(x + 2, signatureY + 2, boxWidth - 4, 10, 'F');
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      addText(title, x + 5, signatureY + 9);
+
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      addText('Name:', x + labelX, contentTop);
+      addText('Date:', x + labelX, contentTop + nameHeight + rowGap);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(nameLines, x + valueX, contentTop);
+      pdf.text(dateLines, x + valueX, contentTop + nameHeight + rowGap);
+    };
+
+    drawSignaturePanel(
+      margin,
+      'INSPECTOR SIGNATURE:',
+      safeString(certificate.inspectorName),
+      formatDate(certificate.inspectionDate)
+    );
+
+    drawSignaturePanel(
+      margin + boxWidth + 10,
+      'CLIENT SIGNATURE:',
+      '',
+      ''
+    );
   }
 
   return new Uint8Array(pdf.output('arraybuffer'));
@@ -551,6 +665,7 @@ function getCertificateTypeDisplayName(type: string): string {
     BS5266: 'BS5266 EMERGENCY LIGHTING SYSTEM',
     FIRE_EXTINGUISHER: 'PORTABLE FIRE EXTINGUISHER INSPECTION',
     DRY_RISER: 'DRY RISER SYSTEM TESTING',
+    CP12: 'CP12 LANDLORD GAS SAFETY RECORD',
     EICR: 'ELECTRICAL INSTALLATION CONDITION REPORT',
   };
   
@@ -566,6 +681,7 @@ function getStandardsText(type: string): string {
     BS5266: 'In accordance with BS 5266: Emergency lighting - Part 1: Code of practice for the emergency lighting of premises',
     FIRE_EXTINGUISHER: 'In accordance with BS 5306-3: Fire extinguishing installations and equipment on premises - Code of practice for selection, installation and maintenance of portable fire extinguishers',
     DRY_RISER: 'In accordance with BS 9990: Code of practice for non-automatic fire fighting systems in buildings',
+    CP12: 'In accordance with the Gas Safety (Installation and Use) Regulations 1998 for landlord gas safety records',
     EICR: 'Requirements For Electrical Installations - BS 7671 IET Wiring Regulations',
   };
   
@@ -626,6 +742,16 @@ function getSystemDetails(certificate: CertificateData): string[][] {
       ['Outlet Type:', safeString(formData.outletType) || 'Landing valve'],
       ['Test Pressure Result:', safeString(formData.pressureTestResult) || 'Not specified']
     ];
+  } else if (type === 'CP12') {
+    return [
+      ['Engineer Gas Safe No.:', safeString(formData.gasSafeNumber) || 'Not specified'],
+      ['Appliance Type:', safeString(formData.applianceType) || 'Not specified'],
+      ['Appliance Location:', safeString(formData.applianceLocation) || 'Not specified'],
+      ['Appliance Make/Model:', safeString(formData.applianceMakeModel) || 'Not specified'],
+      ['Flue Type:', safeString(formData.flueType) || 'Not specified'],
+      ['Operating Pressure:', safeString(formData.operatingPressure) || 'Not specified'],
+      ['Flue Performance:', safeString(formData.fluePerformanceSatisfactory) || 'Not specified']
+    ];
   } else if (type === 'EICR') {
     return [
       ['Earthing Arrangement:', safeString(formData.earthingArrangements) || 'TN-C-S'],
@@ -651,6 +777,7 @@ function getCertificationStatement(type: string): string {
     BS5266: 'I certify that the emergency lighting system detailed above has been inspected and tested in accordance with BS 5266. The system is functioning correctly and provides adequate emergency illumination, subject to any defects or recommendations noted above.',
     FIRE_EXTINGUISHER: 'I certify that the portable fire extinguishers detailed above have been inspected and tested in accordance with BS 5306-3. All extinguishers are in serviceable condition and positioned correctly, subject to any defects or recommendations noted above.',
     DRY_RISER: 'I certify that the dry riser system detailed above has been tested in accordance with BS 9990. The system has been tested to the required pressure and is in serviceable condition, subject to any defects or recommendations noted above.',
+    CP12: 'I certify that the gas appliances and flues detailed above have been checked in accordance with the Gas Safety (Installation and Use) Regulations 1998 and, subject to any defects or remedial works noted above, are safe for continued use at the time of inspection.',
     EICR: 'I/We, being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our signatures below), having exercised reasonable skill and care when carrying out the inspection and testing, hereby declare that the information in this report, including the observations and the attached schedules, provides an accurate assessment of the condition of the electrical installation taking into account the stated extent and limitations.',
   };
   
@@ -666,6 +793,7 @@ function getDefaultInspectionType(type: string): string {
     BS5266: 'Annual Service',
     FIRE_EXTINGUISHER: 'Annual Service',
     DRY_RISER: 'Six Monthly Test',
+    CP12: 'Annual Gas Safety Check',
     EICR: 'Condition Report',
   };
   
@@ -685,6 +813,410 @@ function formatDate(dateString: string | null | undefined): string {
 function safeString(value: any): string {
   if (value === null || value === undefined) return '';
   return String(value);
+}
+
+function generateCP12PDF(certificate: CertificateData): Uint8Array {
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 12;
+  const contentWidth = pageWidth - margin * 2;
+  const fd = (certificate.formData || {}) as Record<string, any>;
+
+  const brand = [28, 63, 99] as [number, number, number];
+  const cp12Yellow = [246, 198, 0] as [number, number, number];
+  const border = [164, 174, 188] as [number, number, number];
+  const soft = [245, 247, 250] as [number, number, number];
+  const softBlue = [236, 243, 250] as [number, number, number];
+  const green = [46, 125, 50] as [number, number, number];
+  const amber = [245, 158, 11] as [number, number, number];
+  const red = [185, 28, 28] as [number, number, number];
+  const sectionGap = 4;
+  const footerText =
+    'This record should be retained by the landlord and provided to tenants in accordance with current UK gas safety requirements.';
+  const footerFontSize = 7.5;
+  const footerBottomMargin = 8;
+  let y = margin;
+
+  const ss = safeString;
+  const propertyName = certificate.siteName || fd.propertyName || 'Not specified';
+  const propertyAddress = certificate.siteAddress || fd.propertyAddress || 'Not specified';
+  const landlordName = ss(fd.landlordName) || certificate.customer.name || 'Not specified';
+  const tenantName = ss(fd.tenantName) || 'Not specified';
+  const gasSafeNumber = ss(fd.gasSafeNumber) || 'Not specified';
+  const applianceStatus = ss(fd.applianceSafeToUse) || 'Not specified';
+
+  const boolLabel = (value: any) => {
+    const normalized = ss(value).trim().toLowerCase();
+    if (!normalized) return 'Not specified';
+    if (normalized === 'yes') return 'Yes';
+    if (normalized === 'no') return 'No';
+    if (normalized === 'n/a') return 'N/A';
+    return ss(value);
+  };
+
+  const getLineHeight = (fontSize: number) => (fontSize * 1.15) / pdf.internal.scaleFactor;
+
+  const drawBox = (
+    x: number,
+    top: number,
+    width: number,
+    height: number,
+    title: string,
+    fill: [number, number, number] = soft,
+  ) => {
+    pdf.setDrawColor(border[0], border[1], border[2]);
+    pdf.setFillColor(fill[0], fill[1], fill[2]);
+    pdf.rect(x, top, width, height, 'FD');
+
+    pdf.setFillColor(cp12Yellow[0], cp12Yellow[1], cp12Yellow[2]);
+    pdf.rect(x, top, width, 8, 'F');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.setTextColor(20, 20, 20);
+    pdf.text(title, x + 3, top + 5.5);
+
+    pdf.setTextColor(0, 0, 0);
+  };
+
+  const drawField = (
+    label: string,
+    value: string,
+    x: number,
+    top: number,
+    width: number,
+    fontSize = 9,
+  ) => {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(fontSize);
+    pdf.text(label, x, top);
+    pdf.setFont('helvetica', 'normal');
+    const lines = pdf.splitTextToSize(value || 'Not specified', width);
+    const lineHeight = getLineHeight(fontSize);
+    pdf.text(lines, x, top + 4.8);
+    return top + 4.8 + Math.max(lines.length, 1) * lineHeight;
+  };
+
+  const measureFieldBottomOffset = (
+    value: string,
+    width: number,
+    fontSize = 9,
+  ) => {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(fontSize);
+    const lines = pdf.splitTextToSize(value || 'Not specified', width);
+    return 4.8 + Math.max(lines.length, 1) * getLineHeight(fontSize);
+  };
+
+  const statusColor = (() => {
+    const normalized = applianceStatus.toLowerCase();
+    if (normalized === 'yes') return green;
+    if (normalized === 'at risk') return amber;
+    if (normalized === 'immediately dangerous' || normalized === 'no') return red;
+    return brand;
+  })();
+
+  const drawGasSafeBadgeFallback = (x: number, top: number, width: number, height: number) => {
+    pdf.setDrawColor(border[0], border[1], border[2]);
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(x, top, width, height, 2, 2, 'FD');
+
+    pdf.setFillColor(cp12Yellow[0], cp12Yellow[1], cp12Yellow[2]);
+    pdf.roundedRect(x + 2, top + 2, width - 4, height - 4, 1.5, 1.5, 'F');
+
+    pdf.setFillColor(brand[0], brand[1], brand[2]);
+    pdf.rect(x + 4, top + 4, 9, height - 8, 'F');
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.text('G', x + 8.5, top + height / 2 + 2, { align: 'center' });
+
+    pdf.setTextColor(20, 20, 20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(10);
+    pdf.text('GAS SAFE', x + 16, top + 9);
+    pdf.setFontSize(7);
+    pdf.text('REGISTER', x + 16, top + 14);
+  };
+
+  const drawGasSafeBadge = (x: number, top: number, width: number, height: number) => {
+    try {
+      pdf.addImage(CP12_GAS_SAFE_LOGO_DATA_URI, 'WEBP', x, top, width, height);
+    } catch {
+      drawGasSafeBadgeFallback(x, top, width, height);
+    }
+  };
+
+  const addContinuationHeader = () => {
+    pdf.addPage();
+    y = margin;
+
+    pdf.setDrawColor(border[0], border[1], border[2]);
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(margin, y, contentWidth, 16, 'FD');
+    pdf.setFillColor(cp12Yellow[0], cp12Yellow[1], cp12Yellow[2]);
+    pdf.rect(margin, y, contentWidth, 4, 'F');
+    pdf.setTextColor(20, 20, 20);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text('CP12 Gas Safety Record (continued)', margin + 4, y + 9.5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.text(`Certificate No. ${ss(certificate.certificateNumber) || 'Not specified'}`, margin + 4, y + 13.8);
+    drawGasSafeBadge(margin + contentWidth - 17, y + 1, 14, 14);
+    pdf.setTextColor(0, 0, 0);
+    y += 20;
+  };
+
+  pdf.setDrawColor(border[0], border[1], border[2]);
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(margin, y, contentWidth, 22, 'FD');
+  pdf.setFillColor(cp12Yellow[0], cp12Yellow[1], cp12Yellow[2]);
+  pdf.rect(margin, y, contentWidth, 4, 'F');
+  pdf.setTextColor(20, 20, 20);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(16);
+  pdf.text('LANDLORD / HOMEOWNER GAS SAFETY RECORD', margin + 4, y + 10.5);
+  pdf.setFontSize(10);
+  pdf.text('(CP12)', margin + 4, y + 17);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  pdf.text('Gas Safety (Installation and Use) Regulations 1998', margin + 20, y + 17);
+  drawGasSafeBadge(margin + contentWidth - 21, y + 2.5, 18, 18);
+  pdf.setTextColor(0, 0, 0);
+  y += 26;
+
+  const leftWidth = contentWidth * 0.62;
+  const rightWidth = contentWidth - leftWidth - 4;
+  const propertyLeftWidth = leftWidth - 6;
+  const propertyRightWidth = rightWidth - 10;
+  const propertyHalfWidth = rightWidth / 2;
+  const propertyFirstRowTop = y + 13;
+  const propertyFirstRowHeight = Math.max(
+    measureFieldBottomOffset(ss(propertyName), propertyLeftWidth),
+    measureFieldBottomOffset(ss(certificate.certificateNumber), propertyRightWidth),
+  );
+  const propertySecondRowTop = propertyFirstRowTop + propertyFirstRowHeight + 3;
+  const propertySecondRowHeight = Math.max(
+    measureFieldBottomOffset(ss(propertyAddress), propertyLeftWidth, 8.5),
+    measureFieldBottomOffset(formatDate(certificate.inspectionDate), propertyHalfWidth - 8, 8.5),
+    measureFieldBottomOffset(formatDate(certificate.nextInspectionDate), propertyHalfWidth - 10, 8.5),
+  );
+  const propertyBoxHeight = Math.max(32, propertySecondRowTop - y + propertySecondRowHeight + 4);
+
+  drawBox(margin, y, leftWidth, propertyBoxHeight, 'Property Details', softBlue);
+  drawBox(margin + leftWidth + 4, y, rightWidth, propertyBoxHeight, 'Record Details', soft);
+
+  drawField('Property / Site', ss(propertyName), margin + 3, propertyFirstRowTop, propertyLeftWidth);
+  drawField('Address', ss(propertyAddress), margin + 3, propertySecondRowTop, propertyLeftWidth, 8.5);
+
+  drawField('Certificate No.', ss(certificate.certificateNumber), margin + leftWidth + 7, propertyFirstRowTop, propertyRightWidth);
+  drawField('Inspection Date', formatDate(certificate.inspectionDate), margin + leftWidth + 7, propertySecondRowTop, propertyHalfWidth - 8, 8.5);
+  drawField('Next Check Due', formatDate(certificate.nextInspectionDate), margin + leftWidth + 7 + propertyHalfWidth, propertySecondRowTop, propertyHalfWidth - 10, 8.5);
+  y += propertyBoxHeight + sectionGap;
+
+  const personColumnGap = 4;
+  const personColumnWidth = (contentWidth - 6 - personColumnGap) / 2;
+  const personLeftX = margin + 3;
+  const personRightX = personLeftX + personColumnWidth + personColumnGap;
+  const personFirstRowTop = y + 13;
+  const personFirstRowHeight = Math.max(
+    measureFieldBottomOffset(landlordName, personColumnWidth),
+    measureFieldBottomOffset(tenantName, personColumnWidth),
+  );
+  const personSecondRowTop = personFirstRowTop + personFirstRowHeight + 4;
+  const personSecondRowHeight = Math.max(
+    measureFieldBottomOffset(ss(certificate.inspectorName) || 'Not specified', personColumnWidth),
+    measureFieldBottomOffset(gasSafeNumber, personColumnWidth),
+  );
+  const responsibleBoxHeight = Math.max(26, personSecondRowTop - y + personSecondRowHeight + 4);
+
+  drawBox(margin, y, contentWidth, responsibleBoxHeight, 'Responsible Persons and Engineer', soft);
+  drawField('Landlord / Agent', landlordName, personLeftX, personFirstRowTop, personColumnWidth);
+  drawField('Tenant', tenantName, personRightX, personFirstRowTop, personColumnWidth);
+  drawField('Engineer', ss(certificate.inspectorName) || 'Not specified', personLeftX, personSecondRowTop, personColumnWidth);
+  drawField('Gas Safe No.', gasSafeNumber, personRightX, personSecondRowTop, personColumnWidth);
+  y += responsibleBoxHeight + sectionGap;
+
+  drawBox(margin, y, contentWidth, 39, 'Appliance and Flue Details', softBlue);
+  const tableX = margin + 2;
+  const tableY = y + 10;
+  const tableWidth = contentWidth - 4;
+  const colWidths = [22, 22, 34, 22, 16, 16, 15, 15, 20];
+  const headers = ['Appliance', 'Location', 'Make / Model', 'Serial No.', 'Flue', 'Pressure', 'Devices', 'Flue OK', 'Safe'];
+  const colPositions: number[] = [];
+  let xCursor = tableX;
+  colWidths.forEach((width) => {
+    colPositions.push(xCursor);
+    xCursor += width;
+  });
+
+  pdf.setFillColor(cp12Yellow[0], cp12Yellow[1], cp12Yellow[2]);
+  pdf.rect(tableX, tableY, tableWidth, 8, 'F');
+  pdf.setTextColor(20, 20, 20);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  headers.forEach((header, index) => {
+    pdf.text(header, colPositions[index] + 1.5, tableY + 5.2);
+  });
+
+  const applianceRow = [
+    ss(fd.applianceType) || 'Not specified',
+    ss(fd.applianceLocation) || 'Not specified',
+    ss(fd.applianceMakeModel) || 'Not specified',
+    ss(fd.serialNumber) || 'Not specified',
+    ss(fd.flueType) || 'Not specified',
+    ss(fd.operatingPressure) || 'Not specified',
+    boolLabel(fd.safetyDevicesCorrect),
+    boolLabel(fd.fluePerformanceSatisfactory),
+    applianceStatus,
+  ];
+
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.2);
+  const rowY = tableY + 8;
+  pdf.setDrawColor(border[0], border[1], border[2]);
+  pdf.rect(tableX, rowY, tableWidth, 12);
+
+  applianceRow.forEach((value, index) => {
+    const width = colWidths[index];
+    if (index > 0) {
+      pdf.line(colPositions[index], rowY, colPositions[index], rowY + 12);
+    }
+
+    if (index === applianceRow.length - 1) {
+      pdf.setFillColor(statusColor[0], statusColor[1], statusColor[2]);
+      pdf.rect(colPositions[index], rowY, width, 12, 'F');
+      pdf.setDrawColor(border[0], border[1], border[2]);
+      pdf.rect(colPositions[index], rowY, width, 12);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(value, colPositions[index] + width / 2, rowY + 7.2, { align: 'center' });
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont('helvetica', 'normal');
+    } else {
+      const clipped = pdf.splitTextToSize(value, width - 2).slice(0, 2);
+      pdf.text(clipped, colPositions[index] + 1, rowY + 4.4);
+    }
+  });
+  y += 39 + sectionGap;
+
+  const checks = [
+    ['Ventilation', boolLabel(fd.ventilationSatisfactory)],
+    ['Termination', boolLabel(fd.terminationSatisfactory)],
+    ['Gas tightness', boolLabel(fd.gasTightnessTest)],
+    ['CO alarm present', boolLabel(fd.coAlarmPresent)],
+    ['CO alarm tested', boolLabel(fd.coAlarmTested)],
+    ['Boiler serviced', boolLabel(fd.boilerServiceCompleted)],
+    ['Warning notice', boolLabel(fd.warningNoticeIssued)],
+    ['Emergency control', ss(fd.emergencyControlLocation) || 'Not specified'],
+  ];
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8.5);
+  const checkLabelWidth = 24;
+  const checkColumnWidth = contentWidth / 2 - 6;
+  const checkRowGap = 2;
+  const checkLineHeight = getLineHeight(8.5);
+  const checkEntries = checks.map(([label, value]) => ({
+    label,
+    valueLines: pdf.splitTextToSize(value, checkColumnWidth - checkLabelWidth).slice(0, 2),
+  }));
+  const checkRows = Array.from({ length: Math.ceil(checkEntries.length / 2) }, (_, rowIndex) => {
+    const rowEntries = checkEntries.slice(rowIndex * 2, rowIndex * 2 + 2);
+    const rowHeight = Math.max(
+      6,
+      ...rowEntries.map((entry) => Math.max(entry.valueLines.length, 1) * checkLineHeight),
+    );
+
+    return { rowEntries, rowHeight };
+  });
+  const checksContentHeight = checkRows.reduce(
+    (total, row, index) => total + row.rowHeight + (index < checkRows.length - 1 ? checkRowGap : 0),
+    0,
+  );
+  const checksBoxHeight = Math.max(34, 13 + checksContentHeight + 4);
+
+  drawBox(margin, y, contentWidth, checksBoxHeight, 'Gas Safety Checks', soft);
+  let currentCheckY = y + 13;
+  checkRows.forEach((row) => {
+    row.rowEntries.forEach((entry, column) => {
+      const fieldX = margin + 3 + column * (contentWidth / 2);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${entry.label}:`, fieldX, currentCheckY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(entry.valueLines, fieldX + checkLabelWidth, currentCheckY);
+    });
+    currentCheckY += row.rowHeight + checkRowGap;
+  });
+  y += checksBoxHeight + sectionGap;
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  const defects = pdf.splitTextToSize(
+    ss(fd.defectsRemedialAction) || 'No defects or remedial actions recorded.',
+    contentWidth - 8,
+  );
+  const defectsBoxHeight = Math.max(28, 14 + Math.max(defects.length, 1) * getLineHeight(9) + 4);
+  drawBox(margin, y, contentWidth, defectsBoxHeight, 'Defects Identified / Remedial Action Required', softBlue);
+  pdf.text(defects, margin + 3, y + 14);
+  y += defectsBoxHeight + sectionGap;
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8.5);
+  const declaration = pdf.splitTextToSize(
+    'I confirm that the appliances and flues listed above were checked on the date shown and that this record reflects the condition found at the time of inspection.',
+    contentWidth - 8,
+  );
+  const declarationBoxHeight = Math.max(24, 13 + Math.max(declaration.length, 1) * getLineHeight(8.5) + 4);
+  drawBox(margin, y, contentWidth, declarationBoxHeight, 'Declaration', soft);
+  pdf.text(declaration, margin + 3, y + 13);
+  y += declarationBoxHeight + sectionGap;
+
+  const signWidth = (contentWidth - 4) / 2;
+  const signLeftX = margin + 3;
+  const signRightX = margin + signWidth + 7;
+  const signLeftWidth = signWidth - 6;
+  const signRightWidth = signWidth - 8;
+  const signName = tenantName !== 'Not specified' ? tenantName : landlordName;
+  const signFirstRowHeight = Math.max(
+    measureFieldBottomOffset(ss(certificate.inspectorName) || 'Not specified', signLeftWidth, 8.5),
+    measureFieldBottomOffset(signName, signRightWidth, 8.5),
+  );
+  const signSecondRowHeight = Math.max(
+    measureFieldBottomOffset(formatDate(certificate.inspectionDate), signLeftWidth, 8.5),
+    measureFieldBottomOffset(formatDate(certificate.inspectionDate), signRightWidth, 8.5),
+  );
+  const signBoxHeight = Math.max(22, 13 + signFirstRowHeight + 4 + signSecondRowHeight + 4);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(footerFontSize);
+  const footerLines = pdf.splitTextToSize(footerText, contentWidth);
+  const footerReservedTop = pageHeight - footerBottomMargin - footerLines.length * getLineHeight(footerFontSize) - 1;
+
+  if (y + signBoxHeight > footerReservedTop - sectionGap) {
+    addContinuationHeader();
+  }
+
+  const signFirstRowTop = y + 13;
+  const signSecondRowTop = signFirstRowTop + signFirstRowHeight + 4;
+
+  drawBox(margin, y, signWidth, signBoxHeight, 'Engineer Sign-Off', softBlue);
+  drawBox(margin + signWidth + 4, y, signWidth, signBoxHeight, 'Tenant / Agent Acknowledgement', softBlue);
+  drawField('Engineer', ss(certificate.inspectorName) || 'Not specified', signLeftX, signFirstRowTop, signLeftWidth, 8.5);
+  drawField('Date', formatDate(certificate.inspectionDate), signLeftX, signSecondRowTop, signLeftWidth, 8.5);
+  drawField('Name', signName, signRightX, signFirstRowTop, signRightWidth, 8.5);
+  drawField('Date', formatDate(certificate.inspectionDate), signRightX, signSecondRowTop, signRightWidth, 8.5);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(footerFontSize);
+  pdf.setTextColor(90, 90, 90);
+  pdf.text(footerLines, margin, pageHeight - footerBottomMargin - (footerLines.length - 1) * getLineHeight(footerFontSize));
+
+  return new Uint8Array(pdf.output('arraybuffer'));
 }
 
 // ─── EICR (BS 7671) dedicated PDF generator ─────────────────────────────────
