@@ -56,6 +56,7 @@ const getCertificateTypeDisplayName = (type: string): string => {
     BS5266: 'BS 5266: Emergency Lighting System',
     FIRE_EXTINGUISHER: 'Portable Fire Extinguisher Certificate',
     DRY_RISER: 'Dry Riser Certificate',
+    CP12: 'Landlord / Homeowner Gas Safety Record (CP12)',
     EICR: 'Electrical Installation Condition Report',
   };
   return names[type] || type;
@@ -68,6 +69,7 @@ const getStandardsText = (type: string): string => {
     BS5266: 'Compliant with BS 5266-1:2016 & British Standards Institution',
     FIRE_EXTINGUISHER: 'Compliant with BS 5306-3:2017 & British Standards Institution',
     DRY_RISER: 'Compliant with BS 5306:2012 & British Standards Institution',
+    CP12: 'Gas Safety (Installation and Use) Regulations 1998 landlord gas safety record',
     EICR: 'Compliant with BS 7671:2018 & IET Wiring Regulations',
   };
   return standards[type] || 'Professional Safety Certification Service';
@@ -115,6 +117,17 @@ const getSystemDetails = (data: CertificatePreviewData): Array<[string, string]>
         ['Number of Inlets:', details.numberOfInlets || 'Not specified'],
         ['Test Pressure:', details.testPressure || 'Not specified'],
         ['Test Flow:', details.testFlow || 'Not specified'],
+      ];
+    case 'CP12':
+      return [
+        ['Appliance Type:', details.applianceType || 'Not specified'],
+        ['Appliance Location:', details.applianceLocation || 'Not specified'],
+        ['Appliance Make/Model:', details.applianceMakeModel || 'Not specified'],
+        ['Flue Type:', details.flueType || 'Not specified'],
+        ['Operating Pressure:', details.operatingPressure || 'Not specified'],
+        ['Safety Devices:', details.safetyDevicesCorrect || 'Not specified'],
+        ['Flue Performance:', details.fluePerformanceSatisfactory || 'Not specified'],
+        ['Appliance Safe To Use:', details.applianceSafeToUse || 'Not specified'],
       ];
     default:
       return [['System Type:', details.systemType || 'Not specified']];

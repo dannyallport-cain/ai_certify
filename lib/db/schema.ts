@@ -486,6 +486,7 @@ export enum CertificateType {
   BS5266 = 'BS5266',
   FIRE_EXTINGUISHER = 'FIRE_EXTINGUISHER',
   DRY_RISER = 'DRY_RISER',
+  CP12 = 'CP12',
   EICR = 'EICR',
 }
 

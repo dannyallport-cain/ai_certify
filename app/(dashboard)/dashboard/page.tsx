@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { GasSafeRegisterLogo } from '@/components/GasSafeRegisterLogo';
 import { AlertTriangle, Award, FileText, Users } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -139,6 +140,20 @@ export default async function DashboardPage() {
               </CardTitle>
               <CardDescription>
                 Portable fire extinguisher maintenance certificate
+              </CardDescription>
+            </CardHeader>
+          </Link>
+        </Card>
+
+        <Card className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer">
+          <Link href="/certificates/new/cp12">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <GasSafeRegisterLogo className="h-11 w-14 rounded-lg border-amber-300 p-1.5 shadow-none" sizes="56px" />
+                <span className="ml-3">CP12 Gas Safety</span>
+              </CardTitle>
+              <CardDescription>
+                Landlord gas safety record for appliances and flues
               </CardDescription>
             </CardHeader>
           </Link>

@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 const createTemplateSchema = z.object({
   name: z.string().min(1, 'Template name is required'),
-  certificateType: z.enum(['BS5839-1', 'BS5839-6', 'BS5266', 'FIRE_EXTINGUISHER', 'DRY_RISER', 'EICR']),
+  certificateType: z.enum(['BS5839-1', 'BS5839-6', 'BS5266', 'FIRE_EXTINGUISHER', 'DRY_RISER', 'CP12', 'EICR']),
   description: z.string().optional(),
   template: z.object({
     sections: z.array(
