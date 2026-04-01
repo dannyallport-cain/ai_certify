@@ -61,6 +61,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="wizard"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="success"
         options={{
           href: null, // hidden from tab bar — navigated to programmatically

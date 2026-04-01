@@ -1,15 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    ppr: true,
-    clientSegmentCache: true,
-  },
-  turbopack: {
-    root: process.cwd(),
-  },
-  typescript: {
-    ignoreBuildErrors: true
-  },
   images: {
     remotePatterns: [
       {

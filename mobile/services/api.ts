@@ -1,9 +1,17 @@
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
 const TOKEN_KEY = 'mobile_auth_token';
 
-// Base URL — update to your deployed URL or use local tunnel for dev
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://your-domain.com';
+// Base URL for the deployed web API (Vercel) or a local tunnel in development.
+// Prefer Expo config extra.apiUrl because Expo env vars are not always injected into
+// native/device builds the same way they are in local dev. Fall back to EXPO_PUBLIC_API_URL.
+const configuredBaseUrl =
+  Constants.expoConfig?.extra?.apiUrl ??
+  process.env.EXPO_PUBLIC_API_URL ??
+  'https://ai-certificates.app';
+
+const BASE_URL = configuredBaseUrl.replace(/\/+$/, '');
 
 export async function saveToken(token: string) {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
@@ -70,7 +78,7 @@ export async function listCustomers(): Promise<Customer[]> {
   const res = await authFetch('/api/mobile/customers');
   if (!res.ok) throw new Error('Failed to fetch customers');
   const data = await res.json();
-  return data.customers;
+  return Array.isArray(data) ? data : data.customers ?? [];
 }
 
 export interface CreateCustomerInput {
@@ -92,7 +100,7 @@ export async function createCustomer(input: CreateCustomerInput): Promise<Custom
     throw new Error(body.error ?? 'Failed to create customer');
   }
   const data = await res.json();
-  return data.customer;
+  return data.customer ?? data;
 }
 
 // ── Image Analysis ────────────────────────────────────────────────────────────

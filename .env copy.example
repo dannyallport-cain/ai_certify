@@ -1,30 +1,35 @@
 # Base Railway connection (update with your credentials)
-POSTGRES_URL=postgresql://postgres:password@nozomi.proxy.rlwy.net:37487/railway
-DATABASE_URL=postgresql://postgres:password@nozomi.proxy.rlwy.net:37487/railway
-POSTGRES_HOST=nozomi.proxy.rlwy.net
+# Use Railway's Postgres URL for both runtime and tooling.
+POSTGRES_URL=postgresql://postgres:password@your-railway-host.railway.internal:5432/railway
+DATABASE_URL=postgresql://postgres:password@your-railway-host.railway.internal:5432/railway
+POSTGRES_HOST=your-railway-host.railway.internal
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=password
+POSTGRES_PASSWORD=replace-with-railway-password
 POSTGRES_DATABASE=railway
 
-# Application URLs / auth secrets
-BASE_URL=https://ai-certificates.app
+# Web app URLs / auth secrets
+# Web app is hosted on Vercel. Keep BASE_URL and NEXT_PUBLIC_APP_URL aligned to the web app origin.
+BASE_URL=https://your-web-app.vercel.app
+NEXT_PUBLIC_APP_URL=https://your-web-app.vercel.app
+NEXTAUTH_URL=https://your-web-app.vercel.app
 AUTH_SECRET=replace-with-auth-secret
 NEXTAUTH_SECRET=replace-with-nextauth-secret
-NEXTAUTH_URL=http://localhost:4000
 
 # Stripe configuration (replace with your keys)
-STRIPE_SECRET_KEY=sk_test_your_key
-STRIPE_WEBHOOK_SECRET=whsec_your_secret
+STRIPE_SECRET_KEY=sk_test_replace_with_your_key
+STRIPE_WEBHOOK_SECRET=whsec_replace_with_your_secret
 
-# Vercel AI Gateway (used for report PDF analysis)
-AI_GATEWAY_API_KEY=vck_your_key
+# Vercel AI Gateway / AI providers
+AI_GATEWAY_API_KEY=vck_replace_with_your_key
 AI_GATEWAY_MODEL=anthropic/claude-sonnet-4.6
+AI_GATEWAY_SEARCH_MODEL=openai/gpt-5.4
+OPENAI_API_KEY=sk-replace-with-openai-key
 
 # Google API keys (optional)
-GOOGLE_MAPS_API_KEY=AIzaSyYourKey
-NEXT_PUBLIC_GOOGLE_STREET_VIEW_API_KEY=AIzaSyYourKey
+GOOGLE_MAPS_API_KEY=AIzaSyReplaceWithYourKey
+NEXT_PUBLIC_GOOGLE_STREET_VIEW_API_KEY=AIzaSyReplaceWithYourKey
 
-# Stack environment variables (update as needed)
-NEXT_PUBLIC_STACK_PROJECT_ID=e758e393-53a9-4a17-a26a-9a27354c6495
-NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=pck_kzcemvmh4qbc11q29bdxhwnjetgv452r9z8p9wezbsc70
-STACK_SECRET_SERVER_KEY=ssk_7nbqyb2h2h9ygz5rpcnf6smghcf7mp17746528mdx61a8
+# Stack environment variables (replace all values)
+NEXT_PUBLIC_STACK_PROJECT_ID=replace-with-stack-project-id
+NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=replace-with-stack-publishable-client-key
+STACK_SECRET_SERVER_KEY=replace-with-stack-secret-server-key

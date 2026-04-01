@@ -6,7 +6,7 @@ ROOT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
 IOS_DIR="$ROOT_DIR/ios"
 WORKSPACE="$IOS_DIR/AICertifyField.xcworkspace"
 SCHEME="AICertifyField"
-CONFIGURATION="Debug"
+CONFIGURATION="Release"
 
 # Defaults to the known physical device UDID used in this project workflow.
 IOS_DEVICE_UDID="${IOS_DEVICE_UDID:-00008101-0019452434A1001E}"
