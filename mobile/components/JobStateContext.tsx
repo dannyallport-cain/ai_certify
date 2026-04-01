@@ -1,9 +1,36 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import type { AnalysisResult, Customer } from '@/services/api';
 
+export type CaptureMode = 'consumer_unit' | 'circuit_label';
+
+export type WizardPhotoType =
+  | 'main_fuse'
+  | 'meter'
+  | 'consumer_unit_cover_on'
+  | 'circuit_schedule'
+  | 'smoke_detector'
+  | 'co_detector';
+
 export interface CapturedImage {
   uri: string;
-  mode: 'consumer_unit' | 'circuit_label';
+  mode: CaptureMode;
+  type?: WizardPhotoType;
+  label?: string;
+  slotIndex?: number;
+}
+
+export type ConsumerUnitMaterial = 'metal' | 'plastic' | 'not_sure' | null;
+
+export interface WizardState {
+  inspectionDate: string;
+  consumerUnitMaterial: ConsumerUnitMaterial;
+  smokeDetectorCount: number;
+  hasSolidFuelAppliance: boolean | null;
+  coDetectorTested: boolean;
+  activeCaptureType: WizardPhotoType | null;
+  activeCaptureLabel: string | null;
+  activeCaptureMode: CaptureMode;
+  activeCaptureSlotIndex: number | null;
 }
 
 export interface JobState {
@@ -13,6 +40,7 @@ export interface JobState {
   capturedImages: CapturedImage[];
   analysisResult: AnalysisResult | null;
   createdCertificate: { id: number; certificateNumber: string } | null;
+  wizard: WizardState;
 }
 
 type JobAction =
@@ -20,9 +48,24 @@ type JobAction =
   | { type: 'SET_GPS'; payload: { address: string; coords: { latitude: number; longitude: number } } }
   | { type: 'ADD_IMAGE'; payload: CapturedImage }
   | { type: 'REMOVE_IMAGE'; payload: number }
+  | { type: 'REMOVE_IMAGE_BY_TARGET'; payload: { type: WizardPhotoType; slotIndex?: number | null } }
   | { type: 'SET_ANALYSIS'; payload: AnalysisResult | null }
   | { type: 'SET_CERTIFICATE'; payload: { id: number; certificateNumber: string } | null }
+  | { type: 'SET_WIZARD_FIELD'; payload: { key: keyof WizardState; value: WizardState[keyof WizardState] } }
+  | {
+      type: 'SET_ACTIVE_CAPTURE';
+      payload: {
+        type: WizardPhotoType | null;
+        label: string | null;
+        mode?: CaptureMode;
+        slotIndex?: number | null;
+      };
+    }
   | { type: 'RESET' };
+
+function getTodayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 const initialState: JobState = {
   selectedCustomer: null,
@@ -31,6 +74,17 @@ const initialState: JobState = {
   capturedImages: [],
   analysisResult: null,
   createdCertificate: null,
+  wizard: {
+    inspectionDate: getTodayIsoDate(),
+    consumerUnitMaterial: null,
+    smokeDetectorCount: 0,
+    hasSolidFuelAppliance: null,
+    coDetectorTested: false,
+    activeCaptureType: null,
+    activeCaptureLabel: null,
+    activeCaptureMode: 'consumer_unit',
+    activeCaptureSlotIndex: null,
+  },
 };
 
 function reducer(state: JobState, action: JobAction): JobState {
@@ -39,19 +93,96 @@ function reducer(state: JobState, action: JobAction): JobState {
       return { ...state, selectedCustomer: action.payload };
     case 'SET_GPS':
       return { ...state, gpsAddress: action.payload.address, gpsCoords: action.payload.coords };
-    case 'ADD_IMAGE':
-      return { ...state, capturedImages: [...state.capturedImages, action.payload] };
+    case 'ADD_IMAGE': {
+      const image = action.payload;
+      const nextImages =
+        image.type
+          ? state.capturedImages.filter(
+              (existing) =>
+                !(
+                  existing.type === image.type &&
+                  (existing.slotIndex ?? null) === (image.slotIndex ?? null)
+                ),
+            )
+          : state.capturedImages;
+
+      return { ...state, capturedImages: [...nextImages, image] };
+    }
     case 'REMOVE_IMAGE':
       return {
         ...state,
         capturedImages: state.capturedImages.filter((_, i) => i !== action.payload),
       };
+    case 'REMOVE_IMAGE_BY_TARGET':
+      return {
+        ...state,
+        capturedImages: state.capturedImages.filter(
+          (image) =>
+            !(
+              image.type === action.payload.type &&
+              (image.slotIndex ?? null) === (action.payload.slotIndex ?? null)
+            ),
+        ),
+      };
     case 'SET_ANALYSIS':
       return { ...state, analysisResult: action.payload };
     case 'SET_CERTIFICATE':
       return { ...state, createdCertificate: action.payload };
+    case 'SET_WIZARD_FIELD': {
+      const nextWizard = {
+        ...state.wizard,
+        [action.payload.key]: action.payload.value,
+      } as WizardState;
+
+      if (action.payload.key === 'hasSolidFuelAppliance' && action.payload.value === false) {
+        nextWizard.coDetectorTested = false;
+      }
+
+      if (action.payload.key === 'smokeDetectorCount') {
+        const nextCount = Number(action.payload.value) || 0;
+        return {
+          ...state,
+          wizard: nextWizard,
+          capturedImages: state.capturedImages.filter(
+            (image) =>
+              image.type !== 'smoke_detector' ||
+              (image.slotIndex ?? 0) < nextCount,
+          ),
+        };
+      }
+
+      if (action.payload.key === 'hasSolidFuelAppliance' && action.payload.value === false) {
+        return {
+          ...state,
+          wizard: nextWizard,
+          capturedImages: state.capturedImages.filter((image) => image.type !== 'co_detector'),
+        };
+      }
+
+      return {
+        ...state,
+        wizard: nextWizard,
+      };
+    }
+    case 'SET_ACTIVE_CAPTURE':
+      return {
+        ...state,
+        wizard: {
+          ...state.wizard,
+          activeCaptureType: action.payload.type,
+          activeCaptureLabel: action.payload.label,
+          activeCaptureMode: action.payload.mode ?? state.wizard.activeCaptureMode,
+          activeCaptureSlotIndex: action.payload.slotIndex ?? null,
+        },
+      };
     case 'RESET':
-      return initialState;
+      return {
+        ...initialState,
+        wizard: {
+          ...initialState.wizard,
+          inspectionDate: getTodayIsoDate(),
+        },
+      };
     default:
       return state;
   }

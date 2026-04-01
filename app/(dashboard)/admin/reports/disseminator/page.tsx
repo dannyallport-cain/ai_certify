@@ -49,6 +49,7 @@ import {
 } from '@/lib/utils/calculate-zs';
 import { validateUkPostcode } from '@/lib/report-disseminator/postcode';
 import { GuidancePanel } from '@/components/disseminator/GuidancePanel';
+import { configurePdfJsWorker } from '@/lib/pdf/pdfjs-worker';
 import { getStepGuidance, getFieldGuidance, type DisseminatorStep } from '@/lib/report-disseminator/advisor';
 import { validateReportValues, type ReportValidationResult } from '@/lib/report-disseminator/report-validation';
 
@@ -219,8 +220,7 @@ async function findPlacementSuggestionForField(pdfBase64: string, fieldLabel: st
   const labelTokens = tokenizeSuggestionLabel(fieldLabel);
   if (!normalizedLabel || labelTokens.length === 0) return null;
 
-  const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  const pdfjsLib = configurePdfJsWorker();
 
   const base64Data = pdfBase64.replace(/^data:[^;]+;base64,/, '');
   const binaryString = atob(base64Data);
@@ -423,8 +423,7 @@ function PdfDocumentPreview({
 
     (async () => {
       try {
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        const pdfjsLib = configurePdfJsWorker();
 
         const base64Data = pdfBase64.replace(/^data:[^;]+;base64,/, '');
         const binaryString = atob(base64Data);
@@ -533,8 +532,7 @@ function PdfFormDocumentPreview({
 
     (async () => {
       try {
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        const pdfjsLib = configurePdfJsWorker();
 
         const base64Data = pdfBase64.replace(/^data:[^;]+;base64,/, '');
         const binaryString = atob(base64Data);

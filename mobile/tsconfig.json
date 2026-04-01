@@ -5,6 +5,7 @@
     "preserveSymlinks": true,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"

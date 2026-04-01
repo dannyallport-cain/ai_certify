@@ -43,6 +43,39 @@ export async function POST(request: NextRequest) {
     const certificateNumber = generateCertificateNumber();
     const today = inspectionDate ?? new Date().toISOString().slice(0, 10);
 
+    const rawFormData =
+      formData && typeof formData === 'object' && !Array.isArray(formData)
+        ? (formData as Record<string, unknown>)
+        : {};
+
+    const mobileCircuits = Array.isArray(rawFormData._mobileCircuits)
+      ? rawFormData._mobileCircuits
+      : [];
+
+    const mappedCircuits = mobileCircuits.map((circuit, index) => {
+      const item =
+        circuit && typeof circuit === 'object'
+          ? (circuit as Record<string, unknown>)
+          : {};
+
+      return {
+        circuitNumber: String(item.circuitNumber ?? index + 1),
+        designation: String(item.description ?? `Circuit ${index + 1}`),
+        rating: String(item.rating ?? ''),
+        deviceType: String(item.type ?? ''),
+      };
+    });
+
+    const normalizedFormData = {
+      ...rawFormData,
+      circuits:
+        Array.isArray(rawFormData.circuits) && rawFormData.circuits.length > 0
+          ? rawFormData.circuits
+          : mappedCircuits,
+      _createdFromMobile: true,
+      _mobileInspectorId: auth.user.id,
+    };
+
     const [certificate] = await db
       .insert(certificates)
       .values({
@@ -54,11 +87,7 @@ export async function POST(request: NextRequest) {
         siteAddress: siteAddress ?? null,
         inspectionDate: today,
         inspectorName: auth.user.name ?? null,
-        formData: {
-          ...(formData ?? {}),
-          _createdFromMobile: true,
-          _mobileInspectorId: auth.user.id,
-        },
+        formData: normalizedFormData,
       })
       .returning();
 

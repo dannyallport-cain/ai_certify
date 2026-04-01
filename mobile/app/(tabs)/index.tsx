@@ -70,7 +70,22 @@ export default function HomeScreen() {
   return (
     <ScrollView className="flex-1 bg-gray-50 px-4 pt-6">
       <Text className="text-2xl font-bold text-gray-900 mb-1">New Inspection Job</Text>
-      <Text className="text-gray-500 mb-6">Complete each step to create a pre-filled EICR draft.</Text>
+      <Text className="text-gray-500 mb-4">Complete each step to create a pre-filled EICR draft.</Text>
+
+      <TouchableOpacity
+        className="bg-brand rounded-2xl px-5 py-5 mb-5"
+        onPress={() => router.push('/(tabs)/wizard')}
+      >
+        <View className="flex-row items-center justify-between">
+          <View className="flex-1 pr-4">
+            <Text className="text-white text-xl font-bold mb-1">Start Guided Wizard</Text>
+            <Text className="text-white/90">
+              Follow a step-by-step workflow for customer, address, photos, smoke detectors, and CO checks.
+            </Text>
+          </View>
+          <Ionicons name="sparkles-outline" size={26} color="white" />
+        </View>
+      </TouchableOpacity>
 
       {steps.map((step) => (
         <StepCard

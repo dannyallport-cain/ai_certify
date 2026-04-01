@@ -16,6 +16,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Circle, Text, Transformer } from 'react-konva';
 import { buildCanvasFallbackRedactions, buildFieldLabelRedactions, buildPdfValueRedactions } from '@/components/disseminator/pdfRedaction';
+import { configurePdfJsWorker } from '@/lib/pdf/pdfjs-worker';
 
 type CanvasTextItem = {
   text: string;
@@ -282,10 +283,8 @@ export function PdfPageCanvas({
 
     (async () => {
       try {
-        // Dynamically import pdfjs-dist to avoid SSR issues
-        const pdfjsLib = await import('pdfjs-dist');
-        // Point the worker at the bundled worker script
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        // Dynamically load and configure pdf.js with a bundled worker asset
+        const pdfjsLib = configurePdfJsWorker();
 
         const dataUrl = pdfBase64.startsWith('data:')
           ? pdfBase64

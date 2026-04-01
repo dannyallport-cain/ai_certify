@@ -86,7 +86,11 @@ export async function PATCH(request: Request, context: any) {
       return NextResponse.json({ success: true });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BASE_URL || 'http://localhost:3000';
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.BASE_URL ||
+      process.env.NEXTAUTH_URL ||
+      'http://localhost:4000';
     const signInLink = `${baseUrl.replace(/\/$/, '')}/sign-in`;
     return NextResponse.json({ success: true, signInLink });
   } catch (error) {

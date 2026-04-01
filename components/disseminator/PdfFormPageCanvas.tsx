@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_STATE_OPTIONS, isNumericLikeFieldType, type DisseminatorFieldType, type InspectionPeriodConfig, computeNextInspectionDate, calculateMaxZs, DEVICE_TYPE_OPTIONS, getValidRatingsForType } from '@/lib/report-disseminator/field-analysis';
 import { buildCanvasFallbackRedactions, buildFieldLabelRedactions, buildPdfValueRedactions } from '@/components/disseminator/pdfRedaction';
+import { configurePdfJsWorker } from '@/lib/pdf/pdfjs-worker';
 
 type FieldType = DisseminatorFieldType;
 
@@ -95,8 +96,7 @@ export function PdfFormPageCanvas({
 
     (async () => {
       try {
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+        const pdfjsLib = configurePdfJsWorker();
 
         const dataUrl = pdfBase64.startsWith('data:')
           ? pdfBase64
