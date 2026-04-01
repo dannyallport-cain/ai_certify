@@ -1,5 +1,9 @@
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import type {
+  MobileCertificateEditorRecord,
+  UpdateMobileCertificateInput,
+} from '@/components/certificate-editor';
 
 const TOKEN_KEY = 'mobile_auth_token';
 
@@ -32,7 +36,7 @@ async function authFetch(path: string, init: RequestInit = {}): Promise<Response
     ...(init.headers as Record<string, string>),
   };
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
   return fetch(`${BASE_URL}${path}`, { ...init, headers });
 }
@@ -148,6 +152,65 @@ export async function analyseImage(
   return res.json();
 }
 
+// ── Uploads ───────────────────────────────────────────────────────────────────
+
+export interface MobileUploadResult {
+  key: string;
+  url: string;
+  contentType: string;
+}
+
+export interface MobileUploadInput {
+  imageUri: string;
+  category: 'certificate-photo' | 'user-asset';
+  certificateNumber?: string;
+  label?: string | null;
+  type?: string | null;
+  slotIndex?: number | null;
+  fileName?: string;
+  contentType?: string;
+}
+
+export async function uploadMobileImage(
+  input: MobileUploadInput,
+): Promise<MobileUploadResult> {
+  const token = await getToken();
+  const formData = new FormData();
+
+  formData.append('file', {
+    uri: input.imageUri,
+    name: input.fileName ?? 'photo.jpg',
+    type: input.contentType ?? 'image/jpeg',
+  } as unknown as Blob);
+  formData.append('category', input.category);
+
+  if (input.certificateNumber) {
+    formData.append('certificateNumber', input.certificateNumber);
+  }
+  if (input.label) {
+    formData.append('label', input.label);
+  }
+  if (input.type) {
+    formData.append('type', input.type);
+  }
+  if (typeof input.slotIndex === 'number') {
+    formData.append('slotIndex', String(input.slotIndex));
+  }
+
+  const res = await fetch(`${BASE_URL}/api/mobile/uploads`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Image upload failed');
+  }
+
+  return res.json();
+}
+
 // ── Certificates ──────────────────────────────────────────────────────────────
 
 export interface DraftCertificateInput {
@@ -173,6 +236,32 @@ export async function createDraftCertificate(
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? 'Failed to create certificate');
+  }
+  return res.json();
+}
+
+export async function getMobileCertificate(
+  certificateId: number,
+): Promise<MobileCertificateEditorRecord> {
+  const res = await authFetch(`/api/mobile/certificates/${certificateId}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to load certificate');
+  }
+  return res.json();
+}
+
+export async function updateMobileCertificate(
+  certificateId: number,
+  input: UpdateMobileCertificateInput,
+): Promise<MobileCertificateEditorRecord> {
+  const res = await authFetch(`/api/mobile/certificates/${certificateId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to update certificate');
   }
   return res.json();
 }

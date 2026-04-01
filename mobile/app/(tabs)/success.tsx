@@ -20,7 +20,7 @@ export default function SuccessScreen() {
 
       <Text className="text-2xl font-bold text-gray-900 mb-2 text-center">Draft Created!</Text>
       <Text className="text-gray-500 text-center mb-8">
-        The EICR draft has been created in the web app and is ready for the inspector to complete.
+        The EICR draft has been created and can now be updated in the mobile app while you are still on-site.
       </Text>
 
       {cert && (
@@ -30,15 +30,22 @@ export default function SuccessScreen() {
         </View>
       )}
 
-      <Text className="text-gray-400 text-sm text-center mb-8">
-        Open the AI Certify web app to find this draft pre-filled with site details and circuit data.
+      <Text className="text-gray-400 text-sm text-center mb-6">
+        You can continue in the AI Certify web app later, but essential report details can also be edited here now.
       </Text>
 
       <TouchableOpacity
-        className="bg-brand rounded-xl py-4 px-12 items-center"
+        className="bg-brand rounded-xl py-4 px-12 items-center mb-3"
+        onPress={() => router.replace('/(tabs)/certificate' as never)}
+      >
+        <Text className="text-white font-bold text-base">Edit Certificate On-Site</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        className="bg-white border border-gray-200 rounded-xl py-4 px-12 items-center"
         onPress={startNewJob}
       >
-        <Text className="text-white font-bold text-base">Start New Job</Text>
+        <Text className="text-gray-800 font-bold text-base">Start New Job</Text>
       </TouchableOpacity>
     </View>
   );
