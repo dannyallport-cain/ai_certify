@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } fr
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useJob, type WizardPhotoType } from '@/components/JobStateContext';
-import { createDraftCertificate } from '@/services/api';
+import { createDraftCertificate, uploadMobileImage } from '@/services/api';
 
 const requiredPhotoSummary: { type: WizardPhotoType; label: string }[] = [
   { type: 'main_fuse', label: 'Main fuse' },
@@ -11,6 +11,10 @@ const requiredPhotoSummary: { type: WizardPhotoType; label: string }[] = [
   { type: 'consumer_unit_cover_on', label: 'Consumer unit with cover on' },
   { type: 'circuit_schedule', label: 'Circuit schedule' },
 ];
+
+function buildMobileCaptureFolderHint() {
+  return `mobile-${Date.now()}`;
+}
 
 export default function ReviewScreen() {
   const { state, dispatch } = useJob();
@@ -48,20 +52,39 @@ export default function ReviewScreen() {
     if (!ready || !selectedCustomer || !gpsAddress) return;
     setSubmitting(true);
     try {
+      const certificateNumberHint = buildMobileCaptureFolderHint();
+
+      const uploadedCapturedImages = await Promise.all(
+        capturedImages.map(async (image, index) => {
+          const upload = await uploadMobileImage({
+            imageUri: image.uri,
+            category: 'certificate-photo',
+            certificateNumber: certificateNumberHint,
+            label: image.label ?? undefined,
+            type: image.type ?? undefined,
+            slotIndex: image.slotIndex ?? undefined,
+          });
+
+          return {
+            order: index + 1,
+            mode: image.mode,
+            type: image.type ?? null,
+            label: image.label ?? null,
+            slotIndex: image.slotIndex ?? null,
+            uri: upload.url,
+            storageKey: upload.key,
+            contentType: upload.contentType,
+          };
+        }),
+      );
+
       const formData: Record<string, unknown> = {
         _createdFromMobile: true,
         consumerUnitMaterial: wizard.consumerUnitMaterial,
         smokeDetectorCount: wizard.smokeDetectorCount,
         hasSolidFuelAppliance: wizard.hasSolidFuelAppliance,
         coDetectorTested: wizard.coDetectorTested,
-        mobileCapturedImages: capturedImages.map((image, index) => ({
-          order: index + 1,
-          mode: image.mode,
-          type: image.type ?? null,
-          label: image.label ?? null,
-          slotIndex: image.slotIndex ?? null,
-          uri: image.uri,
-        })),
+        mobileCapturedImages: uploadedCapturedImages,
         wizardEvidenceSummary: {
           requiredElectricalPhotos: requiredPhotoSummary.map((item) => ({
             type: item.type,

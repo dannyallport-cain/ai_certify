@@ -32,6 +32,8 @@ function StepCard({ icon, title, subtitle, done, onPress }: StepCardProps) {
 export default function HomeScreen() {
   const { state, dispatch } = useJob();
 
+  const hasDraftCertificate = !!state.createdCertificate;
+
   const steps = [
     {
       icon: 'camera-outline' as const,
@@ -59,9 +61,9 @@ export default function HomeScreen() {
     {
       icon: 'checkmark-circle-outline' as const,
       title: 'Review & Create Certificate',
-      subtitle: 'Preview and submit draft EICR',
-      done: !!state.createdCertificate,
-      route: '/(tabs)/review',
+      subtitle: hasDraftCertificate ? 'Open and edit the on-site draft' : 'Preview and submit draft EICR',
+      done: hasDraftCertificate,
+      route: hasDraftCertificate ? '/(tabs)/certificate' : '/(tabs)/review',
     },
   ];
 
@@ -69,23 +71,46 @@ export default function HomeScreen() {
 
   return (
     <ScrollView className="flex-1 bg-gray-50 px-4 pt-6">
-      <Text className="text-2xl font-bold text-gray-900 mb-1">New Inspection Job</Text>
-      <Text className="text-gray-500 mb-4">Complete each step to create a pre-filled EICR draft.</Text>
+      <Text className="text-2xl font-bold text-gray-900 mb-1">
+        {hasDraftCertificate ? 'On-Site Certificate Editing' : 'New Inspection Job'}
+      </Text>
+      <Text className="text-gray-500 mb-4">
+        {hasDraftCertificate
+          ? 'Your draft EICR is ready. Open it to finish essential reporting details on-site.'
+          : 'Complete each step to create a pre-filled EICR draft.'}
+      </Text>
 
-      <TouchableOpacity
-        className="bg-brand rounded-2xl px-5 py-5 mb-5"
-        onPress={() => router.push('/(tabs)/wizard')}
-      >
-        <View className="flex-row items-center justify-between">
-          <View className="flex-1 pr-4">
-            <Text className="text-white text-xl font-bold mb-1">Start Guided Wizard</Text>
-            <Text className="text-white/90">
-              Follow a step-by-step workflow for customer, address, photos, smoke detectors, and CO checks.
-            </Text>
+      {hasDraftCertificate ? (
+        <TouchableOpacity
+          className="bg-brand rounded-2xl px-5 py-5 mb-5"
+          onPress={() => router.push('/(tabs)/certificate' as never)}
+        >
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 pr-4">
+              <Text className="text-white text-xl font-bold mb-1">Open Draft Certificate</Text>
+              <Text className="text-white/90">
+                Update observations, report notes, and circuit details directly from site.
+              </Text>
+            </View>
+            <Ionicons name="document-text-outline" size={26} color="white" />
           </View>
-          <Ionicons name="sparkles-outline" size={26} color="white" />
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          className="bg-brand rounded-2xl px-5 py-5 mb-5"
+          onPress={() => router.push('/(tabs)/wizard')}
+        >
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1 pr-4">
+              <Text className="text-white text-xl font-bold mb-1">Start Guided Wizard</Text>
+              <Text className="text-white/90">
+                Follow a step-by-step workflow for customer, address, photos, smoke detectors, and CO checks.
+              </Text>
+            </View>
+            <Ionicons name="sparkles-outline" size={26} color="white" />
+          </View>
+        </TouchableOpacity>
+      )}
 
       {steps.map((step) => (
         <StepCard
@@ -98,7 +123,7 @@ export default function HomeScreen() {
         />
       ))}
 
-      {allDone && (
+      {!hasDraftCertificate && allDone && (
         <TouchableOpacity
           className="bg-brand rounded-xl py-4 items-center mt-4 mb-8"
           onPress={() => router.push('/(tabs)/review')}

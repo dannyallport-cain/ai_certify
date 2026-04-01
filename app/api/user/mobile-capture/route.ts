@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { verifyMobileCaptureToken } from '@/lib/auth/mobile-capture';
 import { db } from '@/lib/db/drizzle';
 import { users } from '@/lib/db/schema';
+import { buildUserAssetKey, uploadDataUrlToR2 } from '@/lib/storage/r2';
 
 const dataUrlSchema = z
   .string()
@@ -38,17 +39,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Avatar image is too large.' }, { status: 413 });
     }
 
+    const contentTypeMatch = dataUrl.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,/i);
+
+    if (!contentTypeMatch) {
+      return NextResponse.json({ error: 'Invalid image data.' }, { status: 400 });
+    }
+
+    const upload = await uploadDataUrlToR2({
+      key: buildUserAssetKey(userId, kind, contentTypeMatch[1]),
+      dataUrl,
+    });
+
     const updateValues =
       kind === 'avatar'
         ? {
-            avatarUrl: dataUrl,
-            avatarR2Key: null,
+            avatarUrl: upload.url,
+            avatarR2Key: upload.key,
             avatarUpdatedAt: now,
             updatedAt: now,
           }
         : {
-            signatureUrl: dataUrl,
-            signatureR2Key: null,
+            signatureUrl: upload.url,
+            signatureR2Key: upload.key,
             signatureUpdatedAt: now,
             updatedAt: now,
           };
@@ -63,7 +75,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found.' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, kind });
+    return NextResponse.json({
+      success: true,
+      kind,
+      asset: upload,
+    });
   } catch (error) {
     console.error('Error saving mobile capture asset:', error);
     return NextResponse.json({ error: 'Failed to save uploaded asset.' }, { status: 500 });

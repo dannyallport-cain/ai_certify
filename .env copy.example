@@ -33,3 +33,11 @@ NEXT_PUBLIC_GOOGLE_STREET_VIEW_API_KEY=AIzaSyReplaceWithYourKey
 NEXT_PUBLIC_STACK_PROJECT_ID=replace-with-stack-project-id
 NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=replace-with-stack-publishable-client-key
 STACK_SECRET_SERVER_KEY=replace-with-stack-secret-server-key
+
+# Cloudflare R2 object storage
+R2_ACCOUNT_ID=ae50656dca5528d3f28ac637b646886e
+R2_BUCKET=aicertify
+R2_ACCESS_KEY_ID=replace-with-r2-access-key-id
+R2_SECRET_ACCESS_KEY=replace-with-r2-secret-access-key
+# Optional: custom public base URL for object delivery, e.g. https://cdn.ai-certificates.app
+R2_PUBLIC_BASE_URL=
