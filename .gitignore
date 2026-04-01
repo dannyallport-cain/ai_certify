@@ -2,6 +2,18 @@
 
 # dependencies
 /node_modules
+**/node_modules/
+.pnpm-store/
+.npm/
+.expo/
+.expo-shared/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/android/app/build/
+mobile/ios/build/
+mobile/ios/Pods/
+mobile/ios/.xcode.env.local
 /.pnp
 .pnp.js
 .yarn/install-state.gz
