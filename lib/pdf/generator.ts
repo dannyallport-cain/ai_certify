@@ -815,6 +815,74 @@ function safeString(value: any): string {
   return String(value);
 }
 
+function parseJsonLike<T>(value: unknown, fallback: T): T {
+  if (value === null || value === undefined || value === '') return fallback;
+
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return fallback;
+    }
+  }
+
+  return value as T;
+}
+
+function normalizeObservationCode(value: unknown): 'C1' | 'C2' | 'C3' | 'FI' | '' {
+  const normalized = safeString(value).trim().toUpperCase();
+  if (normalized === 'C1' || normalized === 'C2' || normalized === 'C3' || normalized === 'FI') {
+    return normalized;
+  }
+
+  if (normalized.includes('DANGER PRESENT')) return 'C1';
+  if (normalized.includes('POTENTIALLY DANGEROUS')) return 'C2';
+  if (normalized.includes('IMPROVEMENT')) return 'C3';
+  if (normalized.includes('FURTHER INVESTIGATION')) return 'FI';
+
+  return '';
+}
+
+function normalizeObservationRows(items: CertificateData['items']): Array<{
+  itemNumber: string;
+  description: string;
+  code: 'C1' | 'C2' | 'C3' | 'FI';
+}> {
+  return (items || [])
+    .map((item, index) => {
+      const defectCode = normalizeObservationCode(item?.defects);
+      const recommendationCode = normalizeObservationCode(item?.recommendations);
+      const statusCode =
+        safeString(item?.status).toLowerCase() === 'unsatisfactory' ? 'C2' : '';
+      const code = defectCode || recommendationCode || statusCode || 'C3';
+
+      const descriptionParts = [
+        safeString(item?.location).trim() ? `Location: ${safeString(item?.location).trim()}` : '',
+        safeString(item?.description).trim(),
+        defectCode ? '' : safeString(item?.defects).trim(),
+        recommendationCode ? '' : safeString(item?.recommendations).trim(),
+      ].filter(Boolean);
+
+      return {
+        itemNumber: safeString(item?.id) || String(index + 1),
+        description: descriptionParts.join(' — ').trim(),
+        code,
+      };
+    })
+    .filter((item) => item.description);
+}
+
+function deriveEicrAssessment(fd: Record<string, any>, observations: Array<{ code: 'C1' | 'C2' | 'C3' | 'FI' }>): 'SATISFACTORY' | 'UNSATISFACTORY' {
+  const explicit = safeString(fd.overallAssessment).trim().toUpperCase();
+  if (explicit === 'SATISFACTORY' || explicit === 'UNSATISFACTORY') {
+    return explicit;
+  }
+
+  return observations.some((obs) => obs.code === 'C1' || obs.code === 'C2')
+    ? 'UNSATISFACTORY'
+    : 'SATISFACTORY';
+}
+
 function generateCP12PDF(certificate: CertificateData): Uint8Array {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -1223,7 +1291,7 @@ function generateCP12PDF(certificate: CertificateData): Uint8Array {
 // Generates a full 8-page report matching BS 7671:2018 Appendix 6 model form
 
 function generateEICRPDF(certificate: CertificateData): Uint8Array {
-  const totalPages = 7;
+  const totalPages = 8;
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -1233,6 +1301,10 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   const fd = (certificate.formData || {}) as Record<string, any>;
   const ss = safeString;
+  const inspectionData = parseJsonLike<Record<string, { comment?: string; outcome?: string }>>(fd.inspectionSchedule, {});
+  const circuitRows = parseJsonLike<Array<Record<string, any>>>(fd.circuits, []);
+  const observations = normalizeObservationRows(certificate.items);
+  const overallAssessment = deriveEicrAssessment(fd, observations);
 
   // ── Colour palette (driven by template when available) ──
   const tc = certificate.templateConfig?.colors;
@@ -1571,7 +1643,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   sectionHeader('5', 'Summary of the Condition of the Installation');
   italicNote('See page 3 for a summary of the general condition of the installation in terms of electrical safety.');
 
-  const isSatisfactory = (ss(fd.overallAssessment) || 'SATISFACTORY').toUpperCase() === 'SATISFACTORY';
+  const isSatisfactory = overallAssessment === 'SATISFACTORY';
   const assessLabel = isSatisfactory ? 'SATISFACTORY' : 'UNSATISFACTORY';
   const assessColour = isSatisfactory ? green : red;
 
@@ -1614,8 +1686,6 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   italicNote("Referring to the attached schedules of inspection and test results, and subject to the limitations specified on page 1 of this report under 'Extent of the Installation and Limitations of Inspection and Testing':");
   y += 1;
 
-  const observations = certificate.items?.filter(i => i.description) || [];
-
   // Height reserved below the table for the classification key + summary rows section.
   // Accounts for: spacing (2) + "or" note (5.4) + "following obs" note (5.4) +
   // spacing (2) + "one of the following codes" note (8) + key box (26) + 4 summary rows (24)
@@ -1638,11 +1708,10 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   // Render actual observation rows
   observations.forEach((obs, idx) => {
-    const code = ss(obs.defects) || 'C3';
     const codeClr: Record<string, [number,number,number]> = {
       C1: red, C2: orange, C3: charcoal, FI: purple
     };
-    const clr = codeClr[code] || charcoal;
+    const clr = codeClr[obs.code] || charcoal;
     const descLines = pdf.splitTextToSize(ss(obs.description), obsColWidths.desc - 4);
     const h = Math.max(7, descLines.length * 3.2 + 3);
     checkPage(h);
@@ -1653,7 +1722,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     vLine(margin + W - obsColWidths.code, y, h);
     pdf.setFontSize(7);
     pdf.setFont('helvetica', 'bold');
-    text(String(idx + 1), margin + obsColWidths.num / 2, y + h / 2 + 1.5, { align: 'center' });
+    text(obs.itemNumber || String(idx + 1), margin + obsColWidths.num / 2, y + h / 2 + 1.5, { align: 'center' });
     pdf.setFont('helvetica', 'normal');
     descLines.forEach((line: string, i: number) => {
       text(line, margin + obsColWidths.num + 2, y + 4 + i * 3.2);
@@ -1662,7 +1731,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     filledRect(margin + W - obsColWidths.code + 0.15, y + 0.15, obsColWidths.code - 0.3, h - 0.3, clr);
     pdf.setTextColor(255, 255, 255);
     pdf.setFont('helvetica', 'bold');
-    text(code, margin + W - obsColWidths.code / 2, y + h / 2 + 1.5, { align: 'center' });
+    text(obs.code, margin + W - obsColWidths.code / 2, y + h / 2 + 1.5, { align: 'center' });
     pdf.setTextColor(0, 0, 0);
     y += h;
   });
@@ -1711,10 +1780,10 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   y = codeBoxY + 26;
 
   // Summary remedial actions
-  const c1Items = observations.filter(o => ss(o.defects) === 'C1').map((_, i) => String(i + 1)).join(', ') || 'N/A';
-  const c2Items = observations.filter(o => ss(o.defects) === 'C2').map((_, i) => String(i + 1)).join(', ') || 'N/A';
-  const c3Items = observations.filter(o => ss(o.defects) === 'C3').map((_, i) => String(i + 1)).join(', ') || 'N/A';
-  const fiItems = observations.filter(o => ss(o.defects) === 'FI').map((_, i) => String(i + 1)).join(', ') || 'N/A';
+  const c1Items = observations.filter(o => o.code === 'C1').map((o) => o.itemNumber).join(', ') || 'N/A';
+  const c2Items = observations.filter(o => o.code === 'C2').map((o) => o.itemNumber).join(', ') || 'N/A';
+  const c3Items = observations.filter(o => o.code === 'C3').map((o) => o.itemNumber).join(', ') || 'N/A';
+  const fiItems = observations.filter(o => o.code === 'FI').map((o) => o.itemNumber).join(', ') || 'N/A';
 
   row('Immediate remedial action required for items:', c1Items);
   row('Urgent remedial action required for items:', c2Items);
@@ -2304,11 +2373,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   ];
 
   // Get inspection data from formData (stored as JSON string via FormData.set)
-  let _inspRaw = fd.inspectionSchedule || {};
-  if (typeof _inspRaw === 'string') {
-    try { _inspRaw = JSON.parse(_inspRaw); } catch { _inspRaw = {}; }
-  }
-  const inspData = _inspRaw as Record<string, { comment?: string; outcome?: string }>;
+  const inspData = inspectionData;
 
   // Render inspection schedule across pages
   const renderInspectionSchedule = () => {
@@ -2524,15 +2589,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   y += 8;
 
   // ── Circuit test results table ──
-  let parsedCircuits = fd.circuits;
-  if (typeof parsedCircuits === 'string') {
-    try {
-      parsedCircuits = JSON.parse(parsedCircuits);
-    } catch (e) {
-      parsedCircuits = [];
-    }
-  }
-  const circuits = (Array.isArray(parsedCircuits) ? parsedCircuits : []) as Array<Record<string, any>>;
+  const circuits = Array.isArray(circuitRows) ? circuitRows : [];
 
   // Column definitions matching BS 7671 Appendix 6 model form (NICEIC layout)
   // group    = tier-1 merged header label
