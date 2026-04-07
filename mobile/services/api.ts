@@ -109,47 +109,152 @@ export async function createCustomer(input: CreateCustomerInput): Promise<Custom
 
 // ── Image Analysis ────────────────────────────────────────────────────────────
 
-export interface CircuitInfo {
-  circuitNumber: number;
-  description: string;
-  rating: string;
-  type: string;
+export type CaptureMode = 'consumer_unit' | 'circuit_label';
+
+export interface AnalysisConsumerUnit {
+  brand?: string | null;
+  model?: string | null;
+  serialNumber?: string | null;
+  condition?: string | null;
+  confidence?: number | null;
+  bbox?: number[] | null;
+  [key: string]: unknown;
+}
+
+export interface AnalysisPrefill {
+  observations?: string[];
+  recommendedCodes?: string[];
+  reportSections?: Record<string, unknown>;
+}
+
+export interface AnalysisModelInfo {
+  detector?: string | null;
+  ocr?: string | null;
+  extractor?: string | null;
 }
 
 export interface AnalysisResult {
-  mainSwitchRating: string;
-  numberOfCircuits: number;
-  earthingArrangement: string;
-  voltage: string;
-  circuits: CircuitInfo[];
-  rawText: string;
+  success?: boolean;
+  summary?: string | null;
+  consumerUnit?: AnalysisConsumerUnit | null;
+  textDetections?: string[];
+  observations?: string[];
+  prefill?: AnalysisPrefill | null;
+  modelInfo?: AnalysisModelInfo | null;
+  needsHumanReview?: boolean;
+  rawText?: string;
+  circuits?: never[];
+  mainSwitchRating?: string | null;
+  numberOfCircuits?: number | null;
+  earthingArrangement?: string | null;
+  voltage?: string | null;
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (typeof FileReader !== 'undefined') {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error('Unable to convert image to base64 data URL'));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('Unable to read image file'));
+      reader.readAsDataURL(blob);
+      return;
+    }
+
+    reject(new Error('FileReader is not available on this device'));
+  });
+}
+
+async function imageUriToDataUrl(imageUri: string): Promise<string> {
+  const response = await fetch(imageUri);
+
+  if (!response.ok) {
+    throw new Error('Unable to read captured image');
+  }
+
+  const blob = await response.blob();
+  return blobToDataUrl(blob);
+}
+
+function buildAnalysisResult(data: any): AnalysisResult {
+  const findings = data?.findings ?? {};
+  const consumerUnit = findings?.consumerUnit ?? null;
+  const textDetections = Array.isArray(findings?.textDetections) ? findings.textDetections : [];
+  const observations = Array.isArray(findings?.observations) ? findings.observations : [];
+  const rawText =
+    typeof data?.rawText === 'string'
+      ? data.rawText
+      : textDetections
+          .filter((text: unknown): text is string => typeof text === 'string' && text.length > 0)
+          .join('\n');
+
+  return {
+    success: Boolean(data?.success),
+    summary: typeof data?.summary === 'string' ? data.summary : null,
+    consumerUnit,
+    textDetections,
+    observations,
+    prefill: data?.prefill ?? null,
+    modelInfo: data?.modelInfo ?? null,
+    needsHumanReview: Boolean(data?.needsHumanReview),
+    rawText,
+    circuits: [],
+    mainSwitchRating: null,
+    numberOfCircuits: null,
+    earthingArrangement: null,
+    voltage: null,
+  };
 }
 
 export async function analyseImage(
   imageUri: string,
-  mode: 'consumer_unit' | 'circuit_label' = 'consumer_unit',
+  mode: CaptureMode = 'consumer_unit',
 ): Promise<AnalysisResult> {
+  const imageBase64 = await imageUriToDataUrl(imageUri);
+  const reportType = 'electrical_installation_condition_report';
+  const inspectionType = mode === 'consumer_unit' ? 'consumer_unit' : 'circuit_label';
+  const requestedSections =
+    mode === 'consumer_unit'
+      ? ['consumer_unit_details', 'observations', 'supply_characteristics']
+      : ['circuit_details', 'observations'];
+
   const token = await getToken();
-  const formData = new FormData();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
 
-  // React Native FormData accepts file objects via { uri, name, type }
-  formData.append('image', {
-    uri: imageUri,
-    name: 'photo.jpg',
-    type: 'image/jpeg',
-  } as unknown as Blob);
-  formData.append('mode', mode);
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
-  const res = await fetch(`${BASE_URL}/api/mobile/analyse-image`, {
+  const res = await fetch(`${BASE_URL}/api/ai/analyze-image`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
+    headers,
+    body: JSON.stringify({
+      imageBase64,
+      reportType,
+      inspectionType,
+      requestedSections,
+      metadata: {
+        source: 'expo-mobile-app',
+        captureMode: mode,
+      },
+    }),
   });
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? 'Image analysis failed');
+    throw new Error(body.error ?? body.message ?? 'Image analysis failed');
   }
-  return res.json();
+
+  const data = await res.json();
+  return buildAnalysisResult(data);
 }
 
 // ── Uploads ───────────────────────────────────────────────────────────────────

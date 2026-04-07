@@ -142,28 +142,78 @@ Example in the main app:
 RAILWAY_AI_WORKER_URL=https://your-railway-service.up.railway.app
 ```
 
+## OCR-first implementation
+
+This worker now performs a real OCR-first analysis flow:
+
+1. load image from `imageUrl` or `imageBase64`
+2. preprocess image variants for OCR
+3. run `pytesseract` on those variants
+4. extract consumer unit hints with regex/keyword rules
+5. return structured findings and report-prefill data
+
+### What it can extract now
+
+- consumer unit brand hints
+- model candidates
+- serial number candidates
+- board type hints
+- device hints for:
+  - `SPD`
+  - `RCD`
+  - `RCBO`
+  - `MCB`
+  - `main switch`
+- image quality notes
+- OCR-derived observations and review notes
+
+### What it does not do yet
+
+- accessory/object detection
+- damage classification
+- bounding box detection for components
+- YOLO inference
+- automatic defect coding beyond manual review recommendation
+
+## Railway runtime requirements
+
+This worker now depends on Tesseract being present at runtime.
+
+Included:
+- `requirements.txt` for Python packages
+- `nixpacks.toml` to install:
+  - `python311`
+  - `tesseract`
+  - runtime libraries needed by OCR/image packages
+
+If Railway rebuilds the service after these files are pushed, it should install the OCR runtime automatically.
+
 ## Future model replacement points
 
-The implementation is intentionally split so real inference can be added later without changing the API contract.
+### `app/ocr.py`
+
+Main OCR integration point:
+- image fetching
+- base64 decoding
+- preprocessing
+- Tesseract execution
+- image quality summary
+
+### `app/extractors.py`
+
+Main rules/extraction point:
+- brand/model/serial parsing
+- consumer unit keyword extraction
+- report section shaping
+- review note generation
 
 ### `app/pipeline.py`
 
-This is the main swap point for production ML logic.
-
-Current placeholder stages:
-- request interpretation
-- fake accessory generation
-- fake text hint generation
-- report prefill shaping
-
-Planned replacement flow:
-1. Load image bytes from `imageUrl` or decode `imageBase64`
-2. Run object detection model
-   - Example future option: YOLO
-3. Run OCR model
-   - Example future option: PaddleOCR or Tesseract
-4. Normalize outputs into the shared response schema
-5. Add confidence thresholds and `needsHumanReview` rules
+Main orchestration point:
+- OCR execution
+- hint extraction
+- response shaping
+- confidence estimation
 
 ### `app/schemas.py`
 
@@ -173,6 +223,6 @@ If you add more fields later, prefer additive changes to avoid breaking the app 
 
 ## Notes
 
-- This service currently performs no real image download, decoding, OCR, or detection.
-- Responses are deterministic scaffolding intended for integration and deployment setup.
-- `needsHumanReview` is always `true` for now to reflect placeholder inference.
+- `needsHumanReview` remains `true` for all responses.
+- This is intended for safe report prefilling, not autonomous certification.
+- The next major upgrade path is custom detection/classification for accessories and damaged equipment.
