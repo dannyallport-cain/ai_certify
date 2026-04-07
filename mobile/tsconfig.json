@@ -6,6 +6,8 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "types": ["react", "react-native", "node"],
     "paths": {
       "@/*": [
         "./*"

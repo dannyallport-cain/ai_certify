@@ -15,7 +15,9 @@ export interface AnalyzeImageAccessoryFinding {
 }
 
 export interface AnalyzeImageConsumerUnitFinding {
-  type?: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
   condition?: string;
   confidence?: number;
   bbox?: number[];

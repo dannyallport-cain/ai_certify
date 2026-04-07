@@ -13,7 +13,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useJob, type CaptureMode, type CapturedImage, type WizardPhotoType } from '@/components/JobStateContext';
-import { analyseImage } from '@/services/api';
+import { analyseImage, type AnalysisResult } from '@/services/api';
 
 type CapturedPreview = {
   uri: string;
@@ -38,6 +38,34 @@ const wizardPhotoTitleMap: Record<WizardPhotoType, string> = {
   co_detector: 'CO Detector',
 };
 
+function getBrandModel(result: AnalysisResult | null | undefined) {
+  return [result?.consumerUnit?.brand, result?.consumerUnit?.model].filter(Boolean).join(' ');
+}
+
+function getTextDetectionCount(result: AnalysisResult | null | undefined) {
+  return Array.isArray(result?.textDetections) ? result.textDetections.length : 0;
+}
+
+function getObservationCount(result: AnalysisResult | null | undefined) {
+  return Array.isArray(result?.observations) ? result.observations.length : 0;
+}
+
+function buildAnalysisMessage(result: AnalysisResult) {
+  const summary = result.summary || 'Analysis completed successfully.';
+  const brandModel = getBrandModel(result);
+  const textCount = getTextDetectionCount(result);
+  const needsHumanReview = result.needsHumanReview ? 'Yes' : 'No';
+
+  return [
+    summary,
+    brandModel ? `Consumer unit: ${brandModel}` : null,
+    `Extracted text items: ${textCount}`,
+    `Needs human review: ${needsHumanReview}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export default function CaptureScreen() {
   const captureModes = ['consumer_unit', 'circuit_label'] as const;
   const [permission, requestPermission] = useCameraPermissions();
@@ -49,7 +77,7 @@ export default function CaptureScreen() {
 
   const activeCaptureMode = state.wizard.activeCaptureType
     ? wizardPhotoModeMap[state.wizard.activeCaptureType]
-    : state.wizard.activeCaptureMode;
+    : mode;
 
   const activeTargetImage = useMemo(
     () =>
@@ -80,6 +108,18 @@ export default function CaptureScreen() {
       'Move back slightly if any text is cropped.',
     ];
   }, [activeCaptureMode]);
+
+  const analysisSummary = useMemo(() => {
+    if (!state.analysisResult) return null;
+
+    return {
+      summary: state.analysisResult.summary || 'No summary returned.',
+      brandModel: getBrandModel(state.analysisResult),
+      textCount: getTextDetectionCount(state.analysisResult),
+      observationCount: getObservationCount(state.analysisResult),
+      needsHumanReview: !!state.analysisResult.needsHumanReview,
+    };
+  }, [state.analysisResult]);
 
   if (!permission) return <View className="flex-1 bg-black" />;
 
@@ -142,11 +182,7 @@ export default function CaptureScreen() {
       const result = await analyseImage(capturedPreview.uri, capturedPreview.mode);
       dispatch({ type: 'SET_ANALYSIS', payload: result });
       setCapturedPreview(null);
-      Alert.alert(
-        'Analysis Complete',
-        `Detected ${result.numberOfCircuits} circuits. Main switch: ${result.mainSwitchRating}.`,
-        [{ text: 'OK' }],
-      );
+      Alert.alert('Analysis Complete', buildAnalysisMessage(result), [{ text: 'OK' }]);
     } catch {
       setCapturedPreview(null);
       Alert.alert('Analysis Failed', 'Image captured but AI analysis failed. You can retry.');
@@ -229,6 +265,31 @@ export default function CaptureScreen() {
           ) : null}
         </View>
       </View>
+
+      {analysisSummary ? (
+        <View className="mx-4 mt-3 rounded-2xl bg-white/10 border border-white/15 px-4 py-3">
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-white font-semibold">Latest analysis</Text>
+            {analysisSummary.needsHumanReview ? (
+              <Text className="text-amber-300 text-xs font-semibold">Needs review</Text>
+            ) : null}
+          </View>
+          <Text className="text-white/90 text-sm">{analysisSummary.summary}</Text>
+          {analysisSummary.brandModel ? (
+            <Text className="text-white/80 text-sm mt-2">Consumer unit: {analysisSummary.brandModel}</Text>
+          ) : null}
+          <View className="flex-row mt-3 gap-2">
+            <View className="flex-1 rounded-xl bg-black/30 px-3 py-2">
+              <Text className="text-white/60 text-[11px] uppercase">Text</Text>
+              <Text className="text-white font-semibold mt-1">{analysisSummary.textCount}</Text>
+            </View>
+            <View className="flex-1 rounded-xl bg-black/30 px-3 py-2">
+              <Text className="text-white/60 text-[11px] uppercase">Observations</Text>
+              <Text className="text-white font-semibold mt-1">{analysisSummary.observationCount}</Text>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       <View className="flex-1 relative">
         <CameraView
