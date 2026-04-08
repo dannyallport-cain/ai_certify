@@ -20,6 +20,8 @@ import { getActivityLogs } from '@/lib/db/queries';
 
 const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.SIGN_UP]: UserPlus,
+  [ActivityType.VERIFY_EMAIL]: CheckCircle,
+  [ActivityType.RESEND_VERIFICATION_EMAIL]: Mail,
   [ActivityType.SIGN_IN]: UserCog,
   [ActivityType.SIGN_OUT]: LogOut,
   [ActivityType.UPDATE_PASSWORD]: Lock,
@@ -57,6 +59,10 @@ function formatAction(action: ActivityType): string {
   switch (action) {
     case ActivityType.SIGN_UP:
       return 'You signed up';
+    case ActivityType.VERIFY_EMAIL:
+      return 'You verified your email address';
+    case ActivityType.RESEND_VERIFICATION_EMAIL:
+      return 'You requested a new verification email';
     case ActivityType.SIGN_IN:
       return 'You signed in';
     case ActivityType.SIGN_OUT:

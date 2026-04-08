@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CircleIcon, Loader2 } from 'lucide-react';
-import { signIn, signUp } from './actions';
+import { resendVerificationEmail, signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
@@ -15,10 +15,33 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const redirect = searchParams.get('redirect');
   const priceId = searchParams.get('priceId');
   const inviteId = searchParams.get('inviteId');
+  const emailFromQuery = searchParams.get('email');
+  const verified = searchParams.get('verified');
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+  const [resendState, resendAction, resendPending] = useActionState<
+    ActionState,
+    FormData
+  >(resendVerificationEmail, { error: '' });
+  const alternateModeParams = new URLSearchParams();
+
+  if (redirect) {
+    alternateModeParams.set('redirect', redirect);
+  }
+
+  if (priceId) {
+    alternateModeParams.set('priceId', priceId);
+  }
+
+  if (inviteId) {
+    alternateModeParams.set('inviteId', inviteId);
+  }
+
+  const alternateModeHref = `${
+    mode === 'signin' ? '/sign-up' : '/sign-in'
+  }${alternateModeParams.toString() ? `?${alternateModeParams.toString()}` : ''}`;
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -51,7 +74,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 name="email"
                 type="email"
                 autoComplete="email"
-                defaultValue={state.email}
+                defaultValue={state.email || emailFromQuery || ''}
                 required
                 maxLength={50}
                 className="appearance-none rounded-full relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-orange-500 focus:border-orange-500 focus:z-10 sm:text-sm"
@@ -89,6 +112,21 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
             <div className="text-red-500 text-sm">{state.error}</div>
           )}
 
+          {state?.success && (
+            <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              {state.success}
+              {mode === 'signup' && state.email ? (
+                <div className="mt-2 break-all font-medium">{state.email}</div>
+              ) : null}
+            </div>
+          )}
+
+          {mode === 'signin' && verified === '1' && (
+            <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+              Email verified. You can sign in now.
+            </div>
+          )}
+
           <div>
             <Button
               type="submit"
@@ -109,6 +147,36 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
           </div>
         </form>
 
+        {mode === 'signin' && (state?.unverified || resendState?.success) && (
+          <form className="mt-4 space-y-3" action={resendAction}>
+            <input type="hidden" name="email" value={state.email || resendState.email || ''} />
+            <input type="hidden" name="redirect" value={redirect || ''} />
+            <input type="hidden" name="priceId" value={priceId || ''} />
+            <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
+              {resendState?.success ||
+                'Need a new verification email? We can send another one.'}
+            </div>
+            {resendState?.error && (
+              <div className="text-red-500 text-sm">{resendState.error}</div>
+            )}
+            <Button
+              type="submit"
+              variant="outline"
+              className="w-full rounded-full"
+              disabled={resendPending}
+            >
+              {resendPending ? (
+                <>
+                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                  Sending...
+                </>
+              ) : (
+                'Resend verification email'
+              )}
+            </Button>
+          </form>
+        )}
+
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -125,9 +193,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
 
           <div className="mt-6">
             <Link
-              href={`${mode === 'signin' ? '/sign-up' : '/sign-in'}${
-                redirect ? `?redirect=${redirect}` : ''
-              }${priceId ? `&priceId=${priceId}` : ''}`}
+              href={alternateModeHref}
               className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
             >
               {mode === 'signin'
