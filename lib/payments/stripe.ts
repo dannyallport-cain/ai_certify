@@ -19,6 +19,9 @@ export async function createCheckoutSession({
   priceId: string;
 }) {
   const user = await getUser();
+  const isVerificationPrice =
+    !!process.env.STRIPE_VERIFICATION_PRICE_ID &&
+    priceId === process.env.STRIPE_VERIFICATION_PRICE_ID;
 
   if (!team || !user) {
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
@@ -38,9 +41,13 @@ export async function createCheckoutSession({
     customer: team.stripeCustomerId || undefined,
     client_reference_id: user.id.toString(),
     allow_promotion_codes: true,
-    subscription_data: {
-      trial_period_days: 14
-    }
+    ...(isVerificationPrice
+      ? {}
+      : {
+          subscription_data: {
+            trial_period_days: 14
+          }
+        })
   });
 
   redirect(session.url!);
