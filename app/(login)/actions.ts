@@ -28,6 +28,11 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+import {
+  createAndSendEmailVerification,
+  getTeamIdForUser,
+  isEmailVerificationRequired,
+} from '@/lib/auth/email-verification';
 
 function getSafeRedirectPath(value: FormDataEntryValue | null): string | null {
   if (typeof value !== 'string') {
@@ -66,6 +71,7 @@ const signInSchema = z.object({
 
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
   const { email, password } = data;
+  const normalizedEmail = email.trim().toLowerCase();
 
   const userWithTeam = await db
     .select({
@@ -75,7 +81,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     .from(users)
     .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
     .leftJoin(teams, eq(teamMembers.teamId, teams.id))
-    .where(eq(users.email, email))
+    .where(eq(users.email, normalizedEmail))
     .limit(1);
 
   if (userWithTeam.length === 0) {
@@ -98,6 +104,15 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       error: 'Invalid email or password. Please try again.',
       email,
       password
+    };
+  }
+
+  if (isEmailVerificationRequired(foundUser)) {
+    return {
+      error: 'Verify your email address before signing in.',
+      email: normalizedEmail,
+      password: '',
+      unverified: true,
     };
   }
 
@@ -165,7 +180,9 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
       const newUser: NewUser = {
         email: normalizedEmail,
         passwordHash,
-        role: 'user'
+        role: 'user',
+        status: 'pending',
+        activatedAt: null,
       };
 
       const [insertedUser] = await tx.insert(users).values(newUser).returning();
@@ -287,21 +304,99 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     };
   }
 
-  await setSession(createdUser);
-
   const redirectTo = formData.get('redirect') as string | null;
-  if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
-    return createCheckoutSession({ team: createdTeam, priceId });
+  const priceId = formData.get('priceId') as string | null;
+
+  try {
+    await createAndSendEmailVerification({
+      user: createdUser,
+      redirectTo,
+      priceId,
+    });
+  } catch (error) {
+    console.error('Failed to send verification email:', error);
+    return {
+      error:
+        'Your account was created, but we could not send the verification email. Please try signing in to resend it.',
+      email,
+      password: '',
+    };
   }
 
-  const safeRedirectPath = getSafeRedirectPath(redirectTo);
-  if (safeRedirectPath) {
-    redirect(safeRedirectPath);
-  }
-
-  redirect('/subscription');
+  return {
+    success:
+      'Account created. Check your email for a verification link before signing in.',
+    email: normalizedEmail,
+    password: '',
+    verificationPending: true,
+  };
 });
+
+const resendVerificationSchema = z.object({
+  email: z.string().email(),
+  redirect: z.string().optional(),
+  priceId: z.string().optional(),
+});
+
+export const resendVerificationEmail = validatedAction(
+  resendVerificationSchema,
+  async (data) => {
+    const normalizedEmail = data.email.trim().toLowerCase();
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, normalizedEmail))
+      .limit(1);
+
+    if (!user) {
+      return {
+        success: 'If that account exists, a verification email has been sent.',
+        email: normalizedEmail,
+        password: '',
+      };
+    }
+
+    if (!isEmailVerificationRequired(user)) {
+      return {
+        success: 'That email address is already verified. You can sign in now.',
+        email: normalizedEmail,
+        password: '',
+      };
+    }
+
+    try {
+      await createAndSendEmailVerification({
+        user,
+        redirectTo: data.redirect ?? null,
+        priceId: data.priceId ?? null,
+      });
+    } catch (error) {
+      console.error('Failed to resend verification email:', error);
+      return {
+        error:
+          'We could not resend the verification email right now. Please try again.',
+        email: normalizedEmail,
+        password: '',
+        unverified: true,
+      };
+    }
+
+    const teamId = await getTeamIdForUser(user.id);
+    await logActivity(
+      teamId,
+      user.id,
+      ActivityType.RESEND_VERIFICATION_EMAIL
+    );
+
+    return {
+      success: 'Verification email sent. Check your inbox.',
+      email: normalizedEmail,
+      password: '',
+      unverified: true,
+    };
+  }
+);
 
 export async function signOut() {
   const user = await getUser();

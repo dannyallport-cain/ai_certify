@@ -9,6 +9,7 @@ import {
   boolean,
   json,
   date,
+  index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { USER_ROLES } from '@/lib/auth/roles';
@@ -97,6 +98,25 @@ export const invitations = pgTable('invitations', {
   invitedAt: timestamp('invited_at').notNull().defaultNow(),
   status: varchar('status', { length: 20 }).notNull().default('pending'),
 });
+
+export const emailVerificationTokens = pgTable(
+  'email_verification_tokens',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index('email_verification_tokens_user_id_idx').on(table.userId),
+    expiresAtIdx: index('email_verification_tokens_expires_at_idx').on(
+      table.expiresAt
+    ),
+  })
+);
 
 // Fire Safety Certificate Management Tables
 export const customers = pgTable('customers', {
@@ -308,7 +328,18 @@ export const usersRelations = relations(users, ({ many }) => ({
   invitationsSent: many(invitations),
   reportDisseminatorTemplates: many(reportDisseminatorTemplates),
   reportDisseminatorReports: many(reportDisseminatorReports),
+  emailVerificationTokens: many(emailVerificationTokens),
 }));
+
+export const emailVerificationTokensRelations = relations(
+  emailVerificationTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [emailVerificationTokens.userId],
+      references: [users.id],
+    }),
+  })
+);
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
   team: one(teams, {
@@ -446,6 +477,9 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;
 export type NewInvitation = typeof invitations.$inferInsert;
+export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
+export type NewEmailVerificationToken =
+  typeof emailVerificationTokens.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 export type Certificate = typeof certificates.$inferSelect;
@@ -504,6 +538,8 @@ export enum ItemStatus {
 
 export enum ActivityType {
   SIGN_UP = 'SIGN_UP',
+  VERIFY_EMAIL = 'VERIFY_EMAIL',
+  RESEND_VERIFICATION_EMAIL = 'RESEND_VERIFICATION_EMAIL',
   SIGN_IN = 'SIGN_IN',
   SIGN_OUT = 'SIGN_OUT',
   UPDATE_PASSWORD = 'UPDATE_PASSWORD',

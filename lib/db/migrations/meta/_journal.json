@@ -43,6 +43,13 @@
       "when": 1773984342516,
       "tag": "0005_fair_naoko",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775601180000,
+      "tag": "0008_email_verification_tokens",
+      "breakpoints": true
     }
   ]
 }
