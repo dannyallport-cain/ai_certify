@@ -1,12 +1,11 @@
 import { requireSubscriptionAccess } from '@/lib/payments/subscription';
-import { SettingsShell } from './settings-shell';
 
-export default async function DashboardLayout({
+export default async function CertificatesLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
   await requireSubscriptionAccess();
 
-  return <SettingsShell>{children}</SettingsShell>;
+  return children;
 }

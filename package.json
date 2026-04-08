@@ -14,7 +14,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:clean-disseminator-preview-values": "npx tsx scripts/clean-disseminator-preview-values.ts",
-    "backup:env": "bash scripts/backup-env.sh"
+    "backup:env": "bash scripts/backup-env.sh",
+    "stripe:prepare-verification": "pnpm exec tsx scripts/prepare-stripe-verification-price.ts",
+    "stripe:verify-callback": "pnpm exec tsx scripts/verify-stripe-signup-callback.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1021.0",
