@@ -114,41 +114,8 @@ export default function TemplatesPage() {
     router.push(`/admin/reports/disseminator?templateId=${template.id}&action=create-report`);
   };
 
-  const handleDuplicateTemplate = async (template: CertificateTemplate) => {
-    try {
-      const duplicateData = {
-        name: `${template.name} (Copy)`,
-        certificateType: template.certificateType,
-        description: template.description ? `${template.description} (Copy)` : undefined,
-        template: {}, // Will need to fetch full template data
-      };
-
-      // First get the full template data
-      const templateResponse = await fetch(`/api/admin/templates/${template.id}`);
-      if (!templateResponse.ok) {
-        throw new Error('Failed to fetch template data');
-      }
-      const fullTemplate = await templateResponse.json();
-      duplicateData.template = fullTemplate.template;
-
-      const response = await fetch('/api/admin/templates', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(duplicateData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to duplicate template');
-      }
-
-      toast.success('Template duplicated successfully');
-      fetchTemplates();
-    } catch (error) {
-      console.error('Error duplicating template:', error);
-      toast.error('Failed to duplicate template');
-    }
+  const handleDuplicateTemplate = (template: CertificateTemplate) => {
+    router.push(`/admin/templates/new?sourceTemplateId=${template.id}`);
   };
 
   if (loading) {
@@ -350,4 +317,4 @@ export default function TemplatesPage() {
       </div>
     </div>
   );
-} 
+}

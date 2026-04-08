@@ -6,6 +6,32 @@ import { getTeamForUser, getUser } from '@/lib/db/queries';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 
+const dragDropEditorSchema = z.object({
+  version: z.number().optional(),
+  canvas: z.object({
+    width: z.number(),
+    height: z.number(),
+    backgroundColor: z.string(),
+    pagePadding: z.number().optional(),
+  }),
+  elements: z.array(
+    z.object({
+      id: z.string(),
+      type: z.enum(['text', 'dynamic-field', 'rectangle', 'line']),
+      x: z.number(),
+      y: z.number(),
+      width: z.number().optional(),
+      height: z.number().optional(),
+      zIndex: z.number(),
+      rotation: z.number().optional(),
+      text: z.string().optional(),
+      fieldKey: z.string().optional(),
+      locked: z.boolean().optional(),
+      style: z.record(z.any()).default({}),
+    }).passthrough()
+  ),
+}).passthrough();
+
 const createTemplateSchema = z.object({
   name: z.string().min(1, 'Template name is required'),
   certificateType: z.enum(['BS5839-1', 'BS5839-6', 'BS5266', 'FIRE_EXTINGUISHER', 'DRY_RISER', 'CP12', 'EICR']),
@@ -44,7 +70,8 @@ const createTemplateSchema = z.object({
       }),
       spacing: z.number(),
     }),
-  }),
+    dragDropEditor: dragDropEditorSchema.optional(),
+  }).passthrough(),
 });
 
 export async function GET(request: NextRequest) {
@@ -73,6 +100,7 @@ export async function GET(request: NextRequest) {
       .from(certificateTemplates)
       .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
       .orderBy(certificateTemplates.createdAt);
+
 
     return NextResponse.json(templates);
   } catch (error) {

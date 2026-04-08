@@ -6,13 +6,38 @@ import { getUser } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+const dragDropEditorSchema = z.object({
+  version: z.number().optional(),
+  canvas: z.object({
+    width: z.number(),
+    height: z.number(),
+    backgroundColor: z.string(),
+    pagePadding: z.number().optional(),
+  }),
+  elements: z.array(
+    z.object({
+      id: z.string(),
+      type: z.enum(['text', 'dynamic-field', 'rectangle', 'line']),
+      x: z.number(),
+      y: z.number(),
+      width: z.number().optional(),
+      height: z.number().optional(),
+      zIndex: z.number(),
+      rotation: z.number().optional(),
+      text: z.string().optional(),
+      fieldKey: z.string().optional(),
+      locked: z.boolean().optional(),
+      style: z.record(z.any()).default({}),
+    }).passthrough()
+  ),
+}).passthrough();
+
 const updateTemplateSchema = z.object({
   name: z.string().min(1, 'Template name is required').optional(),
   description: z.string().optional(),
   isDefault: z.boolean().optional(),
   isActive: z.boolean().optional(),
-  // Accept any well-formed template JSON — sections vary by certificate type
-  // (some use 'title', others use 'label'; some have 'config', others 'style')
+  certificateType: z.enum(['BS5839-1', 'BS5839-6', 'BS5266', 'FIRE_EXTINGUISHER', 'DRY_RISER', 'CP12', 'EICR']).optional(),
   template: z.object({
     sections: z.array(
       z.object({
@@ -47,7 +72,8 @@ const updateTemplateSchema = z.object({
       }),
       spacing: z.number(),
     }),
-  }).optional(),
+    dragDropEditor: dragDropEditorSchema.optional(),
+  }).passthrough().optional(),
 });
 
 export async function GET(
@@ -134,6 +160,7 @@ export async function PUT(
     if (validatedData.description !== undefined) updateData.description = validatedData.description;
     if (validatedData.isDefault !== undefined) updateData.isDefault = validatedData.isDefault;
     if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
+    if (validatedData.certificateType !== undefined) updateData.certificateType = validatedData.certificateType;
     if (validatedData.template !== undefined) {
       updateData.template = validatedData.template;
       updateData.version = (existingTemplate[0].version ?? 0) + 1;
