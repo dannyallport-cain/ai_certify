@@ -38,9 +38,28 @@ export async function verifyToken(input: string) {
 }
 
 export async function getSession() {
-  const session = (await cookies()).get('session')?.value;
+  const cookieStore = await cookies();
+  const session = cookieStore.get('session')?.value;
   if (!session) return null;
-  return await verifyToken(session);
+
+  try {
+    const payload = await verifyToken(session);
+
+    if (!payload?.expires || Number.isNaN(new Date(payload.expires).getTime())) {
+      cookieStore.delete('session');
+      return null;
+    }
+
+    if (new Date(payload.expires).getTime() <= Date.now()) {
+      cookieStore.delete('session');
+      return null;
+    }
+
+    return payload;
+  } catch {
+    cookieStore.delete('session');
+    return null;
+  }
 }
 
 export async function setSession(user: NewUser) {
