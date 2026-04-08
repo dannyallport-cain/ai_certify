@@ -1,19 +1,16 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 
-import { createCertificate } from '@/app/(dashboard)/actions';
+import { createCertificate } from '../../../actions';
 import { AddressAutocompleteField } from '@/components/AddressAutocompleteField';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
 import { DateDropdownField } from '@/components/DateDropdownField';
 import GuidedModeModal, { Step } from '@/components/GuidedModeModal';
 import { NextVisitField } from '@/components/NextVisitField';
-import { OrganisationAutocompleteField } from '@/components/OrganisationAutocompleteField';
 import { PreviewModal } from '@/components/PreviewModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,40 +30,22 @@ const fetcher = (url: string) =>
     return res.json();
   });
 
-const PREMISES_TYPES = [
-  'Office Building',
-  'Retail Premises',
-  'Industrial Premises',
-  'Residential Block',
-  'Educational Premises',
-  'Healthcare Premises',
-  'Hotel / Hospitality',
-  'Warehouse',
-  'Mixed Use',
-  'Other',
+const SERVICE_LEVELS = [
+  'Visual Inspection',
+  'Basic Service',
+  'Extended Service',
+  'Overhaul / Discharge Test',
+  'Commissioning / Installation Review',
 ] as const;
 
-const SYSTEM_TYPES = [
-  'Self-contained Maintained',
-  'Self-contained Non-maintained',
-  'Self-contained Sustained',
-  'Central Battery System',
-  'Generator-backed Emergency Lighting',
-  'Mixed System',
+const AREA_RISK_OPTIONS = [
+  'Light / Low Risk',
+  'Ordinary / Medium Risk',
+  'High Risk',
+  'Special Hazard Area',
 ] as const;
 
-const INSPECTION_TYPES = [
-  'Daily / Weekly Visual Check',
-  'Monthly Functional Test',
-  'Quarterly Inspection',
-  'Six-Monthly Inspection',
-  'Annual Full Duration Test',
-  'Commissioning / Initial Verification',
-] as const;
-
-const DURATION_OPTIONS = ['1 hour', '3 hours', 'Other'] as const;
-
-export default function BS5266CertificatePage() {
+export default function FireExtinguisherCertificatePage() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -84,10 +63,10 @@ export default function BS5266CertificatePage() {
   const [siteAddress, setSiteAddress] = useState('');
   const [isSiteNameAuto, setIsSiteNameAuto] = useState(false);
   const [isSiteAddressAuto, setIsSiteAddressAuto] = useState(false);
-  const [inspectionDate, setInspectionDate] = useState(getTodayDate());
-  const [isInspectionDateAuto, setIsInspectionDateAuto] = useState(true);
-  const [nextInspectionDate, setNextInspectionDate] = useState('');
-  const [inspectionType, setInspectionType] = useState<(typeof INSPECTION_TYPES)[number] | ''>('');
+  const [serviceDate, setServiceDate] = useState(getTodayDate());
+  const [isServiceDateAuto, setIsServiceDateAuto] = useState(true);
+  const [nextServiceDate, setNextServiceDate] = useState('');
+  const [serviceLevel, setServiceLevel] = useState<(typeof SERVICE_LEVELS)[number] | ''>('');
   const [formError, setFormError] = useState('');
 
   const generateCertificateNumber = () => {
@@ -99,24 +78,23 @@ export default function BS5266CertificatePage() {
       .toString()
       .padStart(3, '0');
 
-    return `EL-${year}${month}${day}-${random}`;
+    return `FE-${year}${month}${day}-${random}`;
   };
 
   useEffect(() => {
     setCertificateNumber(generateCertificateNumber());
   }, []);
 
-  const steps: Step[] = [
+  const guidedSteps: Step[] = [
     { name: 'certificateNumber', label: 'Certificate Number', type: 'text' },
     { name: 'customerId', label: 'Customer', type: 'text' },
     { name: 'siteName', label: 'Premises Name', type: 'text' },
     { name: 'siteAddress', label: 'Premises Address', type: 'textarea' },
-    { name: 'inspectionDate', label: 'Inspection Date', type: 'text' },
-    { name: 'inspectionType', label: 'Inspection Type', type: 'text' },
-    { name: 'systemType', label: 'System Type', type: 'text' },
-    { name: 'duration', label: 'Rated Duration', type: 'text' },
+    { name: 'serviceDate', label: 'Service Date', type: 'text' },
+    { name: 'serviceLevel', label: 'Service Level', type: 'text' },
+    { name: 'responsiblePerson', label: 'Responsible Person', type: 'text' },
     { name: 'engineerName', label: 'Engineer Name', type: 'text' },
-    { name: 'defectsFound', label: 'Defects Found', type: 'textarea' },
+    { name: 'inventorySummary', label: 'Equipment Inventory Summary', type: 'textarea' },
   ];
 
   const handleSubmit = async (formData: FormData) => {
@@ -124,13 +102,13 @@ export default function BS5266CertificatePage() {
     setFormError('');
 
     try {
-      formData.append('certificateType', 'BS5266');
+      formData.append('certificateType', 'Fire Extinguisher');
 
       const result = await createCertificate({}, formData);
 
       if (result?.error) {
         if (isSessionExpiredError(result.error)) {
-          router.push(getSignInRedirectPath('/certificates/new/bs5266'));
+          router.push(getSignInRedirectPath('/certificates/new/fire-extinguisher'));
           return;
         }
 
@@ -147,7 +125,7 @@ export default function BS5266CertificatePage() {
   const handleGuidedComplete = async (values: Record<string, string>) => {
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) => formData.append(key, value));
-    formData.append('certificateType', 'BS5266');
+    formData.append('certificateType', 'Fire Extinguisher');
     await handleSubmit(formData);
     setGuidedOpen(false);
   };
@@ -165,25 +143,26 @@ export default function BS5266CertificatePage() {
 
     setPreviewData({
       certificateNumber: String(formData.get('certificateNumber') || ''),
-      certificateType: 'BS5266',
+      certificateType: 'FIRE_EXTINGUISHER',
       siteName: String(formData.get('siteName') || ''),
       siteAddress: String(formData.get('siteAddress') || ''),
-      inspectionDate: String(formData.get('inspectionDate') || ''),
-      nextInspectionDate: String(formData.get('nextInspectionDate') || ''),
+      inspectionDate: String(formData.get('serviceDate') || ''),
+      nextInspectionDate: String(formData.get('nextServiceDate') || ''),
       inspectorName: String(formData.get('engineerName') || ''),
       inspectorQualification: String(
-        formData.get('competencyDetails') || formData.get('companyRegistration') || 'Emergency lighting service engineer',
+        formData.get('competencyDetails') || formData.get('companyRegistration') || 'Competent extinguisher service engineer',
       ),
       status: 'draft',
       formData: {
-        inspectionType: String(formData.get('inspectionType') || ''),
-        systemType: String(formData.get('systemType') || ''),
-        duration: String(formData.get('duration') || ''),
-        totalLuminaires: String(formData.get('totalLuminaires') || ''),
-        failedUnits: String(formData.get('failedUnits') || ''),
+        serviceLevel: String(formData.get('serviceLevel') || ''),
+        siteRiskCategory: String(formData.get('siteRiskCategory') || ''),
+        totalUnits: String(formData.get('totalUnits') || ''),
+        inventorySummary: String(formData.get('inventorySummary') || ''),
+        serviceLabelApplied: String(formData.get('serviceLabelApplied') || ''),
+        signageCondition: String(formData.get('signageCondition') || ''),
+        mountingCondition: String(formData.get('mountingCondition') || ''),
+        accessCondition: String(formData.get('accessCondition') || ''),
         overallCondition: String(formData.get('overallCondition') || ''),
-        defectsFound: String(formData.get('defectsFound') || ''),
-        recommendations: String(formData.get('recommendations') || ''),
       },
       customer: {
         name: customer?.name || customerName || 'Not specified',
@@ -203,11 +182,11 @@ export default function BS5266CertificatePage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tight">
-              BS 5266 Emergency Lighting Service & Maintenance Certificate
+              Fire Extinguisher Servicing Certificate
             </h2>
             <p className="max-w-3xl text-muted-foreground">
-              Emergency lighting inspection, test, and maintenance record aligned to the current
-              app style and the typical BS 5266 service and maintenance workflow.
+              Portable fire extinguisher and fire blanket servicing certificate aligned to the
+              British Standard servicing model approach used for annual maintenance records.
             </p>
           </div>
 
@@ -228,7 +207,7 @@ export default function BS5266CertificatePage() {
             </p>
           )}
 
-          <input type="hidden" name="certificateType" value="BS5266" />
+          <input type="hidden" name="certificateType" value="Fire Extinguisher" />
 
           <Card>
             <CardHeader>
@@ -240,7 +219,7 @@ export default function BS5266CertificatePage() {
                 <CertificateNumberField
                   value={certificateNumber}
                   onChange={setCertificateNumber}
-                  certificateType="BS5266"
+                  certificateType="Fire Extinguisher"
                   customerName={selectedCustomerName}
                   siteName={siteName}
                 />
@@ -252,7 +231,7 @@ export default function BS5266CertificatePage() {
                 <Input
                   id="customerName"
                   name="customerName"
-                  list="customers-list-bs5266"
+                  list="customers-list-fire-extinguisher"
                   value={selectedCustomerName}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -283,7 +262,7 @@ export default function BS5266CertificatePage() {
                   required
                   placeholder="Type customer name"
                 />
-                <datalist id="customers-list-bs5266">
+                <datalist id="customers-list-fire-extinguisher">
                   {customers.map((customer: any) => (
                     <option key={customer.id} value={customer.name} />
                   ))}
@@ -294,28 +273,23 @@ export default function BS5266CertificatePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Premises & System Overview</CardTitle>
+              <CardTitle>Premises & Responsible Person</CardTitle>
               <CardDescription>
-                Record the premises, occupancy, and emergency lighting arrangement being maintained.
+                Record the premises details and the person responsible for the fire-fighting equipment.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="siteName">Premises Name</Label>
-                  <OrganisationAutocompleteField
+                  <Input
                     id="siteName"
                     name="siteName"
-                    placeholder="Building or premises name"
-                    required
+                    placeholder="Site or building name"
                     value={siteName}
-                    onChange={(value) => {
-                      setSiteName(value);
+                    onChange={(e) => {
+                      setSiteName(e.target.value);
                       setIsSiteNameAuto(false);
-                    }}
-                    onAddressPick={(address) => {
-                      setSiteAddress(address);
-                      setIsSiteAddressAuto(true);
                     }}
                     className={
                       isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''
@@ -323,6 +297,7 @@ export default function BS5266CertificatePage() {
                     title={
                       isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined
                     }
+                    required
                   />
                   {isSiteNameAuto && (
                     <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer.">
@@ -336,7 +311,7 @@ export default function BS5266CertificatePage() {
                   <Input
                     id="responsiblePerson"
                     name="responsiblePerson"
-                    placeholder="Person responsible for the emergency lighting system"
+                    placeholder="Person responsible for fire safety equipment"
                   />
                 </div>
               </div>
@@ -348,8 +323,8 @@ export default function BS5266CertificatePage() {
                   name="siteAddress"
                   placeholder="Full premises address"
                   value={siteAddress}
-                  onChange={(newValue) => {
-                    setSiteAddress(newValue);
+                  onChange={(value) => {
+                    setSiteAddress(value);
                     setIsSiteAddressAuto(false);
                   }}
                   className={
@@ -358,6 +333,7 @@ export default function BS5266CertificatePage() {
                   title={
                     isSiteAddressAuto ? 'Auto-populated from selected customer address. Edit if needed.' : undefined
                   }
+                  required
                 />
                 {isSiteAddressAuto && (
                   <p
@@ -371,13 +347,13 @@ export default function BS5266CertificatePage() {
 
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="premisesType">Premises Type</Label>
-                  <Select name="premisesType">
-                    <SelectTrigger id="premisesType">
-                      <SelectValue placeholder="Select premises type" />
+                  <Label htmlFor="siteRiskCategory">Risk Category</Label>
+                  <Select name="siteRiskCategory">
+                    <SelectTrigger id="siteRiskCategory">
+                      <SelectValue placeholder="Select risk category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {PREMISES_TYPES.map((option) => (
+                      {AREA_RISK_OPTIONS.map((option) => (
                         <SelectItem key={option} value={option}>
                           {option}
                         </SelectItem>
@@ -387,52 +363,13 @@ export default function BS5266CertificatePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="floors">Number of Floors</Label>
-                  <Input id="floors" name="floors" type="number" min="0" placeholder="e.g., 3" />
+                  <Label htmlFor="numberOfFloors">Number of Floors</Label>
+                  <Input id="numberOfFloors" name="numberOfFloors" type="number" min="0" placeholder="e.g., 2" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="occupancyLoad">Maximum Occupancy</Label>
-                  <Input id="occupancyLoad" name="occupancyLoad" type="number" min="0" placeholder="e.g., 150" />
-                </div>
-              </div>
-
-              <div className="grid gap-6 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="totalFloorArea">Total Floor Area (m²)</Label>
-                  <Input id="totalFloorArea" name="totalFloorArea" type="number" min="0" placeholder="e.g., 1200" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="systemType">System Type</Label>
-                  <Select name="systemType">
-                    <SelectTrigger id="systemType">
-                      <SelectValue placeholder="Select system type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SYSTEM_TYPES.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Rated Duration</Label>
-                  <Select name="duration">
-                    <SelectTrigger id="duration">
-                      <SelectValue placeholder="Select duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DURATION_OPTIONS.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="occupancyType">Occupancy Type</Label>
+                  <Input id="occupancyType" name="occupancyType" placeholder="e.g., Offices, retail, mixed use" />
                 </div>
               </div>
             </CardContent>
@@ -440,114 +377,50 @@ export default function BS5266CertificatePage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Luminaires & System Inventory</CardTitle>
+              <CardTitle>Service Visit Details</CardTitle>
               <CardDescription>
-                Summarise the emergency luminaires, exit signage, and battery equipment covered by the visit.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label htmlFor="exitSigns">Exit Signs</Label>
-                  <Input id="exitSigns" name="exitSigns" type="number" min="0" placeholder="0" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bulkheadLights">Bulkhead Luminaires</Label>
-                  <Input id="bulkheadLights" name="bulkheadLights" type="number" min="0" placeholder="0" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="spotlights">Spotlights / Downlights</Label>
-                  <Input id="spotlights" name="spotlights" type="number" min="0" placeholder="0" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="centralBatteryUnits">Central Battery Units</Label>
-                  <Input id="centralBatteryUnits" name="centralBatteryUnits" type="number" min="0" placeholder="0" />
-                </div>
-              </div>
-
-              <div className="grid gap-6 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label htmlFor="slaveLuminaires">Slave Luminaires</Label>
-                  <Input id="slaveLuminaires" name="slaveLuminaires" type="number" min="0" placeholder="0" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="highRiskTaskAreaUnits">High Risk Task Area Units</Label>
-                  <Input id="highRiskTaskAreaUnits" name="highRiskTaskAreaUnits" type="number" min="0" placeholder="0" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyLightingPanels">Control / Test Panels</Label>
-                  <Input id="emergencyLightingPanels" name="emergencyLightingPanels" type="number" min="0" placeholder="0" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="totalLuminaires">Total Emergency Lighting Points</Label>
-                  <Input id="totalLuminaires" name="totalLuminaires" type="number" min="0" placeholder="0" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="inventorySummary">Inventory / Zone Summary</Label>
-                <Textarea
-                  id="inventorySummary"
-                  name="inventorySummary"
-                  placeholder="Summarise luminaires by floor, zone, distribution board, address, test key switch, battery system, or any notable inventory detail..."
-                  rows={5}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Inspection & Test Details</CardTitle>
-              <CardDescription>
-                Record the inspection type, dates, competency details, and service interval information.
+                Capture the service type, attendance date, and competency details in line with an annual maintenance record.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-6 md:grid-cols-3">
                 <DateDropdownField
-                  id="inspectionDate"
-                  name="inspectionDate"
-                  label="Inspection Date"
-                  value={inspectionDate}
+                  id="serviceDate"
+                  name="serviceDate"
+                  label="Service Date"
+                  value={serviceDate}
                   onChange={(newDate) => {
-                    setInspectionDate(newDate);
-                    setIsInspectionDateAuto(false);
+                    setServiceDate(newDate);
+                    setIsServiceDateAuto(false);
                   }}
                   required
-                  isAutoPopulated={isInspectionDateAuto}
-                  autoTitle="Auto-populated with today's date. Edit if required."
+                  isAutoPopulated={isServiceDateAuto}
+                  autoTitle="Auto-populated with today's date. Edit if the service was carried out on another date."
                   autoHelpText="Auto-populated with today's date. Hover the field for details."
                 />
 
                 <NextVisitField
-                  visitDate={inspectionDate}
-                  value={nextInspectionDate}
-                  onChange={setNextInspectionDate}
+                  visitDate={serviceDate}
+                  value={nextServiceDate}
+                  onChange={setNextServiceDate}
                   required
-                  label="Next Inspection Due"
+                  label="Next Service Due"
                 />
 
                 <div className="space-y-2">
-                  <Label htmlFor="inspectionType">Inspection Type</Label>
+                  <Label htmlFor="serviceLevel">Service Level</Label>
                   <Select
-                    name="inspectionType"
-                    value={inspectionType}
+                    name="serviceLevel"
+                    value={serviceLevel}
                     onValueChange={(value) =>
-                      setInspectionType(value as (typeof INSPECTION_TYPES)[number] | '')
+                      setServiceLevel(value as (typeof SERVICE_LEVELS)[number] | '')
                     }
                   >
-                    <SelectTrigger id="inspectionType">
-                      <SelectValue placeholder="Select inspection type" />
+                    <SelectTrigger id="serviceLevel">
+                      <SelectValue placeholder="Select service level" />
                     </SelectTrigger>
                     <SelectContent>
-                      {INSPECTION_TYPES.map((option) => (
+                      {SERVICE_LEVELS.map((option) => (
                         <SelectItem key={option} value={option}>
                           {option}
                         </SelectItem>
@@ -559,13 +432,8 @@ export default function BS5266CertificatePage() {
 
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="lastFullDurationTest">Last Full Duration Test</Label>
-                  <Input id="lastFullDurationTest" name="lastFullDurationTest" type="date" />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="engineerName">Engineer Name</Label>
-                  <Input id="engineerName" name="engineerName" placeholder="Inspection / maintenance engineer" required />
+                  <Input id="engineerName" name="engineerName" placeholder="Servicing engineer name" required />
                 </div>
 
                 <div className="space-y-2">
@@ -573,12 +441,10 @@ export default function BS5266CertificatePage() {
                   <Input
                     id="companyRegistration"
                     name="companyRegistration"
-                    placeholder="e.g., BAFE SP203-4, NICEIC, company number"
+                    placeholder="e.g., BAFE SP101, company number"
                   />
                 </div>
-              </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="competencyDetails">Competency / Certification Details</Label>
                   <Input
@@ -587,115 +453,91 @@ export default function BS5266CertificatePage() {
                     placeholder="Engineer competency or certification details"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="testMethod">Test Method</Label>
-                  <Input
-                    id="testMethod"
-                    name="testMethod"
-                    placeholder="e.g., simulated mains failure, key switch test, automatic test system"
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Results & Compliance Checks</CardTitle>
+              <CardTitle>Equipment Inventory Summary</CardTitle>
               <CardDescription>
-                Record the outcome of functional, duration, charging, and illumination checks.
+                Summarise the portable extinguishers and fire blankets maintained during the visit.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
-                <Label>Overall System Condition</Label>
-                <RadioGroup name="overallCondition" className="space-y-3 pt-2">
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="satisfactory" id="overallSatisfactory" className="mt-1" />
-                    <Label htmlFor="overallSatisfactory">Satisfactory</Label>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="requires-attention" id="overallRequiresAttention" className="mt-1" />
-                    <Label htmlFor="overallRequiresAttention">Requires Attention</Label>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <RadioGroupItem value="unsatisfactory" id="overallUnsatisfactory" className="mt-1" />
-                    <Label htmlFor="overallUnsatisfactory">Unsatisfactory</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
               <div className="grid gap-6 md:grid-cols-4">
                 <div className="space-y-2">
-                  <Label htmlFor="functionalTest">Functional Test</Label>
-                  <Select name="functionalTest">
-                    <SelectTrigger id="functionalTest">
-                      <SelectValue placeholder="Select result" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pass">Pass</SelectItem>
-                      <SelectItem value="fail">Fail</SelectItem>
-                      <SelectItem value="partial">Partial</SelectItem>
-                      <SelectItem value="not-applicable">Not Applicable</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="waterUnits">Water Units</Label>
+                  <Input id="waterUnits" name="waterUnits" type="number" min="0" placeholder="0" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="durationTest">Duration Test</Label>
-                  <Select name="durationTest">
-                    <SelectTrigger id="durationTest">
-                      <SelectValue placeholder="Select result" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pass">Pass</SelectItem>
-                      <SelectItem value="fail">Fail</SelectItem>
-                      <SelectItem value="partial">Partial</SelectItem>
-                      <SelectItem value="not-carried-out">Not Carried Out</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="foamUnits">Foam Units</Label>
+                  <Input id="foamUnits" name="foamUnits" type="number" min="0" placeholder="0" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="illuminationTest">Illumination / Coverage Check</Label>
-                  <Select name="illuminationTest">
-                    <SelectTrigger id="illuminationTest">
-                      <SelectValue placeholder="Select result" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pass">Pass</SelectItem>
-                      <SelectItem value="fail">Fail</SelectItem>
-                      <SelectItem value="partial">Partial</SelectItem>
-                      <SelectItem value="not-verified">Not Verified</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="co2Units">CO₂ Units</Label>
+                  <Input id="co2Units" name="co2Units" type="number" min="0" placeholder="0" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="chargingIndicators">Charging Indicators / Battery Status</Label>
-                  <Select name="chargingIndicators">
-                    <SelectTrigger id="chargingIndicators">
-                      <SelectValue placeholder="Select result" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="satisfactory">Satisfactory</SelectItem>
-                      <SelectItem value="requires-attention">Requires Attention</SelectItem>
-                      <SelectItem value="unsatisfactory">Unsatisfactory</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="powderUnits">Powder Units</Label>
+                  <Input id="powderUnits" name="powderUnits" type="number" min="0" placeholder="0" />
                 </div>
               </div>
 
               <div className="grid gap-6 md:grid-cols-4">
                 <div className="space-y-2">
-                  <Label htmlFor="failedUnits">Failed Units</Label>
-                  <Input id="failedUnits" name="failedUnits" type="number" min="0" placeholder="0" />
+                  <Label htmlFor="wetChemicalUnits">Wet Chemical Units</Label>
+                  <Input id="wetChemicalUnits" name="wetChemicalUnits" type="number" min="0" placeholder="0" />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="unitsRepaired">Units Repaired</Label>
-                  <Input id="unitsRepaired" name="unitsRepaired" type="number" min="0" placeholder="0" />
+                  <Label htmlFor="cleanAgentUnits">Clean Agent / Specialist Units</Label>
+                  <Input id="cleanAgentUnits" name="cleanAgentUnits" type="number" min="0" placeholder="0" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fireBlanketsCount">Fire Blankets</Label>
+                  <Input id="fireBlanketsCount" name="fireBlanketsCount" type="number" min="0" placeholder="0" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="totalUnits">Total Units on Site</Label>
+                  <Input id="totalUnits" name="totalUnits" type="number" min="0" placeholder="Total number serviced" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="inventorySummary">Inventory / Location Summary</Label>
+                <Textarea
+                  id="inventorySummary"
+                  name="inventorySummary"
+                  placeholder="Record extinguisher types, sizes, locations, serial numbers, or a summary of the installed inventory..."
+                  rows={5}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Maintenance Results</CardTitle>
+              <CardDescription>
+                Record servicing outcomes, condemnations, replacements, and label/signage checks.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-4">
+                <div className="space-y-2">
+                  <Label htmlFor="unitsServiced">Units Serviced</Label>
+                  <Input id="unitsServiced" name="unitsServiced" type="number" min="0" placeholder="0" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="unitsCondemned">Units Condemned</Label>
+                  <Input id="unitsCondemned" name="unitsCondemned" type="number" min="0" placeholder="0" />
                 </div>
 
                 <div className="space-y-2">
@@ -704,17 +546,31 @@ export default function BS5266CertificatePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="circuitsTested">Circuits / Areas Tested</Label>
-                  <Input id="circuitsTested" name="circuitsTested" placeholder="e.g., all escape routes and stair cores" />
+                  <Label htmlFor="unitsRemoved">Units Removed</Label>
+                  <Input id="unitsRemoved" name="unitsRemoved" type="number" min="0" placeholder="0" />
                 </div>
               </div>
 
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="signageCondition">Exit Signage Condition</Label>
+                  <Label htmlFor="serviceLabelApplied">Service Label / Maintenance Record Updated</Label>
+                  <Select name="serviceLabelApplied">
+                    <SelectTrigger id="serviceLabelApplied">
+                      <SelectValue placeholder="Select result" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="yes">Yes</SelectItem>
+                      <SelectItem value="partially">Partially</SelectItem>
+                      <SelectItem value="no">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="signageCondition">Signage Condition</Label>
                   <Select name="signageCondition">
                     <SelectTrigger id="signageCondition">
-                      <SelectValue placeholder="Select result" />
+                      <SelectValue placeholder="Select condition" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="satisfactory">Satisfactory</SelectItem>
@@ -725,10 +581,10 @@ export default function BS5266CertificatePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="luminaireCondition">Luminaire Condition</Label>
-                  <Select name="luminaireCondition">
-                    <SelectTrigger id="luminaireCondition">
-                      <SelectValue placeholder="Select result" />
+                  <Label htmlFor="mountingCondition">Mountings / Brackets Condition</Label>
+                  <Select name="mountingCondition">
+                    <SelectTrigger id="mountingCondition">
+                      <SelectValue placeholder="Select condition" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="satisfactory">Satisfactory</SelectItem>
@@ -737,20 +593,69 @@ export default function BS5266CertificatePage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
+              <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="logbookUpdated">Logbook / Records Updated</Label>
-                  <Select name="logbookUpdated">
-                    <SelectTrigger id="logbookUpdated">
-                      <SelectValue placeholder="Select result" />
+                  <Label htmlFor="accessCondition">Access / Visibility</Label>
+                  <Select name="accessCondition">
+                    <SelectTrigger id="accessCondition">
+                      <SelectValue placeholder="Select condition" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="partially">Partially</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
+                      <SelectItem value="satisfactory">Satisfactory</SelectItem>
+                      <SelectItem value="restricted">Restricted</SelectItem>
+                      <SelectItem value="unsatisfactory">Unsatisfactory</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dischargeTestRequired">Extended Service / Discharge Test Required</Label>
+                  <Select name="dischargeTestRequired">
+                    <SelectTrigger id="dischargeTestRequired">
+                      <SelectValue placeholder="Select result" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no">No</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="overdue">Overdue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="overallCondition">Overall Condition</Label>
+                  <Select name="overallCondition">
+                    <SelectTrigger id="overallCondition">
+                      <SelectValue placeholder="Select overall result" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="satisfactory">Satisfactory</SelectItem>
+                      <SelectItem value="requires-attention">Requires Attention</SelectItem>
+                      <SelectItem value="unsatisfactory">Unsatisfactory</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Coverage Assessment</Label>
+                <RadioGroup name="coverageAssessment" className="space-y-3">
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem value="adequate" id="coverageAdequate" className="mt-1" />
+                    <Label htmlFor="coverageAdequate">Equipment provision appears adequate for the risk</Label>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem value="review-required" id="coverageReviewRequired" className="mt-1" />
+                    <Label htmlFor="coverageReviewRequired">Review required - coverage or siting may need improvement</Label>
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem value="additional-required" id="coverageAdditionalRequired" className="mt-1" />
+                    <Label htmlFor="coverageAdditionalRequired">Additional or replacement equipment required</Label>
+                  </div>
+                </RadioGroup>
               </div>
             </CardContent>
           </Card>
@@ -759,7 +664,7 @@ export default function BS5266CertificatePage() {
             <CardHeader>
               <CardTitle>Defects, Work Carried Out & Recommendations</CardTitle>
               <CardDescription>
-                Record faults, remedial work, omissions, and any further action required.
+                Document defects, service work completed, and any departures from the expected standard arrangement.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -768,7 +673,7 @@ export default function BS5266CertificatePage() {
                 <Textarea
                   id="defectsFound"
                   name="defectsFound"
-                  placeholder="Describe any failed luminaires, battery faults, poor coverage, missing signage, charging issues, or wiring faults..."
+                  placeholder="Describe any missing units, pressure loss, damaged hoses, failed inspections, out-of-test units, or siting/signage defects..."
                   rows={4}
                 />
               </div>
@@ -778,7 +683,7 @@ export default function BS5266CertificatePage() {
                 <Textarea
                   id="workCarriedOut"
                   name="workCarriedOut"
-                  placeholder="Record lamps, batteries, fittings, drivers, controls, circuit repairs, test switches, or any other service work completed..."
+                  placeholder="Record servicing actions completed, parts changed, refills, replacements, condemnations, relocations, and maintenance labels applied..."
                   rows={4}
                 />
               </div>
@@ -788,7 +693,7 @@ export default function BS5266CertificatePage() {
                 <Textarea
                   id="recommendations"
                   name="recommendations"
-                  placeholder="List any recommendations for replacement fittings, overdue duration tests, additional coverage, signage improvements, or further remedial work..."
+                  placeholder="List any recommendations for additional equipment, signage, testing, replacement, staff instruction, or overdue extended servicing..."
                   rows={4}
                 />
               </div>
@@ -822,7 +727,7 @@ export default function BS5266CertificatePage() {
 
       <GuidedModeModal
         open={guidedOpen}
-        steps={steps}
+        steps={guidedSteps}
         onClose={() => setGuidedOpen(false)}
         onComplete={handleGuidedComplete}
       />

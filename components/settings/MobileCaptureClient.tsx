@@ -12,6 +12,8 @@ type MobileCaptureClientProps = {
 
 const SIGNATURE_PAD_HEIGHT = 220;
 const SIGNATURE_PAD_MAX_WIDTH = 560;
+const SIGNATURE_EXPORT_PADDING = 12;
+const SIGNATURE_EXPORT_MAX_WIDTH = 900;
 const AVATAR_OUTPUT_SIZE = 512;
 
 function getCaptureHeading(kind: UserAssetKind) {
@@ -218,11 +220,85 @@ export default function MobileCaptureClient({ token, kind }: MobileCaptureClient
     }
   };
 
+  const buildSignatureDataUrl = () => {
+    const canvas = canvasRef.current;
+
+    if (!canvas) {
+      return null;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return null;
+    }
+
+    const { width, height } = canvas;
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const pixels = imageData.data;
+
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const alpha = pixels[(y * width + x) * 4 + 3];
+
+        if (alpha > 0) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    if (maxX < minX || maxY < minY) {
+      return null;
+    }
+
+    const croppedWidth = maxX - minX + 1;
+    const croppedHeight = maxY - minY + 1;
+    const exportScale = Math.min(1, SIGNATURE_EXPORT_MAX_WIDTH / croppedWidth);
+    const outputWidth = Math.max(
+      1,
+      Math.round(croppedWidth * exportScale + SIGNATURE_EXPORT_PADDING * 2)
+    );
+    const outputHeight = Math.max(
+      1,
+      Math.round(croppedHeight * exportScale + SIGNATURE_EXPORT_PADDING * 2)
+    );
+    const exportCanvas = document.createElement('canvas');
+
+    exportCanvas.width = outputWidth;
+    exportCanvas.height = outputHeight;
+
+    const exportCtx = exportCanvas.getContext('2d');
+
+    if (!exportCtx) {
+      return null;
+    }
+
+    exportCtx.clearRect(0, 0, outputWidth, outputHeight);
+    exportCtx.drawImage(
+      canvas,
+      minX,
+      minY,
+      croppedWidth,
+      croppedHeight,
+      SIGNATURE_EXPORT_PADDING,
+      SIGNATURE_EXPORT_PADDING,
+      outputWidth - SIGNATURE_EXPORT_PADDING * 2,
+      outputHeight - SIGNATURE_EXPORT_PADDING * 2
+    );
+
+    return exportCanvas.toDataURL('image/png');
+  };
+
   const handleSubmit = async () => {
-    const dataUrl =
-      kind === 'signature'
-        ? canvasRef.current?.toDataURL('image/png') || null
-        : avatarDataUrl;
+    const dataUrl = kind === 'signature' ? buildSignatureDataUrl() : avatarDataUrl;
 
     if (kind === 'signature' && !hasSignature) {
       setError('Add a signature before saving.');
