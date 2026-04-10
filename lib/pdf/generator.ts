@@ -218,14 +218,14 @@ export function generateCertificatePDF(certificate: CertificateData): Uint8Array
     pdf.setFontSize(14);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(255, 255, 255);
-    addText('FIRE SAFETY CERTIFICATIONS LTD', margin + 5, margin + 10);
+    addText('AI-CERTIFICATES', margin + 5, margin + 10);
     
     // Company details
     pdf.setTextColor(52, 73, 124);
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
-    addText('Professional Fire Safety Inspection Services', margin + 5, margin + 20);
-    addText('Email: info@firesafetycert.com | Phone: 0800 123 4567', margin + 5, margin + 26);
+    addText('Professional certification management services', margin + 5, margin + 20);
+    addText('Operated by Cain Enabled Engineering Ltd', margin + 5, margin + 26);
     
     // Reset text color
     pdf.setTextColor(0, 0, 0);

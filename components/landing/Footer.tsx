@@ -12,8 +12,8 @@ export function Footer() {
               <span className="text-xl font-bold text-white">AI-Certificates</span>
             </div>
             <p className="max-w-sm">
-              The leading platform for fire safety certification management. 
-              Built for professionals, powered by AI.
+              The leading platform for professional certification management.
+              Operated by Cain Enabled Engineering Ltd.
             </p>
           </div>
         </div>

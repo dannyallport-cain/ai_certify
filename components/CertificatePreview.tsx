@@ -242,10 +242,10 @@ export const CertificatePreview = React.memo(function CertificatePreview({
         {/* Header */}
         <div className={getBlockClassName('header', 'mb-6 border-b-2 border-blue-900 pb-4')} style={getBlockStyle('header')} {...bindBlockProps('header')}>
           <div className="bg-blue-900 text-white p-3 mb-3 rounded-sm">
-            <h1 className="text-xl font-bold">FIRE SAFETY CERTIFICATIONS LTD</h1>
+            <h1 className="text-xl font-bold">AI-CERTIFICATES</h1>
           </div>
-          <p className="text-xs text-gray-600">Professional Fire Safety Inspection Services</p>
-          <p className="text-xs text-gray-600">Email: info@firesafetycert.com | Phone: 0800 123 4567</p>
+          <p className="text-xs text-gray-600">Professional certification management services</p>
+          <p className="text-xs text-gray-600">Operated by Cain Enabled Engineering Ltd</p>
         </div>
 
         {/* Main Title */}
