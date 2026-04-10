@@ -1,259 +1,105 @@
-# AI-Certificates - Safety Certificate Management System
+# AI Certify
 
-A comprehensive Next.js application for managing fire safety certificates and inspections, built for fire safety professionals and compliance managers.
+A Next.js 15 application for generating and managing electrical certificates and reports with AI-assisted document analysis, backed by PostgreSQL on Railway and Cloudflare R2 object storage.
 
-**Live Demo**: [Coming Soon]
+## Features
 
-## 🔥 Features
+- Certificate and report generation workflows
+- AI-assisted document/image analysis via a Railway worker
+- PostgreSQL database with Drizzle ORM
+- Cloudflare R2 storage for generated assets and backups
+- Vercel deployment for the web app and cron routes
 
-### Certificate Management
-- **BS5839-1**: Fire detection and alarm systems (commercial)
-- **BS5839-6**: Fire detection and alarm systems (domestic)
-- **BS5266**: Emergency lighting systems
-- **Fire Extinguisher**: Portable fire fighting equipment
-- **Dry Riser**: Dry riser system testing and maintenance
+## Tech Stack
 
-### Key Capabilities
-- ✅ **Multi-page Forms**: British Standards-compliant certificate forms
-- ✅ **Customer Management**: Company and contact information tracking
-- ✅ **Dashboard Overview**: Certificate status, expiration tracking, and statistics
-- ✅ **Type Safety**: Full TypeScript implementation with Drizzle ORM
-- ✅ **Modern UI**: Responsive design with shadcn/ui components
-- ✅ **Database Integration**: PostgreSQL with automated migrations
+- Next.js 15 App Router
+- TypeScript
+- PostgreSQL
+- Drizzle ORM
+- Cloudflare R2
+- Vercel
+- Railway
+- FastAPI
 
-## 🛠 Tech Stack
+## Setup
 
-- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
-- **Language**: TypeScript
-- **Database**: [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/)
-- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) (Radix UI + Tailwind CSS)
-- **Authentication**: NextAuth.js
-- **Styling**: Tailwind CSS
-- **Package Manager**: pnpm
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+ 
-- pnpm (recommended) or npm
-- PostgreSQL database (local or cloud)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/ai-certificates.git
-   cd ai-certificates
-   ```
-
-2. **Install dependencies**
+1. Install dependencies:
    ```bash
    pnpm install
    ```
 
-3. **Set up environment variables**
+2. Copy environment variables:
    ```bash
-   cp .env.example .env
-   ```
-   
-   Update the following variables in `.env`:
-   ```env
-   # Database
-   DATABASE_URL=your_postgresql_connection_string
-   
-   # Authentication
-   AUTH_SECRET=your_secret_key
-   
-   # Stripe (optional)
-   STRIPE_SECRET_KEY=your_stripe_secret
-   STRIPE_WEBHOOK_SECRET=your_webhook_secret
+   cp ".env copy.example" .env
    ```
 
-4. **Set up the database**
-
-   ```bash
-   pnpm db:push
-   pnpm db:seed
-   ```
-
-5. **Start the development server**
+3. Start local development:
    ```bash
    pnpm dev
    ```
 
-6. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+## Deployment Overview
 
-### Default Login
-- **Email**: test@test.com
-- **Password**: admin123
+- Vercel hosts the Next.js app and cron trigger route
+- Railway hosts the Python worker
+- Railway Postgres stores application data
+- Cloudflare R2 stores uploaded files and database backups
 
-## 📋 Certificate Types
+## Database Backup Architecture
 
-### BS5839-1 (Commercial Fire Alarms)
-- System categories and equipment counts
-- Zone configuration and control panel details
-- Comprehensive test results and compliance checks
-- Defects tracking and recommendations
+The old GitHub daily backup workflow has been removed.
 
-### BS5839-6 (Domestic Fire Alarms)
-- Property type classification (house, flat, HMO)
-- System grades (A, B, C, D, F)
-- Detector counts and interconnection methods
-- Functional and audibility testing
+Backups now run every 6 hours using the deployed app infrastructure:
 
-### BS5266 (Emergency Lighting)
-- Building type and occupancy assessment
-- System types (maintained, non-maintained, sustained)
-- Duration requirements and illumination levels
-- Equipment inventory and test results
+1. Vercel Cron calls `GET /api/cron/db-backup`
+2. The Next.js route validates the cron request
+3. The Next.js app sends `POST ${RAILWAY_BACKUP_WORKER_URL}/backup-database`
+4. The Railway worker validates `X-Backup-Token`
+5. The Railway worker runs `pg_dump` against `POSTGRES_URL` or `DATABASE_URL`
+6. The dump is compressed to a real PostgreSQL `.sql.gz` file
+7. The file is uploaded to Cloudflare R2
 
-### Fire Extinguisher Certificates
-- Risk category assessment
-- Complete extinguisher inventory by class
-- Service type tracking (routine, basic, extended, overhaul)
-- Coverage adequacy and positioning checks
+This produces a real `pg_dump`-generated PostgreSQL backup, not an application-level export.
 
-### Dry Riser Certificates
-- Building specifications and system details
-- Pressure and flow test results
-- Visual inspection and accessibility assessment
-- Compliance with BS9990 standards
+### R2 object path format
 
-## 📁 Project Structure
-
-```
-app/
-├── (dashboard)/              # Main application pages
-│   ├── certificates/         # Certificate management
-│   │   └── new/             # Certificate creation forms
-│   │       ├── bs5839-1/    # BS5839-1 form
-│   │       ├── bs5839-6/    # BS5839-6 form
-│   │       ├── bs5266/      # BS5266 form
-│   │       ├── fire-extinguisher/ # Fire extinguisher form
-│   │       └── dry-riser/   # Dry riser form
-│   ├── customers/           # Customer management
-│   └── actions.ts           # Server actions
-├── api/                     # API routes
-└── (login)/                 # Authentication pages
-
-lib/
-├── db/                      # Database configuration
-│   ├── schema.ts           # Database schema
-│   ├── queries.ts          # Database queries
-│   └── migrations/         # Database migrations
-└── auth/                   # Authentication configuration
+```text
+database-backups/YYYY/MM/ai-certify-db-YYYYMMDD-HHMMSS.sql.gz
 ```
 
-## 🗃 Database Schema
+Example:
 
-### Core Tables
-- `users` - System users and authentication
-- `customers` - Client companies and contact information
-- `certificates` - Fire safety certificates with metadata
-- `certificateItems` - Individual inspection items and results
-
-### Certificate Types Enum
-- `BS5839_1` - Commercial fire alarm systems
-- `BS5839_6` - Domestic fire alarm systems  
-- `BS5266` - Emergency lighting systems
-- `FIRE_EXTINGUISHER` - Portable fire extinguishers
-- `DRY_RISER` - Dry riser systems
-
-## 🔄 Development Workflow
-
-### Database Operations
-```bash
-# Generate migrations
-pnpm db:generate
-
-# Push schema changes
-pnpm db:push
-
-# Run migrations
-pnpm db:migrate
-
-# Seed development data
-pnpm db:seed
+```text
+database-backups/2026/04/ai-certify-db-20260408-120000.sql.gz
 ```
 
-### Development Commands
-```bash
-# Start development server
-pnpm dev
+## Backup Setup
 
-# Build for production
-pnpm build
+### Vercel environment variables
 
-# Start production server
-pnpm start
+- `RAILWAY_BACKUP_WORKER_URL` — Railway worker base URL, no trailing slash
+- `BACKUP_SHARED_SECRET` — shared secret sent to Railway as `X-Backup-Token`
+- `CRON_SECRET` — optional but recommended; Vercel Cron sends `Authorization: Bearer <CRON_SECRET>`
 
-# Type checking
-pnpm type-check
+### Railway worker environment variables
 
-# Linting
-pnpm lint
-```
+- `BACKUP_SHARED_SECRET` — must exactly match the Vercel value
+- `POSTGRES_URL` or `DATABASE_URL` — PostgreSQL connection string for `pg_dump`
+- `R2_ACCOUNT_ID`
+- `R2_BUCKET`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `R2_PUBLIC_BASE_URL` — optional
 
-## 🚧 Roadmap
+### Security headers
 
-### Phase 1 - Core Features ✅
-- [x] Certificate form implementation
-- [x] Customer management
-- [x] Basic dashboard
-- [x] Database schema
+- Vercel Cron → Next.js route:
+  - `Authorization: Bearer ${CRON_SECRET}` when `CRON_SECRET` is configured
+- Next.js route → Railway worker:
+  - `X-Backup-Token: ${BACKUP_SHARED_SECRET}`
 
-### Phase 2 - Advanced Features 🚧
-- [ ] Certificate detail views and editing
-- [ ] PDF generation for certificates
-- [ ] Digital signature capture
-- [ ] Certificate status workflow (draft → completed → issued)
+## Notes
 
-### Phase 3 - Enhanced Functionality 📋
-- [ ] Expiration tracking and alerts
-- [ ] Advanced search and filtering
-- [ ] Reporting and analytics dashboard
-- [ ] Bulk certificate operations
-- [ ] Mobile-responsive certificate forms
-
-### Phase 4 - Enterprise Features 📈
-- [ ] Multi-tenant support
-- [ ] Role-based permissions
-- [ ] API for integrations
-- [ ] Automated reminder system
-- [ ] Compliance reporting
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙋‍♂️ Support
-
-For support and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Review existing issues and discussions
-
----
-
-**AI-Certificates** - Streamlining fire safety compliance, one certificate at a time. 🔥🛡️
-3. Follow the Vercel deployment process, which will guide you through setting up your project.
-
-### Add environment variables
-
-In your Vercel project settings (or during deployment), add all the necessary environment variables. Make sure to update the values for the production environment, including:
-
-1. `BASE_URL`: Set this to your production domain.
-2. `STRIPE_SECRET_KEY`: Use your Stripe secret key for the production environment.
-3. `STRIPE_WEBHOOK_SECRET`: Use the webhook secret from the production webhook you created in step 1.
-4. `POSTGRES_URL`: Set this to your production database URL.
-5. `AUTH_SECRET`: Set this to a random string. `openssl rand -base64 32` will generate one.
-
+- Keep `RAILWAY_BACKUP_WORKER_URL` pointed at the Railway worker root URL with no trailing slash.
+- The actual backup job must run on Railway so `pg_dump` can be installed and executed there.
+- Existing AI worker endpoints such as `/health` and `/analyze-image` remain available alongside the backup endpoint.

@@ -1,5 +1,4 @@
 // filepath: app/(dashboard)/admin/page.tsx
-import { Suspense } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -162,6 +161,14 @@ async function AdminDashboardContent() {
       href: '/admin/stripe-config',
       color: 'text-gray-600',
       bgColor: 'bg-gray-50'
+    },
+    {
+      title: 'Database Management',
+      description: 'Trigger backups and restore archived database snapshots',
+      icon: Database,
+      href: '/admin/database',
+      color: 'text-slate-700',
+      bgColor: 'bg-slate-100'
     }
   ];
 
@@ -372,9 +379,5 @@ async function AdminDashboardContent() {
 }
 
 export default function AdminHomePage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <AdminDashboardContent />
-    </Suspense>
-  );
+  return <AdminDashboardContent />;
 }

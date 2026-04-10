@@ -1414,37 +1414,12 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     pdf.setDrawColor(0, 0, 0);
   };
 
-  // Section index tabs (BS 7671 form: section numbers shown on right margin of each page)
+  // Right-side section tabs intentionally disabled, but retain the page section state
+  // because other pagination logic still assigns to this variable.
   let currentPageSections: string[] = [];
-
-  const drawSectionTabs = () => {
-    if (currentPageSections.length === 0) return;
-    const tabW = 8;
-    const tabX = pageWidth - tabW - 0.5;
-    const tabAreaStart = 5;
-    const tabAreaEnd = pageHeight - 13;
-    const tabAreaH = tabAreaEnd - tabAreaStart;
-    const tabH = tabAreaH / currentPageSections.length;
-
-    pdf.setLineWidth(0.4);
-    currentPageSections.forEach((sec, i) => {
-      const ty = tabAreaStart + i * tabH;
-      pdf.setFillColor(light[0], light[1], light[2]);
-      pdf.setDrawColor(brandRed[0], brandRed[1], brandRed[2]);
-      pdf.rect(tabX, ty, tabW, tabH, 'FD');
-      pdf.setTextColor(brandRed[0], brandRed[1], brandRed[2]);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(sec.length > 2 ? 7 : 9);
-      text(sec, tabX + tabW / 2, ty + tabH / 2 + 2.5, { align: 'center' });
-    });
-    pdf.setTextColor(0, 0, 0);
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.3);
-  };
 
   // Page footer with reference, page number, company info
   const addPageFooter = (showPageNum = true) => {
-    drawSectionTabs();
     const footerY = pageHeight - 10;
     pdf.setFontSize(6.5);
     pdf.setFont('helvetica', 'italic');

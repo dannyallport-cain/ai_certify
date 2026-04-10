@@ -47,6 +47,11 @@ export interface CertificatePreviewData {
 interface CertificatePreviewProps {
   data: CertificatePreviewData;
   className?: string;
+  layoutEditMode?: boolean;
+  selectedBlockId?: string | null;
+  blockPositions?: Record<string, { x: number; y: number }>;
+  onSelectBlock?: (blockId: string | null) => void;
+  onMoveBlock?: (blockId: string, position: { x: number; y: number }) => void;
 }
 
 const getCertificateTypeDisplayName = (type: string): string => {
@@ -141,15 +146,101 @@ const getSystemDetails = (data: CertificatePreviewData): Array<[string, string]>
 export const CertificatePreview = React.memo(function CertificatePreview({
   data,
   className = '',
+  layoutEditMode = false,
+  selectedBlockId = null,
+  blockPositions = {},
+  onSelectBlock,
+  onMoveBlock,
 }: CertificatePreviewProps) {
   const systemDetails = useMemo(() => getSystemDetails(data), [data]);
 
+  const getBlockClassName = (blockId: string, baseClassName = '') =>
+    `${baseClassName} ${layoutEditMode ? 'relative cursor-move select-none rounded-sm outline outline-1 outline-dashed outline-blue-300 hover:outline-blue-500' : ''} ${
+      layoutEditMode && selectedBlockId === blockId ? 'outline-2 outline-blue-600 bg-blue-50/30' : ''
+    }`.trim();
+
+  const getBlockStyle = (blockId: string): React.CSSProperties | undefined => {
+    if (!layoutEditMode) return undefined;
+
+    const position = blockPositions[blockId];
+    if (!position || (!position.x && !position.y)) return undefined;
+
+    return {
+      transform: `translate(${position.x}px, ${position.y}px)`,
+    };
+  };
+
+  const bindBlockProps = (blockId: string) => {
+    if (!layoutEditMode) {
+      return {};
+    }
+
+    return {
+      onClick: (event: React.MouseEvent<HTMLDivElement>) => {
+        event.stopPropagation();
+        onSelectBlock?.(blockId);
+      },
+      draggable: true,
+      onDragStart: (event: React.DragEvent<HTMLDivElement>) => {
+        const target = event.currentTarget.getBoundingClientRect();
+        event.dataTransfer.setData(
+          'application/json',
+          JSON.stringify({
+            blockId,
+            startMouseX: event.clientX,
+            startMouseY: event.clientY,
+            originX: blockPositions[blockId]?.x ?? 0,
+            originY: blockPositions[blockId]?.y ?? 0,
+            elementLeft: target.left,
+            elementTop: target.top,
+          })
+        );
+      },
+      onDragEnd: (event: React.DragEvent<HTMLDivElement>) => {
+        const payload = event.dataTransfer.getData('application/json');
+        let originX = blockPositions[blockId]?.x ?? 0;
+        let originY = blockPositions[blockId]?.y ?? 0;
+        let startMouseX = event.clientX;
+        let startMouseY = event.clientY;
+
+        if (payload) {
+          try {
+            const parsed = JSON.parse(payload) as {
+              originX?: number;
+              originY?: number;
+              startMouseX?: number;
+              startMouseY?: number;
+            };
+            originX = parsed.originX ?? originX;
+            originY = parsed.originY ?? originY;
+            startMouseX = parsed.startMouseX ?? startMouseX;
+            startMouseY = parsed.startMouseY ?? startMouseY;
+          } catch {
+            // ignore malformed payload
+          }
+        }
+
+        onMoveBlock?.(blockId, {
+          x: originX + (event.clientX - startMouseX),
+          y: originY + (event.clientY - startMouseY),
+        });
+      },
+    };
+  };
+
   return (
-    <div className="bg-white text-gray-900 print:bg-white">
+    <div
+      className={`bg-white text-gray-900 print:bg-white ${className}`}
+      onClick={() => {
+        if (layoutEditMode) {
+          onSelectBlock?.(null);
+        }
+      }}
+    >
       {/* Page Container - A4 size 210mm x 297mm */}
-      <div className="mx-auto bg-white print:shadow-none shadow-sm border border-gray-300 m-4 certificate-preview-page">
+      <div className="mx-auto m-0 border border-gray-300 bg-white shadow-sm print:shadow-none certificate-preview-page">
         {/* Header */}
-        <div className="mb-6 pb-4 border-b-2 border-blue-900">
+        <div className={getBlockClassName('header', 'mb-6 border-b-2 border-blue-900 pb-4')} style={getBlockStyle('header')} {...bindBlockProps('header')}>
           <div className="bg-blue-900 text-white p-3 mb-3 rounded-sm">
             <h1 className="text-xl font-bold">FIRE SAFETY CERTIFICATIONS LTD</h1>
           </div>
@@ -158,21 +249,21 @@ export const CertificatePreview = React.memo(function CertificatePreview({
         </div>
 
         {/* Main Title */}
-        <div className="text-center mb-6">
+        <div className={getBlockClassName('title', 'mb-6 text-center')} style={getBlockStyle('title')} {...bindBlockProps('title')}>
           <h2 className="text-2xl font-bold mb-2">{getCertificateTypeDisplayName(data.certificateType)}</h2>
           <p className="text-lg font-semibold mb-2">INSPECTION AND SERVICING REPORT</p>
           <p className="text-xs italic text-gray-600">{getStandardsText(data.certificateType)}</p>
         </div>
 
         {/* Certificate Number */}
-        <div className="bg-yellow-100 border-2 border-yellow-400 p-3 mb-6 rounded-sm">
+        <div className={getBlockClassName('certificate-number', 'mb-6 rounded-sm border-2 border-yellow-400 bg-yellow-100 p-3')} style={getBlockStyle('certificate-number')} {...bindBlockProps('certificate-number')}>
           <p className="font-bold text-sm">
             CERTIFICATE NUMBER: <span className="text-lg">{data.certificateNumber || '[Certificate Number]'}</span>
           </p>
         </div>
 
         {/* Section 1: Site Details */}
-        <div className="mb-6">
+        <div className={getBlockClassName('site-details', 'mb-6')} style={getBlockStyle('site-details')} {...bindBlockProps('site-details')}>
           <h3 className="text-lg font-bold bg-blue-900 text-white p-2 mb-3">1. SITE DETAILS</h3>
           <div className="grid gap-2 text-sm">
             <div className="grid grid-cols-3 gap-4">
@@ -215,7 +306,7 @@ export const CertificatePreview = React.memo(function CertificatePreview({
         </div>
 
         {/* Section 2: System/Equipment Details */}
-        <div className="mb-6">
+        <div className={getBlockClassName('system-details', 'mb-6')} style={getBlockStyle('system-details')} {...bindBlockProps('system-details')}>
           <h3 className="text-lg font-bold bg-blue-900 text-white p-2 mb-3">2. SYSTEM/EQUIPMENT DETAILS</h3>
           <div className="grid gap-2 text-sm">
             {systemDetails.map((detail, idx) => (
@@ -228,7 +319,7 @@ export const CertificatePreview = React.memo(function CertificatePreview({
         </div>
 
         {/* Section 3: Inspection Details */}
-        <div className="mb-6">
+        <div className={getBlockClassName('inspection-details', 'mb-6')} style={getBlockStyle('inspection-details')} {...bindBlockProps('inspection-details')}>
           <h3 className="text-lg font-bold bg-blue-900 text-white p-2 mb-3">3. INSPECTION DETAILS</h3>
           <div className="grid gap-2 text-sm">
             <div className="grid grid-cols-2 gap-4">
@@ -266,7 +357,7 @@ export const CertificatePreview = React.memo(function CertificatePreview({
 
         {/* Section 4: Equipment/Items Tested */}
         {data.items && data.items.length > 0 && (
-          <div className="mb-6">
+          <div className={getBlockClassName('items-tested', 'mb-6')} style={getBlockStyle('items-tested')} {...bindBlockProps('items-tested')}>
             <h3 className="text-lg font-bold bg-blue-900 text-white p-2 mb-3">4. EQUIPMENT/ITEMS TESTED</h3>
             <div className="border border-gray-300 rounded-sm overflow-hidden text-sm">
               <table className="w-full border-collapse">
@@ -280,7 +371,12 @@ export const CertificatePreview = React.memo(function CertificatePreview({
                 </thead>
                 <tbody>
                   {data.items.map((item, idx) => (
-                    <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr
+                      key={idx}
+                      className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${layoutEditMode ? 'cursor-move outline outline-1 outline-dashed outline-transparent hover:outline-blue-400' : ''}`}
+                      style={getBlockStyle(`items-tested-row-${idx}`)}
+                      {...bindBlockProps(`items-tested-row-${idx}`)}
+                    >
                       <td className="border border-gray-300 px-2 py-2">{item.itemType || '-'}</td>
                       <td className="border border-gray-300 px-2 py-2">{item.location || '-'}</td>
                       <td className="border border-gray-300 px-2 py-2">{item.description || '-'}</td>
@@ -303,12 +399,17 @@ export const CertificatePreview = React.memo(function CertificatePreview({
 
         {/* Section 5: Defects and Recommendations */}
         {data.items && data.items.some((item) => item.defects || item.recommendations) && (
-          <div className="mb-6">
+          <div className={getBlockClassName('defects', 'mb-6')} style={getBlockStyle('defects')} {...bindBlockProps('defects')}>
             <h3 className="text-lg font-bold bg-blue-900 text-white p-2 mb-3">5. DEFECTS AND RECOMMENDATIONS</h3>
             <div className="space-y-3">
               {data.items.map((item, idx) => (
                 (item.defects || item.recommendations) && (
-                  <div key={idx} className="border-l-4 border-yellow-400 bg-yellow-50 p-3 rounded-sm">
+                  <div
+                    key={idx}
+                    className={`border-l-4 border-yellow-400 bg-yellow-50 p-3 rounded-sm ${layoutEditMode ? 'cursor-move outline outline-1 outline-dashed outline-transparent hover:outline-blue-400' : ''}`}
+                    style={getBlockStyle(`defect-item-${idx}`)}
+                    {...bindBlockProps(`defect-item-${idx}`)}
+                  >
                     {item.defects && (
                       <div>
                         <p className="font-semibold text-sm mb-1">Defects: {item.location}</p>
@@ -329,7 +430,7 @@ export const CertificatePreview = React.memo(function CertificatePreview({
         )}
 
         {/* Certification Statement */}
-        <div className="my-6 p-4 border-2 border-blue-900 rounded-sm bg-blue-50 text-xs">
+        <div className={getBlockClassName('certification-statement', 'my-6 rounded-sm border-2 border-blue-900 bg-blue-50 p-4 text-xs')} style={getBlockStyle('certification-statement')} {...bindBlockProps('certification-statement')}>
           <p className="font-bold mb-2">CERTIFICATION STATEMENT</p>
           <p className="text-justify leading-relaxed">
             I hereby certify that the inspection and testing of the above fire safety system has been carried out in
@@ -339,7 +440,7 @@ export const CertificatePreview = React.memo(function CertificatePreview({
         </div>
 
         {/* Signature Section */}
-        <div className="mt-12 grid grid-cols-2 gap-8 text-sm">
+        <div className={getBlockClassName('signatures', 'mt-12 grid grid-cols-2 gap-8 text-sm')} style={getBlockStyle('signatures')} {...bindBlockProps('signatures')}>
           <div>
             <p className="text-center mb-8 pb-2 border-b border-gray-400 min-h-10">
               &nbsp;
@@ -355,7 +456,7 @@ export const CertificatePreview = React.memo(function CertificatePreview({
         </div>
 
         {/* Footer */}
-        <div className="mt-12 pt-4 border-t border-gray-300 text-center text-xs text-gray-500">
+        <div className={getBlockClassName('footer', 'mt-12 border-t border-gray-300 pt-4 text-center text-xs text-gray-500')} style={getBlockStyle('footer')} {...bindBlockProps('footer')}>
           <p>This certificate is only valid when accompanied by the detailed technical report.</p>
           <p>Page 1 of Certificate {data.certificateNumber}</p>
         </div>

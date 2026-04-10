@@ -6,31 +6,116 @@ import { getUser } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
+const templateElementTypeSchema = z.enum([
+  'static-text',
+  'dynamic-text',
+  'rectangle',
+  'line',
+  'image',
+]);
+
+const templateElementBaseSchema = z.object({
+  id: z.string(),
+  type: templateElementTypeSchema,
+  x: z.number(),
+  y: z.number(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  zIndex: z.number().optional(),
+  rotation: z.number().optional(),
+  opacity: z.number().min(0).max(1).optional(),
+  locked: z.boolean().optional(),
+  pageId: z.string().optional(),
+  style: z.record(z.any()).default({}),
+}).passthrough();
+
+const templateElementSchema = z.discriminatedUnion('type', [
+  templateElementBaseSchema.extend({
+    type: z.literal('static-text'),
+    text: z.string(),
+    fontSize: z.number().optional(),
+    fontFamily: z.string().optional(),
+    fontWeight: z.string().optional(),
+    color: z.string().optional(),
+    align: z.enum(['left', 'center', 'right']).optional(),
+  }),
+  templateElementBaseSchema.extend({
+    type: z.literal('dynamic-text'),
+    field: z.string().optional(),
+    fieldKey: z.string().optional(),
+    sampleText: z.string().optional(),
+    text: z.string().optional(),
+    fontSize: z.number().optional(),
+    fontFamily: z.string().optional(),
+    fontWeight: z.string().optional(),
+    color: z.string().optional(),
+    align: z.enum(['left', 'center', 'right']).optional(),
+  }),
+  templateElementBaseSchema.extend({
+    type: z.literal('rectangle'),
+    fill: z.string().optional(),
+    stroke: z.string().optional(),
+    strokeWidth: z.number().optional(),
+    cornerRadius: z.number().optional(),
+  }),
+  templateElementBaseSchema.extend({
+    type: z.literal('line'),
+    points: z.array(z.number()).min(4).optional(),
+    stroke: z.string().optional(),
+    strokeWidth: z.number().optional(),
+  }),
+  templateElementBaseSchema.extend({
+    type: z.literal('image'),
+    src: z.string().optional(),
+  }),
+]);
+
+const pageCanvasSchema = z.object({
+  width: z.number(),
+  height: z.number(),
+  backgroundColor: z.string().optional(),
+  snapToGrid: z.boolean().optional(),
+  gridSize: z.number().optional(),
+  showGrid: z.boolean().optional(),
+  pagePadding: z.number().optional(),
+}).passthrough();
+
+const templatePageSchema = z.object({
+  id: z.string(),
+  name: z.string().optional(),
+  order: z.number().optional(),
+  canvas: pageCanvasSchema,
+}).passthrough();
+
+const legacyCanvasSchema = z.object({
+  width: z.number(),
+  height: z.number(),
+  backgroundColor: z.string().optional(),
+  backgroundImage: z.string().optional(),
+  backgroundImageScaleX: z.number().optional(),
+  backgroundImageScaleY: z.number().optional(),
+  backgroundImageX: z.number().optional(),
+  backgroundImageY: z.number().optional(),
+  pagePadding: z.number().optional(),
+}).passthrough();
+
 const dragDropEditorSchema = z.object({
   version: z.number().optional(),
-  canvas: z.object({
-    width: z.number(),
-    height: z.number(),
-    backgroundColor: z.string(),
-    pagePadding: z.number().optional(),
-  }),
-  elements: z.array(
-    z.object({
-      id: z.string(),
-      type: z.enum(['text', 'dynamic-field', 'rectangle', 'line']),
-      x: z.number(),
-      y: z.number(),
-      width: z.number().optional(),
-      height: z.number().optional(),
-      zIndex: z.number(),
-      rotation: z.number().optional(),
-      text: z.string().optional(),
-      fieldKey: z.string().optional(),
-      locked: z.boolean().optional(),
-      style: z.record(z.any()).default({}),
-    }).passthrough()
-  ),
-}).passthrough();
+  activePageId: z.string().optional(),
+  canvas: legacyCanvasSchema.optional(),
+  elements: z.array(templateElementSchema).optional(),
+  pages: z.array(templatePageSchema).optional(),
+}).passthrough().superRefine((value, ctx) => {
+  const hasLegacyShape = !!value.canvas || !!value.elements;
+  const hasMultiPageShape = !!value.pages;
+
+  if (!hasLegacyShape && !hasMultiPageShape) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'dragDropEditor must include either legacy canvas/elements or pages',
+    });
+  }
+});
 
 const updateTemplateSchema = z.object({
   name: z.string().min(1, 'Template name is required').optional(),
@@ -82,7 +167,7 @@ export async function GET(
 ) {
   try {
     const user = await getUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -121,7 +206,7 @@ export async function PUT(
 ) {
   try {
     const user = await getUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -175,11 +260,11 @@ export async function PUT(
     return NextResponse.json(updatedTemplate[0]);
   } catch (error) {
     console.error('Error updating template:', error);
-    
+
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ 
-        error: 'Validation error', 
-        details: error.errors 
+      return NextResponse.json({
+        error: 'Validation error',
+        details: error.errors,
       }, { status: 400 });
     }
 
@@ -193,7 +278,7 @@ export async function DELETE(
 ) {
   try {
     const user = await getUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -222,8 +307,8 @@ export async function DELETE(
 
     // Don't allow deletion of default templates
     if (existingTemplate[0].isDefault) {
-      return NextResponse.json({ 
-        error: 'Cannot delete default template' 
+      return NextResponse.json({
+        error: 'Cannot delete default template'
       }, { status: 400 });
     }
 
@@ -236,4 +321,4 @@ export async function DELETE(
     console.error('Error deleting template:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

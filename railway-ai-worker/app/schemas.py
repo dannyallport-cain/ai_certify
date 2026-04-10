@@ -67,3 +67,36 @@ class AnalyzeImageResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     service: str
+
+
+class BackupDatabaseResponse(BaseModel):
+    success: bool
+    objectKey: str
+    bucket: str
+    dumpBytes: int
+    gzipBytes: int
+    timestamp: str
+
+
+class BackupListItem(BaseModel):
+    objectKey: str
+    bucket: str
+    size: int | None = None
+    timestamp: str | None = None
+    lastModified: str | None = None
+
+
+class ListBackupsResponse(BaseModel):
+    success: bool
+    backups: list[BackupListItem] = Field(default_factory=list)
+
+
+class RestoreDatabaseRequest(BaseModel):
+    objectKey: str
+
+
+class RestoreDatabaseResponse(BaseModel):
+    success: bool
+    objectKey: str
+    bucket: str
+    restoredAt: str

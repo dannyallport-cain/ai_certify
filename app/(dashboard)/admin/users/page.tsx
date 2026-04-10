@@ -15,6 +15,7 @@ type User = {
   role: string;
   status: 'pending' | 'active' | 'inactive' | 'suspended';
   createdAt: string;
+  lastLoginAt: string | null;
 };
 
 export default function UsersPage() {
@@ -225,6 +226,14 @@ export default function UsersPage() {
     }
   };
 
+  const formatLastLogin = (lastLoginAt: string | null) => {
+    if (!lastLoginAt) {
+      return 'Never';
+    }
+
+    return new Date(lastLoginAt).toLocaleDateString();
+  };
+
   const filteredUsers = users.filter((user) => {
     const q = searchQuery.trim().toLowerCase();
     const matchesSearch =
@@ -290,24 +299,25 @@ export default function UsersPage() {
       {loading ? (
         <p>Loading users...</p>
       ) : (
-        <Table>
+        <Table className="table-fixed text-sm">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Name</th>
+              <th className="w-14">ID</th>
+              <th className="w-36">Name</th>
               <th>Email</th>
-              <th>Role</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Actions</th>
+              <th className="w-24">Role</th>
+              <th className="w-24">Status</th>
+              <th className="w-24">Created</th>
+              <th className="w-24">Last login</th>
+              <th className="w-36">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.map((user) => (
               <tr key={user.id}>
                 <td>{user.id}</td>
-                <td>{user.name}</td>
-                <td>{user.email}</td>
+                <td className="truncate font-medium" title={user.name}>{user.name}</td>
+                <td className="truncate" title={user.email}>{user.email}</td>
                 <td>{USER_ROLE_LABELS[user.role as UserRole] || user.role}</td>
                 <td>
                   <span
@@ -323,18 +333,19 @@ export default function UsersPage() {
                   </span>
                 </td>
                 <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                <td>{formatLastLogin(user.lastLoginAt)}</td>
                 <td>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" disabled={busyUserId === user.id} onClick={() => handleSuspendToggle(user)}>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button size="sm" variant="outline" className="px-2" disabled={busyUserId === user.id} onClick={() => handleSuspendToggle(user)}>
                       {user.status === 'suspended' ? 'Activate' : 'Suspend'}
                     </Button>
-                    <Button size="sm" variant="outline" disabled={busyUserId === user.id} onClick={() => openChangePasswordModal(user)}>
-                      Change Password
+                    <Button size="sm" variant="outline" className="px-2" disabled={busyUserId === user.id} onClick={() => openChangePasswordModal(user)}>
+                      Password
                     </Button>
-                    <Button size="sm" variant="outline" disabled={busyUserId === user.id} onClick={() => handleSendPasswordLink(user)}>
-                      Send Password Link
+                    <Button size="sm" variant="outline" className="px-2" disabled={busyUserId === user.id} onClick={() => handleSendPasswordLink(user)}>
+                      Send Link
                     </Button>
-                    <Button variant="destructive" size="sm" disabled={busyUserId === user.id} onClick={() => handleDelete(user.id)}>
+                    <Button variant="destructive" size="sm" className="px-2" disabled={busyUserId === user.id} onClick={() => handleDelete(user.id)}>
                       Delete
                     </Button>
                   </div>
@@ -343,7 +354,7 @@ export default function UsersPage() {
             ))}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-sm text-gray-500">
+                <td colSpan={8} className="px-4 py-6 text-center text-sm text-gray-500">
                   No users match your current filters.
                 </td>
               </tr>

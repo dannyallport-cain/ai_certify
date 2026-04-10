@@ -46,3 +46,18 @@ R2_ACCESS_KEY_ID=replace-with-r2-access-key-id
 R2_SECRET_ACCESS_KEY=replace-with-r2-secret-access-key
 # Optional: custom public base URL for object delivery, e.g. https://cdn.ai-certificates.app
 R2_PUBLIC_BASE_URL=
+
+# Database backup trigger + worker integration
+# Vercel Cron calls /api/cron/db-backup, which forwards to the Railway worker.
+RAILWAY_BACKUP_WORKER_URL=https://your-railway-worker.up.railway.app
+BACKUP_SHARED_SECRET=replace-with-a-long-random-shared-secret
+# Optional but recommended for Vercel Cron auth: Authorization: Bearer <CRON_SECRET>
+CRON_SECRET=replace-with-a-long-random-cron-secret
+
+# Backup automation
+# Vercel forwards the cron trigger to the Railway worker root URL (no trailing slash).
+RAILWAY_BACKUP_WORKER_URL=https://your-railway-worker.up.railway.app
+# Shared secret used between Vercel and Railway worker via X-Backup-Token.
+BACKUP_SHARED_SECRET=replace-with-shared-backup-secret
+# Optional but recommended: Vercel Cron Authorization header secret.
+CRON_SECRET=replace-with-vercel-cron-secret

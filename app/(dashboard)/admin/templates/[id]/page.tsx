@@ -149,13 +149,12 @@ export default function EditTemplatePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card>
-            <CardHeader><CardTitle>Template Settings</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader><CardTitle>Template Settings</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="name">Template Name</Label>
                 <Input
                   id="name"
@@ -164,7 +163,7 @@ export default function EditTemplatePage() {
                   placeholder="Enter template name"
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="certType">Certificate Type</Label>
                 <Select
                   value={template.certificateType}
@@ -180,7 +179,7 @@ export default function EditTemplatePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="space-y-2 xl:col-span-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
@@ -190,7 +189,10 @@ export default function EditTemplatePage() {
                   rows={3}
                 />
               </div>
-              <div className="flex items-center justify-between">
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="flex items-center justify-between rounded-md border px-3 py-2">
                 <Label htmlFor="isDefault">Default Template</Label>
                 <Switch
                   id="isDefault"
@@ -198,7 +200,7 @@ export default function EditTemplatePage() {
                   onCheckedChange={v => setTemplate(prev => prev ? { ...prev, isDefault: v } : prev)}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between rounded-md border px-3 py-2">
                 <Label htmlFor="isActive">Active</Label>
                 <Switch
                   id="isActive"
@@ -206,47 +208,45 @@ export default function EditTemplatePage() {
                   onCheckedChange={v => setTemplate(prev => prev ? { ...prev, isActive: v } : prev)}
                 />
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Editor */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList>
-                  <TabsTrigger value="design">Design</TabsTrigger>
-                  <TabsTrigger value="json">JSON</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </CardHeader>
-            <CardContent>
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsContent value="design">
-                  <TemplateEditor
-                    template={template.template as any}
-                    onChange={updated => setTemplate(prev => prev ? { ...prev, template: updated } : prev)}
-                  />
-                </TabsContent>
-                <TabsContent value="json">
-                  <Textarea
-                    className="font-mono text-xs min-h-[500px]"
-                    value={JSON.stringify(template.template, null, 2)}
-                    onChange={e => {
-                      try {
-                        const parsed = JSON.parse(e.target.value);
-                        setTemplate(prev => prev ? { ...prev, template: parsed } : prev);
-                      } catch {
-                        // invalid JSON while typing — ignore
-                      }
-                    }}
-                  />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList>
+                <TabsTrigger value="design">Design</TabsTrigger>
+                <TabsTrigger value="json">JSON</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsContent value="design">
+                <TemplateEditor
+                  template={template.template as any}
+                  certificateType={template.certificateType}
+                  onChange={updated => setTemplate(prev => prev ? { ...prev, template: updated } : prev)}
+                />
+              </TabsContent>
+              <TabsContent value="json">
+                <Textarea
+                  className="font-mono text-xs min-h-[500px]"
+                  value={JSON.stringify(template.template, null, 2)}
+                  onChange={e => {
+                    try {
+                      const parsed = JSON.parse(e.target.value);
+                      setTemplate(prev => prev ? { ...prev, template: parsed } : prev);
+                    } catch {
+                      // invalid JSON while typing — ignore
+                    }
+                  }}
+                />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
