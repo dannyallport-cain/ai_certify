@@ -10,6 +10,7 @@ import {
   json,
   date,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { USER_ROLES } from '@/lib/auth/roles';
@@ -115,6 +116,119 @@ export const emailVerificationTokens = pgTable(
     expiresAtIdx: index('email_verification_tokens_expires_at_idx').on(
       table.expiresAt
     ),
+  })
+);
+
+export const paymentTypeEnum = pgEnum('PaymentType', ['subscription', 'one_time']);
+export const paymentModeEnum = pgEnum('PaymentMode', ['subscription', 'payment', 'setup']);
+export const paymentTransactionStatusEnum = pgEnum('PaymentTransactionStatus', [
+  'pending',
+  'requires_action',
+  'processing',
+  'succeeded',
+  'paid',
+  'failed',
+  'cancelled',
+  'refunded',
+  'expired',
+]);
+export const purchaseEntitlementStatusEnum = pgEnum('PurchaseEntitlementStatus', [
+  'pending',
+  'active',
+  'consumed',
+  'expired',
+  'revoked',
+]);
+
+export const paymentTransactions = pgTable(
+  'payment_transactions',
+  {
+    id: serial('id').primaryKey(),
+    teamId: integer('team_id')
+      .notNull()
+      .references(() => teams.id),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+    paymentType: paymentTypeEnum('payment_type').notNull(),
+    mode: paymentModeEnum('mode').notNull().default('payment'),
+    purchaseType: varchar('purchase_type', { length: 100 }),
+    stripeCustomerId: text('stripe_customer_id'),
+    stripeCheckoutSessionId: text('stripe_checkout_session_id'),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    stripeInvoiceId: text('stripe_invoice_id'),
+    stripeChargeId: text('stripe_charge_id'),
+    stripeSubscriptionId: text('stripe_subscription_id'),
+    stripeProductId: text('stripe_product_id'),
+    stripePriceId: text('stripe_price_id'),
+    amount: integer('amount'),
+    amountSubtotal: integer('amount_subtotal'),
+    amountTax: integer('amount_tax'),
+    amountDiscount: integer('amount_discount'),
+    currency: varchar('currency', { length: 10 }),
+    status: paymentTransactionStatusEnum('status').notNull().default('pending'),
+    description: text('description'),
+    metadata: json('metadata'),
+    processedAt: timestamp('processed_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    teamIdIdx: index('payment_transactions_team_id_idx').on(table.teamId),
+    userIdIdx: index('payment_transactions_user_id_idx').on(table.userId),
+    statusIdx: index('payment_transactions_status_idx').on(table.status),
+    paymentTypeIdx: index('payment_transactions_payment_type_idx').on(table.paymentType),
+    createdAtIdx: index('payment_transactions_created_at_idx').on(table.createdAt),
+    stripeCheckoutSessionIdIdx: uniqueIndex('payment_transactions_checkout_session_id_idx').on(
+      table.stripeCheckoutSessionId
+    ),
+    stripePaymentIntentIdIdx: uniqueIndex('payment_transactions_payment_intent_id_idx').on(
+      table.stripePaymentIntentId
+    ),
+    stripeInvoiceIdIdx: uniqueIndex('payment_transactions_invoice_id_idx').on(
+      table.stripeInvoiceId
+    ),
+    stripeChargeIdIdx: uniqueIndex('payment_transactions_charge_id_idx').on(
+      table.stripeChargeId
+    ),
+    stripeSubscriptionIdIdx: index('payment_transactions_subscription_id_idx').on(
+      table.stripeSubscriptionId
+    ),
+  })
+);
+
+export const purchaseEntitlements = pgTable(
+  'purchase_entitlements',
+  {
+    id: serial('id').primaryKey(),
+    teamId: integer('team_id')
+      .notNull()
+      .references(() => teams.id),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+    paymentTransactionId: integer('payment_transaction_id').references(() => paymentTransactions.id, {
+      onDelete: 'set null',
+    }),
+    paymentType: paymentTypeEnum('payment_type').notNull(),
+    purchaseType: varchar('purchase_type', { length: 100 }).notNull(),
+    featureKey: varchar('feature_key', { length: 100 }),
+    quantity: integer('quantity').notNull().default(1),
+    status: purchaseEntitlementStatusEnum('status').notNull().default('pending'),
+    startsAt: timestamp('starts_at'),
+    endsAt: timestamp('ends_at'),
+    consumedAt: timestamp('consumed_at'),
+    revokedAt: timestamp('revoked_at'),
+    metadata: json('metadata'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    teamIdIdx: index('purchase_entitlements_team_id_idx').on(table.teamId),
+    userIdIdx: index('purchase_entitlements_user_id_idx').on(table.userId),
+    paymentTransactionIdIdx: index('purchase_entitlements_payment_transaction_id_idx').on(
+      table.paymentTransactionId
+    ),
+    purchaseTypeIdx: index('purchase_entitlements_purchase_type_idx').on(table.purchaseType),
+    featureKeyIdx: index('purchase_entitlements_feature_key_idx').on(table.featureKey),
+    statusIdx: index('purchase_entitlements_status_idx').on(table.status),
+    createdAtIdx: index('purchase_entitlements_created_at_idx').on(table.createdAt),
   })
 );
 
@@ -321,6 +435,8 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   servicem8Connections: many(servicem8Connections),
   servicem8JobMappings: many(servicem8JobMappings),
   servicem8ClientMappings: many(servicem8ClientMappings),
+  paymentTransactions: many(paymentTransactions),
+  purchaseEntitlements: many(purchaseEntitlements),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -329,6 +445,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   reportDisseminatorTemplates: many(reportDisseminatorTemplates),
   reportDisseminatorReports: many(reportDisseminatorReports),
   emailVerificationTokens: many(emailVerificationTokens),
+  paymentTransactions: many(paymentTransactions),
+  purchaseEntitlements: many(purchaseEntitlements),
 }));
 
 export const emailVerificationTokensRelations = relations(
@@ -340,6 +458,33 @@ export const emailVerificationTokensRelations = relations(
     }),
   })
 );
+
+export const paymentTransactionsRelations = relations(paymentTransactions, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [paymentTransactions.teamId],
+    references: [teams.id],
+  }),
+  user: one(users, {
+    fields: [paymentTransactions.userId],
+    references: [users.id],
+  }),
+  purchaseEntitlements: many(purchaseEntitlements),
+}));
+
+export const purchaseEntitlementsRelations = relations(purchaseEntitlements, ({ one }) => ({
+  team: one(teams, {
+    fields: [purchaseEntitlements.teamId],
+    references: [teams.id],
+  }),
+  user: one(users, {
+    fields: [purchaseEntitlements.userId],
+    references: [users.id],
+  }),
+  paymentTransaction: one(paymentTransactions, {
+    fields: [purchaseEntitlements.paymentTransactionId],
+    references: [paymentTransactions.id],
+  }),
+}));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
   team: one(teams, {
@@ -480,6 +625,10 @@ export type NewInvitation = typeof invitations.$inferInsert;
 export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
 export type NewEmailVerificationToken =
   typeof emailVerificationTokens.$inferInsert;
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+export type NewPaymentTransaction = typeof paymentTransactions.$inferInsert;
+export type PurchaseEntitlement = typeof purchaseEntitlements.$inferSelect;
+export type NewPurchaseEntitlement = typeof purchaseEntitlements.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 export type Certificate = typeof certificates.$inferSelect;

@@ -7,17 +7,96 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
+export type StripePaymentType = 'subscription' | 'one_time';
+
+export type StripeCheckoutMetadata = {
+  paymentType: StripePaymentType;
+  teamId?: string;
+  userId?: string;
+  purchaseType?: string;
+  featureId?: string;
+  templateName?: string;
+  type?: string;
+  [key: string]: string | undefined;
+};
+
+export type CreateSubscriptionCheckoutParams = {
+  team: Team | null;
+  priceId: string;
+  successPath?: string;
+  cancelPath?: string;
+  purchaseType?: string;
+  featureId?: string;
+  trialPeriodDays?: number | null;
+};
+
+export type CreateOneTimeCheckoutParams = {
+  team: Team | null;
+  userId?: number | string | null;
+  successUrl: string;
+  cancelUrl: string;
+  customerId?: string | null;
+  lineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
+  purchaseType?: string;
+  featureId?: string;
+  metadata?: Record<string, string | undefined>;
+};
+
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
+
+export const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2025-08-27.basil'
 });
 
-export async function createCheckoutSession({
+export function getBaseUrl() {
+  return process.env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+}
+
+export function buildStripeMetadata(
+  metadata: StripeCheckoutMetadata
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(metadata).filter((entry): entry is [string, string] => {
+      const [, value] = entry;
+      return typeof value === 'string' && value.length > 0;
+    })
+  );
+}
+
+export function getMetadataValue(
+  metadata: Stripe.Metadata | null | undefined,
+  key: string
+) {
+  const value = metadata?.[key];
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+export function getPaymentTypeFromMetadata(
+  metadata: Stripe.Metadata | null | undefined
+): StripePaymentType | undefined {
+  const paymentType = getMetadataValue(metadata, 'paymentType');
+
+  if (paymentType === 'subscription' || paymentType === 'one_time') {
+    return paymentType;
+  }
+
+  const legacyType = getMetadataValue(metadata, 'type');
+  if (legacyType === 'template_creation') {
+    return 'one_time';
+  }
+
+  return undefined;
+}
+
+export async function createSubscriptionCheckoutSession({
   team,
-  priceId
-}: {
-  team: Team | null;
-  priceId: string;
-}) {
+  priceId,
+  successPath = '/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}',
+  cancelPath = '/pricing',
+  purchaseType,
+  featureId,
+  trialPeriodDays
+}: CreateSubscriptionCheckoutParams) {
   const user = await getUser();
   const isVerificationPrice =
     !!process.env.STRIPE_VERIFICATION_PRICE_ID &&
@@ -26,6 +105,16 @@ export async function createCheckoutSession({
   if (!team || !user) {
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
   }
+
+  const metadata = buildStripeMetadata({
+    paymentType: 'subscription',
+    purchaseType,
+    featureId,
+    teamId: team.id.toString(),
+    userId: user.id.toString()
+  });
+
+  const baseUrl = getBaseUrl();
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -36,21 +125,69 @@ export async function createCheckoutSession({
       }
     ],
     mode: 'subscription',
-    success_url: `${process.env.BASE_URL}/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.BASE_URL}/pricing`,
+    success_url: `${baseUrl}${successPath}`,
+    cancel_url: `${baseUrl}${cancelPath}`,
     customer: team.stripeCustomerId || undefined,
     client_reference_id: user.id.toString(),
     allow_promotion_codes: true,
-    ...(isVerificationPrice
-      ? {}
-      : {
-          subscription_data: {
-            trial_period_days: 14
-          }
-        })
+    metadata,
+    subscription_data: {
+      metadata,
+      ...(isVerificationPrice
+        ? {}
+        : {
+            trial_period_days:
+              typeof trialPeriodDays === 'number' ? trialPeriodDays : 14
+          })
+    }
   });
 
   redirect(session.url!);
+}
+
+export async function createOneTimeCheckoutSession({
+  team,
+  userId,
+  successUrl,
+  cancelUrl,
+  customerId,
+  lineItems,
+  purchaseType,
+  featureId,
+  metadata = {}
+}: CreateOneTimeCheckoutParams) {
+  const resolvedUserId =
+    typeof userId === 'number' ? userId.toString() : userId || undefined;
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: lineItems,
+    mode: 'payment',
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    customer: customerId || team?.stripeCustomerId || undefined,
+    client_reference_id: resolvedUserId,
+    metadata: buildStripeMetadata({
+      paymentType: 'one_time',
+      purchaseType,
+      featureId,
+      teamId: team?.id?.toString(),
+      userId: resolvedUserId,
+      ...metadata
+    })
+  });
+
+  return session;
+}
+
+export async function createCheckoutSession({
+  team,
+  priceId
+}: {
+  team: Team | null;
+  priceId: string;
+}) {
+  return createSubscriptionCheckoutSession({ team, priceId });
 }
 
 export async function createCustomerPortalSession(team: Team) {
@@ -116,7 +253,7 @@ export async function createCustomerPortalSession(team: Team) {
 
   return stripe.billingPortal.sessions.create({
     customer: team.stripeCustomerId,
-    return_url: `${process.env.BASE_URL}/dashboard`,
+    return_url: `${getBaseUrl()}/dashboard`,
     configuration: configuration.id
   });
 }
@@ -132,30 +269,52 @@ export async function handleSubscriptionChange(
 
   if (!team) {
     console.error('Team not found for Stripe customer:', customerId);
-    return;
+    return null;
   }
 
-  if (status === 'active' || status === 'trialing') {
-    const plan = subscription.items.data[0]?.plan;
+  if (status === 'active' || status === 'trialing' || status === 'past_due') {
+    const item = subscription.items.data[0];
+    const product =
+      typeof item?.price?.product === 'string' ? null : item?.price?.product;
+
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: subscriptionId,
-      stripeProductId: plan?.product as string,
-      planName: (plan?.product as Stripe.Product).name,
+      stripeProductId:
+        typeof item?.price?.product === 'string'
+          ? item.price.product
+          : item?.price?.product?.id || null,
+      planName: product && !('deleted' in product && product.deleted) ? product.name : team.planName || null,
       subscriptionStatus: status
     });
-  } else if (status === 'canceled' || status === 'unpaid') {
+  } else if (
+    status === 'canceled' ||
+    status === 'unpaid' ||
+    status === 'incomplete_expired'
+  ) {
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: null,
       stripeProductId: null,
       planName: null,
       subscriptionStatus: status
     });
+  } else {
+    await updateTeamSubscription(team.id, {
+      stripeSubscriptionId: subscriptionId,
+      stripeProductId: team.stripeProductId,
+      planName: team.planName,
+      subscriptionStatus: status
+    });
   }
+
+  return team;
 }
 
 export async function getStripePrices() {
-  // Return mock data if no valid Stripe key is set
-  if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('placeholder') || process.env.STRIPE_SECRET_KEY.includes('here')) {
+  if (
+    !process.env.STRIPE_SECRET_KEY ||
+    process.env.STRIPE_SECRET_KEY.includes('placeholder') ||
+    process.env.STRIPE_SECRET_KEY.includes('here')
+  ) {
     return [
       {
         id: 'price_base_mock',
@@ -194,8 +353,11 @@ export async function getStripePrices() {
 }
 
 export async function getStripeProducts() {
-  // Return mock data if no valid Stripe key is set
-  if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('placeholder') || process.env.STRIPE_SECRET_KEY.includes('here')) {
+  if (
+    !process.env.STRIPE_SECRET_KEY ||
+    process.env.STRIPE_SECRET_KEY.includes('placeholder') ||
+    process.env.STRIPE_SECRET_KEY.includes('here')
+  ) {
     return [
       {
         id: 'prod_base_mock',

@@ -72,11 +72,22 @@ export interface DragDropEditorCanvasSettings {
   gridSize: number;
   showGrid: boolean;
   pagePadding: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  zoom: number;
+}
+
+export interface DragDropEditorPage {
+  id: string;
+  name: string;
+  order: number;
+  canvas: DragDropEditorCanvasSettings;
 }
 
 interface DragDropEditorElementBase {
   id: string;
   type: DragDropEditorElementType;
+  pageId: string;
   x: number;
   y: number;
   width?: number;
@@ -153,11 +164,22 @@ export type DragDropEditorElement =
   | DragDropEditorLineElement
   | DragDropEditorImageElement;
 
-export interface DragDropEditorConfig {
+export interface LegacyDragDropEditorConfig {
   version: 1;
   canvas: DragDropEditorCanvasSettings;
   elements: DragDropEditorElement[];
 }
+
+export interface DragDropEditorConfig {
+  version: 2;
+  pages: DragDropEditorPage[];
+  activePageId: string;
+  elements: DragDropEditorElement[];
+}
+
+export type AnyDragDropEditorConfig =
+  | DragDropEditorConfig
+  | LegacyDragDropEditorConfig;
 
 export interface CertificateTemplateConfig {
   sections: LegacyTemplateSection[];
@@ -333,7 +355,12 @@ export const DEFAULT_DRAG_DROP_CANVAS: DragDropEditorCanvasSettings = {
   gridSize: 16,
   showGrid: true,
   pagePadding: 24,
+  viewportWidth: 1123,
+  viewportHeight: 794,
+  zoom: 1,
 };
+
+const DEFAULT_PAGE_NAME = 'Page 1';
 
 const createBaseTextStyle = (
   overrides?: Partial<DragDropEditorTextStyle>
@@ -350,218 +377,342 @@ const createBaseTextStyle = (
   ...overrides,
 });
 
-export function createDefaultDragDropEditor(): DragDropEditorConfig {
+function sanitizeNumber(value: unknown, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function sanitizeString(value: unknown, fallback: string) {
+  return typeof value === 'string' && value.length > 0 ? value : fallback;
+}
+
+function sanitizeBoolean(value: unknown, fallback: boolean) {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function sanitizeDash(value: unknown): number[] | undefined {
+  return Array.isArray(value)
+    ? value.filter((item): item is number => typeof item === 'number' && Number.isFinite(item))
+    : undefined;
+}
+
+function createId(prefix: string, seed?: number) {
+  const suffix = seed ? `${seed}` : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${prefix}-${suffix}`;
+}
+
+export function createEditorPage(
+  pageIndex = 0,
+  canvasOverrides?: Partial<DragDropEditorCanvasSettings>,
+  overrides?: Partial<DragDropEditorPage>
+): DragDropEditorPage {
+  const order = sanitizeNumber(overrides?.order, pageIndex);
+  const fallbackName = `Page ${order + 1}`;
+
   return {
-    version: 1,
-    canvas: { ...DEFAULT_DRAG_DROP_CANVAS },
-    elements: [
-      {
-        id: 'el-title',
-        type: 'static-text',
-        x: 120,
-        y: 80,
-        width: 880,
-        height: 48,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 1,
-        visible: true,
-        text: 'CERTIFICATE OF INSPECTION',
-        style: createBaseTextStyle({
-          fontSize: 30,
-          fontWeight: 'bold',
-          textAlign: 'center',
-          color: DEFAULT_TEMPLATE_COLORS.primary,
-        }),
+    id: sanitizeString(overrides?.id, createId('page', order + 1)),
+    name: sanitizeString(overrides?.name, fallbackName),
+    order,
+    canvas: {
+      ...DEFAULT_DRAG_DROP_CANVAS,
+      ...(canvasOverrides ?? {}),
+      ...(overrides?.canvas ?? {}),
+      width: sanitizeNumber(
+        overrides?.canvas?.width ?? canvasOverrides?.width,
+        DEFAULT_DRAG_DROP_CANVAS.width
+      ),
+      height: sanitizeNumber(
+        overrides?.canvas?.height ?? canvasOverrides?.height,
+        DEFAULT_DRAG_DROP_CANVAS.height
+      ),
+      backgroundColor: sanitizeString(
+        overrides?.canvas?.backgroundColor ?? canvasOverrides?.backgroundColor,
+        DEFAULT_DRAG_DROP_CANVAS.backgroundColor
+      ),
+      gridSize: sanitizeNumber(
+        overrides?.canvas?.gridSize ?? canvasOverrides?.gridSize,
+        DEFAULT_DRAG_DROP_CANVAS.gridSize
+      ),
+      pagePadding: sanitizeNumber(
+        overrides?.canvas?.pagePadding ?? canvasOverrides?.pagePadding,
+        DEFAULT_DRAG_DROP_CANVAS.pagePadding
+      ),
+      viewportWidth: sanitizeNumber(
+        overrides?.canvas?.viewportWidth ?? canvasOverrides?.viewportWidth,
+        sanitizeNumber(
+          overrides?.canvas?.width ?? canvasOverrides?.width,
+          DEFAULT_DRAG_DROP_CANVAS.viewportWidth
+        )
+      ),
+      viewportHeight: sanitizeNumber(
+        overrides?.canvas?.viewportHeight ?? canvasOverrides?.viewportHeight,
+        sanitizeNumber(
+          overrides?.canvas?.height ?? canvasOverrides?.height,
+          DEFAULT_DRAG_DROP_CANVAS.viewportHeight
+        )
+      ),
+      zoom: sanitizeNumber(
+        overrides?.canvas?.zoom ?? canvasOverrides?.zoom,
+        DEFAULT_DRAG_DROP_CANVAS.zoom
+      ),
+      snapToGrid: sanitizeBoolean(
+        overrides?.canvas?.snapToGrid ?? canvasOverrides?.snapToGrid,
+        DEFAULT_DRAG_DROP_CANVAS.snapToGrid
+      ),
+      showGrid: sanitizeBoolean(
+        overrides?.canvas?.showGrid ?? canvasOverrides?.showGrid,
+        DEFAULT_DRAG_DROP_CANVAS.showGrid
+      ),
+    },
+  };
+}
+
+function buildDefaultReportElements(pageId: string): DragDropEditorElement[] {
+  return [
+    {
+      id: 'el-title',
+      type: 'static-text',
+      pageId,
+      x: 120,
+      y: 80,
+      width: 880,
+      height: 48,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 1,
+      visible: true,
+      text: 'CERTIFICATE OF INSPECTION',
+      style: createBaseTextStyle({
+        fontSize: 30,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        color: DEFAULT_TEMPLATE_COLORS.primary,
+      }),
+    },
+    {
+      id: 'el-certificate-number',
+      type: 'dynamic-text',
+      pageId,
+      x: 120,
+      y: 160,
+      width: 360,
+      height: 24,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 2,
+      visible: true,
+      fieldKey: 'certificateNumber',
+      label: 'Certificate Number',
+      placeholder: 'CERT-000123',
+      style: createBaseTextStyle({
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: DEFAULT_TEMPLATE_COLORS.text,
+      }),
+    },
+    {
+      id: 'el-customer-name',
+      type: 'dynamic-text',
+      pageId,
+      x: 120,
+      y: 220,
+      width: 420,
+      height: 24,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 3,
+      visible: true,
+      fieldKey: 'customer.name',
+      label: 'Customer Name',
+      placeholder: 'Customer Name',
+      style: createBaseTextStyle({
+        fontSize: 22,
+        fontWeight: 'bold',
+      }),
+    },
+    {
+      id: 'el-site-address',
+      type: 'dynamic-text',
+      pageId,
+      x: 120,
+      y: 255,
+      width: 480,
+      height: 48,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 4,
+      visible: true,
+      fieldKey: 'siteAddress',
+      label: 'Site Address',
+      placeholder: 'Site Address',
+      style: createBaseTextStyle({
+        fontSize: 16,
+      }),
+    },
+    {
+      id: 'el-inspection-date',
+      type: 'dynamic-text',
+      pageId,
+      x: 120,
+      y: 340,
+      width: 260,
+      height: 24,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 5,
+      visible: true,
+      fieldKey: 'inspectionDate',
+      label: 'Inspection Date',
+      placeholder: '01/04/2026',
+      style: createBaseTextStyle({
+        fontSize: 16,
+      }),
+    },
+    {
+      id: 'el-next-inspection-date',
+      type: 'dynamic-text',
+      pageId,
+      x: 420,
+      y: 340,
+      width: 260,
+      height: 24,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 6,
+      visible: true,
+      fieldKey: 'nextInspectionDate',
+      label: 'Next Inspection Date',
+      placeholder: '01/04/2027',
+      style: createBaseTextStyle({
+        fontSize: 16,
+      }),
+    },
+    {
+      id: 'el-status-box',
+      type: 'rectangle',
+      pageId,
+      x: 760,
+      y: 150,
+      width: 220,
+      height: 120,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 7,
+      visible: true,
+      cornerRadius: 8,
+      style: {
+        fill: '#f8fafc',
+        stroke: DEFAULT_TEMPLATE_COLORS.primary,
+        strokeWidth: 2,
       },
-      {
-        id: 'el-certificate-number',
-        type: 'dynamic-text',
-        x: 120,
-        y: 160,
-        width: 360,
-        height: 24,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 2,
-        visible: true,
-        fieldKey: 'certificateNumber',
-        label: 'Certificate Number',
-        placeholder: 'CERT-000123',
-        style: createBaseTextStyle({
-          fontSize: 18,
-          fontWeight: 'bold',
-          color: DEFAULT_TEMPLATE_COLORS.text,
-        }),
+    },
+    {
+      id: 'el-status-label',
+      type: 'static-text',
+      pageId,
+      x: 790,
+      y: 178,
+      width: 160,
+      height: 24,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 8,
+      visible: true,
+      text: 'STATUS',
+      style: createBaseTextStyle({
+        fontSize: 14,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        color: DEFAULT_TEMPLATE_COLORS.primary,
+      }),
+    },
+    {
+      id: 'el-status-value',
+      type: 'dynamic-text',
+      pageId,
+      x: 790,
+      y: 214,
+      width: 160,
+      height: 32,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 9,
+      visible: true,
+      fieldKey: 'status',
+      label: 'Status',
+      placeholder: 'Satisfactory',
+      style: createBaseTextStyle({
+        fontSize: 24,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        color: '#15803d',
+      }),
+    },
+    {
+      id: 'el-divider',
+      type: 'line',
+      pageId,
+      x: 120,
+      y: 400,
+      width: 860,
+      height: 0,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 10,
+      visible: true,
+      points: [0, 0, 860, 0],
+      style: {
+        stroke: DEFAULT_TEMPLATE_COLORS.secondary,
+        strokeWidth: 1,
+        dash: [8, 4],
       },
-      {
-        id: 'el-customer-name',
-        type: 'dynamic-text',
-        x: 120,
-        y: 220,
-        width: 420,
-        height: 24,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 3,
-        visible: true,
-        fieldKey: 'customer.name',
-        label: 'Customer Name',
-        placeholder: 'Customer Name',
-        style: createBaseTextStyle({
-          fontSize: 22,
-          fontWeight: 'bold',
-        }),
-      },
-      {
-        id: 'el-site-address',
-        type: 'dynamic-text',
-        x: 120,
-        y: 255,
-        width: 480,
-        height: 48,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 4,
-        visible: true,
-        fieldKey: 'siteAddress',
-        label: 'Site Address',
-        placeholder: 'Site Address',
-        style: createBaseTextStyle({
-          fontSize: 16,
-        }),
-      },
-      {
-        id: 'el-inspection-date',
-        type: 'dynamic-text',
-        x: 120,
-        y: 340,
-        width: 260,
-        height: 24,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 5,
-        visible: true,
-        fieldKey: 'inspectionDate',
-        label: 'Inspection Date',
-        placeholder: '01/04/2026',
-        style: createBaseTextStyle({
-          fontSize: 16,
-        }),
-      },
-      {
-        id: 'el-next-inspection-date',
-        type: 'dynamic-text',
-        x: 420,
-        y: 340,
-        width: 260,
-        height: 24,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 6,
-        visible: true,
-        fieldKey: 'nextInspectionDate',
-        label: 'Next Inspection Date',
-        placeholder: '01/04/2027',
-        style: createBaseTextStyle({
-          fontSize: 16,
-        }),
-      },
-      {
-        id: 'el-status-box',
-        type: 'rectangle',
-        x: 760,
-        y: 150,
-        width: 220,
-        height: 120,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 7,
-        visible: true,
-        cornerRadius: 8,
-        style: {
-          fill: '#f8fafc',
-          stroke: DEFAULT_TEMPLATE_COLORS.primary,
-          strokeWidth: 2,
-        },
-      },
-      {
-        id: 'el-status-label',
-        type: 'static-text',
-        x: 790,
-        y: 178,
-        width: 160,
-        height: 24,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 8,
-        visible: true,
-        text: 'STATUS',
-        style: createBaseTextStyle({
-          fontSize: 14,
-          fontWeight: 'bold',
-          textAlign: 'center',
-          color: DEFAULT_TEMPLATE_COLORS.primary,
-        }),
-      },
-      {
-        id: 'el-status-value',
-        type: 'dynamic-text',
-        x: 790,
-        y: 214,
-        width: 160,
-        height: 32,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 9,
-        visible: true,
-        fieldKey: 'status',
-        label: 'Status',
-        placeholder: 'Satisfactory',
-        style: createBaseTextStyle({
-          fontSize: 24,
-          fontWeight: 'bold',
-          textAlign: 'center',
-          color: '#15803d',
-        }),
-      },
-      {
-        id: 'el-divider',
-        type: 'line',
-        x: 120,
-        y: 400,
-        width: 860,
-        height: 0,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 10,
-        visible: true,
-        points: [0, 0, 860, 0],
-        style: {
-          stroke: DEFAULT_TEMPLATE_COLORS.secondary,
-          strokeWidth: 1,
-          dash: [8, 4],
-        },
-      },
-      {
-        id: 'el-inspector-name',
-        type: 'dynamic-text',
-        x: 120,
-        y: 450,
-        width: 320,
-        height: 24,
-        rotation: 0,
-        opacity: 1,
-        zIndex: 11,
-        visible: true,
-        fieldKey: 'inspectorName',
-        label: 'Inspector Name',
-        placeholder: 'Inspector Name',
-        style: createBaseTextStyle({
-          fontSize: 16,
-        }),
-      },
-    ],
+    },
+    {
+      id: 'el-inspector-name',
+      type: 'dynamic-text',
+      pageId,
+      x: 120,
+      y: 450,
+      width: 320,
+      height: 24,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 11,
+      visible: true,
+      fieldKey: 'inspectorName',
+      label: 'Inspector Name',
+      placeholder: 'Inspector Name',
+      style: createBaseTextStyle({
+        fontSize: 16,
+      }),
+    },
+  ];
+}
+
+export function createBlankDragDropEditor(): DragDropEditorConfig {
+  const firstPage = createEditorPage(0, undefined, {
+    id: 'page-1',
+    name: DEFAULT_PAGE_NAME,
+  });
+
+  return {
+    version: 2,
+    pages: [firstPage],
+    activePageId: firstPage.id,
+    elements: [],
+  };
+}
+
+export function createDefaultDragDropEditor(): DragDropEditorConfig {
+  const firstPage = createEditorPage(0, undefined, {
+    id: 'page-1',
+    name: DEFAULT_PAGE_NAME,
+  });
+
+  return {
+    version: 2,
+    pages: [firstPage],
+    activePageId: firstPage.id,
+    elements: buildDefaultReportElements(firstPage.id),
   };
 }
 
@@ -579,14 +730,6 @@ export function createDefaultTemplateConfig(): CertificateTemplateConfig {
     },
     dragDropEditor: createDefaultDragDropEditor(),
   };
-}
-
-function sanitizeNumber(value: unknown, fallback: number) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function sanitizeString(value: unknown, fallback: string) {
-  return typeof value === 'string' && value.length > 0 ? value : fallback;
 }
 
 export function normalizeTemplateConfig(
@@ -618,87 +761,63 @@ export function normalizeTemplateConfig(
         ...(incoming.layout?.margins ?? {}),
       },
     },
-    dragDropEditor: normalizeDragDropEditor(incoming.dragDropEditor, {
-      colors: {
-        ...base.colors,
-        ...(incoming.colors ?? {}),
-      },
-      fonts: {
-        ...base.fonts,
-        ...(incoming.fonts ?? {}),
-        size: {
-          ...base.fonts.size,
-          ...(incoming.fonts?.size ?? {}),
+    dragDropEditor: normalizeDragDropEditor(
+      incoming.dragDropEditor as Partial<AnyDragDropEditorConfig> | null | undefined,
+      {
+        colors: {
+          ...base.colors,
+          ...(incoming.colors ?? {}),
         },
-      },
-    }),
+        fonts: {
+          ...base.fonts,
+          ...(incoming.fonts ?? {}),
+          size: {
+            ...base.fonts.size,
+            ...(incoming.fonts?.size ?? {}),
+          },
+        },
+      }
+    ),
   };
 }
 
-export function normalizeDragDropEditor(
-  editor: Partial<DragDropEditorConfig> | null | undefined,
-  options?: {
-    colors?: Partial<LegacyTemplateColors>;
-    fonts?: Partial<LegacyTemplateFonts>;
-  }
-): DragDropEditorConfig {
-  const defaults = createDefaultDragDropEditor();
-  const colors = {
-    ...DEFAULT_TEMPLATE_COLORS,
-    ...(options?.colors ?? {}),
-  };
-  const fonts = {
-    ...DEFAULT_TEMPLATE_FONTS,
-    ...(options?.fonts ?? {}),
-    size: {
-      ...DEFAULT_TEMPLATE_FONTS.size,
-      ...(options?.fonts?.size ?? {}),
-    },
-  };
-
-  const incoming = editor ?? {};
-
-  const elements = Array.isArray(incoming.elements)
-    ? incoming.elements.map((element, index) => normalizeElement(element, index, colors, fonts))
-    : defaults.elements;
+function normalizeTextStyle(
+  style:
+    | Partial<DragDropEditorTextStyle>
+    | Partial<DragDropEditorStrokeStyle>
+    | Partial<DragDropEditorFillStyle>
+    | undefined,
+  colors: LegacyTemplateColors,
+  fonts: LegacyTemplateFonts
+): DragDropEditorTextStyle {
+  const textStyle = style as Partial<DragDropEditorTextStyle> | undefined;
 
   return {
-    version: 1,
-    canvas: {
-      ...defaults.canvas,
-      ...(incoming.canvas ?? {}),
-      width: sanitizeNumber(incoming.canvas?.width, defaults.canvas.width),
-      height: sanitizeNumber(incoming.canvas?.height, defaults.canvas.height),
-      backgroundColor: sanitizeString(
-        incoming.canvas?.backgroundColor,
-        defaults.canvas.backgroundColor
-      ),
-      gridSize: sanitizeNumber(incoming.canvas?.gridSize, defaults.canvas.gridSize),
-      pagePadding: sanitizeNumber(
-        incoming.canvas?.pagePadding,
-        defaults.canvas.pagePadding
-      ),
-      snapToGrid:
-        typeof incoming.canvas?.snapToGrid === 'boolean'
-          ? incoming.canvas.snapToGrid
-          : defaults.canvas.snapToGrid,
-      showGrid:
-        typeof incoming.canvas?.showGrid === 'boolean'
-          ? incoming.canvas.showGrid
-          : defaults.canvas.showGrid,
-    },
-    elements,
+    fontFamily: sanitizeString(textStyle?.fontFamily, fonts.body),
+    fontSize: sanitizeNumber(textStyle?.fontSize, fonts.size.medium),
+    fontWeight: textStyle?.fontWeight === 'bold' ? 'bold' : 'normal',
+    fontStyle: textStyle?.fontStyle === 'italic' ? 'italic' : 'normal',
+    textAlign:
+      textStyle?.textAlign === 'center' || textStyle?.textAlign === 'right'
+        ? textStyle.textAlign
+        : 'left',
+    color: sanitizeString(textStyle?.color, colors.text),
+    lineHeight: sanitizeNumber(textStyle?.lineHeight, 1.2),
+    letterSpacing: sanitizeNumber(textStyle?.letterSpacing, 0),
+    textDecoration: textStyle?.textDecoration === 'underline' ? 'underline' : 'none',
   };
 }
 
 function normalizeElement(
   element: Partial<DragDropEditorElement>,
   index: number,
+  pageId: string,
   colors: LegacyTemplateColors,
   fonts: LegacyTemplateFonts
 ): DragDropEditorElement {
   const baseElement = {
     id: sanitizeString(element.id, `element-${index + 1}`),
+    pageId: sanitizeString((element as Partial<DragDropEditorElement>).pageId, pageId),
     x: sanitizeNumber(element.x, 0),
     y: sanitizeNumber(element.y, 0),
     width: sanitizeNumber(element.width, 200),
@@ -745,9 +864,7 @@ function normalizeElement(
             (element as DragDropEditorRectangleElement).style?.strokeWidth,
             1
           ),
-          dash: Array.isArray((element as DragDropEditorRectangleElement).style?.dash)
-            ? ((element as DragDropEditorRectangleElement).style?.dash as number[])
-            : undefined,
+          dash: sanitizeDash((element as DragDropEditorRectangleElement).style?.dash),
         },
       };
     case 'line':
@@ -768,9 +885,7 @@ function normalizeElement(
             (element as DragDropEditorLineElement).style?.strokeWidth,
             1
           ),
-          dash: Array.isArray((element as DragDropEditorLineElement).style?.dash)
-            ? ((element as DragDropEditorLineElement).style?.dash as number[])
-            : undefined,
+          dash: sanitizeDash((element as DragDropEditorLineElement).style?.dash),
         },
       };
     case 'image':
@@ -801,30 +916,110 @@ function normalizeElement(
   }
 }
 
-function normalizeTextStyle(
-  style:
-    | Partial<DragDropEditorTextStyle>
-    | Partial<DragDropEditorStrokeStyle>
-    | Partial<DragDropEditorFillStyle>
-    | undefined,
-  colors: LegacyTemplateColors,
-  fonts: LegacyTemplateFonts
-): DragDropEditorTextStyle {
-  const textStyle = style as Partial<DragDropEditorTextStyle> | undefined;
+function normalizePages(
+  editor: Partial<DragDropEditorConfig>,
+  fallbackCanvas: DragDropEditorCanvasSettings
+): DragDropEditorPage[] {
+  const incomingPages = Array.isArray(editor.pages) ? editor.pages : [];
+
+  if (incomingPages.length === 0) {
+    return [
+      createEditorPage(0, fallbackCanvas, {
+        id: 'page-1',
+        name: DEFAULT_PAGE_NAME,
+        order: 0,
+      }),
+    ];
+  }
+
+  return incomingPages
+    .map((page, index) =>
+      createEditorPage(index, fallbackCanvas, {
+        ...page,
+        order: sanitizeNumber(page.order, index),
+      })
+    )
+    .sort((a, b) => a.order - b.order)
+    .map((page, index) => ({
+      ...page,
+      order: index,
+      name: sanitizeString(page.name, `Page ${index + 1}`),
+    }));
+}
+
+export function normalizeDragDropEditor(
+  editor: Partial<AnyDragDropEditorConfig> | null | undefined,
+  options?: {
+    colors?: Partial<LegacyTemplateColors>;
+    fonts?: Partial<LegacyTemplateFonts>;
+  }
+): DragDropEditorConfig {
+  const defaults = createDefaultDragDropEditor();
+  const colors = {
+    ...DEFAULT_TEMPLATE_COLORS,
+    ...(options?.colors ?? {}),
+  };
+  const fonts = {
+    ...DEFAULT_TEMPLATE_FONTS,
+    ...(options?.fonts ?? {}),
+    size: {
+      ...DEFAULT_TEMPLATE_FONTS.size,
+      ...(options?.fonts?.size ?? {}),
+    },
+  };
+
+  const incoming = editor ?? {};
+
+  if ('pages' in incoming && Array.isArray(incoming.pages)) {
+    const pages = normalizePages(incoming, defaults.pages[0].canvas);
+    const validPageIds = new Set(pages.map((page) => page.id));
+    const fallbackPageId = pages[0]?.id ?? defaults.pages[0].id;
+    const elements = Array.isArray(incoming.elements)
+      ? incoming.elements.map((element, index) =>
+          normalizeElement(
+            element,
+            index,
+            validPageIds.has((element as Partial<DragDropEditorElement>).pageId ?? '')
+              ? ((element as Partial<DragDropEditorElement>).pageId as string)
+              : fallbackPageId,
+            colors,
+            fonts
+          )
+        )
+      : defaults.elements.map((element, index) =>
+          normalizeElement(element, index, element.pageId, colors, fonts)
+        );
+
+    return {
+      version: 2,
+      pages,
+      activePageId: validPageIds.has(incoming.activePageId ?? '')
+        ? (incoming.activePageId as string)
+        : fallbackPageId,
+      elements,
+    };
+  }
+
+  const legacy = incoming as Partial<LegacyDragDropEditorConfig>;
+  const firstPage = createEditorPage(0, legacy.canvas, {
+    id: 'page-1',
+    name: DEFAULT_PAGE_NAME,
+    order: 0,
+  });
+
+  const elements = Array.isArray(legacy.elements)
+    ? legacy.elements.map((element, index) =>
+        normalizeElement(element, index, firstPage.id, colors, fonts)
+      )
+    : defaults.elements.map((element, index) =>
+        normalizeElement(element, index, firstPage.id, colors, fonts)
+      );
 
   return {
-    fontFamily: sanitizeString(textStyle?.fontFamily, fonts.body),
-    fontSize: sanitizeNumber(textStyle?.fontSize, fonts.size.medium),
-    fontWeight: textStyle?.fontWeight === 'bold' ? 'bold' : 'normal',
-    fontStyle: textStyle?.fontStyle === 'italic' ? 'italic' : 'normal',
-    textAlign:
-      textStyle?.textAlign === 'center' || textStyle?.textAlign === 'right'
-        ? textStyle.textAlign
-        : 'left',
-    color: sanitizeString(textStyle?.color, colors.text),
-    lineHeight: sanitizeNumber(textStyle?.lineHeight, 1.2),
-    letterSpacing: sanitizeNumber(textStyle?.letterSpacing, 0),
-    textDecoration: textStyle?.textDecoration === 'underline' ? 'underline' : 'none',
+    version: 2,
+    pages: [firstPage],
+    activePageId: firstPage.id,
+    elements,
   };
 }
 
@@ -832,6 +1027,7 @@ export function createEditorElement(
   type: DragDropEditorElementType,
   currentCount: number,
   options?: {
+    pageId?: string;
     colors?: Partial<LegacyTemplateColors>;
     fonts?: Partial<LegacyTemplateFonts>;
   }
@@ -850,8 +1046,10 @@ export function createEditorElement(
   };
   const nextIndex = currentCount + 1;
   const baseId = `${type}-${Date.now()}-${nextIndex}`;
+  const pageId = sanitizeString(options?.pageId, 'page-1');
   const common = {
     id: baseId,
+    pageId,
     x: 80 + (currentCount % 4) * 24,
     y: 80 + (currentCount % 6) * 24,
     width: 220,

@@ -166,21 +166,21 @@ export default function NewTemplatePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Template Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {sourceTemplateId ? (
-                <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
-                  {loadingSourceTemplate
-                    ? 'Loading template layout copy into the editor...'
-                    : 'This new template has been pre-filled from an existing saved layout copy.'}
-                </div>
-              ) : null}
-              <div>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Template Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {sourceTemplateId ? (
+              <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                {loadingSourceTemplate
+                  ? 'Loading template layout copy into the editor...'
+                  : 'This new template has been pre-filled from an existing saved layout copy.'}
+              </div>
+            ) : null}
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="name">Template Name</Label>
                 <Input
                   id="name"
@@ -190,7 +190,7 @@ export default function NewTemplatePage() {
                 />
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="certificateType">Certificate Type</Label>
                 <Select
                   value={templateData.certificateType}
@@ -211,7 +211,7 @@ export default function NewTemplatePage() {
                 </Select>
               </div>
 
-              <div>
+              <div className="space-y-2 xl:col-span-2">
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
@@ -223,43 +223,42 @@ export default function NewTemplatePage() {
                   rows={3}
                 />
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="lg:col-span-3">
-          <Card className="h-full">
-            <CardHeader>
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList>
-                  <TabsTrigger value="design">Design</TabsTrigger>
-                  <TabsTrigger value="preview">Preview</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </CardHeader>
-            <CardContent className="h-full">
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsContent value="design" className="h-full">
-                  <TemplateEditor
-                    template={normalizeTemplateConfig(templateData.template)}
-                    onChange={handleTemplateUpdate}
-                  />
-                </TabsContent>
-                <TabsContent value="preview" className="h-full">
-                  <div className="border rounded-lg bg-white p-6 shadow-inner">
-                    <div className="py-12 text-center text-gray-500">
-                      <Eye className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                      <p>Certificate preview will be displayed here</p>
-                      <p className="text-sm">
-                        This will show how the certificate will look when generated
-                      </p>
-                    </div>
+        <Card className="h-full">
+          <CardHeader>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList>
+                <TabsTrigger value="design">Design</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </CardHeader>
+          <CardContent className="h-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsContent value="design" className="h-full">
+                <TemplateEditor
+                  template={normalizeTemplateConfig(templateData.template)}
+                  certificateType={templateData.certificateType}
+                  onChange={handleTemplateUpdate}
+                />
+              </TabsContent>
+              <TabsContent value="preview" className="h-full">
+                <div className="border rounded-lg bg-white p-6 shadow-inner">
+                  <div className="py-12 text-center text-gray-500">
+                    <Eye className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <p>Certificate preview will be displayed here</p>
+                    <p className="text-sm">
+                      This will show how the certificate will look when generated
+                    </p>
                   </div>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

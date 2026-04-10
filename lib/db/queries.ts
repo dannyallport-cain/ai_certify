@@ -1,10 +1,23 @@
-import { desc, and, eq, isNull } from 'drizzle-orm';
+import { desc, and, eq, isNull, or } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users, customers, certificates, certificateItems, ActivityType } from './schema';
+import {
+  activityLogs,
+  teamMembers,
+  teams,
+  users,
+  customers,
+  certificates,
+  certificateItems,
+  paymentTransactions,
+  purchaseEntitlements,
+  ActivityType,
+  type NewActivityLog,
+  type NewPaymentTransaction,
+  type NewPurchaseEntitlement,
+} from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 import { type UserRole } from '@/lib/auth/roles';
-import { NewActivityLog } from './schema';
 
 export async function getUser() {
   const sessionCookie = (await cookies()).get('session');
@@ -279,6 +292,7 @@ export async function getAllUsers() {
       role: users.role,
       status: users.status,
       createdAt: users.createdAt,
+      lastLoginAt: users.lastLoginAt,
     })
     .from(users)
     .where(isNull(users.deletedAt));
@@ -387,4 +401,353 @@ export async function setUserPasswordById(userId: number, passwordHash: string) 
     .returning();
 
   return user;
+}
+
+export async function createPaymentTransaction(data: NewPaymentTransaction) {
+  const [transaction] = await db
+    .insert(paymentTransactions)
+    .values({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return transaction;
+}
+
+export async function updatePaymentTransactionById(
+  transactionId: number,
+  data: Partial<NewPaymentTransaction>
+) {
+  const [transaction] = await db
+    .update(paymentTransactions)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(paymentTransactions.id, transactionId))
+    .returning();
+
+  return transaction ?? null;
+}
+
+export async function upsertPaymentTransactionByStripeReference(
+  data: NewPaymentTransaction & {
+    stripeCheckoutSessionId?: string | null;
+    stripePaymentIntentId?: string | null;
+    stripeInvoiceId?: string | null;
+    stripeChargeId?: string | null;
+  }
+) {
+  const references = [
+    data.stripeCheckoutSessionId
+      ? eq(paymentTransactions.stripeCheckoutSessionId, data.stripeCheckoutSessionId)
+      : undefined,
+    data.stripePaymentIntentId
+      ? eq(paymentTransactions.stripePaymentIntentId, data.stripePaymentIntentId)
+      : undefined,
+    data.stripeInvoiceId
+      ? eq(paymentTransactions.stripeInvoiceId, data.stripeInvoiceId)
+      : undefined,
+    data.stripeChargeId
+      ? eq(paymentTransactions.stripeChargeId, data.stripeChargeId)
+      : undefined,
+  ].filter((reference): reference is NonNullable<typeof reference> => Boolean(reference));
+
+  if (references.length === 0) {
+    return createPaymentTransaction(data);
+  }
+
+  const existing = await db
+    .select()
+    .from(paymentTransactions)
+    .where(or(...references))
+    .orderBy(desc(paymentTransactions.updatedAt))
+    .limit(1);
+
+  if (existing[0]) {
+    return updatePaymentTransactionById(existing[0].id, data);
+  }
+
+  return createPaymentTransaction(data);
+}
+
+export async function getPaymentTransactionByStripeCheckoutSessionId(sessionId: string) {
+  const [transaction] = await db
+    .select()
+    .from(paymentTransactions)
+    .where(eq(paymentTransactions.stripeCheckoutSessionId, sessionId))
+    .limit(1);
+
+  return transaction ?? null;
+}
+
+export async function getPaymentTransactionByStripePaymentIntentId(paymentIntentId: string) {
+  const [transaction] = await db
+    .select()
+    .from(paymentTransactions)
+    .where(eq(paymentTransactions.stripePaymentIntentId, paymentIntentId))
+    .limit(1);
+
+  return transaction ?? null;
+}
+
+export async function getPaymentTransactionByStripeInvoiceId(invoiceId: string) {
+  const [transaction] = await db
+    .select()
+    .from(paymentTransactions)
+    .where(eq(paymentTransactions.stripeInvoiceId, invoiceId))
+    .limit(1);
+
+  return transaction ?? null;
+}
+
+export async function getPaymentTransactionByStripeSubscriptionId(subscriptionId: string) {
+  const [transaction] = await db
+    .select()
+    .from(paymentTransactions)
+    .where(eq(paymentTransactions.stripeSubscriptionId, subscriptionId))
+    .orderBy(desc(paymentTransactions.updatedAt))
+    .limit(1);
+
+  return transaction ?? null;
+}
+
+export async function createPurchaseEntitlement(data: NewPurchaseEntitlement) {
+  const [entitlement] = await db
+    .insert(purchaseEntitlements)
+    .values({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return entitlement;
+}
+
+export async function updatePurchaseEntitlementById(
+  entitlementId: number,
+  data: Partial<NewPurchaseEntitlement>
+) {
+  const [entitlement] = await db
+    .update(purchaseEntitlements)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(purchaseEntitlements.id, entitlementId))
+    .returning();
+
+  return entitlement ?? null;
+}
+
+export async function upsertPurchaseEntitlement(
+  data: NewPurchaseEntitlement & {
+    paymentTransactionId?: number | null;
+  }
+) {
+  const conditions = [
+    eq(purchaseEntitlements.teamId, data.teamId),
+    eq(purchaseEntitlements.purchaseType, data.purchaseType),
+  ];
+
+  if (data.userId) {
+    conditions.push(eq(purchaseEntitlements.userId, data.userId));
+  }
+
+  if (data.featureKey) {
+    conditions.push(eq(purchaseEntitlements.featureKey, data.featureKey));
+  }
+
+  if (data.paymentTransactionId) {
+    conditions.push(eq(purchaseEntitlements.paymentTransactionId, data.paymentTransactionId));
+  }
+
+  const [existing] = await db
+    .select()
+    .from(purchaseEntitlements)
+    .where(and(...conditions))
+    .orderBy(desc(purchaseEntitlements.updatedAt))
+    .limit(1);
+
+  if (existing) {
+    return updatePurchaseEntitlementById(existing.id, data);
+  }
+
+  return createPurchaseEntitlement(data);
+}
+
+export async function listPurchaseEntitlementsForTeam(teamId: number) {
+  return await db
+    .select()
+    .from(purchaseEntitlements)
+    .where(eq(purchaseEntitlements.teamId, teamId))
+    .orderBy(desc(purchaseEntitlements.createdAt));
+}
+
+export async function listTeamBillingHistory(teamId: number) {
+  return await db
+    .select({
+      transaction: paymentTransactions,
+      entitlement: purchaseEntitlements,
+      user: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      },
+    })
+    .from(paymentTransactions)
+    .leftJoin(users, eq(paymentTransactions.userId, users.id))
+    .leftJoin(
+      purchaseEntitlements,
+      eq(paymentTransactions.id, purchaseEntitlements.paymentTransactionId)
+    )
+    .where(eq(paymentTransactions.teamId, teamId))
+    .orderBy(desc(paymentTransactions.createdAt));
+}
+
+export async function getBillingHistoryForCurrentTeam() {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const team = await getTeamForUser();
+  if (!team) {
+    throw new Error('User not part of a team');
+  }
+
+  return listTeamBillingHistory(team.id);
+}
+
+export async function getTeamBillingHistory() {
+  return getBillingHistoryForCurrentTeam();
+}
+
+export async function upsertStripePaymentTransaction(
+  data: NewPaymentTransaction & {
+    stripeCheckoutSessionId?: string | null;
+    stripePaymentIntentId?: string | null;
+    stripeInvoiceId?: string | null;
+    stripeChargeId?: string | null;
+    amountTotal?: number | null;
+    featureId?: string | null;
+  }
+) {
+  const { amountTotal, featureId, metadata, ...rest } = data;
+
+  return upsertPaymentTransactionByStripeReference({
+    ...rest,
+    amount: amountTotal ?? rest.amount ?? null,
+    metadata: {
+      ...(metadata ?? {}),
+      ...(featureId ? { featureId } : {}),
+    },
+  });
+}
+
+export async function upsertStripeInvoiceRecord(data: {
+  teamId?: number | null;
+  userId?: number | null;
+  stripeInvoiceId: string;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  amountDue?: number | null;
+  amountPaid?: number | null;
+  currency?: string | null;
+  status?: string | null;
+  metadata?: Record<string, unknown> | null;
+}) {
+  if (data.teamId === null || data.teamId === undefined) {
+    throw new Error('teamId is required to upsert a Stripe invoice record');
+  }
+
+  return upsertPaymentTransactionByStripeReference({
+    teamId: data.teamId,
+    userId: data.userId ?? null,
+    paymentType: 'subscription',
+    mode: 'subscription',
+    purchaseType: 'subscription_invoice',
+    stripeInvoiceId: data.stripeInvoiceId,
+    stripeCustomerId: data.stripeCustomerId ?? null,
+    stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+    stripePaymentIntentId: data.stripePaymentIntentId ?? null,
+    amount: data.amountPaid ?? data.amountDue ?? null,
+    amountSubtotal: data.amountDue ?? null,
+    amountTax: null,
+    amountDiscount: null,
+    currency: data.currency ?? null,
+    status:
+      data.status === 'paid'
+        ? 'paid'
+        : data.status === 'open'
+          ? 'pending'
+          : data.status === 'void'
+            ? 'cancelled'
+            : data.status === 'uncollectible'
+              ? 'failed'
+              : (data.status as
+                  | 'pending'
+                  | 'requires_action'
+                  | 'processing'
+                  | 'succeeded'
+                  | 'paid'
+                  | 'failed'
+                  | 'cancelled'
+                  | 'refunded'
+                  | 'expired'
+                  | null) ?? 'pending',
+    description: 'Stripe invoice',
+    metadata: data.metadata ?? null,
+    processedAt: new Date(),
+  });
+}
+
+export async function upsertStripePurchaseEntitlement(data: {
+  teamId: number;
+  userId?: number | null;
+  paymentType?: 'subscription' | 'one_time';
+  purchaseType: string;
+  featureId?: string | null;
+  stripeCheckoutSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  stripeCustomerId?: string | null;
+  status?: 'pending' | 'active' | 'consumed' | 'expired' | 'revoked';
+  metadata?: Record<string, unknown> | null;
+}) {
+  let paymentTransactionId: number | null = null;
+
+  if (data.stripeCheckoutSessionId) {
+    const transaction = await getPaymentTransactionByStripeCheckoutSessionId(
+      data.stripeCheckoutSessionId
+    );
+    paymentTransactionId = transaction?.id ?? null;
+  } else if (data.stripePaymentIntentId) {
+    const transaction = await getPaymentTransactionByStripePaymentIntentId(
+      data.stripePaymentIntentId
+    );
+    paymentTransactionId = transaction?.id ?? null;
+  }
+
+  return upsertPurchaseEntitlement({
+    teamId: data.teamId,
+    userId: data.userId ?? null,
+    ...(paymentTransactionId ? { paymentTransactionId } : {}),
+    paymentType: data.paymentType ?? 'one_time',
+    purchaseType: data.purchaseType,
+    featureKey: data.featureId ?? null,
+    quantity: 1,
+    status: data.status ?? 'active',
+    startsAt: new Date(),
+    endsAt: null,
+    consumedAt: null,
+    revokedAt: null,
+    metadata: {
+      ...(data.metadata ?? {}),
+      stripeCustomerId: data.stripeCustomerId ?? null,
+      stripeCheckoutSessionId: data.stripeCheckoutSessionId ?? null,
+      stripePaymentIntentId: data.stripePaymentIntentId ?? null,
+    },
+  });
 }
