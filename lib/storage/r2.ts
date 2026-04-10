@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 const ALLOWED_CONTENT_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'] as const;
 
@@ -6,6 +6,12 @@ export type R2UploadResult = {
   key: string;
   url: string;
   contentType: string;
+};
+
+export type R2DeleteResult = {
+  key: string;
+  bucket: string;
+  deletedAt: string;
 };
 
 type AllowedContentType = (typeof ALLOWED_CONTENT_TYPES)[number];
@@ -173,6 +179,39 @@ export async function uploadToR2({ key, body, contentType }: UploadBinaryInput):
     key,
     url: buildPublicUrl(key),
     contentType: normalizedContentType,
+  };
+}
+
+function isAllowedBackupObjectKey(key: string): boolean {
+  return /^database-backups\/\d{4}\/\d{2}\/[A-Za-z0-9._-]+\.sql\.gz$/.test(key);
+}
+
+export async function deleteBackupFromR2(key: string): Promise<R2DeleteResult> {
+  if (!isAllowedBackupObjectKey(key)) {
+    throw new Error('Invalid objectKey');
+  }
+
+  const client = getR2Client();
+  const { bucket } = getR2Config();
+
+  try {
+    await client.send(new HeadObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    }));
+  } catch {
+    throw new Error(`Backup not found for objectKey: ${key}`);
+  }
+
+  await client.send(new DeleteObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  }));
+
+  return {
+    key,
+    bucket,
+    deletedAt: new Date().toISOString(),
   };
 }
 
