@@ -1,5 +1,5 @@
 // Test script to verify PDF generation functionality
-import { generateCertificatePDF } from './lib/pdf/generator.js';
+import { generateCertificatePDF } from '../../../lib/pdf/generator';
 import { writeFileSync } from 'fs';
 
 // Sample certificate data for testing

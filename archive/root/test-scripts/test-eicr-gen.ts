@@ -1,5 +1,5 @@
 
-import { generateCertificatePDF, CertificateData } from './lib/pdf/generator';
+import { generateCertificatePDF, CertificateData } from '../../../lib/pdf/generator';
 import * as fs from 'fs';
 
 // ─── Accurate representation of:
