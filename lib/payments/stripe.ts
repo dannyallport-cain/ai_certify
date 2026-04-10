@@ -352,6 +352,429 @@ export async function getStripePrices() {
   }));
 }
 
+export type AdminStripeSubscriptionPlan = {
+  id: string;
+  productId: string;
+  priceId: string;
+  name: string;
+  description: string | null;
+  active: boolean;
+  currency: string;
+  monthlyPrice: number;
+  annualPrice: number | null;
+  interval: Stripe.Price.Recurring.Interval | null;
+  trialPeriodDays: number | null;
+  metadata: Record<string, string>;
+  allowances: {
+    certificates: string;
+    teamSeats: string;
+    additionalSeatPrice: string | null;
+    targetUser: string | null;
+    badge: string | null;
+    savingsNote: string | null;
+    competitorAnchor: string | null;
+  };
+  features: string[];
+};
+
+const approvedPlanDefaults = {
+  starter: {
+    displayName: 'Starter',
+    description:
+      'For solo engineers who need compliant certificates, branded PDFs, and a low-friction upgrade path.',
+    monthlyPrice: 5,
+    annualPrice: 50,
+    currency: 'gbp',
+    badge: 'Entry Plan',
+    targetUser: 'Occasional or newly self-employed engineers',
+    certificates: 'Up to 30 certificates / month',
+    teamSeats: '1 user included',
+    additionalSeatPrice: null,
+    savingsNote: 'Set at ~50% of the common £10 solo benchmark.',
+    competitorAnchor: 'Comparable specialist tools often land around £10/month.',
+    features: [
+      'Electrical and fire certificate workflows',
+      'Branded PDF exports',
+      'Customer and installation records',
+      'Admin analytics visibility',
+      'Email support'
+    ]
+  },
+  professional: {
+    displayName: 'Small Business',
+    description:
+      'Built for growing electrical businesses that need unlimited certificates, faster admin, and room for a small office team.',
+    monthlyPrice: 9,
+    annualPrice: 90,
+    currency: 'gbp',
+    badge: 'Most Popular',
+    targetUser: 'Growing contractors and small electrical businesses',
+    certificates: 'Unlimited certificates',
+    teamSeats: '3 users included',
+    additionalSeatPrice: '£2.50/month each',
+    savingsNote:
+      'Designed as the best-value plan for day-to-day operational use.',
+    competitorAnchor: 'A practical fit for small firms moving beyond solo usage.',
+    features: [
+      'Unlimited certificate generation',
+      'AI-assisted data extraction and autofill',
+      'Shared customer and installation records',
+      'Priority PDF generation',
+      'Team-ready admin visibility',
+      'Priority support'
+    ]
+  },
+  team: {
+    displayName: 'Enterprise',
+    description:
+      'For larger firms that need broader team access, stronger oversight, and a scalable certificate workflow across the business.',
+    monthlyPrice: 19,
+    annualPrice: 190,
+    currency: 'gbp',
+    badge: 'For Larger Teams',
+    targetUser: 'Larger contractors, offices, and compliance-led teams',
+    certificates: 'Unlimited certificates',
+    teamSeats: '10 users included',
+    additionalSeatPrice: '£2/month each',
+    savingsNote:
+      'Higher seat allowance and admin controls for larger operational teams.',
+    competitorAnchor:
+      'Structured for businesses needing wider rollout across engineers and admins.',
+    features: [
+      'Everything in Small Business',
+      '10 included users',
+      'Enhanced admin and oversight visibility',
+      'Streamlined onboarding for office and field teams',
+      'Priority operational support',
+      'Designed for multi-user rollout'
+    ]
+  }
+} as const;
+
+function getApprovedPlanKey(planName: string) {
+  const normalized = planName.toLowerCase();
+
+  if (
+    normalized.includes('starter') ||
+    normalized.includes('basic') ||
+    normalized.includes('base')
+  ) {
+    return 'starter';
+  }
+
+  if (
+    normalized.includes('professional') ||
+    normalized.includes('small business') ||
+    normalized.includes('pro') ||
+    normalized.includes('plus')
+  ) {
+    return 'professional';
+  }
+
+  if (normalized.includes('team') || normalized.includes('enterprise')) {
+    return 'team';
+  }
+
+  return null;
+}
+
+function getApprovedPlanDefaults(planName: string) {
+  const key = getApprovedPlanKey(planName);
+
+  return key ? approvedPlanDefaults[key] : null;
+}
+
+export async function getAdminStripeSubscriptionPlans(): Promise<
+  AdminStripeSubscriptionPlan[]
+> {
+  const hasStripeKey =
+    !!process.env.STRIPE_SECRET_KEY &&
+    !process.env.STRIPE_SECRET_KEY.includes('placeholder') &&
+    !process.env.STRIPE_SECRET_KEY.includes('here');
+
+  if (!hasStripeKey) {
+    return [
+      {
+        id: 'plan_starter',
+        productId: 'prod_starter_mock',
+        priceId: 'price_starter_mock',
+        name: 'Starter',
+        description:
+          'For solo engineers who need compliant certificates, branded PDFs, and a low-friction upgrade path.',
+        active: true,
+        currency: 'gbp',
+        monthlyPrice: 5,
+        annualPrice: 50,
+        interval: 'month',
+        trialPeriodDays: 14,
+        metadata: {
+          certificates: 'Up to 30 certificates / month',
+          teamSeats: '1 user included',
+          additionalSeatPrice: '',
+          targetUser: 'Occasional or newly self-employed engineers',
+          badge: 'Entry Plan',
+          savingsNote: 'Set at ~50% of the common £10 solo benchmark.',
+          competitorAnchor:
+            'Comparable specialist tools often land around £10/month.',
+          features:
+            'Electrical and fire certificate workflows|Branded PDF exports|Customer and installation records|Admin analytics visibility|Email support',
+        },
+        allowances: {
+          certificates: 'Up to 30 certificates / month',
+          teamSeats: '1 user included',
+          additionalSeatPrice: null,
+          targetUser: 'Occasional or newly self-employed engineers',
+          badge: 'Entry Plan',
+          savingsNote: 'Set at ~50% of the common £10 solo benchmark.',
+          competitorAnchor:
+            'Comparable specialist tools often land around £10/month.',
+        },
+        features: [
+          'Electrical and fire certificate workflows',
+          'Branded PDF exports',
+          'Customer and installation records',
+          'Admin analytics visibility',
+          'Email support'
+        ]
+      },
+      {
+        id: 'plan_professional',
+        productId: 'prod_professional_mock',
+        priceId: 'price_professional_mock',
+        name: 'Small Business',
+        description:
+          'Built for growing electrical businesses that need unlimited certificates, faster admin, and room for a small office team.',
+        active: true,
+        currency: 'gbp',
+        monthlyPrice: 9,
+        annualPrice: 90,
+        interval: 'month',
+        trialPeriodDays: 14,
+        metadata: {
+          certificates: 'Unlimited certificates',
+          teamSeats: '3 users included',
+          additionalSeatPrice: '£2.50/month each',
+          targetUser: 'Growing contractors and small electrical businesses',
+          badge: 'Most Popular',
+          savingsNote:
+            'Designed as the best-value plan for day-to-day operational use.',
+          competitorAnchor:
+            'A practical fit for small firms moving beyond solo usage.',
+          features:
+            'Unlimited certificate generation|AI-assisted data extraction and autofill|Shared customer and installation records|Priority PDF generation|Team-ready admin visibility|Priority support',
+        },
+        allowances: {
+          certificates: 'Unlimited certificates',
+          teamSeats: '3 users included',
+          additionalSeatPrice: '£2.50/month each',
+          targetUser: 'Growing contractors and small electrical businesses',
+          badge: 'Most Popular',
+          savingsNote:
+            'Designed as the best-value plan for day-to-day operational use.',
+          competitorAnchor:
+            'A practical fit for small firms moving beyond solo usage.',
+        },
+        features: [
+          'Unlimited certificate generation',
+          'AI-assisted data extraction and autofill',
+          'Shared customer and installation records',
+          'Priority PDF generation',
+          'Team-ready admin visibility',
+          'Priority support'
+        ]
+      },
+      {
+        id: 'plan_team',
+        productId: 'prod_team_mock',
+        priceId: 'price_team_mock',
+        name: 'Enterprise',
+        description:
+          'For larger firms that need broader team access, stronger oversight, and a scalable certificate workflow across the business.',
+        active: true,
+        currency: 'gbp',
+        monthlyPrice: 19,
+        annualPrice: 190,
+        interval: 'month',
+        trialPeriodDays: 14,
+        metadata: {
+          certificates: 'Unlimited certificates',
+          teamSeats: '10 users included',
+          additionalSeatPrice: '£2/month each',
+          targetUser: 'Larger contractors, offices, and compliance-led teams',
+          badge: 'For Larger Teams',
+          savingsNote:
+            'Higher seat allowance and admin controls for larger operational teams.',
+          competitorAnchor:
+            'Structured for businesses needing wider rollout across engineers and admins.',
+          features:
+            'Everything in Small Business|10 included users|Enhanced admin and oversight visibility|Streamlined onboarding for office and field teams|Priority operational support|Designed for multi-user rollout',
+        },
+        allowances: {
+          certificates: 'Unlimited certificates',
+          teamSeats: '10 users included',
+          additionalSeatPrice: '£2/month each',
+          targetUser: 'Larger contractors, offices, and compliance-led teams',
+          badge: 'For Larger Teams',
+          savingsNote:
+            'Higher seat allowance and admin controls for larger operational teams.',
+          competitorAnchor:
+            'Structured for businesses needing wider rollout across engineers and admins.',
+        },
+        features: [
+          'Everything in Small Business',
+          '10 included users',
+          'Enhanced admin and oversight visibility',
+          'Streamlined onboarding for office and field teams',
+          'Priority operational support',
+          'Designed for multi-user rollout'
+        ]
+      }
+    ];
+  }
+
+  const [products, prices] = await Promise.all([
+    stripe.products.list({
+      active: true
+    }),
+    stripe.prices.list({
+      active: true,
+      type: 'recurring'
+    })
+  ]);
+
+  const recurringMonthlyPrices = prices.data.filter(
+    (price) => price.recurring?.interval === 'month' && price.unit_amount !== null
+  );
+
+  const plans = recurringMonthlyPrices
+    .map((price): AdminStripeSubscriptionPlan | null => {
+      const product =
+        typeof price.product === 'string'
+          ? products.data.find((candidate) => candidate.id === price.product)
+          : price.product;
+
+      if (!product || product.deleted) {
+        return null;
+      }
+
+      const metadata = Object.fromEntries(
+        Object.entries(product.metadata ?? {}).map(([key, value]) => [key, value ?? ''])
+      );
+
+      const defaults = getApprovedPlanDefaults(product.name);
+      const annualPrice = metadata.annualPrice
+        ? Number.parseFloat(metadata.annualPrice)
+        : null;
+      const isVerificationPlan =
+        product.id === process.env.STRIPE_VERIFICATION_PRODUCT_ID ||
+        price.id === process.env.STRIPE_VERIFICATION_PRICE_ID ||
+        product.name.toLowerCase().includes('verification');
+
+      if (isVerificationPlan) {
+        return null;
+      }
+
+      const features = (metadata.features || '')
+        .split('|')
+        .map((feature) => feature.trim())
+        .filter(Boolean);
+
+      const isGenericDescription =
+        !product.description ||
+        product.description === 'Base subscription plan' ||
+        product.description === 'Plus subscription plan';
+
+      return {
+        id: metadata.planId || product.id,
+        productId: product.id,
+        priceId: price.id,
+        name: defaults?.displayName || product.name,
+        description: isGenericDescription
+          ? defaults?.description || product.description
+          : product.description,
+        active: product.active && price.active,
+        currency: defaults?.currency || price.currency,
+        monthlyPrice: defaults?.monthlyPrice ?? (price.unit_amount ?? 0) / 100,
+        annualPrice:
+          Number.isFinite(annualPrice) ? annualPrice : defaults?.annualPrice ?? null,
+        interval: price.recurring?.interval ?? null,
+        trialPeriodDays:
+          price.recurring?.trial_period_days ??
+          (metadata.trialPeriodDays
+            ? Number.parseInt(metadata.trialPeriodDays, 10)
+            : 14),
+        metadata,
+        allowances: {
+          certificates: metadata.certificates || defaults?.certificates || 'Unlimited certificates',
+          teamSeats: metadata.teamSeats || defaults?.teamSeats || '1 user included',
+          additionalSeatPrice:
+            metadata.additionalSeatPrice || defaults?.additionalSeatPrice || null,
+          targetUser: metadata.targetUser || defaults?.targetUser || 'Electrical contractors',
+          badge: metadata.badge || defaults?.badge || null,
+          savingsNote: metadata.savingsNote || defaults?.savingsNote || null,
+          competitorAnchor:
+            metadata.competitorAnchor || defaults?.competitorAnchor || null,
+        },
+        features:
+          features.length > 0 ? features : [...(defaults?.features || [])]
+      };
+    })
+    .filter((plan): plan is AdminStripeSubscriptionPlan => plan !== null);
+
+  const existingPlanKeys = new Set(
+    plans
+      .map((plan) => getApprovedPlanKey(plan.name))
+      .filter((planKey): planKey is keyof typeof approvedPlanDefaults => planKey !== null)
+  );
+
+  const missingApprovedPlans = (
+    Object.entries(approvedPlanDefaults) as Array<
+      [keyof typeof approvedPlanDefaults, (typeof approvedPlanDefaults)[keyof typeof approvedPlanDefaults]]
+    >
+  )
+    .filter(([planKey]) => !existingPlanKeys.has(planKey))
+    .map(([planKey, defaults], index): AdminStripeSubscriptionPlan => ({
+      id: `fallback_${planKey}`,
+      productId: `fallback_product_${planKey}`,
+      priceId: `fallback_price_${planKey}`,
+      name: defaults.displayName,
+      description: defaults.description,
+      active: true,
+      currency: defaults.currency,
+      monthlyPrice: defaults.monthlyPrice,
+      annualPrice: defaults.annualPrice,
+      interval: 'month',
+      trialPeriodDays: 14,
+      metadata: {
+        planId: planKey,
+        annualPrice: defaults.annualPrice.toString(),
+        certificates: defaults.certificates,
+        teamSeats: defaults.teamSeats,
+        additionalSeatPrice: defaults.additionalSeatPrice || '',
+        targetUser: defaults.targetUser,
+        badge: defaults.badge,
+        savingsNote: defaults.savingsNote,
+        competitorAnchor: defaults.competitorAnchor,
+        trialPeriodDays: '14',
+        features: defaults.features.join('|'),
+      },
+      allowances: {
+        certificates: defaults.certificates,
+        teamSeats: defaults.teamSeats,
+        additionalSeatPrice: defaults.additionalSeatPrice,
+        targetUser: defaults.targetUser,
+        badge: defaults.badge,
+        savingsNote: defaults.savingsNote,
+        competitorAnchor: defaults.competitorAnchor,
+      },
+      features: [...defaults.features],
+    }));
+
+  return [...plans, ...missingApprovedPlans].sort(
+    (left, right) => left.monthlyPrice - right.monthlyPrice
+  );
+}
+
 export async function getStripeProducts() {
   if (
     !process.env.STRIPE_SECRET_KEY ||

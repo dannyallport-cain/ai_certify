@@ -45,6 +45,14 @@ class RestoreResult:
     restored_at: str
 
 
+@dataclass
+class DeleteBackupResult:
+    success: bool
+    object_key: str
+    bucket: str
+    deleted_at: str
+
+
 BACKUP_PREFIX = "database-backups/"
 
 
@@ -229,6 +237,11 @@ def _download_from_r2(file_path: Path, object_key: str, bucket: str) -> None:
     client.download_file(bucket, object_key, str(file_path))
 
 
+def _delete_from_r2(object_key: str, bucket: str) -> None:
+    client = _get_r2_client()
+    client.delete_object(Bucket=bucket, Key=object_key)
+
+
 def _find_psql_path() -> str | None:
     psql_path = shutil.which("psql")
     if psql_path:
@@ -369,4 +382,18 @@ def restore_database_backup(object_key: str) -> RestoreResult:
         object_key=validated_object_key,
         bucket=bucket,
         restored_at=datetime.now(UTC).isoformat(),
+    )
+
+
+def delete_database_backup(object_key: str) -> DeleteBackupResult:
+    bucket = _get_required_env("R2_BUCKET")
+    validated_object_key = _validate_backup_object_key(object_key)
+
+    _delete_from_r2(validated_object_key, bucket)
+
+    return DeleteBackupResult(
+        success=True,
+        object_key=validated_object_key,
+        bucket=bucket,
+        deleted_at=datetime.now(UTC).isoformat(),
     )

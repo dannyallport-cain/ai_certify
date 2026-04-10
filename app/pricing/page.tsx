@@ -1,11 +1,13 @@
-import { Header } from '@/components/landing/Header';
 import { Footer } from '@/components/landing/Footer';
+import { Header } from '@/components/landing/Header';
 import { Button } from '@/components/ui/button';
+import { getAdminStripeSubscriptionPlans } from '@/lib/payments/stripe';
 import { CheckCircle2 } from 'lucide-react';
-import Link from 'next/link';
 import Image from 'next/image';
+import Link from 'next/link';
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const plans = (await getAdminStripeSubscriptionPlans()).filter((plan) => plan.active);
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-slate-950">
       <Header />
@@ -32,79 +34,90 @@ export default function PricingPage() {
 
       <section className="py-20 bg-white dark:bg-slate-950">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                name: "Starter",
-                price: "Free",
-                description: "Try the platform at no cost. Certificates include a watermark.",
-                features: ["Up to 5 certificates/month", "Watermarked certificates", "Basic templates", "1 User", "Community support only"],
-                cta: "Start Free",
-                highlight: false
-              },
-              {
-                name: "Pro",
-                price: "$29",
-                period: "/month",
-                description: "For growing businesses that need more power and flexibility.",
-                features: ["Unlimited certificates", "Custom branding", "Priority support", "Up to 5 Users", "AI Verification"],
-                cta: "Get Started",
-                highlight: true
-              },
-              {
-                name: "Enterprise",
-                price: "Custom",
-                description: "Tailored solutions for large organizations with specific needs.",
-                features: ["Unlimited Users", "API Access", "Dedicated Account Manager", "SLA", "Custom Integration"],
-                cta: "Contact Sales",
-                highlight: false
-              }
-            ].map((plan, index) => (
-              <div key={index} className={`relative p-8 rounded-2xl border ${
-                plan.highlight 
-                  ? 'border-blue-500 bg-slate-900 shadow-2xl shadow-blue-500/20 scale-105 z-10' 
-                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
-              } flex flex-col`}>
-                {plan.highlight && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-                    Most Popular
-                  </div>
-                )}
-                <h3 className={`text-2xl font-bold mb-2 ${plan.highlight ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                  {plan.name}
-                </h3>
-                <div className="flex items-baseline gap-1 mb-4">
-                  <span className={`text-4xl font-bold ${plan.highlight ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                    {plan.price}
-                  </span>
-                  {plan.period && (
-                    <span className="text-slate-500">{plan.period}</span>
-                  )}
-                </div>
-                <p className="text-slate-500 mb-8">{plan.description}</p>
-                
-                <ul className="space-y-4 mb-8 flex-grow">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-3">
-                      <CheckCircle2 className={`h-5 w-5 ${plan.highlight ? 'text-blue-400' : 'text-green-500'}`} />
-                      <span className={plan.highlight ? 'text-slate-300' : 'text-slate-600 dark:text-slate-400'}>
-                        {feature}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3 max-w-6xl mx-auto">
+            {plans.map((plan) => {
+              const highlight = (plan.allowances.badge || '').toLowerCase().includes('popular');
+              const price = new Intl.NumberFormat('en-GB', {
+                style: 'currency',
+                currency: plan.currency.toUpperCase(),
+                maximumFractionDigits: 0,
+              }).format(plan.monthlyPrice);
 
-                <Link href={plan.name === "Enterprise" ? "/contact" : "/sign-up"} className="w-full">
-                  <Button className={`w-full h-12 ${
-                    plan.highlight 
-                      ? 'bg-blue-600 hover:bg-blue-500 text-white' 
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-900 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white'
-                  }`}>
-                    {plan.cta}
-                  </Button>
-                </Link>
-              </div>
-            ))}
+              return (
+                <div
+                  key={plan.priceId}
+                  className={`relative flex flex-col rounded-2xl border p-8 ${
+                    highlight
+                      ? 'z-10 scale-105 border-blue-500 bg-slate-900 shadow-2xl shadow-blue-500/20'
+                      : 'border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900'
+                  }`}
+                >
+                  {plan.allowances.badge ? (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-blue-500 px-4 py-1 text-sm font-medium text-white">
+                      {plan.allowances.badge}
+                    </div>
+                  ) : null}
+                  <h3
+                    className={`mb-2 text-2xl font-bold ${
+                      highlight ? 'text-white' : 'text-slate-900 dark:text-white'
+                    }`}
+                  >
+                    {plan.name}
+                  </h3>
+                  <div className="mb-4 flex items-baseline gap-1">
+                    <span
+                      className={`text-4xl font-bold ${
+                        highlight ? 'text-white' : 'text-slate-900 dark:text-white'
+                      }`}
+                    >
+                      {price}
+                    </span>
+                    <span className="text-slate-500">/month</span>
+                  </div>
+                  <p className="mb-3 text-slate-500">{plan.description}</p>
+                  <div
+                    className={`mb-6 space-y-1 text-sm ${
+                      highlight ? 'text-slate-300' : 'text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <p>Best for: {plan.allowances.targetUser || 'Electrical contractors'}</p>
+                    <p>Usage: {plan.allowances.certificates}</p>
+                    <p>Seats: {plan.allowances.teamSeats}</p>
+                    {plan.trialPeriodDays ? <p>Trial: {plan.trialPeriodDays} days</p> : null}
+                    {plan.annualPrice ? <p>Annual: £{plan.annualPrice}/year</p> : null}
+                  </div>
+
+                  <ul className="mb-8 flex-grow space-y-4">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-center gap-3">
+                        <CheckCircle2
+                          className={`h-5 w-5 ${highlight ? 'text-blue-400' : 'text-green-500'}`}
+                        />
+                        <span
+                          className={
+                            highlight ? 'text-slate-300' : 'text-slate-600 dark:text-slate-400'
+                          }
+                        >
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link href={plan.name === 'Enterprise' ? '/contact' : '/sign-up'} className="w-full">
+                    <Button
+                      className={`h-12 w-full ${
+                        highlight
+                          ? 'bg-blue-600 text-white hover:bg-blue-500'
+                          : 'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {plan.name === 'Enterprise' ? 'Contact Sales' : 'Get Started'}
+                    </Button>
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
