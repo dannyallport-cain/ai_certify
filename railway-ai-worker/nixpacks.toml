@@ -1,5 +1,6 @@
 [phases.setup]
-nixPkgs = ["python311", "tesseract", "libGL", "glib", "libz", "stdenv.cc.cc.lib"]
+nixPkgs = ["python311", "tesseract", "postgresql_16", "libGL", "glib", "libz", "stdenv.cc.cc.lib"]
+aptPkgs = ["postgresql-client"]
 
 [start]
 cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
