@@ -1,3 +1,4 @@
+import StripePlanEditor from '@/components/admin/StripePlanEditor';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +11,11 @@ import {
 import { Table } from '@/components/ui/table';
 import { getTeamBillingHistory, getUser } from '@/lib/db/queries';
 import { checkoutAction, oneTimeCheckoutAction } from '@/lib/payments/actions';
-import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
+import {
+  getAdminStripeSubscriptionPlans,
+  getStripePrices,
+  getStripeProducts,
+} from '@/lib/payments/stripe';
 import { Check, CreditCard, Receipt, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -109,10 +114,11 @@ export default async function BillingPage() {
     redirect('/sign-in');
   }
 
-  const [prices, products, billingHistory] = await Promise.all([
+  const [prices, products, billingHistory, subscriptionPlans] = await Promise.all([
     getStripePrices(),
     getStripeProducts(),
     getTeamBillingHistory(),
+    getAdminStripeSubscriptionPlans(),
   ]);
 
   const teamBillingHistory: BillingHistoryItem[] = (billingHistory || []).map(
@@ -144,11 +150,7 @@ export default async function BillingPage() {
     ? products.find((product) => product.id === verificationPrice.productId)
     : undefined;
 
-  const basePlan = products.find((product) => product.name === 'Base');
-  const plusPlan = products.find((product) => product.name === 'Plus');
-
-  const basePrice = prices.find((price) => price.productId === basePlan?.id);
-  const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
+  const activeSubscriptionPlans = subscriptionPlans.filter((plan) => plan.active);
 
   return (
     <main className="flex-1 space-y-6 p-4 pt-6 md:p-8">
@@ -174,35 +176,20 @@ export default async function BillingPage() {
               Start or change your recurring Stripe subscription.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-2">
-            <PricingCard
-              name={basePlan?.name || 'Base'}
-              price={basePrice?.unitAmount || 800}
-              currency={basePrice?.currency || 'usd'}
-              interval={basePrice?.interval || 'month'}
-              trialDays={basePrice?.trialPeriodDays || 7}
-              description="Base subscription plan for everyday team usage."
-              features={[
-                'Unlimited usage',
-                'Unlimited workspace members',
-                'Email support',
-              ]}
-              priceId={basePrice?.id}
-            />
-            <PricingCard
-              name={plusPlan?.name || 'Plus'}
-              price={plusPrice?.unitAmount || 1200}
-              currency={plusPrice?.currency || 'usd'}
-              interval={plusPrice?.interval || 'month'}
-              trialDays={plusPrice?.trialPeriodDays || 7}
-              description="Expanded support and early access features."
-              features={[
-                'Everything in Base',
-                'Early access to new features',
-                '24/7 support and Slack access',
-              ]}
-              priceId={plusPrice?.id}
-            />
+          <CardContent className="grid gap-4 lg:grid-cols-3">
+            {activeSubscriptionPlans.map((plan) => (
+              <PricingCard
+                key={plan.priceId}
+                name={plan.name}
+                price={Math.round(plan.monthlyPrice * 100)}
+                currency={plan.currency}
+                interval={plan.interval || 'month'}
+                trialDays={plan.trialPeriodDays || 0}
+                description={plan.description || undefined}
+                features={plan.features}
+                priceId={plan.priceId}
+              />
+            ))}
           </CardContent>
         </Card>
 
@@ -243,6 +230,20 @@ export default async function BillingPage() {
           </CardContent>
         </Card>
       </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Edit Stripe plan options</CardTitle>
+          <CardDescription>
+            Live Stripe product metadata can also be updated from the billing page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          {activeSubscriptionPlans.map((plan) => (
+            <StripePlanEditor key={`${plan.productId}-billing-editor`} plan={plan} compact />
+          ))}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

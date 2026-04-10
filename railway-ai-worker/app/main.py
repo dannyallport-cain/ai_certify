@@ -9,6 +9,8 @@ from app.schemas import (
     AnalyzeImageRequest,
     AnalyzeImageResponse,
     BackupDatabaseResponse,
+    DeleteBackupRequest,
+    DeleteBackupResponse,
     HealthResponse,
     ListBackupsResponse,
     RestoreDatabaseRequest,
@@ -40,6 +42,7 @@ def _load_backup_module():
     from app.backup import (
         BackupError,
         create_database_backup,
+        delete_database_backup,
         list_database_backups,
         restore_database_backup,
     )
@@ -47,6 +50,7 @@ def _load_backup_module():
     return {
         "BackupError": BackupError,
         "create_database_backup": create_database_backup,
+        "delete_database_backup": delete_database_backup,
         "list_database_backups": list_database_backups,
         "restore_database_backup": restore_database_backup,
     }
@@ -160,4 +164,34 @@ async def restore_database_endpoint(
         objectKey=result.object_key,
         bucket=result.bucket,
         restoredAt=result.restored_at,
+    )
+
+
+@app.delete("/backups", response_model=DeleteBackupResponse)
+async def delete_backup_endpoint(
+    payload: DeleteBackupRequest,
+    x_backup_token: str | None = Header(default=None, alias="X-Backup-Token"),
+) -> DeleteBackupResponse:
+    _require_backup_token(x_backup_token)
+    backup_module = _load_backup_module()
+
+    try:
+        result = backup_module["delete_database_backup"](payload.objectKey)
+    except backup_module["BackupError"] as exc:
+        detail = str(exc)
+        status_code = (
+            status.HTTP_400_BAD_REQUEST
+            if "objectKey" in detail or "Invalid objectKey" in detail
+            else status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+        raise HTTPException(
+            status_code=status_code,
+            detail=detail,
+        ) from exc
+
+    return DeleteBackupResponse(
+        success=result.success,
+        objectKey=result.object_key,
+        bucket=result.bucket,
+        deletedAt=result.deleted_at,
     )

@@ -100,3 +100,14 @@ class RestoreDatabaseResponse(BaseModel):
     objectKey: str
     bucket: str
     restoredAt: str
+
+
+class DeleteBackupRequest(BaseModel):
+    objectKey: str
+
+
+class DeleteBackupResponse(BaseModel):
+    success: bool
+    objectKey: str
+    bucket: str
+    deletedAt: str
