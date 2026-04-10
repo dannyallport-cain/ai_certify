@@ -5,13 +5,6 @@ import os
 from fastapi import FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.backup import (
-    BackupError,
-    create_database_backup,
-    list_database_backups,
-    restore_database_backup,
-)
-from app.pipeline import analyze_image
 from app.schemas import (
     AnalyzeImageRequest,
     AnalyzeImageResponse,
@@ -37,6 +30,28 @@ app.add_middleware(
 )
 
 
+def _load_pipeline_module():
+    from app.pipeline import analyze_image
+
+    return {"analyze_image": analyze_image}
+
+
+def _load_backup_module():
+    from app.backup import (
+        BackupError,
+        create_database_backup,
+        list_database_backups,
+        restore_database_backup,
+    )
+
+    return {
+        "BackupError": BackupError,
+        "create_database_backup": create_database_backup,
+        "list_database_backups": list_database_backups,
+        "restore_database_backup": restore_database_backup,
+    }
+
+
 def _require_backup_token(x_backup_token: str | None) -> None:
     expected_token = os.getenv("BACKUP_SHARED_SECRET")
     if not expected_token:
@@ -59,7 +74,8 @@ async def health() -> HealthResponse:
 
 @app.post("/analyze-image", response_model=AnalyzeImageResponse)
 async def analyze_image_endpoint(payload: AnalyzeImageRequest) -> AnalyzeImageResponse:
-    return analyze_image(payload)
+    pipeline_module = _load_pipeline_module()
+    return pipeline_module["analyze_image"](payload)
 
 
 @app.post("/backup-database", response_model=BackupDatabaseResponse)
@@ -67,10 +83,11 @@ async def backup_database_endpoint(
     x_backup_token: str | None = Header(default=None, alias="X-Backup-Token"),
 ) -> BackupDatabaseResponse:
     _require_backup_token(x_backup_token)
+    backup_module = _load_backup_module()
 
     try:
-        result = create_database_backup()
-    except BackupError as exc:
+        result = backup_module["create_database_backup"]()
+    except backup_module["BackupError"] as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
@@ -91,10 +108,11 @@ async def list_backups_endpoint(
     x_backup_token: str | None = Header(default=None, alias="X-Backup-Token"),
 ) -> ListBackupsResponse:
     _require_backup_token(x_backup_token)
+    backup_module = _load_backup_module()
 
     try:
-        backups = list_database_backups()
-    except BackupError as exc:
+        backups = backup_module["list_database_backups"]()
+    except backup_module["BackupError"] as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
@@ -121,10 +139,11 @@ async def restore_database_endpoint(
     x_backup_token: str | None = Header(default=None, alias="X-Backup-Token"),
 ) -> RestoreDatabaseResponse:
     _require_backup_token(x_backup_token)
+    backup_module = _load_backup_module()
 
     try:
-        result = restore_database_backup(payload.objectKey)
-    except BackupError as exc:
+        result = backup_module["restore_database_backup"](payload.objectKey)
+    except backup_module["BackupError"] as exc:
         detail = str(exc)
         status_code = (
             status.HTTP_400_BAD_REQUEST
