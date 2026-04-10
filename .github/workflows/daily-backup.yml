@@ -1,29 +1,11 @@
 name: Daily Backup
 
 on:
-  schedule:
-    - cron: '0 2 * * *'
   workflow_dispatch:
 
 jobs:
-  backup:
+  disabled:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Create backup archive
-        run: |
-          mkdir -p backup-artifacts
-          tar --exclude='.git' --exclude='backups' -czf backup-artifacts/ai-certificates-$(date +%Y%m%d-%H%M%S).tar.gz .
-
-      - name: Upload backup artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-certificates-backup-${{ github.run_id }}
-          path: backup-artifacts/*.tar.gz
-          retention-days: 30
+      - name: Workflow disabled
+        run: echo "Daily Backup workflow has been disabled."
