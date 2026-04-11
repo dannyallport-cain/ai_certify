@@ -17,6 +17,13 @@ const configuredBaseUrl =
 
 const BASE_URL = configuredBaseUrl.replace(/\/+$/, '');
 
+const configuredAiWorkerUrl =
+  Constants.expoConfig?.extra?.aiWorkerUrl ??
+  process.env.EXPO_PUBLIC_AI_WORKER_URL ??
+  'https://ai-worker-production-b025.up.railway.app';
+
+const AI_WORKER_URL = configuredAiWorkerUrl.replace(/\/+$/, '');
+
 export async function saveToken(token: string) {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
 }
@@ -233,7 +240,7 @@ export async function analyseImage(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE_URL}/api/ai/analyze-image`, {
+  const res = await fetch(`${AI_WORKER_URL}/analyze-image`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
