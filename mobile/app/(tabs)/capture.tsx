@@ -291,16 +291,17 @@ export default function CaptureScreen() {
         </View>
       ) : null}
 
-      <View className="flex-1 relative">
+      <View className="flex-1 relative bg-black">
         <CameraView
           ref={cameraRef}
-          className="flex-1"
+          style={{ flex: 1 }}
+          active={!capturedPreview}
           facing="back"
           enableTorch={false}
           flash="auto"
         />
 
-        <View className="absolute inset-0 items-center justify-center pointer-events-none px-8">
+        <View className="absolute inset-0 items-center justify-center px-8" pointerEvents="none">
           <View className="w-full max-w-[340px] aspect-[1.45] border-4 border-white rounded-3xl bg-transparent">
             <View className="absolute top-3 left-3 w-8 h-8 border-t-4 border-l-4 border-brand rounded-tl-lg" />
             <View className="absolute top-3 right-3 w-8 h-8 border-t-4 border-r-4 border-brand rounded-tr-lg" />
