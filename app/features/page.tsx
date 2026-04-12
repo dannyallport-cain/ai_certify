@@ -1,8 +1,7 @@
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
 import { Header } from '@/components/landing/Header';
 import { Footer } from '@/components/landing/Footer';
-import { ArrowRight, CheckCircle2, Shield, Zap, BarChart3, Users, FileText, Lock, Globe, Clock, Layers, Edit3 } from 'lucide-react';
+import { CheckCircle2, Zap, BarChart3, Lock, Layers, Edit3, Shield } from 'lucide-react';
 
 export default function FeaturesPage() {
   return (
@@ -26,11 +25,11 @@ export default function FeaturesPage() {
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
             Powerful Features for <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-              Modern Certification
+              smarter PDF report automation
             </span>
           </h1>
           <p className="text-xl text-slate-400 max-w-3xl mx-auto">
-            Discover how AI-Certificates can transform your certification process with AI-powered tools and seamless workflows.
+            Upload the report templates you already use, turn them into reusable digital workflows, and generate polished outputs with AI-assisted setup, dynamic data merge, and secure cloud storage.
           </p>
         </div>
       </section>
@@ -40,53 +39,62 @@ export default function FeaturesPage() {
         <div className="container mx-auto px-4">
           {[
             {
-              title: "AI-Powered Generation",
-              description: "Generate compliant certificates instantly using our advanced AI models. Simply input the data and let us handle the formatting and validation.",
-              benefits: ["99% faster than manual creation", "Automatic regulation compliance checks", "Smart error detection"],
+              title: 'AI-Powered Template Setup',
+              description: 'Bring your existing PDF reports into AI-Certificates and accelerate setup with AI blank-field detection. The platform identifies likely fillable areas automatically, helping your team convert static documents into smart templates without starting from zero.',
+              benefits: ['Upload existing PDF certificate and report templates', 'AI detects likely blank input areas automatically', 'Reduce repetitive setup and manual template preparation'],
               icon: Zap,
-              color: "text-amber-500",
-              bg: "bg-amber-50 dark:bg-amber-900/20",
-              image: "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?auto=format&fit=crop&q=80&w=2070"
+              color: 'text-amber-500',
+              bg: 'bg-amber-50 dark:bg-amber-900/20',
+              image: 'https://images.unsplash.com/photo-1677442135703-1787eea5ce01?auto=format&fit=crop&q=80&w=2070'
             },
             {
-              title: "Visual Report Template Builder",
-              description: "Transform any existing PDF into a living, reusable template. Upload your report, mark field areas by clicking or drawing boxes, and let our AI automatically detect blank input regions using intelligent boundary analysis. Every field can be mapped to a specific data source — no coding, no PDF editing tools required.",
-              benefits: ["AI auto-detects blank fields in any PDF", "Point-and-click field placement with resizable handles", "Guided wizard maps each field to job or client data"],
+              title: 'Visual Report Template Builder',
+              description: 'Use a visual builder to place fields exactly where they belong. Click to add, drag to draw, then resize and reposition with precision. It gives your team full control over every mapped area, whether AI finds it first or you place it manually.',
+              benefits: ['Manual field placement for total control', 'Resize and reposition fields directly on the PDF', 'Fast point-and-click editing with no specialist tools required'],
               icon: Layers,
-              color: "text-blue-500",
-              bg: "bg-blue-50 dark:bg-blue-900/20",
-              image: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&q=80&w=2070"
+              color: 'text-blue-500',
+              bg: 'bg-blue-50 dark:bg-blue-900/20',
+              image: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&q=80&w=2070'
             },
             {
-              title: "Dynamic Text & Branding Editor",
-              description: "Take full control of every piece of text in your PDF templates. Select any word, heading, footer, or logo and choose to white it out, replace it with custom text, or insert dynamic handlebars tokens that automatically fill in the right details at generation time — from job addresses to engineer names and company contact info.",
+              title: 'Text & Branding Editor',
+              description: 'Update customer-facing templates without leaving the platform. White-out and replace logos, headers, footers, and text blocks so every generated report reflects your own branding, formatting, and wording.',
               benefits: [
-                "White-out or replace any text, footer, logo, or graphic",
-                "Insert \u007b\u007bjob.address\u007d\u007d, \u007b\u007bclient.name\u007d\u007d, \u007b\u007bcompany.phone\u007d\u007d and 14+ more tokens",
-                "Full control: font, size, colour, weight, style & alignment"
+                'Replace logos, headers, footers, and text directly in the PDF',
+                'White-out unwanted supplier or legacy branding cleanly',
+                'Control typography, placement, and presentation for polished output'
               ],
               icon: Edit3,
-              color: "text-purple-500",
-              bg: "bg-purple-50 dark:bg-purple-900/20",
-              image: "https://images.unsplash.com/photo-1542744095-291d1f67b221?auto=format&fit=crop&q=80&w=2070"
+              color: 'text-purple-500',
+              bg: 'bg-purple-50 dark:bg-purple-900/20',
+              image: 'https://images.unsplash.com/photo-1542744095-291d1f67b221?auto=format&fit=crop&q=80&w=2070'
             },
             {
-              title: "Secure Cloud Storage",
-              description: "Keep your certificates safe and accessible anywhere. Our bank-grade encryption ensures your sensitive data remains protected.",
-              benefits: ["AES-256 encryption", "Automatic backups", "Role-based access control"],
-              icon: Lock,
-              color: "text-emerald-500",
-              bg: "bg-emerald-50 dark:bg-emerald-900/20",
-              image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=2070"
+              title: 'Dynamic Auto-Fill Tokens',
+              description: 'Insert dynamic {{handlebars}} tokens anywhere you need live data to appear. Merge job, client, and company details into your reports automatically so every document is accurate, consistent, and ready to send.',
+              benefits: ['Use dynamic tokens such as {{job.address}} and {{client.name}}', 'Auto-fill company details, contact information, and job data', 'Generate consistent reports without copy-and-paste errors'],
+              icon: Shield,
+              color: 'text-indigo-500',
+              bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+              image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=2070'
             },
             {
-              title: "Real-time Analytics",
-              description: "Gain valuable insights into your certification operations. Track issuance rates, expiry dates, and team performance.",
-              benefits: ["Customisable dashboards", "Exportable reports", "Trend analysis"],
+              title: 'ServiceM8 Data Mapping',
+              description: 'Connect your report templates to live ServiceM8 information so mapped fields pull through the right job, client, and company values at generation time. This keeps your workflows aligned with the data your team already relies on operationally.',
+              benefits: ['Map template fields to ServiceM8 job, client, and company data', 'Keep generated reports aligned with live operational records', 'Streamline report production across office and field workflows'],
               icon: BarChart3,
-              color: "text-indigo-500",
-              bg: "bg-indigo-50 dark:bg-indigo-900/20",
-              image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2070"
+              color: 'text-cyan-500',
+              bg: 'bg-cyan-50 dark:bg-cyan-900/20',
+              image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2070'
+            },
+            {
+              title: 'Secure Cloud Storage',
+              description: 'Store templates, generated reports, and supporting business data securely in the cloud. Your team gets reliable access to the latest files while keeping sensitive customer and compliance information protected.',
+              benefits: ['Secure cloud storage for templates and generated documents', 'Reliable access to files from anywhere your team works', 'Built for safe handling of business and customer report data'],
+              icon: Lock,
+              color: 'text-emerald-500',
+              bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+              image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=2070'
             }
           ].map((feature, index) => (
             <div key={index} className={`flex flex-col lg:flex-row items-center gap-16 mb-32 ${

@@ -3,20 +3,15 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/landing/Header';
 import { Footer } from '@/components/landing/Footer';
-import { 
-  ArrowRight, 
-  CheckCircle2, 
-  Shield, 
-  Zap, 
-  BarChart3, 
-  Users, 
-  FileCheck, 
-  Lock, 
-  Globe,
+import {
+  ArrowRight,
+  CheckCircle2,
+  Shield,
+  Zap,
+  FileCheck,
+  Lock,
   Layers,
-  Edit3,
-  Menu,
-  X
+  Edit3
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -36,7 +31,7 @@ export default function LandingPage() {
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/50 via-slate-950/80 to-slate-950" />
-        
+
         {/* Animated background blobs */}
         <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/30 rounded-full blur-3xl animate-pulse-slow" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse-slow delay-1000" />
@@ -49,21 +44,22 @@ export default function LandingPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                 </span>
-                New: Visual Report Template Builder
+                New: AI-powered PDF template builder
               </div>
-              
+
               <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight tracking-tight">
-                Certify with <br />
+                Turn any PDF report into a<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400">
-                  Confidence & Speed
+                  smart, auto-filled workflow
                 </span>
               </h1>
-              
+
               <p className="text-xl text-slate-400 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                The complete platform for managing fire safety certificates. 
-                Automate generation, ensure compliance, and streamline your workflow with AI.
+                Upload your existing certificate or report template, detect blank fields with AI,
+                place fields visually, replace logos and text, and generate polished documents with
+                live ServiceM8 job, client, and company data.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
                 <Link href="/sign-up" className="w-full sm:w-auto">
                   <Button size="lg" className="w-full h-14 px-8 text-lg bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-600/20 rounded-full transition-all hover:scale-105">
@@ -102,7 +98,7 @@ export default function LandingPage() {
                     sizes="(max-width: 768px) 100vw, 50vw"
                     priority
                   />
-                  
+
                   {/* Floating Elements */}
                   <div className="absolute -right-4 top-10 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 animate-float" style={{ animationDelay: '1s' }}>
                     <div className="flex items-center gap-3">
@@ -110,8 +106,8 @@ export default function LandingPage() {
                         <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">Certificate Verified</p>
-                        <p className="text-xs text-slate-500">Just now</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">Template mapped & ready</p>
+                        <p className="text-xs text-slate-500">Live ServiceM8 fields connected</p>
                       </div>
                     </div>
                   </div>
@@ -122,8 +118,8 @@ export default function LandingPage() {
                         <Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">AI Analysis Complete</p>
-                        <p className="text-xs text-slate-500">98% Accuracy</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">AI fields detected</p>
+                        <p className="text-xs text-slate-500">Blank inputs found automatically</p>
                       </div>
                     </div>
                   </div>
@@ -155,10 +151,11 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-              Everything you need to manage certificates
+              Everything you need to turn static PDFs into reusable report templates
             </h2>
             <p className="text-lg text-slate-600 dark:text-slate-400">
-              Powerful tools designed to streamline your workflow and ensure compliance at every step.
+              From upload to generation, every step is built to help your team personalise reports faster,
+              stay on-brand, and merge the right data into every document.
             </p>
           </div>
 
@@ -166,45 +163,45 @@ export default function LandingPage() {
             {[
               {
                 icon: FileCheck,
-                title: "Smart Generation",
-                desc: "Upload any existing PDF report template. Build it once, generate personalised documents for every job in seconds.",
-                color: "text-blue-500",
-                bg: "bg-blue-50 dark:bg-blue-900/20"
-              },
-              {
-                icon: Shield,
-                title: "Compliance First",
-                desc: "Stay up to date with BS5839-1, BS5839-6, and BS5266 standards automatically.",
-                color: "text-indigo-500",
-                bg: "bg-indigo-50 dark:bg-indigo-900/20"
+                title: 'Upload Existing PDF Templates',
+                desc: 'Start with the reports you already use. Upload existing PDF certificates, forms, and inspection templates instead of rebuilding documents from scratch.',
+                color: 'text-blue-500',
+                bg: 'bg-blue-50 dark:bg-blue-900/20'
               },
               {
                 icon: Zap,
-                title: "AI Field Detection",
-                desc: "Automatically detect blank input fields in any PDF and map each one to job, client, or company data — no manual marking needed.",
-                color: "text-amber-500",
-                bg: "bg-amber-50 dark:bg-amber-900/20"
-              },
-              {
-                icon: Lock,
-                title: "Secure Storage",
-                desc: "Bank-grade encryption for all your sensitive data and certificates.",
-                color: "text-emerald-500",
-                bg: "bg-emerald-50 dark:bg-emerald-900/20"
-              },
-              {
-                icon: Edit3,
-                title: "Text & Branding Editor",
-                desc: "White-out or replace any text, header, footer, or logo in your PDF. Insert dynamic \u007b\u007bhandlebars\u007d\u007d tokens to auto-fill client and job details at generation time.",
-                color: "text-purple-500",
-                bg: "bg-purple-50 dark:bg-purple-900/20"
+                title: 'AI Blank-Field Detection',
+                desc: 'Let AI scan your PDF and identify likely fillable areas automatically, so your team can map templates faster with less repetitive setup.',
+                color: 'text-amber-500',
+                bg: 'bg-amber-50 dark:bg-amber-900/20'
               },
               {
                 icon: Layers,
-                title: "Visual Template Builder",
-                desc: "Point-and-click field placement with resizable handles, drag-to-draw, and a guided wizard — no coding required.",
-                color: "text-cyan-500",
-                bg: "bg-cyan-50 dark:bg-cyan-900/20"
+                title: 'Visual Field Placement',
+                desc: 'Fine-tune every template with click-to-place, drag-to-draw, resize, and reposition controls for total layout accuracy where AI needs a hand.',
+                color: 'text-cyan-500',
+                bg: 'bg-cyan-50 dark:bg-cyan-900/20'
+              },
+              {
+                icon: Edit3,
+                title: 'Text & Branding Editor',
+                desc: 'White-out and replace logos, headers, footers, and text so every output matches your brand and your customer-facing report style.',
+                color: 'text-purple-500',
+                bg: 'bg-purple-50 dark:bg-purple-900/20'
+              },
+              {
+                icon: Shield,
+                title: 'Dynamic Data Mapping',
+                desc: 'Insert {{handlebars}} tokens and map fields to live job, client, and company data from ServiceM8 for consistent, error-free document generation.',
+                color: 'text-indigo-500',
+                bg: 'bg-indigo-50 dark:bg-indigo-900/20'
+              },
+              {
+                icon: Lock,
+                title: 'Secure Cloud Storage',
+                desc: 'Keep templates, generated reports, and business data protected in secure cloud storage with controlled access and reliable availability.',
+                color: 'text-emerald-500',
+                bg: 'bg-emerald-50 dark:bg-emerald-900/20'
               }
             ].map((feature, i) => (
               <div key={i} className="group p-8 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 dark:hover:border-blue-500/50 bg-white dark:bg-slate-900 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300">
@@ -231,7 +228,7 @@ export default function LandingPage() {
               How it works
             </h2>
             <p className="text-lg text-slate-600 dark:text-slate-400">
-              Three simple steps to streamline your certification process
+              Go from static PDF to live, branded report workflow in three simple steps
             </p>
           </div>
 
@@ -241,19 +238,19 @@ export default function LandingPage() {
 
             {[
               {
-                step: "01",
-                title: "Upload Your Template",
-                desc: "Upload any existing PDF report. Our editor lets you visually map fields, white-out logos or footers, and personalise text in minutes."
+                step: '01',
+                title: 'Upload & Analyse Your PDF',
+                desc: 'Import an existing report template and let AI detect blank fields and likely entry areas so setup starts with the structure already on the page.'
               },
               {
-                step: "02",
-                title: "Map & Personalise",
-                desc: "Auto-detect blank fields or draw them manually. Insert \u007b\u007bhandlebars\u007d\u007d tokens so every report is automatically filled with the right job, client, and company details."
+                step: '02',
+                title: 'Map, Edit & Brand',
+                desc: 'Place or adjust fields manually, resize and reposition elements, replace logos or text, and add {{handlebars}} tokens tied to ServiceM8 data.'
               },
               {
-                step: "03",
-                title: "Generate & Deliver",
-                desc: "Produce a fully personalised, branded report for any job in seconds. Send to the client or store securely in the cloud."
+                step: '03',
+                title: 'Generate, Store & Reuse',
+                desc: 'Create finished reports with live job, client, and company data merged in automatically, then store templates and outputs securely in the cloud.'
               }
             ].map((item, i) => (
               <div key={i} className="relative flex flex-col items-center text-center">
@@ -273,10 +270,10 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-800 opacity-10" />
         <div className="container relative mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-            Ready to transform your workflow?
+            Ready to modernise your PDF reporting workflow?
           </h2>
           <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
-            Join thousands of safety professionals who trust AI-Certificates for their certification needs.
+            Build reusable templates, merge live ServiceM8 data, and deliver polished branded reports without manual rework.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/sign-up">
