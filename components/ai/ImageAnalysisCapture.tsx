@@ -4,7 +4,11 @@ import { ChangeEvent, useMemo, useRef, useState } from 'react';
 import { Camera, FileImage, Loader2, RefreshCw, Sparkles, Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import type { AnalyzeImageResponse } from '@/lib/ai/railway-client';
+import type {
+  AnalyzeImageResponse,
+  AnalyzeImageObservationRecommendation,
+  AnalyzeImageScheduleItem,
+} from '@/lib/ai/railway-client';
 
 type AnalysisState = {
   imageDataUrl: string | null;
@@ -67,6 +71,29 @@ function formatValue(value: unknown) {
   return String(value);
 }
 
+function formatBoolean(value: boolean | null | undefined) {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+
+  return value ? 'Yes' : 'No';
+}
+
+function getScheduleItemTitle(item: AnalyzeImageScheduleItem) {
+  return item.item || item.description || 'Schedule item';
+}
+
+function getScheduleItemMeta(item: AnalyzeImageScheduleItem) {
+  return [item.result, item.outcome, item.code, item.classification]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean)
+    .join(' • ');
+}
+
+function getObservationRecommendationTitle(item: AnalyzeImageObservationRecommendation) {
+  return item.observation || item.recommendation || 'Observation';
+}
+
 export default function ImageAnalysisCapture() {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +122,15 @@ export default function ImageAnalysisCapture() {
 
   const consumerUnit = state.result?.findings?.consumerUnit ?? null;
   const reportSections = state.result?.prefill?.reportSections ?? null;
+  const identifiedDefects = reportSections?.identifiedDefects ?? [];
+  const highlightedSections = reportSections?.highlightedSections ?? [];
+  const observationSchedule = reportSections?.observationSchedule ?? [];
+  const inspectionSchedule = reportSections?.inspectionSchedule ?? [];
+  const observationsAndRecommendations = reportSections?.observationsAndRecommendations ?? [];
+  const summaryComments = reportSections?.summaryComments ?? [];
+  const reportSummary = reportSections?.reportSummary;
+  const gasBondingPresent =
+    reportSections?.supplyCharacteristicsAndEarthingArrangements?.mainProtectiveBonding?.gas?.present;
 
   const summaryBlocks = useMemo(() => {
     if (!state.result) {
@@ -369,7 +405,189 @@ export default function ImageAnalysisCapture() {
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Report sections</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Identified defects</h3>
+              {identifiedDefects.length > 0 ? (
+                <div className="space-y-3">
+                  {identifiedDefects.map((defect, index) => (
+                    <div key={`${index}-${defect.item ?? defect.description ?? 'defect'}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-900">{formatValue(defect.item || defect.description)}</p>
+                      <p className="mt-1 text-sm text-slate-600">
+                        {[defect.code, defect.classification]
+                          .map((value) => (typeof value === 'string' ? value.trim() : ''))
+                          .filter(Boolean)
+                          .join(' • ') || 'No classification provided'}
+                      </p>
+                      {defect.sourceText ? <p className="mt-2 text-xs text-slate-500">Source: {defect.sourceText}</p> : null}
+                      {typeof defect.confidence === 'number' ? (
+                        <p className="mt-1 text-xs text-slate-500">Confidence: {(defect.confidence * 100).toFixed(0)}%</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  No identified defects were returned.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Highlighted sections</h3>
+              {highlightedSections.length > 0 ? (
+                <div className="space-y-3">
+                  {highlightedSections.map((section, index) => (
+                    <div key={`${index}-${section.section ?? section.title ?? 'section'}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-900">{formatValue(section.section || section.title)}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{formatValue(section.content)}</p>
+                      {section.reason ? <p className="mt-2 text-xs text-slate-500">Reason: {section.reason}</p> : null}
+                      {typeof section.confidence === 'number' ? (
+                        <p className="mt-1 text-xs text-slate-500">Confidence: {(section.confidence * 100).toFixed(0)}%</p>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  No highlighted sections were returned.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Observation schedule</h3>
+              {observationSchedule.length > 0 ? (
+                <div className="space-y-3">
+                  {observationSchedule.map((item, index) => (
+                    <div key={`${index}-${item.item ?? item.description ?? 'observation-schedule'}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-900">{getScheduleItemTitle(item)}</p>
+                      <p className="mt-1 text-sm text-slate-600">{getScheduleItemMeta(item) || 'No outcome provided'}</p>
+                      {item.comments ? <p className="mt-2 whitespace-pre-wrap text-xs text-slate-500">{item.comments}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  No observation schedule items were returned.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Inspection schedule</h3>
+              {inspectionSchedule.length > 0 ? (
+                <div className="space-y-3">
+                  {inspectionSchedule.map((item, index) => (
+                    <div key={`${index}-${item.item ?? item.description ?? 'inspection-schedule'}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-900">{getScheduleItemTitle(item)}</p>
+                      <p className="mt-1 text-sm text-slate-600">{getScheduleItemMeta(item) || 'No outcome provided'}</p>
+                      {item.comments ? <p className="mt-2 whitespace-pre-wrap text-xs text-slate-500">{item.comments}</p> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  No inspection schedule items were returned.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Observations and recommendations</h3>
+              {observationsAndRecommendations.length > 0 ? (
+                <div className="space-y-3">
+                  {observationsAndRecommendations.map((item, index) => (
+                    <div key={`${index}-${item.observation ?? item.recommendation ?? 'recommendation'}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-900">{getObservationRecommendationTitle(item)}</p>
+                      {item.observation && item.recommendation && item.observation !== item.recommendation ? (
+                        <p className="mt-1 text-sm text-slate-700">{item.recommendation}</p>
+                      ) : null}
+                      <p className="mt-1 text-sm text-slate-600">
+                        {[item.code, item.classification]
+                          .map((value) => (typeof value === 'string' ? value.trim() : ''))
+                          .filter(Boolean)
+                          .join(' • ') || 'No code provided'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  No observations and recommendations were returned.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Summary comments</h3>
+              {summaryComments.length > 0 ? (
+                <div className="space-y-3">
+                  {summaryComments.map((comment, index) => (
+                    <div key={`${index}-${typeof comment === 'string' ? comment : comment.title ?? comment.comment ?? comment.text ?? 'comment'}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      {typeof comment === 'string' ? (
+                        <p className="text-sm text-slate-900">{comment}</p>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium text-slate-900">{formatValue(comment.title || comment.comment || comment.text)}</p>
+                          {comment.comment && comment.title && comment.comment !== comment.title ? (
+                            <p className="mt-1 text-sm text-slate-700">{comment.comment}</p>
+                          ) : null}
+                          {comment.text && comment.text !== comment.comment && comment.text !== comment.title ? (
+                            <p className="mt-1 text-sm text-slate-700">{comment.text}</p>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  No summary comments were returned.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Report summary</h3>
+              {reportSummary ? (
+                typeof reportSummary === 'string' ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-900">{reportSummary}</div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {Object.entries(reportSummary).map(([key, value]) => (
+                      <div key={key} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{toDisplayLabel(key)}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-900">{formatValue(value)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  No report summary was returned.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                Supply characteristics and earthing arrangements
+              </h3>
+              {reportSections ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Gas main protective bonding present
+                  </p>
+                  <p className="mt-1 text-sm text-slate-900">{formatBoolean(gasBondingPresent)}</p>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  No supply characteristic section was returned.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Raw report sections</h3>
               {reportSections ? (
                 <pre className="overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">
                   {JSON.stringify(reportSections, null, 2)}

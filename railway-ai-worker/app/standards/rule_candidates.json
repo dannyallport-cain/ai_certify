@@ -1,0 +1,339 @@
+[
+  {
+    "id": "inspection-labeling-review:18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+    "sourceDocumentId": "18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "18th edition IET wiring regulations. Electric wiring for domestic installers ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+    "sourceDocumentId": "18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "18th edition IET wiring regulations. Electric wiring for domestic installers ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "consumer-unit-type-ac-review:bs-7671-2018-pdfdrive",
+    "sourceDocumentId": "bs-7671-2018-pdfdrive",
+    "issueType": "protective_device",
+    "severity": "medium",
+    "message": "Type AC wording appears in the source standards and should be reviewed for suitability.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "type ac"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "BS 7671 2018 ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "consumer-unit-spd-review:bs-7671-2018-pdfdrive",
+    "sourceDocumentId": "bs-7671-2018-pdfdrive",
+    "issueType": "protective_device",
+    "severity": "info",
+    "message": "SPD-related guidance was found in the standards source set.",
+    "suggestedCodes": [],
+    "triggerTokens": [
+      "surge protection",
+      "spd"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "BS 7671 2018 ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-labeling-review:bs-7671-2018-pdfdrive",
+    "sourceDocumentId": "bs-7671-2018-pdfdrive",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "BS 7671 2018 ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:bs-7671-2018-pdfdrive",
+    "sourceDocumentId": "bs-7671-2018-pdfdrive",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "BS 7671 2018 ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "consumer-unit-spd-review:guidance-note-3-inspection-testing-18th-pdfdrive",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "issueType": "protective_device",
+    "severity": "info",
+    "message": "SPD-related guidance was found in the standards source set.",
+    "suggestedCodes": [],
+    "triggerTokens": [
+      "surge protection",
+      "spd"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-labeling-review:guidance-note-3-inspection-testing-18th-pdfdrive",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:guidance-note-3-inspection-testing-18th-pdfdrive",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "consumer-unit-spd-review:on-site-guide-bs-7671-2018-electrical-regulations-pdfdrive",
+    "sourceDocumentId": "on-site-guide-bs-7671-2018-electrical-regulations-pdfdrive",
+    "issueType": "protective_device",
+    "severity": "info",
+    "message": "SPD-related guidance was found in the standards source set.",
+    "suggestedCodes": [],
+    "triggerTokens": [
+      "surge protection",
+      "spd"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "On-Site Guide (BS 7671_2018) (Electrical Regulations) ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-labeling-review:on-site-guide-bs-7671-2018-electrical-regulations-pdfdrive",
+    "sourceDocumentId": "on-site-guide-bs-7671-2018-electrical-regulations-pdfdrive",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "On-Site Guide (BS 7671_2018) (Electrical Regulations) ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:on-site-guide-bs-7671-2018-electrical-regulations-pdfdrive",
+    "sourceDocumentId": "on-site-guide-bs-7671-2018-electrical-regulations-pdfdrive",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "On-Site Guide (BS 7671_2018) (Electrical Regulations) ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-labeling-review:bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only"
+      }
+    ]
+  },
+  {
+    "id": "consumer-unit-spd-review:bs7671-eicr",
+    "sourceDocumentId": "bs7671-eicr",
+    "issueType": "protective_device",
+    "severity": "info",
+    "message": "SPD-related guidance was found in the standards source set.",
+    "suggestedCodes": [],
+    "triggerTokens": [
+      "surge protection",
+      "spd"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs7671-eicr"
+      }
+    ]
+  },
+  {
+    "id": "inspection-labeling-review:bs7671-eicr",
+    "sourceDocumentId": "bs7671-eicr",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs7671-eicr"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:bs7671-eicr",
+    "sourceDocumentId": "bs7671-eicr",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs7671-eicr"
+      }
+    ]
+  }
+]

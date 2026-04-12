@@ -1,0 +1,80 @@
+[
+  {
+    "id": "consumer-unit-type-ac-review:bs-7671-2018-pdfdrive",
+    "sourceDocumentId": "bs-7671-2018-pdfdrive",
+    "issueType": "protective_device",
+    "severity": "medium",
+    "message": "Type AC wording appears in the source standards and should be reviewed for suitability.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "type ac"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "BS 7671 2018 ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "consumer-unit-spd-review:bs-7671-2018-pdfdrive",
+    "sourceDocumentId": "bs-7671-2018-pdfdrive",
+    "issueType": "protective_device",
+    "severity": "info",
+    "message": "SPD-related guidance was found in the standards source set.",
+    "suggestedCodes": [],
+    "triggerTokens": [
+      "surge protection",
+      "spd"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "BS 7671 2018 ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-labeling-review:bs-7671-2018-pdfdrive",
+    "sourceDocumentId": "bs-7671-2018-pdfdrive",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "BS 7671 2018 ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:bs-7671-2018-pdfdrive",
+    "sourceDocumentId": "bs-7671-2018-pdfdrive",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "BS 7671 2018 ( PDFDrive )"
+      }
+    ]
+  }
+]

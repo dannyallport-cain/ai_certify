@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createCertificate } from '../../../actions';
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
@@ -18,7 +18,19 @@ import { AddressAutocompleteField } from '@/components/AddressAutocompleteField'
 import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
 import { OrganisationAutocompleteField } from '@/components/OrganisationAutocompleteField';
 import { Badge } from '@/components/ui/badge';
-import { Copy, Plus, Trash2, ShieldCheck, SpellCheck, CheckCircle2, AlertCircle, AlertTriangle, X } from 'lucide-react';
+import {
+  Copy,
+  Plus,
+  Trash2,
+  ShieldCheck,
+  SpellCheck,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  X,
+  Sparkles,
+  Upload,
+} from 'lucide-react';
 import { isAdminRole } from '@/lib/auth/roles';
 import { calculateMaxZs } from '@/lib/utils/calculate-zs';
 import { cn } from '@/lib/utils';
@@ -28,6 +40,7 @@ import {
   type InspScheduleValue,
   SCHEDULE_GROUPS,
 } from '@/components/InspectionScheduleSection';
+import type { AnalyzeImageResponse, AnalyzeImageScheduleItem } from '@/lib/ai/railway-client';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -371,6 +384,84 @@ function normalizeCircuitRows(rows: CircuitRow[], threePhase = false): CircuitRo
   return rows.map((row, idx) => ({ ...row, circuitNumber: circuitLabel(idx, threePhase) }));
 }
 
+function normalizeYesNoValue(value: unknown): 'Yes' | 'No' | 'N/A' | null {
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
+  }
+
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim().toLowerCase();
+
+  if (['yes', 'present', 'true', 'fitted'].includes(normalized)) {
+    return 'Yes';
+  }
+
+  if (['no', 'absent', 'false', 'not present', 'not fitted'].includes(normalized)) {
+    return 'No';
+  }
+
+  if (['n/a', 'na', 'not applicable'].includes(normalized)) {
+    return 'N/A';
+  }
+
+  return null;
+}
+
+function normalizeInspectionOutcome(value: unknown): InspCode {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const normalized = value.trim().toUpperCase();
+
+  if (normalized === 'SAT' || normalized === 'S') {
+    return '✓';
+  }
+
+  if (normalized === 'UNSAT') {
+    return 'C2';
+  }
+
+  if (normalized === 'LIMITATION') {
+    return 'LIM';
+  }
+
+  if (normalized === 'NOT VERIFIED') {
+    return 'NV';
+  }
+
+  const allowedOutcomes: InspCode[] = ['', 'N/A', '✓', 'C1', 'C2', 'C3', 'LIM', 'NV'];
+
+  return allowedOutcomes.includes(normalized as InspCode) ? (normalized as InspCode) : '';
+}
+
+function getScheduleRef(item: AnalyzeImageScheduleItem): string | null {
+  const candidates = [item.item, item.description];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== 'string') {
+      continue;
+    }
+
+    const match = candidate.match(/\b\d+(?:\.\d+)+\b/);
+    if (match) {
+      return match[0];
+    }
+  }
+
+  return null;
+}
+
+function buildObservationDescription(item: AnalyzeImageScheduleItem) {
+  return [item.item, item.description, item.comments]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean)
+    .join(' — ');
+}
+
 export default function EICRCertificatePage() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -416,6 +507,18 @@ export default function EICRCertificatePage() {
   type VerifyResult = { type: 'error' | 'warning' | 'pass'; message: string };
   const [verifyResults, setVerifyResults] = useState<VerifyResult[] | null>(null);
   const [spellCheckActive, setSpellCheckActive] = useState(false);
+  const aiUploadInputRef = useRef<HTMLInputElement>(null);
+  const [aiAnalysisState, setAiAnalysisState] = useState<{
+    isSubmitting: boolean;
+    fileName: string;
+    error: string;
+    summary: string;
+  }>({
+    isSubmitting: false,
+    fileName: '',
+    error: '',
+    summary: '',
+  });
 
   // When an inspection code changes to C1/C2, auto-add an observation and vice-versa
   const handleInspCodeChange = (
@@ -1081,6 +1184,249 @@ export default function EICRCertificatePage() {
     (firstFilled ?? fields[0])?.focus();
   };
 
+  const applyAiPrefill = (payload: AnalyzeImageResponse) => {
+    const reportSections = payload.prefill?.reportSections;
+    const findingsConsumerUnit = payload.findings?.consumerUnit;
+    const combinedObservationText = [
+      ...(payload.findings?.observations ?? []),
+      ...(payload.prefill?.observations ?? []),
+    ]
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter(Boolean);
+
+    if (payload.summary) {
+      setAiAnalysisState((current) => ({
+        ...current,
+        summary: payload.summary,
+      }));
+      appendSentenceToField('generalCondition', payload.summary);
+    }
+
+    if (findingsConsumerUnit) {
+      if (typeof findingsConsumerUnit.brand === 'string' && findingsConsumerUnit.brand.trim()) {
+        setFieldValue('consumerUnitDesignation', findingsConsumerUnit.brand.trim());
+      }
+
+      if (typeof findingsConsumerUnit.model === 'string' && findingsConsumerUnit.model.trim()) {
+        appendSentenceToField(
+          'generalCondition',
+          `Consumer unit model identified as ${findingsConsumerUnit.model.trim()}`,
+        );
+      }
+
+      if (typeof findingsConsumerUnit.condition === 'string' && findingsConsumerUnit.condition.trim()) {
+        appendSentenceToField('generalCondition', findingsConsumerUnit.condition.trim());
+      }
+    }
+
+    const gasBondingValue = normalizeYesNoValue(
+      reportSections?.supplyCharacteristicsAndEarthingArrangements?.mainProtectiveBonding?.gas?.present,
+    );
+    if (gasBondingValue) {
+      setFieldValue('bondingGas', gasBondingValue);
+    }
+
+    const nextObservationEntries: Observation[] = [];
+    const seenObservationKeys = new Set<string>();
+
+    const pushObservation = (description: string, code: Observation['code']) => {
+      const normalizedDescription = description.trim();
+      if (!normalizedDescription) {
+        return;
+      }
+
+      const key = `${code}:${normalizedDescription.toLowerCase()}`;
+      if (seenObservationKeys.has(key)) {
+        return;
+      }
+
+      seenObservationKeys.add(key);
+      nextObservationEntries.push({
+        id: `ai-${Date.now()}-${seenObservationKeys.size}`,
+        description: normalizedDescription,
+        code,
+      });
+    };
+
+    combinedObservationText.forEach((text) => {
+      pushObservation(text, 'C3');
+    });
+
+    (reportSections?.identifiedDefects ?? []).forEach((defect) => {
+      const description = [defect.item, defect.description, defect.sourceText]
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean)
+        .join(' — ');
+      const normalizedCode = typeof defect.code === 'string' ? defect.code.trim().toUpperCase() : '';
+      const code: Observation['code'] =
+        normalizedCode === 'C1' || normalizedCode === 'C2' || normalizedCode === 'C3' || normalizedCode === 'FI'
+          ? (normalizedCode as Observation['code'])
+          : 'C3';
+
+      pushObservation(description, code);
+    });
+
+    (reportSections?.observationsAndRecommendations ?? []).forEach((item) => {
+      const description = [item.observation, item.recommendation]
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean)
+        .join(' — ');
+      const normalizedCode = typeof item.code === 'string' ? item.code.trim().toUpperCase() : '';
+      const code: Observation['code'] =
+        normalizedCode === 'C1' || normalizedCode === 'C2' || normalizedCode === 'C3' || normalizedCode === 'FI'
+          ? (normalizedCode as Observation['code'])
+          : 'C3';
+
+      pushObservation(description, code);
+    });
+
+    (reportSections?.observationSchedule ?? []).forEach((item) => {
+      const description = buildObservationDescription(item);
+      const normalizedCode = typeof item.code === 'string' ? item.code.trim().toUpperCase() : '';
+      const code: Observation['code'] =
+        normalizedCode === 'C1' || normalizedCode === 'C2' || normalizedCode === 'C3' || normalizedCode === 'FI'
+          ? (normalizedCode as Observation['code'])
+          : 'C3';
+
+      pushObservation(description, code);
+    });
+
+    if (nextObservationEntries.length > 0) {
+      setObservations((prev) => {
+        const existingKeys = new Set(
+          prev.map((item) => `${item.code}:${item.description.trim().toLowerCase()}`),
+        );
+
+        const dedupedAdditions = nextObservationEntries.filter((item) => {
+          const key = `${item.code}:${item.description.trim().toLowerCase()}`;
+          if (existingKeys.has(key)) {
+            return false;
+          }
+          existingKeys.add(key);
+          return true;
+        });
+
+        return dedupedAdditions.length > 0 ? [...prev, ...dedupedAdditions] : prev;
+      });
+    }
+
+    const inspectionUpdates = (reportSections?.inspectionSchedule ?? []).reduce<{
+      codes: Record<string, InspCode>;
+      comments: Record<string, string>;
+    }>(
+      (accumulator, item) => {
+        const ref = getScheduleRef(item);
+        if (!ref) {
+          return accumulator;
+        }
+
+        const outcome = normalizeInspectionOutcome(item.outcome || item.result || item.code || item.classification);
+        if (outcome) {
+          accumulator.codes[ref] = outcome;
+        }
+
+        const comment = buildObservationDescription(item);
+        if (comment) {
+          accumulator.comments[ref] = comment;
+        }
+
+        return accumulator;
+      },
+      { codes: {}, comments: {} },
+    );
+
+    if (Object.keys(inspectionUpdates.codes).length > 0 || Object.keys(inspectionUpdates.comments).length > 0) {
+      setInspSchedule((prev) => ({
+        codes: {
+          ...prev.codes,
+          ...inspectionUpdates.codes,
+        },
+        comments: {
+          ...prev.comments,
+          ...inspectionUpdates.comments,
+        },
+      }));
+    }
+  };
+
+  const handleAiImageSelect = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      setAiAnalysisState((current) => ({
+        ...current,
+        isSubmitting: true,
+        error: '',
+        fileName: file.name,
+      }));
+
+      const imageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            resolve(reader.result);
+            return;
+          }
+
+          reject(new Error('Unable to read the selected image.'));
+        };
+
+        reader.onerror = () => {
+          reject(reader.error ?? new Error('Unable to read the selected image.'));
+        };
+
+        reader.readAsDataURL(file);
+      });
+
+      const response = await fetch('/api/ai/analyze-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageBase64,
+          reportType: 'electrical-installation-condition-report',
+          inspectionType: 'consumer-unit-ocr',
+          requestedSections: ['summary', 'consumerUnit', 'observations', 'reportSections'],
+          metadata: {
+            source: 'eicr-certificate-editor',
+            fileName: file.name,
+            capturedAt: new Date().toISOString(),
+          },
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as AnalyzeImageResponse & {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'Image analysis failed.');
+      }
+
+      applyAiPrefill(payload);
+
+      setAiAnalysisState((current) => ({
+        ...current,
+        isSubmitting: false,
+        error: '',
+        summary: payload.summary || current.summary,
+      }));
+    } catch (error) {
+      setAiAnalysisState((current) => ({
+        ...current,
+        isSubmitting: false,
+        error: error instanceof Error ? error.message : 'Unable to analyze the selected image.',
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -1160,6 +1506,60 @@ export default function EICRCertificatePage() {
             {formError}
           </p>
         )}
+
+        <Card className={EDITOR_CARD_CLASS}>
+          <CardHeader className={EDITOR_HEADER_CLASS}>
+            <CardTitle>AI Image Prefill</CardTitle>
+            <CardDescription>Upload a consumer-unit or certificate image to prefill observations, bonding, and schedule details.</CardDescription>
+          </CardHeader>
+          <CardContent className={cn(EDITOR_CONTENT_CLASS, EDITOR_SECTION_BODY_CLASS)}>
+            <div className="flex flex-col gap-3 border border-slate-300 bg-white p-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => aiUploadInputRef.current?.click()}
+                  disabled={aiAnalysisState.isSubmitting}
+                >
+                  {aiAnalysisState.isSubmitting ? (
+                    <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
+                  {aiAnalysisState.isSubmitting ? 'Analyzing image...' : 'Upload image for AI prefill'}
+                </Button>
+                {aiAnalysisState.fileName ? (
+                  <span className="text-xs text-slate-600">Selected image: {aiAnalysisState.fileName}</span>
+                ) : null}
+              </div>
+
+              <input
+                ref={aiUploadInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAiImageSelect}
+              />
+
+              {aiAnalysisState.summary ? (
+                <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                  <span className="font-medium">AI summary:</span> {aiAnalysisState.summary}
+                </div>
+              ) : null}
+
+              {aiAnalysisState.error ? (
+                <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {aiAnalysisState.error}
+                </div>
+              ) : null}
+
+              <p className="text-xs text-slate-500">
+                The AI prefill appends observations, updates gas bonding when available, and applies recognised
+                inspection schedule outcomes.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* ── Basic / Certificate Number ── */}
         <Card className={EDITOR_CARD_CLASS}>
@@ -2405,7 +2805,7 @@ export default function EICRCertificatePage() {
           </Button>
         </div>
       </form>
-    </div>
+      </div>
     </div>
   );
 }

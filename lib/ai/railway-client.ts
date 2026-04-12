@@ -31,10 +31,85 @@ export interface AnalyzeImageFindings {
   observations: string[];
 }
 
+export interface AnalyzeImageIdentifiedDefect {
+  item?: string;
+  description?: string;
+  code?: string;
+  classification?: string;
+  confidence?: number;
+  sourceText?: string;
+  [key: string]: unknown;
+}
+
+export interface AnalyzeImageHighlightedSection {
+  section?: string;
+  title?: string;
+  content?: string;
+  reason?: string;
+  confidence?: number;
+  [key: string]: unknown;
+}
+
+export interface AnalyzeImageScheduleItem {
+  item?: string;
+  description?: string;
+  result?: string;
+  outcome?: string;
+  code?: string;
+  classification?: string;
+  comments?: string;
+  confidence?: number;
+  [key: string]: unknown;
+}
+
+export interface AnalyzeImageObservationRecommendation {
+  observation?: string;
+  recommendation?: string;
+  code?: string;
+  classification?: string;
+  confidence?: number;
+  [key: string]: unknown;
+}
+
+export interface AnalyzeImageSummaryComment {
+  title?: string;
+  comment?: string;
+  text?: string;
+  confidence?: number;
+  [key: string]: unknown;
+}
+
+export interface AnalyzeImageMainProtectiveBondingGas {
+  present?: boolean | null;
+  [key: string]: unknown;
+}
+
+export interface AnalyzeImageMainProtectiveBonding {
+  gas?: AnalyzeImageMainProtectiveBondingGas;
+  [key: string]: unknown;
+}
+
+export interface AnalyzeImageSupplyCharacteristicsAndEarthingArrangements {
+  mainProtectiveBonding?: AnalyzeImageMainProtectiveBonding;
+  [key: string]: unknown;
+}
+
+export interface AnalyzeImageReportSections {
+  identifiedDefects?: AnalyzeImageIdentifiedDefect[];
+  highlightedSections?: AnalyzeImageHighlightedSection[];
+  observationSchedule?: AnalyzeImageScheduleItem[];
+  inspectionSchedule?: AnalyzeImageScheduleItem[];
+  observationsAndRecommendations?: AnalyzeImageObservationRecommendation[];
+  summaryComments?: Array<string | AnalyzeImageSummaryComment>;
+  reportSummary?: string | Record<string, unknown>;
+  supplyCharacteristicsAndEarthingArrangements?: AnalyzeImageSupplyCharacteristicsAndEarthingArrangements;
+  [key: string]: unknown;
+}
+
 export interface AnalyzeImagePrefill {
   observations?: string[];
   recommendedCodes?: string[];
-  reportSections?: Record<string, unknown>;
+  reportSections?: AnalyzeImageReportSections;
 }
 
 export interface AnalyzeImageModelInfo {

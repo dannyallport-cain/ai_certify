@@ -1,0 +1,316 @@
+[
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-1",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 1,
+    "summary": "BRITISH STANDARD Requirements for Electrical Installations IET Wiring Regulations Eighteenth Edition © The Institution of Engineering and Technology and BSI NO COPYING IN ANY FORM WITHOUT WRITTEN PERMISSION BS 7671:2018",
+    "keywords": [],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 1
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-2",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 2,
+    "summary": "Publication Information Published by the Institution of Engineering and Technology, London, United Kingdom in agreement with BSI. The Institution of Engineering and Technology is registered as a Charity in England & Wales (no. 211014) and Scotland (no. SC038698). The Institution of Engineering and Technology is the institution formed in 2006 by the joining together of the IEE (the Institution of Electrical Engineers) and the IIE (the Institution of Incorporated Engineers). British   Standards   Institution   is   the   independent   national   body   responsible   for",
+    "keywords": [],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 2
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-3",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 3,
+    "summary": "3 CONTENTS FOREWORD   4 INTRODUCTION TO AMENDMENT 1:2020   4 EDITIONS   5 PREFACE   5 NOTE BY THE HEALTH AND SAFETY EXECUTIVE   6 NOTES ON THE PLAN OF THE 18th EDITION   6",
+    "keywords": [],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 3
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-4",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 4,
+    "summary": "4 Foreword This British Standard is published under the direction of the British Electrotechnical Committee (BEC) and the Institution of Engineering and Technology (IET). Following a full review, this Standard replaced the 17th Edition of the IEE Wiring Regulations BS 7671:2008 as amended. Copyright is held jointly by the IET and BSI. Technical authority for this Standard is vested in the Joint IET/BSI Technical Committee JPEL/64. This Joint Technical Committee, which is responsible for the work previously undertaken by the IEE Wiring Regulations",
+    "keywords": [
+      "consumer_unit",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 4
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-5",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 5,
+    "summary": "5 Editions EIGHTEENTH EDITION   BS 7671:2018 issued, July 2018. (Blue Cover) Amendment 1 issued, February 2020 (electronic) Preface BS 7671 Requirements for Electrical Installations takes account of the technical substance of agreements reached in CENELEC. In particular, the technical intent of the following CENELEC Harmonization Document is included:",
+    "keywords": [],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 5
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-6",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 6,
+    "summary": "6 Note by the Health and Safety Executive The Health and Safety Executive (HSE) welcomes the publication of BS 7671:2018, Requirements for Electrical Installations, IET Wiring Regulations 18th Edition and its updating with the first amendment, published in 2020. BS 7671 and the IET/IEE Wiring Regulations have been extensively referred to in HSE guidance over the years. Installations which conform to the standards laid down in BS 7671:2018+A1:2020 are regarded by HSE as likely to achieve conformity with the relevant parts of the Electricity at Work Regulations 1989. Existing installations may have been designed and installed to conform to the standards set by earlier editions of BS 7671 or the",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 6
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-7",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 7,
+    "summary": "7 Part 2 DEFINITIONS Electric vehicle (EV), {722}.   Any vehicle propelled by an electric motor drawing current from a rechargeable storage battery or from other portable energy storage devices (rechargeable, using energy from a source off the vehicle such as a residential or public electricity service), which is manufactured primarily for use on public streets, roads or highways. •   Charging equipment.   An assembly including one or more charging points.",
+    "keywords": [
+      "consumer_unit",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 7
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-8",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 8,
+    "summary": "8 Symbol   Meaning   Example I L1   , I L2 and I L3 are the rms values of current (in amperes) in lines 1, 2 and 3, respectively, that were used when determining the value of I m A722.1",
+    "keywords": [
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 8
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-9",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 9,
+    "summary": "9 PART 7 SPECIAL INSTALLATIONS OR LOCATIONS CONTENTS 700   GENERAL 722   ELECTRIC VEHICLE CHARGING INSTALLATIONS SECTION 700 GENERAL",
+    "keywords": [
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 9
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-10",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 10,
+    "summary": "10 722.4   Protection for safety 722.41   Protection against electric shock 722.410.3   General requirements 722.410.3.5   The protective measures of obstacles and placing out of reach (Section 417) shall not be used. 722.410.3.6   The protective measures of non-conducting location (Regulation 418.1) and earth-free local equipotential bonding (Regulation 418.2) shall not be used. 722.411.4   TN system",
+    "keywords": [
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 10
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-11",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 11,
+    "summary": "11 Protective conductors and exposed-conductive-parts downstream of a protective device provided for the purposes of (iii), (iv) and (v) shall have no connection to: (a)   any protective conductors or exposed-conductive-parts of any circuit not protected by the same protective device; or (b)   any extraneous-conductive-part. NOTE 6 :   Creating a TT earthing system for charging equipment or the whole installation as an alternative to using a PME earthing facility with one of methods (i) to (v) above may not be an appropriate",
+    "keywords": [
+      "consumer_unit",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 11
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-12",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 12,
+    "summary": "12 Except where provided by the EV charging equipment, protection against DC fault currents shall be provided by: (i)   an RCD Type B, or (ii)   an RCD Type A or Type F in conjunction with a residual direct current detecting device (RDC-DD) complying with BS IEC 62955 as appropriate to the nature of the residual and superimposed currents and recommendation of the manufacturer of the charging equipment. RCDs shall comply with one of the following standards: BS EN 61008-1, BS EN 61009-1, BS EN 60947-2 or BS EN 62423.",
+    "keywords": [
+      "consumer_unit",
+      "protective_devices",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 12
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-13",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 13,
+    "summary": "13 ANNEX A722 (Informative) GUIDANCE FOR TN SYSTEMS WHERE PME CONDITIONS APPLY A722.1   Neutral current of a three-phase installation Where the power factors of the currents in all three phases are similar and triple harmonics can be neglected, it may be assumed that the neutral current of a three-phase installation is given by: NOTE:   The maximum neutral current (I m ) occurs under conditions of maximum imbalance, not necessarily maximum overall demand.",
+    "keywords": [
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 13
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-14",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 14,
+    "summary": "14 Applying Clauses 9.6.1 and 9.6.2 of BS 7430:2011+A1:2015, in conditions where only buried exposed- and/or extraneous-conductive-parts equivalent to vertical and horizontal earth electrodes are being considered, a separation distance of at least 8 m reduces the voltage transfer from the PME earthing system to less than 20 % and, in these conditions, the voltage operated device should be arranged to operate at 56 V. It is recommended that the minimum separation distance is 2 m, and at this separation distance the device should be arranged to operate at 40 V. Where other types of earth electrodes are used, separation distances should be increased, or the operating voltage",
+    "keywords": [
+      "consumer_unit",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 14
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-15",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 15,
+    "summary": "15 APPENDIX 1 (Normative) BRITISH STANDARDS TO WHICH REFERENCE IS MADE IN THIS STANDARD NOTE:   Certain British Standards have been withdrawn since the issue of the previous Edition. From the date of withdrawal, certificates and marks already awarded may continue to apply to production until a date specified in the superseding standard. During the period between these dates, the withdrawn standard may be specified in contracts. However, it should be noted that this appendix may not list such standards, as only current British Standards are listed with some",
+    "keywords": [
+      "consumer_unit",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 15
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-16",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 16,
+    "summary": "16 P Protective multiple earthing (PME) - -   electric vehicle charging installations   722.411.4.1 R Residual current devices (RCDs) - -   electric vehicle charging points   722.531.3.101",
+    "keywords": [
+      "consumer_unit",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 16
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-17",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 17,
+    "summary": "BRITISH STANDARD Requirements for Electrical Installations IET Wiring Regulations Eighteenth Edition © The Institution of Engineering and Technology and BSI NO COPYING IN ANY FORM WITHOUT WRITTEN PERMISSION BS 7671:2018",
+    "keywords": [],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 17
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-18",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 18,
+    "summary": "BS   7671:2018+A1:2020   ‐   Corrigendum   (May   2020) Please   note   the   following   corrections SUMMARY   OF   CORRECTIONS No.   Page   Location   Issue 1   10   722.411.4.1   NOTE   5   applies   equally   to   (iii),   (iv)   and   (v)   and,   therefore, should   not   be   indented   under   (v). 2   11   722.511.101   The   text   should   not   be   emboldened. 3   11   722.512.2.203   Impact   severity   AG3   should   be   high .",
+    "keywords": [],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 18
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-19",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 19,
+    "summary": "10 722.4   Protection for safety 722.41   Protection against electric shock 722.410.3   General requirements 722.410.3.5   The protective measures of obstacles and placing out of reach (Section 417) shall not be used. 722.410.3.6   The protective measures of non-conducting location (Regulation 418.1) and earth-free local equipotential bonding (Regulation 418.2) shall not be used. 722.411.4   TN system",
+    "keywords": [
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 19
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-20",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 20,
+    "summary": "11 Protective conductors and exposed-conductive-parts downstream of a protective device provided for the purposes of (iii), (iv) and (v) shall have no connection to: (a)   any protective conductors or exposed-conductive-parts of any circuit not protected by the same protective device; or (b)   any extraneous-conductive-part. NOTE 6 :   Creating a TT earthing system for charging equipment or the whole installation as an alternative to using a PME earthing facility with one of methods (i) to (v) above may not be an appropriate",
+    "keywords": [
+      "consumer_unit",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 20
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-21",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 21,
+    "summary": "13 ANNEX A722 (Informative) GUIDANCE FOR TN SYSTEMS WHERE PME CONDITIONS APPLY A722.1   Neutral current of a three-phase installation Where the power factors of the currents in all three phases are similar and triple harmonics can be neglected, it may be assumed that the neutral current of a three-phase installation is given by: NOTE:   The maximum neutral current (Im) occurs under conditions of maximum imbalance, not necessarily maximum overall demand.",
+    "keywords": [
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 21
+    }
+  },
+  {
+    "id": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only:page-22",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "page": 22,
+    "summary": "16 P Protective multiple earthing (PME) - -   electric vehicle charging installations   722.411.4.1 R Residual current devices (RCDs) - -   electric vehicle charging points   722.531.3.101",
+    "keywords": [
+      "consumer_unit",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only",
+      "page": 22
+    }
+  }
+]

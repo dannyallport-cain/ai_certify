@@ -1,0 +1,43 @@
+[
+  {
+    "id": "inspection-labeling-review:18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+    "sourceDocumentId": "18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "18th edition IET wiring regulations. Electric wiring for domestic installers ( PDFDrive )"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+    "sourceDocumentId": "18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "18th edition IET wiring regulations. Electric wiring for domestic installers ( PDFDrive )"
+      }
+    ]
+  }
+]

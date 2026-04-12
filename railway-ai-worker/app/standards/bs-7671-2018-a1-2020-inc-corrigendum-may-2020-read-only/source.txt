@@ -1,0 +1,978 @@
+BRITISH STANDARD
+Requirements for
+Electrical Installations
+IET Wiring Regulations
+Eighteenth Edition
+© The Institution of Engineering and Technology and BSI
+NO COPYING IN ANY FORM WITHOUT WRITTEN PERMISSION
+BS 7671:2018
+Amendment   1:2020
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+Publication Information
+Published by the Institution of Engineering and Technology, London, United Kingdom in agreement with BSI.
+The Institution of Engineering and Technology is registered as a Charity in England & Wales (no. 211014) and
+Scotland (no. SC038698).
+The Institution of Engineering and Technology is the institution formed in 2006 by
+the joining together of the IEE (the Institution of Electrical Engineers) and the IIE
+(the Institution of Incorporated Engineers).
+British   Standards   Institution   is   the   independent   national   body   responsible   for
+preparing British Standards. It presents the UK view on standards in Europe and at
+the international level. It is incorporated by Royal Charter.
+© 2008, 2011, 2013, 2015, 2018, 2020 the Institution of Engineering and Technology and BSI
+This British Standard was published under the joint authority of the IET and of the Standards Policy and Strategy
+Committee on 1 July 2018.
+This publication is copyright under the Berne Convention and the Universal Copyright Convention. All rights
+reserved. Apart from any fair dealing for the purposes of research or private study, or criticism or review, as permitted
+under the Copyright, Designs and Patents Act 1988 this publication may be reproduced, stored or transmitted, in
+any form or by any means, only with the prior permission in writing of the publishers, or in the case of reprographic
+reproduction in accordance with the terms of licences issued by the Copyright Licensing Agency. Enquiries
+concerning reproduction outside those terms should be sent to the publishers at The Institution of Engineering and
+Technology, Michael Faraday House, Six Hills Way, Stevenage, SG1 2AY, United Kingdom
+While the publisher and contributors believe that the information and guidance given in this work is correct, all
+parties must rely upon their own skill and judgement when making use of it. The publisher and contributors do not
+assume any liability to anyone for any loss or damage caused by any error or omission in the work, whether such
+error or omission is the result of negligence or any other cause. Any and all such liability is disclaimed.
+The UK participation in its preparation was entrusted to Joint Technical Committee JPEL/64 Electrical Installations.
+A list of organizations represented on this committee can be obtained on request to its secretary.
+This publication does not purport to include all the necessary provisions of a contract. Users are responsible for its
+correct application. Compliance with a British Standard cannot confer immunity from legal obligations.
+The   IET   is   taking   the   issues   found   with   dangerous   counterfeits   of   its   titles   very   seriously.   For
+information   on   counterfeits,   the   hologram   and   how   to   identify   genuine   IET   publications,   visit   :
+https://electrical.theiet.org/bs-7671/fake-awareness/
+It is the constant aim of the IET and BSI to improve the quality of our products and services. We should be grateful
+if anyone finding an inaccuracy or ambiguity while using this British Standard would inform the Secretary,
+G D Cronshaw {gcronshaw@theiet.org}, The IET, Six Hills Way, Stevenage, SG1 2AY, United Kingdom.
+ISBN   978-1-83953-193-4 (electronic)
+ISBN 978-1-83953-194-1 (VBID)
+Typeset in the UK by the Institution of Engineering and Technology, Stevenage
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+3
+CONTENTS
+FOREWORD   4
+INTRODUCTION TO AMENDMENT 1:2020   4
+EDITIONS   5
+PREFACE   5
+NOTE BY THE HEALTH AND SAFETY EXECUTIVE   6
+NOTES ON THE PLAN OF THE 18th EDITION   6
+PART 2 DEFINITIONS   7
+SYMBOLS USED IN THE STANDARD   8
+PART 7 SPECIAL INSTALLATIONS OR LOCATIONS   9
+SECTION 700 GENERAL   9
+SECTION 722 ELECTRIC VEHICLE CHARGING INSTALLATIONS   9
+ANNEX A722 GUIDANCE FOR TN SYSTEMS WHERE PME CONDITIONS APPLY   13
+APPENDIX 1 (Normative) BRITISH STANDARDS TO WHICH
+REFERENCE IS MADE IN THIS STANDARD   15
+INDEX   16
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+4
+Foreword
+This British Standard is published under the direction of the British Electrotechnical Committee (BEC) and
+the Institution of Engineering and Technology (IET).
+Following a full review, this Standard replaced the 17th Edition of the IEE Wiring Regulations BS 7671:2008
+as amended. Copyright is held jointly by the IET and BSI.
+Technical authority for this Standard is vested in the Joint IET/BSI Technical Committee JPEL/64. This Joint
+Technical Committee, which is responsible for the work previously undertaken by the IEE Wiring Regulations
+Committee and the BSI Technical Committee PEL/64, meets the constitutional and operational requirements of both
+parent bodies. JPEL/64 has the responsibility for the content of this British Standard under the joint authority of
+the IET and the BSI Standards Board.
+All references in this text to the Wiring Regulations or the Regulation(s), where not otherwise specifically
+identified, shall be taken to refer to BS 7671:2018 Requirements for Electrical Installations as amended by
+Amendment 1, 2020.
+Additions or alterations to regulations owing to the issue of BS 7671:2018 are indicated by a side bar in the margin.
+Introduction to Amendment 1:2020
+Amendment 1:2020 to BS 7671:2018 Requirements for Electrical Installations was issued on 1st February 2020
+and may be implemented immediately. Electrical installations falling within the scope of Section 722, the erection
+of which is commenced after 31st July 2020, are to comply with BS 7671:2018 incorporating Amendment 1:2020.
+Amendment 1:2020 amends Section 722 Electric Vehicle Charging Installations.
+Part 2
+Definitions relating to Section 722 have been included.
+Section 700 General
+This overarching section explains the need for Part 7.
+Section 722
+Electric vehicle charging installations, Section 722 amended, based on HD 60364-7-722:2018.
+Section 722 applies to electric vehicle charging installations. It modifies the general requirements for protection
+against electric shock, and includes specific requirements with regard to PME systems, socket-outlets and connectors,
+external influences, isolation and switching and RCD protection.
+Regulation 722.411.4.1 adds indent (iv) which adds an alternative solution requirement for charging installations.
+The requirements of this section do not apply to wireless charging, such as inductive charging.
+Appendix 1
+References to British Standards for Section 722 have been included.
+Index
+Entries for Section 722 have been included.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+5
+Editions
+EIGHTEENTH EDITION   BS 7671:2018 issued, July 2018. (Blue Cover)
+Amendment 1 issued, February 2020 (electronic)
+Preface
+BS 7671 Requirements for Electrical Installations takes account of the technical substance of agreements
+reached in CENELEC. In particular, the technical intent of the following CENELEC Harmonization Document is
+included:
+CENELEC HD   Year   Document reference   BS 7671
+HD 60364-7-722   2018   Supplies for electric vehicles   Section 722
+Where the above document contains UK special national conditions, those conditions have been incorporated within
+BS 7671. If BS 7671 is applied in other countries the above document should be consulted to confirm the status of
+a particular regulation.
+BS 7671 will continue to be amended from time to time to take account of the publication of new or amended
+CENELEC and IEC standards. The opportunity has been taken to revise regulations that experience has shown
+require clarification or to allow for new technology and methods.
+Reference is made throughout BS 7671 to publications of the British Standards Institution, both specifications and
+codes of practice. Appendix 1 lists these publications and gives their full titles whereas throughout BS 7671 they
+are referred to only by their numbers.
+Where reference is made in BS 7671 to a British Standard which takes account of a CENELEC Harmonization
+Document, European Norm (EN) or IEC standard, it is understood that the reference also relates to any European
+national standard similarly derived from the CENELEC standard, although account needs to be taken of any national
+exemptions.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+6
+Note by the Health and Safety Executive
+The Health and Safety Executive (HSE) welcomes the publication of BS 7671:2018, Requirements for Electrical
+Installations, IET Wiring Regulations 18th Edition and its updating with the first amendment, published in 2020.
+BS 7671 and the IET/IEE Wiring Regulations have been extensively referred to in HSE guidance over the years.
+Installations which conform to the standards laid down in BS 7671:2018+A1:2020 are regarded by HSE as likely
+to achieve conformity with the relevant parts of the Electricity at Work Regulations 1989. Existing installations
+may have been designed and installed to conform to the standards set by earlier editions of BS 7671 or the
+IET/IEE Wiring Regulations. This does not mean that they will fail to achieve conformity with the relevant parts of
+the Electricity at Work Regulations 1989.
+Notes on the plan of the 18th Edition
+This Edition is based on the plan agreed internationally for the arrangement of safety rules for electrical installations.
+The regulation numbering follows the pattern and corresponding references of IEC 60364. The numbering does
+not, therefore, necessarily follow sequentially. The numbering system used in Part 7 is explained in Section 700.
+In the numbering system used, the first digit signifies a Part, the second digit a Chapter, the third digit a Section and
+the subsequent digits the Regulation number. For example, Section number 413 is made up as follows:
+PART 4 - PROTECTION FOR SAFETY
+Chapter 41 (first chapter of Part 4) - PROTECTION AGAINST ELECTRIC SHOCK
+Section 413 (third section of Chapter 41) - PROTECTIVE MEASURE: ELECTRICAL   SEPARATION
+Part 1   sets out the scope, object and fundamental principles.
+Part 2   defines the sense in which certain terms are used throughout the Regulations, and provides a list of
+symbols used and a list of abbreviations used in the Standard.
+The subjects of the subsequent parts are as indicated below:
+Part   Subject
+Part 3   Identification of the characteristics of the installation that will need to be taken into account in
+choosing and applying the requirements of the subsequent Parts. These characteristics may vary
+from one part of an installation to another and should be assessed for each location to be served by
+the installation.
+Part 4   Description of the measures that are available for the protection of persons, livestock and property,
+and against the hazards that may arise from the use of electricity.
+Part 5   Precautions to be taken in the selection and erection of the equipment of the installation.
+Part 6   Inspection and testing.
+Part 7   Special installations or locations - particular requirements.
+The sequence of the plan should be followed in considering the application of any particular requirement of the
+Regulations. The general index provides a ready reference to particular regulations by subject, but in applying any
+one regulation the requirements of related regulations should be borne in mind. Cross-references are provided, and
+the index is arranged to facilitate this.
+In many cases, a group of associated regulations is covered by a side heading which is identified by a two-part
+number, e.g. 544.2. Throughout the Regulations where reference is made to such a two-part number, that reference
+is to be taken to include all the individual regulation numbers which are covered by that side heading and include
+that two-part number.
+The Regulations use the IEC decimal point numbering system to make it easier to embody future changes and
+additions resulting from ongoing international standards work within IEC and CENELEC. In order to identify and
+accommodate future IEC changes some regulations carry either a 100 or 200 number where 100 numbers represent
+CENELEC Harmonization Document reference numbers and 200 numbers represent UK-only regulations. Some
+regulations have not been 'updated' to indicate 100 and 200 numbers; that will only be done when those regulations
+require a significant rewrite.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+7
+Part 2
+DEFINITIONS
+Electric vehicle (EV), {722}.   Any vehicle propelled by an electric motor drawing current from a rechargeable
+storage battery or from other portable energy storage devices (rechargeable, using energy from a source off the
+vehicle such as a residential or public electricity service), which is manufactured primarily for use on public streets,
+roads or highways.
+•   Charging equipment.   An assembly including one or more charging points.
+•   Electric vehicle charging point.   The point where the electric vehicle is connected to the fixed installation.
+NOTE:   The charging point is a socket-outlet where the charging cable belongs to the vehicle, or a connector, where
+the charging cable is a fixed part of the electric vehicle supply equipment.
+•   Mode 1 charging.   Connection of the EV to the AC supply network utilizing standardized socket-outlets
+not exceeding 16 A and not exceeding 250 V AC single-phase or 480 V AC three-phase, at the supply side,
+and utilizing the power and protective earth conductors (according to BS EN 61851-1).
+•   Mode 2 charging.   Connection of the EV to the AC supply network utilizing standardized socket-outlets
+not exceeding 32 A and not exceeding 250 V AC single-phase or 480 V AC three-phase, at the supply side,
+and utilizing the power and protective earth conductors together with a control pilot function and system
+of personnel protection against electric shock (RCD) between the EV and the plug or as part of the in-cable
+control box.
+•   Mode 3 charging.   Connection of the EV to the AC supply network utilizing dedicated electric vehicle
+supply equipment where the control pilot function extends to control equipment in the electric vehicle
+supply equipment, permanently connected to the AC supply network.
+•   Mode 4 charging.   Connection of the EV to the AC supply network utilizing an off-board charger where
+the control pilot function extends to equipment permanently connected to the AC supply.
+•   Vehicle connector.   Part of a vehicle coupler integral with, or intended to be attached to, the flexible cable
+connected to the AC supply network (mains).
+•   Vehicle coupler.   Means of enabling the manual connection of a flexible cable to an EV for the purpose
+of charging.
+NOTE:   A vehicle coupler consists of two parts: a vehicle connector and a vehicle inlet.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+8
+Symbol   Meaning   Example
+I L1   , I L2
+and I L3
+are the rms values of current (in amperes) in lines
+1, 2 and 3, respectively, that were used when
+determining the value of I m
+A722.1
+R A ev   is the sum of the resistances of the earth
+electrode and the protective conductor
+connecting it to the main earthing terminal
+of the installation (in ohms)
+A722.3
+Symbol   Meaning   Example
+C max   is the maximum voltage factor to take account of
+voltage variations depending on time and place,
+changing of transformer taps and other
+considerations. For a low voltage supply given in
+accordance with the ESQCR, C max   is given the
+value 1.1
+A722.2
+I inst   is the rms maximum demand current of a
+single-phase installation (in amperes), including
+that of the electric vehicle charging load and
+any other loads, determined in accordance with
+Regulation 311.1
+A722.3
+I m   is the rms maximum neutral current of a
+three-phase installation (in amperes), including
+that of the electric vehicle charging load and
+any other loads, determined in accordance with
+Regulation 311.1
+A722.1
+SYMBOLS USED IN THE STANDARD
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+9
+PART 7
+SPECIAL INSTALLATIONS OR LOCATIONS
+CONTENTS
+700   GENERAL
+722   ELECTRIC VEHICLE CHARGING INSTALLATIONS
+SECTION 700
+GENERAL
+The particular requirements for each section (special installation or location) in Part 7 supplement or modify the
+general requirements contained in other parts of BS 7671.
+The absence of reference to the exclusion of a part, a chapter, a section or a regulation means that the corresponding
+general regulations are applicable.
+The number appearing after a section number generally refers to the corresponding chapter, section or regulation
+within Parts 1 to 6. The numbering does not, therefore, necessarily follow sequentially and new numbers have been
+added as required. Numbering of figures and tables takes the number of the section followed by a sequential number.
+SECTION 722
+ELECTRIC VEHICLE CHARGING INSTALLATIONS
+NOTE:   Definitions relating to Section 722 can be found in Part 2 under electric vehicle (EV), {722}.
+722.1   Scope
+The particular requirements of this section apply to circuits intended to supply electric vehicles for charging purposes.
+The requirements of this section do not apply to electric vehicle charging points that:
+(i)   employ inductive charging
+(ii)   charge mobility scooters and similar vehicles of 10 A and less.
+722.3   Assessment of general characteristics
+722.31   Purposes, supplies and structure
+722.311   Maximum demand and diversity
+722.311.201   Load curtailment, including load reduction or disconnection, either automatically or manually, may
+be taken into account when determining maximum demand of the installation or part thereof.
+722.312   Conductor arrangement and system earthing
+722.312.2.1   TN systems
+A circuit supplying charging equipment for electric vehicles shall not include a PEN conductor.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+10
+722.4   Protection for safety
+722.41   Protection against electric shock
+722.410.3   General requirements
+722.410.3.5   The protective measures of obstacles and placing out of reach (Section 417) shall not be used.
+722.410.3.6   The protective measures of non-conducting location (Regulation 418.1) and earth-free local
+equipotential bonding (Regulation 418.2) shall not be used.
+722.411.4   TN system
+722.411.4.1   A PME earthing facility shall not be used as the means of earthing for the protective conductor
+contact of a charging point located outdoors or that might reasonably be expected to be used to charge a vehicle
+located outdoors unless one of the following methods is used:
+(i)   The charging point forms part of a three-phase installation that also supplies loads other than for electric
+vehicle charging and, because of the characteristics of the load of the installation, the maximum voltage
+between the main earthing terminal of the installation and Earth in the event of an open-circuit fault in the
+PEN conductor of the low voltage network supplying the installation does not exceed 70 V rms.
+NOTE 1:   Annex 722, item A722.2 gives some information relating to (i).
+NOTE 2:   See also Regulation 641.5 when undertaking an addition or alteration to an existing installation.
+(ii)   The main earthing terminal of the installation is connected to an installation earth electrode by a protective
+conductor complying with Regulation 544.1.1. The resistance of the earth electrode to Earth shall be such
+that the maximum voltage between the main earthing terminal of the installation and Earth in the event of
+an open-circuit fault in the PEN conductor of the low voltage network supplying the installation does not
+exceed 70 V rms.
+NOTE 3:   Annex 722, item A722.3 gives guidance on determining the maximum resistance required for the earth
+electrode in (ii).
+(iii)   Protection against electric shock is provided by a device which electrically disconnects the vehicle from
+the live conductors of the supply and from protective earth in accordance with Regulation 543.3.3.101(ii)
+within 5 s in the event of the voltage between the circuit protective conductor and Earth exceeding 70 V rms
+due to an open-circuit fault in the PEN conductor of the low voltage network. The device need not operate
+if the voltage exceeds 70 V rms for less than 4 s. The device shall provide isolation and be selected in
+accordance with Table 537.4. Closing or resetting of the device shall be possible only if the voltage between
+the circuit protective conductor and Earth does not exceed 70 V rms. Equivalent means of functionality
+could be included within the charging equipment.
+NOTE 4:   Annex 722, item A722.4 gives guidance on (iii).
+(iv)   Protection against electric shock in a single-phase installation is provided by a device which electrically
+disconnects the vehicle from the live conductors of the supply and from protective earth in accordance with
+Regulation 543.3.3.101(ii) within 5 s in the event of the utilisation voltage at the charging point, between
+the line and neutral conductors, being greater than 253 V rms or less than 207 V rms. The device shall
+provide isolation and be selected in accordance with Table 537.4. Equivalent means of functionality could
+be included within the charging equipment. Closing or resetting of the device shall be possible only if the
+voltage between line and neutral conductors is in the range 207 to 253 V rms.
+(v)   Protection against electric shock is provided by the use of an alternative device to those in (iii) or (iv) which
+does not result in a lesser degree of safety than using (iii) or (iv). Equivalent means of functionality could be
+included within the charging equipment. The device (or means of functionality) shall operate by electrically
+disconnecting the vehicle from the live conductors of the supply and from protective earth in accordance
+with Regulation 543.3.3.101(ii). It shall provide isolation and be selected in accordance with Table 537.4.
+NOTE 5:   See Section 511. BS 7671 does not deal with the safety requirements for the construction of electrical
+equipment. Where equipment to be used is not covered by a British or Harmonized Standard or is to be used
+outside the scope of its standard, it is the responsibility of the electrical installation designer or other person
+responsible for specifying the installation to establish that the manufacturer of the equipment has ensured that
+the equipment satisfies the safety objectives of the relevant Directive(s), as it will not benefit from a
+presumption of conformity afforded by the appropriate product standard.
+Where buried in the ground, a protective conductor connected to an earth electrode for the purposes of (ii) or (iii)
+shall have a cross-sectional area not less than that stated in Table 54.1.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+11
+Protective conductors and exposed-conductive-parts downstream of a protective device provided for the purposes
+of (iii), (iv) and (v) shall have no connection to:
+(a)   any protective conductors or exposed-conductive-parts of any circuit not protected by the same protective
+device; or
+(b)   any extraneous-conductive-part.
+NOTE 6 :   Creating a TT earthing system for charging equipment or the whole installation as an alternative to
+using a PME earthing facility with one of methods (i) to (v) above may not be an appropriate
+solution due to the inability to provide sufficient separation from buried metalwork connected to
+the supply PEN conductor
+722.413   Protective measure: Electrical separation
+722.413.1.2   This protective measure shall be limited to the supply of one electric vehicle supplied from
+one unearthed source. The circuit shall be supplied through a fixed isolating transformer complying with
+BS EN 61558-2-4.
+NOTE:   An example of an arrangement for the supply of a Class I electric vehicle charging point from a separated source is
+shown in Annex A722, Item A722.5.
+722.5   Selection and erection of equipment
+722.51   Common rules
+722.511   Compliance with standards
+722.511.1   Where an EV charging point is built into a low voltage switchgear or controlgear assembly the
+requirements of the relevant part of BS EN 61439 series shall apply.
+722.511.101   EV charging equipment shall comply with the appropriate parts of the BS EN 61851
+series.
+722.512   Operational   conditions   and   external   influences
+722.512.2   External   influences
+722.512.2.201   Presence of water (AD)
+Where installed outdoors, the equipment shall provide a degree of protection of at least IPX4.
+722.512.2.202   Presence of solid foreign bodies (AE)
+Where installed outdoors, the equipment shall provide a degree of protection of at least IP4X.
+722.512.2.203   Impact (AG)
+Equipment installed in public areas and car park sites shall be protected against mechanical damage (impact of
+medium severity AG3). Protection of the equipment shall be afforded by one or more of the following:
+-   the position or location shall be selected to avoid damage by any reasonably foreseeable impact
+-   local or general mechanical protection shall be provided
+-   equipment shall be installed that complies with a minimum degree of protection against external mechanical
+impact of IK08 in accordance with the requirements of BS EN 62262.
+722.53   Protection, isolation, switching, control and monitoring
+722.531   Devices for protection against electric shock by automatic disconnection of supply
+722.531.3   Residual current devices (RCDs)
+722.531.3.1   RCDs shall disconnect all live conductors.
+722.531.3.101   Unless supplied by a circuit using the protective measure of electrical separation, each charging
+point incorporating a socket-outlet or vehicle connector complying with the BS EN 62196 series shall be protected
+by an RCD having a rated residual operating current not exceeding 30 mA.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+12
+Except where provided by the EV charging equipment, protection against DC fault currents shall be provided by:
+(i)   an RCD Type B, or
+(ii)   an RCD Type A or Type F in conjunction with a residual direct current detecting device (RDC-DD)
+complying with BS IEC 62955 as appropriate to the nature of the residual and superimposed currents and
+recommendation of the manufacturer of the charging equipment.
+RCDs shall comply with one of the following standards: BS EN 61008-1, BS EN 61009-1, BS EN 60947-2 or
+BS EN 62423.
+NOTE 1:   Types of RCD are described in Regulation 531.3.3 in respect of their behaviour when exposed to DC components and
+frequencies.
+NOTE 2:   Requirements for the selection and erection of RCDs in the case of supplies using DC vehicle connectors according to
+the BS EN 62196 series are under consideration.
+NOTE 3:   An RCD Type A or Type F in conjunction with an RDC-DD can be arranged with the RDC-DD inside the EV charging
+equipment and the Type A or Type F RCD upstream in either the charging equipment or the installation.
+722.533   Devices for protection against overcurrent
+722.533.101   Each charging point shall be supplied individually by a final circuit protected by an overcurrent
+protective device complying with BS EN 60947-2, BS EN 60947-6-2 or BS EN 61009-1 or with the relevant parts
+of the BS EN 60898 series or the BS EN 60269 series.
+NOTE:   The electric vehicle charging equipment may have multiple charging points.
+722.55   Other equipment
+722.55.101   Socket-outlets and connectors
+722.55.101.0.201.1   Each AC charging point shall incorporate:
+(i)   one socket-outlet complying with BS 1363-2 marked ‘EV’ on its rear and, except where there is no possibility
+of confusion, a label shall be provided on the front face or adjacent to the socket-outlet or its enclosure
+stating: ‘suitable for electric vehicle charging’, or
+(ii)   one socket-outlet or connector complying with BS EN 60309-2 which is interlocked and classified to clause
+6.1.5 of BS EN 60309-1 to prevent the socket contacts being live when accessible, or
+(iii)   one socket-outlet or connector complying with BS EN 60309-2 which is part of an interlocked self-contained
+product complying with BS EN 60309-4 and classified to clauses 6.1.101 and 6.1.102 to prevent the socket
+contacts being live when accessible, or
+(iv)   one Type 1 vehicle connector complying with BS EN 62196-2 for use with mode 3 charging only, or
+(v)   one Type 2 socket-outlet or vehicle connector complying with BS EN 62196-2 for use with mode 3 charging
+only, or
+(vi)   one Type 3 socket-outlet or vehicle connector complying with BS EN 62196-2 for use with mode 3 charging
+only.
+NOTE:   Vehicle manufacturers' instructions should be taken into account when determining the type of socket-outlet to be
+installed.
+722.55.101.0.201.2   Each socket-outlet shall be installed in a distribution board in accordance with Regulation
+722.51 or in its appropriate enclosure (e.g. flush or surface mounted socket-outlet box) and mounted in a fixed
+position.
+Portable socket-outlets shall not be used but tethered vehicle connectors are permitted.
+722.55.101.3   One socket-outlet or vehicle connector shall supply only one electric vehicle.
+722.55.101.4   In EV charging modes 3 and 4, an electrical or mechanical system shall be provided to prevent the
+plugging/unplugging of the plug unless the socket-outlet or the vehicle connector has been switched off from the
+supply.
+722.55.101.6   Precautions   on   supply   of   the   fixed   installation   by   the   EV
+NOTE:   Requirements for precautions on supply of the fixed installation by the EV are under consideration.
+722.551.7.2   The socket-outlet or vehicle connector shall comply with BS EN 62196 series.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+13
+ANNEX A722 (Informative)
+GUIDANCE FOR TN SYSTEMS WHERE PME CONDITIONS APPLY
+A722.1   Neutral current of a three-phase installation
+Where the power factors of the currents in all three phases are similar and triple harmonics can be neglected, it may
+be assumed that the neutral current of a three-phase installation is given by:
+NOTE:   The maximum neutral current (I m ) occurs under conditions of maximum imbalance, not necessarily maximum overall
+demand.
+A722.2   Load balance
+Where triple harmonics can be neglected, condition (i) of Regulation 722.411.4.1 may be assumed to apply where
+the following condition is met. This formula should take account of C max   in line with PD CLC/TR 50480.
+A722.3   Earth electrode resistance
+For the purposes of condition (ii) of Regulation 722.411.4.1, the sum of the resistances of the earth electrode and the
+protective conductor connecting it to the main earthing terminal must meet the following condition, as applicable.
+For a single-phase installation:
+For a three-phase installation:
+NOTE 1:   The above three-phase formula for R A ev   is valid only where   . Where this is not the case,
+this indicates that condition (i) of Regulation 722.411.4.1 applies and that an earth electrode is not required for the
+purposes of condition (ii) of that regulation.
+NOTE 2:   The above currents and voltage are magnitudes only; they are not phasors.
+NOTE 3:   In determining I m , I L1 , I L2   and I L3 , allowance must be made for single-phase vehicles being charged from three-phase
+charging points.
+A722.4   Guidance on voltage monitoring device described in Regulation 722.411.4.1 (iii)
+Regulation 722.411.4.1 (iii) describes a device that measures the voltage between the circuit protective conductor
+of the electric vehicle charging equipment and Earth. During a PEN failure in the supply network, the neutral of a
+TN-C-S supply is no longer considered to be reliably connected to Earth, and a device that measures the voltages
+between the following points will fail to provide equivalent safety to the device described in Regulation 722.411.4
+(iii):
+(i)   the circuit protective conductor and neutral
+(ii)   the circuit protective conductor and the consumer’s main earthing terminal.
+Suitable arrangements include measurement of the voltage between either:
+(a)   the circuit protective conductor and a suitable measurement earth electrode, or
+(b)   the circuit protective conductor and a reference point derived from the line conductors of a three-phase
+system, provided that suitable precautions are also taken to disconnect the device when the supply to one or
+more-line conductors is interrupted.
+Where used, measurement earth electrodes should be located at a sufficient distance from other earth electrodes
+and/or other buried exposed-conductive-parts and/or extraneous-conductive-parts connected to the PME earthing
+terminal to reduce transfer of earth potential rise on the PME system during a PEN failure.
+70(Iu+I L 2+I L3 )
+Im
+>
+UoC max
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+14
+Applying Clauses 9.6.1 and 9.6.2 of BS 7430:2011+A1:2015, in conditions where only buried exposed- and/or
+extraneous-conductive-parts equivalent to vertical and horizontal earth electrodes are being considered, a separation
+distance of at least 8 m reduces the voltage transfer from the PME earthing system to less than 20 % and, in these
+conditions, the voltage operated device should be arranged to operate at 56 V.
+It is recommended that the minimum separation distance is 2 m, and at this separation distance the device should be
+arranged to operate at 40 V.
+Where other types of earth electrodes are used, separation distances should be increased, or the operating voltage
+decreased, accordingly, using the guidance in BS 7430.
+To protect a person touching the body of an electric vehicle, connected to the charging point, when an open-
+circuit fault occurs in the PEN conductor of the supply, an enhanced safety provision may be offered. This may
+be achieved by a device that provides shorter disconnection times, depending on the detected voltage between the
+circuit protective conductor and Earth but also taking into account the need to limit the risk of unwanted tripping.
+Examples of shorter disconnection times are shown in Table A722 below. These disconnection times are based on
+IEC Technical Report IEC TR 60479-5 and also on comparable requirements already included in Chapter 41 of
+BS 7671.
+TABLE A722 – Maximum disconnection times in relation to the voltage between the circuit
+protective conductor and Earth*
+70 V   100 V   200 V   400 V
+1 s   0.7 s   0.2 s   0.04 s
+*   Total voltage drop across the sensing element of the device and the earth electrode (if any) in series.
+A722.5   Example arrangement of a separated system described in Regulation 722.413
+An example arrangement of a separated system as described in Regulation 722.413 is shown in Figure A722.
+Isolating transformers may have high inrush currents, and overcurrent protective devices in the primary circuit
+should be selected accordingly to prevent nuisance-tripping.
+Fig A722 – Example of a separated system where protective conductor monitoring is required
+L
+N
+PC
+L
+Supply RCD
+Overcurrent
+protective
+device
+Overcurrent
+protective
+device
+30 mA RCD
+(Note 1)
+To electrical
+vehicle
+charging point
+(Note 2)
+TN-C-S
+(PM E)
+Supply
+N
+PE
+Key
+L   line conductor
+N   neutral conductor
+PE   protective earthing conductor
+PC   protective conductor
+NOTE 1:   The RCD on the secondary, complying with Regulation 722.531.3.101, should be placed as close as possible to the
+transformer.
+NOTE 2:   Only one charging point may be supplied by each transformer, see Regulation 722.413.1.2.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+15
+APPENDIX 1 (Normative)
+BRITISH STANDARDS TO WHICH REFERENCE IS MADE IN THIS
+STANDARD
+NOTE:   Certain British Standards have been withdrawn since the issue of the previous Edition. From the date of withdrawal,
+certificates and marks already awarded may continue to apply to production until a date specified in the superseding
+standard. During the period between these dates, the withdrawn standard may be specified in contracts. However, it
+should be noted that this appendix may not list such standards, as only current British Standards are listed with some
+references to superseded standards. Where standards are not dated they are a multiple standard.
+BS or EN Number   Title   References
+BS 1363-2   Specification for 13 A switched and unswitched
+socket-outlets
+722.55.101.0.201.1(i)
+BS 7430:2011+A1:2015   Code of practice for protective earthing of electrical
+installations
+A722.4
+BS EN 60269 series   Low-voltage fuses   722.533.101
+BS EN 60309-1   Plugs, socket-outlets and couplers for industrial purposes –
+General requirements
+722.55.101.0.201.1(ii)
+BS EN 60309-2   Plugs, socket-outlets and couplers for industrial purposes –
+Dimensional interchangeability requirements for pin and
+contact-tube accessories
+722.55.101.0.201.1(ii)
+722.55.101.0.201.1(iii)
+BS EN 60309-4   Plugs, socket-outlets and couplers for industrial purposes – Switched
+socket-outlets and connectors, with or without interlock
+722.55.101.0.201.1(iii)
+BS EN 60898 series   Specification for circuit-breakers for overcurrent protection for house -
+hold and similar installations
+722.533.101
+BS EN 60947-2   Low-voltage switchgear and control gear – Circuit-breakers   722.531.3.101
+722.533.101
+BS EN 60947-6-2   Multiple function equipment – Control and protective switching
+devices (or equipment) (CPS)
+722.533.101
+BS EN 61008-1   Residual current operated circuit-breakers without integral
+overcurrent protection for household and similar uses
+(RCCBs) General rules
+722.531.3.101
+BS EN 61009-1   Electrical accessories. Residual current operated
+circuit-breakers with integral overcurrent protection for
+household and similar uses (RCBOs) General rules
+Supercedes BS EN 61001:2004+A14:2012 but remains current
+722.531.3.101
+722.533.101
+BS EN 61439 series   Low-voltage switchgear and controlgear assemblies
+General rules (see also BS EN 60439)
+722.511.1
+BS EN 61558-2-4   Safety of transformers, reactors, power supply units and similar prod -
+ucts for supply voltages up to 1100 V.
+Particular requirements and tests for isolating transformers and power
+supply units incorporating isolating
+transformers
+722.413.1.2
+BS EN 61851 series   Electric vehicle conductive charging system. General
+requirements
+Current but partially replaced with BS EN 62752:2016
+722.511.101
+BS EN 62196
+BS EN 62196-2
+Plugs, socket-outlets, vehicle connectors and vehicle inlets.
+Conductive charging of electric vehicles.
+Dimensional compatibility and interchangeability
+requirements for a.c. pin and contact-tube accessories
+722.531.3.101 NOTE 2
+722.551.7.2
+722.55.101.0.201.1(iv)
+722.55.101.0.201.1(v)
+722.55.101.0.201.1(vi)
+BS EN 62262   Degrees of protection provided by enclosures for electrical
+equipment against external mechanical impacts (IK code)
+722.512.2.203
+BS EN 62423   Type F and type B residual current operated
+circuit-breakers with and without integral overcurrent
+protection for household and similar uses
+722.531.3.101
+BS IEC 62955   Residual direct current detecting device (RDC-DD) to be used for
+mode 3 charging of electric vehicles
+722.531.3.101(ii)
+PD CLC/TR 50480   Determination of cross-sectional area of conductors and selection of
+protective devices
+A722.2
+IEC TR 60479-5   Effects of current on human beings and livestock –. Part 5: Touch
+voltage threshold values for physiological effects
+A722.4
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+16
+P
+Protective multiple earthing (PME) -
+-   electric vehicle charging
+installations   722.411.4.1
+R
+Residual current devices (RCDs) -
+-   electric vehicle charging points   722.531.3.101
+S
+Socket-outlets -
+-   electric vehicle charging   722.551.7.2
+E
+Electric vehicle (EV), definition   Part 2
+Electric vehicle charging installations
+-   Sec 722
+-   application, scope of   722.1
+-   charging point outdoors, IP rating   722.512.2.201
+-   connectors   722.55.101
+-   dedicated final circuit required   722.311
+-   definitions relating to   Part 2 EV
+-   electrical separation, limitation on
+use of   722.413.1.2
+-   external influences   722.512.2
+-   load curtailment   722.311.201
+-   maximum demand   722.311
+-   overcurrent protection   722.533.101
+-   protective measures not permitted   722.410.3.5 & 6
+-   RCDs   722.531.3
+-   RDC-DD   722.531.3.101
+-   selection and erection   722.5
+-   socket-outlets for   722.55.101
+-   TN system -   722.411.4
+-   PEN conductor prohibited in final
+circuit   722.312.2.1
+INDEX
+The following entries are pertinent to Section 722:
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+BRITISH STANDARD
+Requirements for
+Electrical Installations
+IET Wiring Regulations
+Eighteenth Edition
+© The Institution of Engineering and Technology and BSI
+NO COPYING IN ANY FORM WITHOUT WRITTEN PERMISSION
+BS 7671:2018
+Amendment 1:2020
+Corrigendum   May   2020
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+BS   7671:2018+A1:2020   ‐   Corrigendum   (May   2020)
+Please   note   the   following   corrections
+SUMMARY   OF   CORRECTIONS
+No.   Page   Location   Issue
+1   10   722.411.4.1   NOTE   5   applies   equally   to   (iii),   (iv)   and   (v)   and,   therefore,
+should   not   be   indented   under   (v).
+2   11   722.511.101   The   text   should   not   be   emboldened.
+3   11   722.512.2.203   Impact   severity   AG3   should   be   high .
+4   13   A722.1   Incorrect   equation.
+5   13   A722. 4   Incorrect   Regulation   number,   722.411.4   (iii)   changed   to
+722.411.4.1   (iii).
+6   16   Index   Incorrect   Regulation   number,   722.311   changed   to   722.533.101
+7   16   Index   Addition   of   an   entry   to   the   Index.
+8   16   Index   Incorrect   Regulation   number,   722.551.7.2   changed   to
+722.55.101
+The   corrections   are   shown   in   red   on   the   following   pages.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+10
+722.4   Protection for safety
+722.41   Protection against electric shock
+722.410.3   General requirements
+722.410.3.5   The protective measures of obstacles and placing out of reach (Section 417) shall not be used.
+722.410.3.6   The protective measures of non-conducting location (Regulation 418.1) and earth-free local
+equipotential bonding (Regulation 418.2) shall not be used.
+722.411.4   TN system
+722.411.4.1   A PME earthing facility shall not be used as the means of earthing for the protective conductor
+contact of a charging point located outdoors or that might reasonably be expected to be used to charge a vehicle
+located outdoors unless one of the following methods is used:
+(i)   The charging point forms part of a three-phase installation that also supplies loads other than for electric
+vehicle charging and, because of the characteristics of the load of the installation, the maximum voltage
+between the main earthing terminal of the installation and Earth in the event of an open-circuit fault in the
+PEN conductor of the low voltage network supplying the installation does not exceed 70 V rms.
+NOTE 1:   Annex 722, item A722.2 gives some information relating to (i).
+NOTE 2:   See also Regulation 641.5 when undertaking an addition or alteration to an existing installation.
+(ii)   The main earthing terminal of the installation is connected to an installation earth electrode by a protective
+conductor complying with Regulation 544.1.1. The resistance of the earth electrode to Earth shall be such
+that the maximum voltage between the main earthing terminal of the installation and Earth in the event of
+an open-circuit fault in the PEN conductor of the low voltage network supplying the installation does not
+exceed 70 V rms.
+NOTE 3:   Annex 722, item A722.3 gives guidance on determining the maximum resistance required for the earth
+electrode in (ii).
+(iii)   Protection against electric shock is provided by a device which electrically disconnects the vehicle from
+the live conductors of the supply and from protective earth in accordance with Regulation 543.3.3.101(ii)
+within 5 s in the event of the voltage between the circuit protective conductor and Earth exceeding 70 V rms
+due to an open-circuit fault in the PEN conductor of the low voltage network. The device need not operate
+if the voltage exceeds 70 V rms for less than 4 s. The device shall provide isolation and be selected in
+accordance with Table 537.4. Closing or resetting of the device shall be possible only if the voltage between
+the circuit protective conductor and Earth does not exceed 70 V rms. Equivalent means of functionality
+could be included within the charging equipment.   See NOTE 5.
+NOTE 4:   Annex 722, item A722.4 gives guidance on (iii).
+(iv)   Protection against electric shock in a single-phase installation is provided by a device which electrically
+disconnects the vehicle from the live conductors of the supply and from protective earth in accordance with
+Regulation 543.3.3.101(ii) within 5 s in the event of the utilisation voltage at the charging point, between
+the line and neutral conductors, being greater than 253 V rms or less than 207 V rms. The device shall
+provide isolation and be selected in accordance with Table 537.4. Equivalent means of functionality could
+be included within the charging equipment. Closing or resetting of the device shall be possible only if the
+voltage between line and neutral conductors is in the range 207 to 253 V rms.   See NOTE 5.
+(v)   Protection against electric shock is provided by the use of an alternative device to those in (iii) or (iv) which does
+not result in a lesser degree of safety than using (iii) or (iv). Equivalent means of functionality could be included
+within the charging equipment. The device (or means of functionality) shall operate by electrically disconnecting
+the vehicle from the live conductors of the supply and from protective earth in accordance with Regulation
+543.3.3.101(ii). It shall provide isolation and be selected in accordance with Table 537.4.   See NOTE 5.
+NOTE 5:   See Section 511. BS 7671 does not deal with the safety requirements for the construction of electrical
+equipment. Where equipment to be used is not covered by a British or Harmonized Standard or is to be used
+outside the scope of its standard, it is the responsibility of the electrical installation designer or other person
+responsible for specifying the installation to establish that the manufacturer of the equipment has ensured that
+the equipment satisfies the safety objectives of the relevant Directive(s), as it will not benefit from a
+presumption of conformity afforded by the appropriate product standard.
+NOTE 5:   See Section 511. BS 7671 does not deal with the safety requirements for the construction of electrical equipment.
+Where equipment to be used is not covered by a British or Harmonized Standard or is to be used   outside the
+scope of its standard, it is the responsibility of the electrical installation designer or other person   responsible for
+specifying the installation to establish that the manufacturer of the equipment has ensured that   the equipment
+satisfies the safety objectives of the relevant Directive(s), as it will not benefit from a   presumption of conformity
+afforded by the appropriate product standard.
+Where buried in the ground, a protective conductor connected to an earth electrode for the purposes of (ii) or (iii)
+shall have a cross-sectional area not less than that stated in Table 54.1.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+11
+Protective conductors and exposed-conductive-parts downstream of a protective device provided for the purposes
+of (iii), (iv) and (v) shall have no connection to:
+(a)   any protective conductors or exposed-conductive-parts of any circuit not protected by the same protective
+device; or
+(b)   any extraneous-conductive-part.
+NOTE 6 :   Creating a TT earthing system for charging equipment or the whole installation as an alternative to
+using a PME earthing facility with one of methods (i) to (v) above may not be an appropriate
+solution due to the inability to provide sufficient separation from buried metalwork connected to
+the supply PEN conductor
+722.413   Protective measure: Electrical separation
+722.413.1.2   This protective measure shall be limited to the supply of one electric vehicle supplied from
+one unearthed source. The circuit shall be supplied through a fixed isolating transformer complying with
+BS EN 61558-2-4.
+NOTE:   An example of an arrangement for the supply of a Class I electric vehicle charging point from a separated source is
+shown in Annex A722, Item A722.5.
+722.5   Selection and erection of equipment
+722.51   Common rules
+722.511   Compliance with standards
+722.511.1   Where an EV charging point is built into a low voltage switchgear or controlgear assembly the
+requirements of the relevant part of BS EN 61439 series shall apply.
+722.511.101   EV charging equipment shall comply with the appropriate parts of the BS EN 61851
+series.   EV charging equipment shall comply with the appropriate parts of the BS EN 61851 series.
+722.512   Operational   conditions   and   external   influences
+722.512.2   External   influences
+722.512.2.201   Presence of water (AD)
+Where installed outdoors, the equipment shall provide a degree of protection of at least IPX4.
+722.512.2.202   Presence of solid foreign bodies (AE)
+Where installed outdoors, the equipment shall provide a degree of protection of at least IP4X.
+722.512.2.203   Impact (AG)
+Equipment installed in public areas and car park sites shall be protected against mechanical damage (impact of
+medium   high   severity AG3). Protection of the equipment shall be afforded by one or more of the following:
+-   the position or location shall be selected to avoid damage by any reasonably foreseeable impact
+-   local or general mechanical protection shall be provided
+-   equipment shall be installed that complies with a minimum degree of protection against external mechanical
+impact of IK08 in accordance with the requirements of BS EN 62262.
+722.53   Protection, isolation, switching, control and monitoring
+722.531   Devices for protection against electric shock by automatic disconnection of supply
+722.531.3   Residual current devices (RCDs)
+722.531.3.1   RCDs shall disconnect all live conductors.
+722.531.3.101   Unless supplied by a circuit using the protective measure of electrical separation, each charging
+point incorporating a socket-outlet or vehicle connector complying with the BS EN 62196 series shall be protected
+by an RCD having a rated residual operating current not exceeding 30 mA.
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+13
+ANNEX A722 (Informative)
+GUIDANCE FOR TN SYSTEMS WHERE PME CONDITIONS APPLY
+A722.1   Neutral current of a three-phase installation
+Where the power factors of the currents in all three phases are similar and triple harmonics can be neglected, it may
+be assumed that the neutral current of a three-phase installation is given by:
+NOTE:   The maximum neutral current (Im) occurs under conditions of maximum imbalance, not necessarily maximum overall
+demand.
+A722.2   Load balance
+Where triple harmonics can be neglected, condition (i) of Regulation 722.411.4.1 may be assumed to apply where
+the following condition is met. This formula should take account of Cmax in line with PD CLC/TR 50480.
+A722.3   Earth electrode resistance
+For the purposes of condition (ii) of Regulation 722.411.4.1, the sum of the resistances of the earth electrode and the
+protective conductor connecting it to the main earthing terminal must meet the following condition, as applicable.
+For a single-phase installation:
+For a three-phase installation:
+NOTE 1:   The above three-phase formula for RA ev is valid only where   . Where this is not the case,
+this indicates that condition (i) of Regulation 722.411.4.1 applies and that an earth electrode is not required for the
+purposes of condition (ii) of that regulation.
+NOTE 2:   The above currents and voltage are magnitudes only; they are not phasors.
+NOTE 3:   In determining Im, IL1, IL2 and IL3, allowance must be made for single-phase vehicles being charged from three-phase
+charging points.
+A722.4   Guidance on voltage monitoring device described in Regulation 722.411.4.1 (iii)
+Regulation 722.411.4.1 (iii) describes a device that measures the voltage between the circuit protective conductor
+of the electric vehicle charging equipment and Earth. During a PEN failure in the supply network, the neutral of a
+TN-C-S supply is no longer considered to be reliably connected to Earth, and a device that measures the voltages
+between the following points will fail to provide equivalent safety to the device described in Regulation
+722.411.4 (iii)   722.411.4.1 (iii) :
+(i)   the circuit protective conductor and neutral
+(ii)   the circuit protective conductor and the consumer’s main earthing terminal.
+Suitable arrangements include measurement of the voltage between either:
+(a)   the circuit protective conductor and a suitable measurement earth electrode, or
+(b)   the circuit protective conductor and a reference point derived from the line conductors of a three-phase
+system, provided that suitable precautions are also taken to disconnect the device when the supply to one or
+more-line conductors is interrupted.
+:KHUHXVHGPHDVXUHPHQWHDUWKHOHFWURGHVVKRXOGEHORFDWHGDWDVX൶FLHQWGLVWDQFHIURPRWKHUHDUWKHOHFWURGHV
+and/or other buried exposed-conductive-parts and/or extraneous-conductive-parts connected to the PME earthing
+terminal to reduce transfer of earth potential rise on the PME system during a PEN failure.
+       
+
+
+ 
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION
+
+16
+P
+Protective multiple earthing (PME) -
+-   electric vehicle charging
+installations   722.411.4.1
+R
+Residual current devices (RCDs) -
+-   electric vehicle charging points   722.531.3.101
+S
+Socket-outlets -
+-   electric vehicle charging   722.551.7.2   722.55.101
+E
+(OHFWULFYHKLFOH (9 GH¿QLWLRQ   Part 2
+Electric vehicle charging installations
+-   Sec 722
+-   application, scope of   722.1
+-   charging point outdoors, IP rating   722.512.2.201
+-   connectors
+-   GHGLFDWHG¿QDOFLUFXLWUHTXLUHG
+-   GH¿QLWLRQVUHODWLQJWR
+-   electrical separation, limitation on
+use of
+722.55.101
+722.311   722.533.101
+Part 2 EV
+722.413.1.2
+722.512.2
+722.311.201
+722.311
+722.533.101
+-   protective measures not permitted   722.410.3.5 & 6
+722.531.3
+722.531.3.101
+722.5
+722.55.101
+722.411.4
+-   H[WHUQDOLQÀXHQFHV
+-   load curtailment
+-   maximum demand
+-   overcurrent protection
+-   RCDs
+-   R DC -DD
+-   selection and erection
+-   socket-outlets for
+-   TN system -
+-   3(1FRQGXFWRUSURKLELWHGLQ¿QDO
+circuit   722.312.2.1
+INDEX
+The following entries are pertinent to Section 722:
+- for supply of the fixed installation
+by the EV   722.551.7.2
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+DO NOT PRINT DO NOT PRINT DO NOT PRINT
+READ ONLY
+NOT FOR
+REPRODUCTION

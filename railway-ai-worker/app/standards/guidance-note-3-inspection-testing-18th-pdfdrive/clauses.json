@@ -1,0 +1,2428 @@
+[
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-2",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 2,
+    "summary": "Published by the Institution of Engineering and Technology, London, United Kingdom The Institution of Engineering and Technology is registered as a Charity in England   &   Wales (no. 211014) and Scotland (no. 5C038698). The Institution of Engineering and Technology is the institution formed by the joining together of the IEE (The Institution of Electrical Engineers) and the IIE (The Institution of Incorporated Engineers). © 1992, 1995, 1997, 2002 The Institution of Electrical Engineers © 2008, 2012, 2015, 2018 The Institution of Engineering and Technology",
+    "keywords": [],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 2
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-3",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 3,
+    "summary": "6 7 8 9 inapter   1 1.1 Gene   11 Safety",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 3
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-4",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 4,
+    "summary": "65 65 68 73 74 76 76 77",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 4
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-5",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 5,
+    "summary": "earth fault loop 139 ables Appendix   3   of BS 7671 Methods of adjusting tabulated values of T   139 143 144",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 5
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-6",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 6,
+    "summary": "The   Institution of Engineering   and   Technology acknowledges the invaluable contribution made by the following individuals and organisations in the preparation of this Guidance   Note; Institution of Engineering and Technology Lovegrove lEns FIET Eur In   G Kenyon BEng(Hon5) CEng   MIETTec;hlOSH R Wickens   -   college lecturer H.R.",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 6
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-7",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 7,
+    "summary": "References to British Standards, CENELEC Harmonization Documents and International Electrotechnical Commission (IEC) standards are made with the kind permission of BSI.   Complete copies can be obtained by   post   from: BSI Customer Sen/ices 389   Chiswick High Road London W4 4AL Tel: +44 (0)20 8996 9001 Fax: +44 (0)20 8996 7001",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 7
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-8",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 8,
+    "summary": "This Guidance Note is part of a series issued by the Institution of Engineering and Technology to   explain and enlarge upon the requirements in BS 767l:2018, the 18th Edition of the IET Wiring Regulations. From here on in BS   767112018   is referred   to   as BS 7671, and will only include a year after the standard where there is a need   to   refer   to   a requirement made in an earlier edition, such as BS 7671:2008. Note that this Guidance Note does not ensure compliance with BS 7671. lt is intended to   explain some of the requirements of   BS 7671   but   readers should always consult",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 8
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-9",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 9,
+    "summary": "This Guidance Note is concerned principally with Part 6 of BS 767   I testing. Inspection and Neither BS 7671 nor any of the lET's Guidance Notes are design guides.   It   is essential to prepare a design and specification prior   to   commencement   or alteration of an electrical installation. 514.9   The documents should set   out   the design and provide sufficient information   to   enable electrically skilled persons and electrically instructed persons (where appropriate)   to   carry",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 9
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-10",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 10,
+    "summary": "The revision of the CDM Regulations   2ors   has given guidance on the duties required of a designer, as well as carrying   out   the actual design layout, calculations and specifying the materials and installation requirements. \"Designers are those, who as part   of a business, prepare or modify designs for a building, product or   system   relating to   construction work. When preparing or modifying designs,   to   eliminate, reduce or control foreseeable risks that may arise during: 1",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 10
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-11",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 11,
+    "summary": "l.l   Safety Before any work can begin a work programme should be agreed with the client and a Health and Safety plan including risk   assessments   and method statements agreed and put in place.   It   may be that work has   to   be carried   out   when the premises is operating and start are present so they   must   not   be exposed   to   any safety risks, work areas should be fenced off with   temporary   barriers and electrical equipment   not   left unattended when open. Escape   routes   must   be kept open   at   all times or   temporary alternatives arranged. Where supplies have   to   be isolated it is necessary that this   must",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 11
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-12",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 12,
+    "summary": "Particular attention should be paid   to   the safety aspects associated with any   tests performed with instruments capable of generating a test voltage greater than 50 V, or which use the supply voltage for the purposes of the   test   in ear   oop testing and residual   current   device (RCD) testing. Note the warnings giv   son   2.6.16 through to Section 2.6.19 of this Guidance Note. to   fault e 1-1   In   SEC Electric shock hazer   an arise from, for example, capacitive loads such as when",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 12
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-13",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 13,
+    "summary": "1.3   The client 1.3.1   Certificates and Reports 644.1 653.1 Following the initial verification of a new installation or changes   to   an existing installation, an 'Electrical Installation Certified:ate', together with a 'Schedule(s) of inspections' and a 'Schedule(s) of   test   results', is required   to   be given   to   the person ordering the installation work.",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 13
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-14",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 14,
+    "summary": "relevant inspection and testing requirements of Chapter 64 also apply   to   additions and alterations. This applies especially   to   the replacement of a distribution board or consumer unit.   In   order   to   verify that the addition or alteration   to   an electrical installation complies with BS   7671,   the relevant parts of an existing installation   must be inspected and tested   to   confirm the safety of the addition or alteration, including for example: (H) (b)",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 14
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-15",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 15,
+    "summary": "Electrical installation certificates, minor electrical installations works certificates and electrical installation condition   reports   (as appropriate)   would   constitute   relevant information in relation   to   this requirement. For domestic installations the NHBC (National House-Building Council)   guidance recommends that all instructions for services be passed   to   the building owner. In   both domestic and non-domestic cases that imply or specify records. there may also be insurance requirements",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 15
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-16",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 16,
+    "summary": "16 Guidance note 3: Inspection and Testing o   The Institution of Engineering and Technology",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 16
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-17",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 17,
+    "summary": "2.1   Purpose of initial verification Verification is defined in BS 7671 as: \"All measures by means of which compliance of the electrical installation with the relevant requirements of BS 7671 are checked, comprising inspection, testing and certification.\" 641.1 642.2 643.1 Initial verification is carried   out   on a new installation be",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 17
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-18",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 18,
+    "summary": "(b) (0) (do The fixed installation   is correctly   selected   and erected, taking into account manufacturers' instructions. The fixed installation is   not   visibly damaged or otherwise defective so as   to impair safety. The installation is ready and safe   to   be used.",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 18
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-19",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 19,
+    "summary": "Examples of typical forms are given in Chapter 5 of this Guidance Note. Multiple-signature Electrical Installation Certificate The   multiple-signature   certificate   allows   different   persons   to   sign   for   design, construction, inspection and testing, and allows   two   signatories for design where there is mutual responsibility. Where designers are responsible for identifiably separate   parts of an installation, the use of separate forms would be appropriate. Minor Electrical Installation Works Certificate This certificate is   to   be used only for minor works that do   not   include the provision of",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 19
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-20",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 20,
+    "summary": "(c) (d) the information necessary for the identification of each device performing the functions of protection, isolation and switching, and its location any circuit or equipment vulnerable   to   the electrical tests specified in Part 6 of BS 7671. a   n Frequency of subsequent inspections",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 20
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-21",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 21,
+    "summary": "2.5.2   Comments on individual items to be inspected 642.3   BS   7671 provides a list of items considered as a minimum   to   be inspected but the list is   not   exhaustive. The inspector where necessary will inspect and compare the items against data provided by the designer and installer and identify any non-compliances or departures but is   not   for the inspector   to   decide what installation items are required or necessary, or identify any repairs or modifications. The list is as follows: Sect   526   a   Connection of conductors Every   connection between   conductors   and   equipment/other   conductors   should",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 21
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-22",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 22,
+    "summary": "Furthermore, where cables are installed   at   a depth of 50 mm or less from the surface of the wall or partition, the requirements mentioned in the previous paragraph also apply. It   will be far   too   late   at   the end of the construction   to   view and   assess   any of these things so it is vital that the inspector continually inspects the installation wor*k during construction. 521.10.202   Cables   rout   d   uildings must be fixed such that they   cannot   come away from their suppo   fires and collapse   to   block escape routes or entangle firefighters",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 22
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-23",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 23,
+    "summary": "The inspector must also assess any fire protection repairs and fire stopping where cables have been installed through a fire rated building structural element or wall. 132.7 Sect 52:5 d   Selection of conductors The specification of cables used   - BS   type   and designation,   temperature   ratings, selection for environmental conditions, conductor category and material, certification to   and compliance with required   Construction Product Regulotrons   requirements etc.",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 23
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-24",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 24,
+    "summary": "Protective measure   Protective provisions Basic protection by l Fault protection by Automatic disconnection Of supply l1,( ul",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 24
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-25",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 25,
+    "summary": "Protective measure   Protective provisions Basic protection by   Fault protection by Non-conducting locations   Basir;   insulation of live parts   and/or banners or enclosures No protective conductor, Insulating floor and walls, spacing/obstacles",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 25
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-26",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 26,
+    "summary": "Sect 544 Sect 544 (C) (d) (e) protective bonding conductors main   bonding   conductors.   Regulation   411.3.1.2   allows   that   metallic   pipes entering the building having an insulating section   at   their point of   entry   need",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 26
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-27",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 27,
+    "summary": "Gii)   Protective measures for use only where access is controlled or supervised by skilled persons Obstacles 411.2   Protection by obstacles provides basic protection only, not fault protection.   It   protects against unintentional contact with live parts. Where this measure is used, the area   must   be accessible only   to   skilled persons or   to instructed persons under their supervision. The measure is not   to   be used in some installations and locations of increased shock",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 27
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-28",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 28,
+    "summary": "418.2   Earth-free loco/ equfpotendal bondfhg The use of this protective measure is intended   to   prevent   the appearance of a dangerous touch voltage under fault conditions.   In   some cases this protective measure is combined with the protective measure of electrical separation. 4181.1   Where protection by earth-free local equipotential bonding is employed, it must be verified (amongst other things) that all installed electrical equipment should meet the requirements of Section 416 with regard   to   provisions for basic protection. 418.2.2   All simultaneously accessible exposed-conductive-parts and extraneous-conductive-",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 28
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-29",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 29,
+    "summary": "(v) Additional   protection Additional protection by one or more RCDS 415.1.1   It   should be confirmed that an RCD selected   to   provide additional protection has a rated residual operating current (IAn) not exceeding 50 mA and complies with relevant standards. Generally all socket-outlets up   to   and including 32 A rating should be provided with additional protection by a   30   mA   RCD, but BS 7671 allows this   to   be omitted in non-",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 29
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-30",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 30,
+    "summary": "All switch utilisation categories   must   be appropriate for the   nature   of the load - see Table 2.1. lt would be part of the design   to   specify the appropriate   type   of device. GN2   on Guidance Note 2:   Isolation   &   Switching   provides more comprehensive guidance is subject and should be consulted and its contents taken into   account. 1~l   1 v   Table 2.1   Examples of utilisation categories for alternating   current   installations AC-22a   AC-22b   Switching   of   mixed   resistive and   inductive   loads,   including moderate overloads",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 30
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-31",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 31,
+    "summary": "Sect   445 k   Presence of undervoltage protective devices Suitable precautions should be in place where a reduction in voltage, or loss and subsequent restoration of voltage, could cause danger. Normally such a requirement concerns only   motor   circuits. If precautions are required they will have been specified by the designer, however, the devices used   must   be confirmed as matching the equipment specification and the relevant regulations in Section 445. Chap   43   I   Protective and monitoring devices",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 31
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-32",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 32,
+    "summary": "normally be expected. Voltages exceeding 230 V   to   earth require warning labels. An example would be the use of a 690 V three-phase   AC   power transformer used on   an   American air base located in the   UK. 514.11 Isolation WI   live   parts   are   not   capable of being isolated by a single device. The location of disconnecters should also be indicated   except   where there is no possibility of confusion.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 32
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-33",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 33,
+    "summary": "(c) The information necessary for the identification of each device performing the functions of protection, isolation and switching, and its location. (d)Ar\\y circuit or equipment that is vulnerable   to   the electrical   tests   as required by Part 6. For a simple installation, such as a dwelling or similar, the forgoing information can be given in the form of schedule, so an additional copy of the Schedule of circuit details' provided within or adjacent   to   each distribution board is likely   to   meet   this requirement.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 33
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-34",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 34,
+    "summary": "p)   .3.3,   .5, q) (X) (y) (1) (as) (ab) (ac)",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 34
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-35",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 35,
+    "summary": "(k) (|) (M) (fl) All connections secure (526) Cables correctly terminated and identified (514, 526) No   sharp edges on cable entries, screw heads,   etc.,   which could cause damage to   cables (l34.l.l, 522.8.H)",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 35
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-36",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 36,
+    "summary": "(8) (h) (i) (i) (k) (|) (m) (II)",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 36
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-37",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 37,
+    "summary": "(b) (€) Conduit systems General (a) Securely fixed, box lids in place and adequately protected against mechanical damage ($22.8) Draw points are accessible (522.8.6) Recommended   quantity   of   cables   for   easy   draw   not   exceeded   during",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 37
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-38",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 38,
+    "summary": "(h) (i) Circuits partitioned from Band I circuits or wired in mineral insulated metal- sheathed cables (528.1) Cables supported for vertical runs (522.8.5). Lily( II l1(=L~IU(j]   all",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 38
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-39",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 39,
+    "summary": "(I) (M) (II) (0) (p) (q) (F) (s)",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 39
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-40",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 40,
+    "summary": "(lt) (k) (|) Insulation, sleeving and terminations identified by the bi-colour   combination green-and-yellow (514.4.2) Joints electrically and mechanically sound (526.l) Separate circuit protective conductors of not less than   4   mm? if not protected against mechanical damage and is   not   an integral   part   of a cable, not formed by",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 40
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-41",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 41,
+    "summary": "required installation inspection and testing and   tests   are limited   to   the circuit being extended or modified, as detailed in Part 4 of the Certificate. See Chapter   5   for further details and guidance on the completion of this Certificate. 2.6.3   Model forms Typical forms for use when carrying out inspection and testing are included in Chapter 5   of this Guidance Note. 643.1   2.6.4   The sequence of tests Initial   tests   should be carried   out   in the following sequence where relevant and practical:",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 41
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-42",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 42,
+    "summary": "Parallel earth paths and effects on   test   readings Inspectors should always be aware of the possible   existence   of parallel earth   return paths. These may take the form of metallic cable management products, extraneous- conductive-parts   or   Indeed   other   metallic   parts.   Examples   Include   Installations incorporating steel conduit, steel trunking, MICC, steel   wIre   armoured or other metal sheathed cables,   equipment   and accessory boxes fitted   to   metal stud walls or   to the building fabric, and lumInaIres fitted   In   grid ceilings. Such parallel paths   exist   In domestic, commercial and IndustrIal Installations.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 42
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-43",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 43,
+    "summary": ".   .   .   .   .   .   . I . . I . . r",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 43
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-44",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 44,
+    "summary": "'I' .|. The resistance of the wandering lead and the   test   leads are either measured and deducted from the readings obtained, or auto-nulled by the test instrument, which most   modern instruments are able to do these days This   test   measures the continuity resistance of the circuit protective conductor, R2. which should be recorded on the Schedule of Test Results (see earlier   note   regarding 'Parallel earth paths and effects on test readings').",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 44
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-45",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 45,
+    "summary": "To confirm the continuity of these protective conductors,   test method 2   may be used. Account should be taken of the possibility of   test   readings being affected by parallel paths as mentioned earlier in this section. For this reason it may be necessary to carry   out   the   test   with the protective conductor disconnected   at   one end, where practicable. This method can also be used   to   confirm a bonding connection between   extraneous- conductive-parts where it is not possible   to   see a bonding connection, for example, where bonding clamps have been 'built in'. The   test   would be done by connecting",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 45
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-46",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 46,
+    "summary": "4 '- -'-»_'. L   4 so Figure 2.2a   Connections for testing step   1 initial   ched(   for   continuity lt   ends of ring",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 46
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-47",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 47,
+    "summary": "The resistance between line and neutral conductors is measured   at   each socket-outlet. The readings   at   each of the sockets wired into the ring should be substantially the same and the value will be approximately one-quarter of the resistance of the line plus the neutral loop resistances,   (or   + rn)/4 (see mathematical explanation in Figure 2.3). Any sockets wired as spurs will give a higher resistance value due   to   the resistance of the spur conductors. i.e. Note 1:",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 47
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-48",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 48,
+    "summary": ".   U I __ l 0 0 I I   I l v   Figure   2.3   Explanation of the maths for step 2",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 48
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-49",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 49,
+    "summary": "0.4 Q   0.2   Q I   I I   I 4 1 0.6   Q I   I d L2",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 49
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-50",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 50,
+    "summary": ". . . . . . . . . . . . . . . The purpose of the insulation resistance   test   is   to   verify that the insulation of conductors provides adequate electrical insulation, is   not   damaged and that live conductors or protective conductors are not short-circuited. Asa   reminder,   prior   to   carrying   out   the   test,   check that: (a) (b) on",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 50
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-51",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 51,
+    "summary": ".   9 O •   * I] .   . 0 local switches controlling such lamps and/or equipment should be open. An insulation resistance test of L&N connected together to E will ensure that all the circuit conductors are tested. Where there are special lighting controls such as   contactor   switching all the",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 51
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-52",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 52,
+    "summary": ".   nr 0 . ' U * I U For circuits containing two-way switches or two-way and intermediate switches, the switches   must   be operated one   at   a time and the circuits subjected   to   additional",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 52
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-53",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 53,
+    "summary": "Note   1:   It is essential for   tests   5 and   6   that the protective conductor of the cable is connected to the installation's earthing arrangement. Tests   4   and   5   can be done individually   L   core by core   to   N   and   E. For experienced inspectors and testers, Table   2.3a   shows how it is possible   to   reduce the number of   steps   for insulation resistance   to   four, but should any test yield a reading lower than referred   to   in Table 2.2, it will be necessary   to   follow the sequence stated in Table 2.3   to   identify which conductors are affected. note   2:",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 53
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-54",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 54,
+    "summary": "Part   7   However, for locations containing a bath or shower, or in swimming pools, saunas and some other special locations, basic protection by insulation is required for SELV and PELV at all voltages. It   is often, therefore, easier   to   carry out insulation resistance   tests   on these circuits as a   matter   of course. Where SELV or PELV is used as a protective measure and insulation resistance testing is required, Tables   2.4   and 2.5   set   out   the requirements. Instrument:   Use an insulation resistance tester for these tests. Refer to Section   4.4.",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 54
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-55",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 55,
+    "summary": "v   Table 2.6   Tests made to verify electrical separation one   it 418.3.4   (a)   I \\   .' .r a 418.3.5   (b) 41l_3_6",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 55
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-56",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 56,
+    "summary": "643.3.2   Regulation 6-43.3.2 requires that FELV circuits shall meet the test requirements for low voltage circuits (such as 'mains voltage' circuits). This includes the testing   of; 643.2 643.3 (a) (b) 416.2   (c)   barrier   or and",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 56
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-57",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 57,
+    "summary": "418.1.5 643.3 Following these checks, the insulation resistance between the insulating floors and walls   to   the installation main earthing terminal (via a local earth terminal of the general installation) should be measured. lt is required that   at   least three   measurements   are made. One   measurement must   be made approximately one   metro   from any accessible extraneous-conductive-part, for example, metal pipe, in the location and the other measurements   should be made   at   distances further away. Methods of measuring the",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 57
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-58",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 58,
+    "summary": "E521 _s-\"' 933 Fig   I m p   Figure 2.5a   Test electrode I I   12539 Q -   b 180 5   mm   )",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 58
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-59",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 59,
+    "summary": "Expected results The Moors and walls are considered   to   be non-conducting where the measured resistances are at least 50   kg   (where the system voltage   to   Earth does   not   exceed 500 V). 643.5   A further   test   is specified in BS   7671   for extraneous-condudive-parts that are within the location but   to   which insulation has been applied during construction.   In   these cases a 'flash' insulation   tester   is required which, after the standard   500   v insulation test, applies a   2   kV   AC   runs test and measures the leakage   current   (which should   not",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 59
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-60",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 60,
+    "summary": "REMEMBER TO REMOVE THE TEMPORARY SHORTING LINK WHEN TESTING IS COMPLETE. 643.12 542.1 542.2 2.6.14 Earth electrode resistance testing Three methods of measuring the resistance of an earth electrode are described in this section. Test method El   uses a dedicated earth electrode tester (fall of potential,",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 60
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-61",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 61,
+    "summary": "The distance between the   tes   is important. if they are   too   dose together their resistance   areas   will overlap.   I   reliable results may be expected if the distance between the electrode under   test   and the   current   spike, C2, is   at   least   ten   times the maximum dimension of the electrode   system,   for example,   30   m for a   3   m long rod electrode. U   general, t   spik(2»Q Three readings are taken:",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 61
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-62",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 62,
+    "summary": "Instrument   using one   test   coil The instrument described here uses a method of   measurement   similar   to   the fall of potential method (Method Er, described earlier), in that it uses   two   temporary   test spikes (electrodes), as shown in Figure 2.8. These are placed in the ground, away from the earth electrode under   test,   in similar fashion to that described for the fall in potential method. v   Figure 2.8   Instrument   using one   test   coil To main",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 62
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-63",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 63,
+    "summary": "Figure 2.9   Instrument   using   two   test coils Main earthing terminal of installation Voltage coil Constant applied a.c. voltage",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 63
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-64",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 64,
+    "summary": "Test method E3: Measurement using   earth fault loop impedance tester An earth electrode may be tested using an earth iaull   loop   impedance   tester.   However, it is recognised that the results may not be as   accurate   as using a dedicated earth electrode tester. an FOR SAFETY REASONS, THE INSTALLATION MUST BE lsoLATEo FROM THE SUPPLY BEFORE   DISCONNECTING   THE   EARTHING   CONDUCTOR.   The   earth   fault   loop impedance   tester   is connected between the line conductor   at   the source of the",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 64
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-65",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 65,
+    "summary": "v   Table 2.7   Maximum values of earth fault loop impedance (ZS) for non-delayed RCDs   to BS EN 61008-1 and BS EN 61009-1 for UP of 230   v Table 41 30   1667 100   500 300   167 10   0 Where a time-delayed RCD is used   to   provide fault protection the maximum value of",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 65
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-66",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 66,
+    "summary": "(a) (b) (¢) the circuit protective conductor, the main earthirrg terminal and earthirrg conductor; for TN   systems,   the metallic return path or, in the case of TT and   IT   systems, the earth return path, the path through the earthed   neut   point of the transformer,",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 66
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-67",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 67,
+    "summary": ". l . . l . . l",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 67
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-68",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 68,
+    "summary": "643.1 Verification of earth fault loop impedance test results It is important   to   recognise that BS 7671 requires the inspector   not   only to test the installation but also   to   compare the results with relevant design criteria (or with criteria within BS 7671). This may seem obvious, but it is   not   uncommon for some inspectors to   pass   test   information back   to   their office without making the necessary comparisons, possibly assuming that the office or someone else will check the results, the office might then assume that the inspector has checked the results against criteria, but no",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 68
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-69",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 69,
+    "summary": "434.5.1 Part I Qd   l Regulation 434   I   requires that, except where back-up protection is provid   :>y another device in accordance with the second paragraph of that regulation, the breaking ty rating of each protective device shall be   not   less than the prospective fault current at its point of installation. The   term   prospective fault   current   includes the prospective short-circuit current and the prospective earth fault   current.   The maximum prospective fault   current   at   the point of installation of a protective device is the greater",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 69
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-70",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 70,
+    "summary": "Note   on accuracy of earth fault loop impedance and prospective fault current   testers   (see also Section 4.5) Earth fault loop impedance   testers   become less   accurate   at low value impedance readings, such as when measuring close   to   a transformer or other low impedance source. lt   should be   noted that the   standard instrument   used for   determining prospective fault   current   is effectively an earth fault loop impedance instrument. Whilst earth fault loop testers should have a resolution of   at   least 0.01   Q   this should not   be confused with accuracy.",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 70
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-71",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 71,
+    "summary": "v   Table 2.8   Rated short-circuit capacities of protective devices Semi-enclosed fuse   to   BS 3036 with allegory   of duty 51A   1 54A   4 System E (bolted) type Iyster-(dp   n) type 80 kA   at   40O   V",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 71
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-72",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 72,
+    "summary": "The difference between the   two   short-circuit-ratings described above is the condition of the circuit-breaker after manuiacturefs testing, lm is the maximum fault   current   t:hat the device can interrupt safely, although its characteristics may have been altered and it may no longer be usable. IG is the maximum fault   current   that the device can interrupt safely without loss of performance. The lm value   IS   maned on the device in a   rectangle, for example,   6000 and   for the majority   of   applications the prospective fault   current   at   the terminals of Me drcuit-",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 72
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-73",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 73,
+    "summary": "current   (between line conductor(s) and the main earthing terminal). If it is considered necessary   to   record values   at   other relevant points, they can be recorded on the Schedule of Test Results. Where the protective   used at the origin have the necessary rated breaking capacity, and devices with similar breaking capacity are used throughout the installation,   at   can be assumed that the Regulations are satisfied in this respect   for all distribution boards (provided there is   not   another source of supply, such as a   generator,   connected   to   the installation   at   a point other than the main supply terminals of the installation).",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 73
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-74",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 74,
+    "summary": "In the case of a rotating disc type instrument, the disc will be rotating eidler clockwise or anticlockwise. Some Approved Voltage Testers have a phase notation facility built in   to   them. They offer an increase in sailer over standard   3   wire phase rotation testers as they do   not require the   inspector   to attach the wires   to   the installation as they only require 2 phases   to   be probed with the hand held probes. Wrth   the indicator   lamp   type either the LI/L2/L3   (fomlerly R/Y/B)   lamp   or the LED/ L2   (formerly R/B/Y)   lamp will be   illuminated.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 74
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-75",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 75,
+    "summary": "Operation of residual current devices 411.4.5   For ead'l of the   tests,   readings should be taken on both positive and negative   half- m.s.3   cycles and the longer operating time recorded. Prior   to   these RED   tests   ii* is essential, for safety reasons, that the earth fault loop Impedance is tested   to   check the requirements have been   met. Instrument Use an RCD   tester   for these   tests,   see Section   4.7. Test method The   test   IS   made   on the load side   of the RCD   between   the line   conductor of the protected",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 75
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-76",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 76,
+    "summary": "(c) (d) any other part of the associated installation earthing, or the sensitivity of the device. The RCD   test   button will only   operate   the RCD if it is energized. 2.6.20 Other functional testing 643.10   Other   equipment,   including switchgear,   controls   and   interlocks,   should   also   be functionally tested   - that is, operated   to   confirm that they work and are properly",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 76
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-77",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 77,
+    "summary": "It should be remembered that voltage drop may exceed the values stated in Appendix   4 in situations such as   motor   starting periods and where equipment has a high inrush current   where sudl events remain within the limits specified in the relevant product standard or reasonable recommendation by a manufacturer. 2.6.22   Verification in medical locations Sect   710   The installation and testing of installations in medical locations is very much a specialist 71a64   area and only the general requirements of BS 7671 are covered in this Guidance Note. Initial verification   is   carried   out   by an inspection and functional   tests   of the isolation IT",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 77
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-78",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 78,
+    "summary": "Temporary overvoltages due   to   a low voltage system fault 442.3 442.4 442.5 Regulations 442.3,   442.4   and 442.5 require consideration   to   be given to the   stress voltages that would occur in an installation in the   event   of loss of the neutral conductor in a TN or TT system, an earth fault in an IT   system   with distributed neutral, or a short- circuit between a line conductor and a neutral conductor.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 78
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-79",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 79,
+    "summary": "(i)   Product manuals and installation instructions   -   and   evidence of   CE   marking of products. (ii)   Notes on what was done whens instructions could   not   be fdlorwed (if relevant). (b) For a large or complex installation, or where the above does   not   apply: (i)   Manufacturer/importer declarations of conformity,   or   statements   of EMC standards compliance   etc. (ii)   Cable and product manufacturer's installation instructions and specifications",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 79
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-80",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 80,
+    "summary": "80 Gudanne Home   3:   Inspection and RIesling c   m   lnslitulim d   www; and   ndn0a0gy",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 80
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-81",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 81,
+    "summary": "3.1   Purpose of periodic inspection and   testing 651.1   The purpose of periodic inspection and testing is   to   provide an engineering view on whether or   not   the installation is in a satisfactory condition where it can continue to be used safely. A detailed visual examination of the installation is required, together with appropriate tests. The tests are mainly   to   confirm that the disconnection times stated in Chapter   41 are met. The periodic inspection and testing is carried",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 81
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-82",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 82,
+    "summary": "others may   require   periodic inspection and testing of dectncal installations, as is for example the case for houses in multiple occupation   -   see Tables   3.1   and   3.2 (c) additionally, periodic inspection and testing should be considered in the following circumstances: (i)   to   assess compliance with BS   767 I (ii)   on a change of occupancy of the premises (especially rented domestic accommodation) (iii)   on a dlange of use of die premises",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 82
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-83",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 83,
+    "summary": "out   as required without dismantling (or with partial dismantling, as required) and supplemented by appropriate testing. There is no specific requirementtotestthe installation on every inspection. Where testing requires dismantling, the inspector should consider whether the risks associated with dismantling and reassembling are justified. Dismantling, and particularly disconnection of cables or components, introduces a risk of unsatisfactory reassembly. lt is however easy   to   decide that it is impractical   to   dismantle an item of equipment or that it would introduce a risk of unsatisfactory reassembly but this needs   to   be",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 83
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-84",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 84,
+    "summary": "checks (as well as periodic inspections), there should also be facilities   to   receive wear- and-tear reports from users of the premises. The frequency and type of these routine checks will depend entirely upon the   nature of the premises and should be   set   by the electrical duty holder. Routine checks should include the items listed in Table 3.1. Table   3.2   (Section 3.7) provides guidance on the frequency   r   which may need   to   be increased as an installation ages. v   Table 3.1   Routine   checks spection   Look for",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 84
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-85",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 85,
+    "summary": "Where there are no records, in all but the simplest domestic installation an inspector may first need   to   spend time tracing installation systems and circuits and producing basic drawings and schedules before starting any inspection and testing work. 3.1   Frequency of periodic inspections The time intervals between the recommended dates of periodic inspections and testing require careful consideration. The date for the first periodic inspection and test is required   to   be considered and recommended by the installation designer, based on their design philosophy and maintenance advice from other parties (Regulation s41.r).",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 85
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-86",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 86,
+    "summary": "a result of the findings of their   current   inspection. For example, the inspector may recommend an interval greater in instances where an installation has   not   suffered from damage or deterioration which would detract from its overall suitability for continued use. Conversely, it would be appropriate   to   recommend that the   next   inspection is carried   out   sooner where an installation has clearly not withstood the adverse effects of its environment and usage well and is not subject   to   adequate and appropriate maintenance. In   short, the inspector, being a skilled person, should apply sound engineering",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 86
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-87",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 87,
+    "summary": "v   Table 3.2   Recommended initial frequencies of inspection of electrical installations Domestic accommodation general Domestic accommodation rented houses and flats I year Residential accommodation (Houses of Multiple Occupation)",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 87
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-88",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 88,
+    "summary": "Notes: 1 2 3 4 5 6 1",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 88
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-89",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 89,
+    "summary": "It is important that the competency of the skilled person carrying   out   the periodic inspection and test is of the appropriate level, having   gained sufficient education, training or practical skills, and knowledge   to   be fully   conversant   with the type of installation being inspected and the   aspects   required of carrying   out   such an important inspection. The inspector will, for example, need   to   be able   to   inspect switchgear, determine the age of installation   components   and recognise signs of their deterioration. As well as having sufficient visual inspection skills, they will also need   to   possess good testing skills and experience of older installations and knowledge of what the resulting data",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 89
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-90",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 90,
+    "summary": "I I   Where diagrams, charts or tables are   not   available, a degree of exploratory work may be necessary so that inspection and testing can be carried   out   safely and effectively, this may include a survey   to   identify switchgear, controlgear and the circuits they control, Indeed, for more involved installations without diagrams or charts the client should be advised that such diagrams require producing prior   to   the inspection and testing commencing.   Alternatively, the   inspection   can   commence   in   cases   where the",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 90
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-91",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 91,
+    "summary": "electronic and other equipment which might be damaged by testing. Special care must be taken where control and protective devices contain electronic components. 3.8.4   Setting inspection and testing samples The inspector must be familiar with setting both inspection and testing sample sizes as carrying   out   100   0/0   inspection or testing in many installations is unrealistic, uneconomical and unachievable. Information is provided in this section and the relevant sampling table, Table   3.3. As pointed   out   in 3.8.3, one recommended procedure is for the inspector   to   carry   out",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 91
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-92",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 92,
+    "summary": "Figure 3.1   Suggested procedure for setting initial and adjusted sample   sizes good results   intermediate/ poor results ent,   It   ma Where the inspection or testing of a sample yields poor   or   unacceptable results this would suggest that similar problems might exist elsewhere in uninspected or untested items. The inspector will then need   to   either increase the sampling or refer back   to the di   y be that the   inspector   recommends that 100   0/0   testing is carried   out in that   area.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 92
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-93",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 93,
+    "summary": "v   Table 3.3   Range of samples for inspection if al circuit distribu cards   than 25   0/0   (note 4)   ageing, check of cable connections Notes: I 2 3",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 93
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-94",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 94,
+    "summary": "visual inspection only as this is   DNO ELECTRICAL INTAKE EQUIPMENT S .equipment > > > > »»",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 94
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-95",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 95,
+    "summary": "ADDITIONAL PROTECTION > |» SPECIFIC INSPECTION EXAMPLES DISTRIBUTION EQUIPMENT > > >",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 95
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-96",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 96,
+    "summary": "-components   not   included in the original verification, the person introducing the deviation becomes the original manufacturer with the corresponding obligations. The inspector may wish   to   note   such assemblies for further investigation. I 2 3 4 5",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 96
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-97",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 97,
+    "summary": "> 1 2 3 4 > »» >",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 97
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-98",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 98,
+    "summary": "3.10   Periodic testing 3.10.1 General 651.1   The   periodic testing is supplementary to the inspection of the installation, see 3.8.1. The same range and level of testing as for initial testing is   not   necessarily required, or indeed possible. Installations that have been previously tested and for which there are comprehensive records of test results may not need the same degree of testing as installations for whi h no such records exist. C 651.5   Periodic testing may cause danger if the   correct   procedures are   not   applied. Persons",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 98
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-99",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 99,
+    "summary": "unctional tests   Tests as required by Regulation 6431, fol owe   by operation o the integral test button CD5 unctional   tests f circuit-breahers, elaters and itching devi Manual operation   to   confirm that the devices disconnect th",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 99
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-100",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 100,
+    "summary": "3.10.3   Additional notes on periodic testing This section provides some notes on the practicalities of carrying   out   the periodic tests, particularly within an installation where only partial isolation is practicable. Continuity of protective earthing and bonding conductors, and earth fault loop impedance testing If an electrical installation is isolated from the supply, it is permissible   to   disconnect protective earthing and bonding conductors from the main earthing terminal in order to   verify their continuity.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 100
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-101",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 101,
+    "summary": "There is a range of possible   outcomes   when carrying   out   insulation testing. Tests are typically made between all live conductors connected together and Earth   at   a   test voltage of   $00   V DC The inspector will need   to   measure the values of insulation resistance for a given distribution board and then take a view based on his or her engineering judgment as   to   whether the results obtained are acceptable. lt should be noted that distribution boards with large numbers of final circuits will generally give a lower insulation resistance value than distribution boards with fewer final circuits.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 101
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-102",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 102,
+    "summary": "It should be verified by inspection that easy access   to   such devices is maintained and that effective operation is   not   be impaired by any material placed near the device. Access   and operation areas may be required   to   be marked   to   ensure they are kept clear. For isolating devices in which the position of the   contacts   or other means of isolation is externally visible, visual inspection of operation is sufficient and no testing is required. The operation of every safety switching device s   d the device in the manner normally intended   to   confirm",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 102
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-103",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 103,
+    "summary": "Schedules of Test results. Typical completed forms are given in Chapter 5 of this Guidance Note. ThefuH   Electrical Installation Condition Report documentation comprises the following: Electrical Installation Condition Report and Schedule of inspections   (one or more) and Schedule of   fest   results   (o ne or move)",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 103
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-104",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 104,
+    "summary": "v   Table 3.5   Classification of danger and non-compliances (for use during periodic inspection and testing) otentially dangerous urgent remedial action required To be attributed for issues that, wheel urgent,   do   not   require   immediat remedial action. Examples include a non",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 104
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-105",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 105,
+    "summary": "3.12 Periodic inspection of installations constructed to an earlier edition of BS   1671   or the IEE Wiring Regulations People often ask what standard should be applied when carrying   out   the periodic inspection of an installation constructed in accordance with an earlier edition of BS 7671, or an even earlier edition of the IEE Wiring Regulations or   to   an unknown standard. Each edition of the Wiring Regulations has provided for an increase of safety to   the users of installations. Particular installation practices and methods that were",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 105
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-106",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 106,
+    "summary": "106 Guidance note 3: Inspection and Testing o   The Institution of Engineering and Technology",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 106
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-107",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 107,
+    "summary": "4.1   Instrument standard BS EN 61010   Safety requirements for electrical equipment for measurement control, and Iuboretory use   is the basic: safety standard for electrical   test   instruments. The basic instrument standard is   BS EN 61557 Electrical safety in low voltage distribution systems up   to   IOOO V o.c. and   F500   V d.c. Equipment for testing, meosurrhg or monitoring of protective measures.   This standard includes performance requirements and requires compliance with BS EN 61010. In   Section   1.1   of this Guidance Note, reference was made   to   the use of test leads",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 107
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-108",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 108,
+    "summary": "A basic   measurement   accuracy of 5   0/0   is usually adequate. In the case of analogue instruments, a basic accuracy of 2   0/0   of full-scale deflection will provide the required accuracy   measurement   over a useful proportion of the scale. It   should   not   be assumed that the accuracy of the reading taken in normal field use will be as good as the basic accuracy. The 'operating accuracy' is always worse than the basic accuracy, and additional errors derive from three sources: (as Instrument errors:   basic instrument accuracy applies only in ideal conditions,",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 108
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-109",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 109,
+    "summary": "Typically, in analogue instruments this corresponds   to   making   measurements   very near to the zero point on the scale, where inaccuracies and non-repeatability are   not at   all evident with this type of electromechanical   movement. Traceability to National Standards can be assured by using a calibration laboratory accredited by a National Accreditation Body.   In   the UK this is the United Kingdom Accreditation Service (UKAS). A list   of accredited laboratories can be found   at www.ukas.com or a search for sources of calibration by instrument can be made   at www.ukas.org/calibration",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 109
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-110",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 110,
+    "summary": "(C) 1000 V DC for circuits rated above 500 V up   to   1000 V. Instruments   conforming   to   BS   EN   61557-2   will fulfil all the above instrument requirements. When the current is applied by an insulation resistance test what we see as total current comprises of three parts. When an insulation resistance   test   is applied   to   a test subject, the   measurement   may be influenced by different circuit characteristics, for   exa   mplez",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 110
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-111",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 111,
+    "summary": "Test   currents   higher than 15 A   tripping some low   current   MCBs. risk Three-wire non-trip test: Where there are RCDs or RCBOs present, the Line-Earth fault loop impedance may be carried   out   using a non-trip loop impedance test. The load   current   is significantly small enough not   to   trip the RCD. Typically this is around 15   mA.   However   i s   mA   does not create   a significant volt drop. Consequently many more   test   cycles are performed, the test runs for significantly longer, and the results are far more susceptible   to   variation. Two wire non-trip test",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 111
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-112",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 112,
+    "summary": "of the RCD will identify any additional impedance within the RCD. This can then be deleted from the   measurement. This phenomenon is   not   encountered with high test   currents,   but these   tests   will trip the RCD during the   test,   preventing their use. Transformer impedances can also affect results, as the impedance close   to   source can be very reactive rather than resistive. This is only a real issue when measuring close to the source transformer, but the instrument resolution and accuracy becomes very significant in this location.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 112
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-113",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 113,
+    "summary": "note   these aspects, and the manufacturer's documentation should be consulted. 4.6   Earth electrode resistance testers There are three general methods referred   to   in Chapter ca) (b) cc) method El, using a dedicated earth electrode   tester   (fall of potential, three- or four-terminal type),",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 113
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-114",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 114,
+    "summary": "4.8   Phase rotation instruments BS EN 61557-7 gives the phase sequence in mechanical, visual and/or audible means. requirements for measuring equipment for testing the three-phase distribution   systems   whether indication is given by BS EN 61557-7 includes requirements that: (a)",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 114
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-115",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 115,
+    "summary": "Some defects though   cannot   be discovered by visual inspection alone. For example, incorrectly tightened connections can result in a high resistance joint which can then cause a high temperature   to   occur locally   to   the connection. If left uncorrected over time further deterioration of the connection may well occur, leading   to   a continuing increase in   temperature   which may subsequently present a risk of fire. This fire risk will be significantly increased in installations where a build-up of dust or other flammable materials can occur in close proximity   to   the source of heat.   It   should also be remembered that increased heat   at   terminations can result in accelerated",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 115
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-116",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 116,
+    "summary": "v   Figure 4.1   A   colour/ correlation In   terms   of visual inspection, the busbar connections in Figure 4.2 appear   to   be satisfactory. temperature indicator I However, if the same connections are viewed   using   a",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 116
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-117",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 117,
+    "summary": "The HSE's guidance on   the Electricity   at   Work   Regulotiorrs   l989(HSR25) recognises that it may be necessary, in some circumstances, for conductors   to   remain live during testing or diagnostic work. However, such work in close proximity   to   live conductors may only be carried   out   if it can be done safely and if all precautions required   to   allow it   to   be done so are put in place. Additionally, the work may only be performed by persons who are suitably   competent   with regard   to   the   type   and   nature   of the work activity being performed, as required by Regulation   is   (Persons   to   be   competent   to prevent   danger or injury). HSR25 also makes clear that although live testing may be",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 117
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-118",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 118,
+    "summary": "118 Guidance   Note   3: Inspection   s.   Testing o   The Institution of Engineering and Technology",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 118
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-119",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 119,
+    "summary": "This chapter provides guidance on completing the necessary schedules, certificates and reports associated with inspection and testing. Sample certificates and report, completed with typical entries, are provided together with sample   test   result schedules and sample inspection schedules, again completed with typical results. The chapter also contains some   notes   on completion of the forms, although helpful information on this will also be gained by reading earlier chapters of this Guidance Note. 5.1   Initial verification (inspection and testing) forms",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 119
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-120",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 120,
+    "summary": "5.2   Minor works The complete   set   of forms for initial verification (inspection and testing) may not be appropriate for minor works. When an addition   to   an electrical installation does not extend   to   the installation of a new circuit, the Minor Electrical installation Works Certificate may be used. This one page certificate is intended for such work as the addition of a socket-outlet or lighting point   to   an existing circuit, or for a repair or modification   to   each circuit worked on Consequently, where three circuits are worked on, for example, three Minor Electrical Installation Work Certificates would have   to   be",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 120
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-121",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 121,
+    "summary": "..   .   .   .   ..   .   ..   .   ....   .   ..   .   .   .   ..   . I .. Pcrstco-de DETAILS   OF THE CLIENT Mr   D Roberts 23   Acacia   ve   be.   so   ETO   N   .SLCZQLT 3, - .   .   .   -   |   .   .   ..   |   .   -   -   Q   .   .   .   .   ¢   -   »   -   . n   . -   4   -   .   l   .   .   ¢   -   1   -   »   -   -   |   . . -",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 121
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-122",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 122,
+    "summary": "PARTICULARS OF SIGNATORIES TO THE ELECTRICAL INSTALLATION CERTIFICATE Jovfmgs Company .   a   l   l   I   I   l   l   . L A l   l   r   1   i   r   1   1   .   .   l   .   1 - 1 1 1 1 »   - _ -   1   4 .",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 122
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-123",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 123,
+    "summary": "2 5 4 I tulle 5 6 This Certificate is only valid if accompanied by the Schedule of Inspections and",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 123
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-124",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 124,
+    "summary": "ITEM NO DESCRIPTION Outcome See Note 2 1.0   DlSTRIBUTOR'S f SUPPLY INTAKE EQUIPMENT   (visual   Inspection only) 1.1   Service cable 1_2   Sew be head",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 124
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-125",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 125,
+    "summary": "ITEM NO DESCRIPTION Outcome See Note 2 CONSUMER   unlr{s}   z   DISTRIBUTION BOARIJ(S) continued 7.6   Protection   against   mechanical   damage where oabbs enter equipment   {522.8.1,   522.a.5,   522.B.11   ) 7.?   Confirmation that   ALL conductor connections are   correctly   located in terminals and are light and   secure   (526.1)",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 125
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-126",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 126,
+    "summary": "* 1 4»   |- v . . . I u p   w   I   Vu",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 126
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-127",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 127,
+    "summary": "1 • 1 9 1 1 1   <£ E*",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 127
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-128",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 128,
+    "summary": "GENERIC SCHEDULE OF TEST RESULTS NOTES The following notes relate   to   the column number in the form (Form 3). I 4 5 6 7",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 128
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-129",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 129,
+    "summary": ".   .   .   .   . .   .   . . .   . .   . . .   .   .   . . .   . . .   .   . . . .   . . .   .   .   .   .   .   .   . . . . .   . . .   .   .   . .   .   . .   . .   .   .   . .   . .   . . . .   . .   . . . .   . . .   . .   .   . . .   .   . .   .   . . .   .   .   . . .   . .   . .   .   . .   . . .   .   . . .   .   .   . . .   . ....... ...........   .   ..   .   ...................... ..   . ..........   .   .... .   .................................. .   ......   .   ....   . ........................   .   ....   .   ........ PART 2* Presence and adequacy of installation earthing and bonding arrangements (Regulation   132.16) 9/1-r 1.2 Q l   r   . . 3. Other.   . Structural steel efea8   de.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 129
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-130",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 130,
+    "summary": "MINOR ELECTRICAL INSTALLATION WORKS CERTIFICATE notes for the person producing the certificate Scope The Minor Electrical Installation Works Certificate is intended   to   be used for alterations or additions   to   an installation that do   not   extend   to   the provision of a new circuit. Examples include the addition of socket-outlets or lighting   points   to   an existing circuit, the relocation of a light switch   etc.   This Certificate may also be used for the replacement of equipment such as accessories or luminaires, but   not   for the replacement of distribution",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 130
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-131",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 131,
+    "summary": "(b) (0) (al) to) measure the insulation resistance of the circuit that has been added to, and establish that it complies with Table 64 of BS 7671 measure   the   earth   fault   loop   impedance   to   establish   that   the   maximum permitted disconnection time is   not   exceeded",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 131
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-132",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 132,
+    "summary": "SECTION ° .*~m ..   .   ..   I I   u   p   I   I   I   I   A N# .   , A 1   . .   I   I   ... .EA11...Z.ZZ Postcode:",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 132
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-133",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 133,
+    "summary": "SECTION I. SUPPLY CHARACTERlSTlCS AND EARTHIHG ARRANGEMENTS Eaurthing arrangements Number and Type of Live 1 Conductors Nature of Supply Pasameters   Supply Protective Device of",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 133
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-134",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 134,
+    "summary": "OUTCOMES Acoeptaafsis oondininn J Unacceptable condition mama C1   NCI",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 134
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-135",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 135,
+    "summary": "ourcoues Accnepfabls ..   ./ Unaacaptabuls condition Side C1 orCa Inlpnwamelrl",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 135
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-136",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 136,
+    "summary": "2 3 4 5 6 7 8   (Cl) should be ser",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 136
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-137",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 137,
+    "summary": "3 4 be -   1 - . \\   VI   otice   at   or near the device   stat   For 5 6",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 137
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-138",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 138,
+    "summary": "138 Gudanne Note 3: Inspection   a   Testing c The Institution d Engineering lid Tednology",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 138
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-139",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 139,
+    "summary": "A1   Tables 645.13 411.4.201 411.4.202 411.4.203 The tables in this appendix provide maximum permissible measured earth fault loop impedances (ZS) for compliance with BS   7671,   which   must not   be exceeded when the tests are carried   out   at   an ambient   temperature   of 10 °C. Table A6 provides correction",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 139
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-140",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 140,
+    "summary": "v   Table Al the line corrdudor maximrrn permitted operating   temperature   green in Table 52.1 of BS 7671 and the protective conductor assumed irrrrad   temperature   given in Tables 54.2   to 54.5   of BS   7671.   The correction factor (divisor) used   is   1.25. This corresponds   to   the ine   conductor maximum operating   temperature   and protective conductor assumed initial   temperature   both being   70   °C.   For   small   cross-sectional sea cables the impedance may also be limited by the adiabatic equation of Regulation   54313.   A   value of k of   IIS   from Table 54.3 of BS 7671   is   used. This is suitable for   pvc   insulated and",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 140
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-141",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 141,
+    "summary": "(\"   5 seconds disconnection (final circuits exceeding 32 A and distribution circuits in TN   systems) II) 2.24   1.76   1.336   100   0.5   0.3   NP Note:   NP   means that the combination of the protective conductor and the fuse is   Not Permitted. v   Table AS   BS 88-3 fuses. Maximum measured earth fault I   dance (in ohms) at   ambient   temperature   where the   overcurrent   protective device is a fuse   to",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 141
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-142",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 142,
+    "summary": "sTable   A4   Circuit-breakers. Maximum measured earth fault loop impedance (in ohms) at   ambient   temperature   where the   overcurrent   device is a circuit-breaker   to BS   3871   or BS EN   60898   or RCBO   to   B5 EN   61009 14.56   8.74   7.28   4.4   2.93   2.76   2.2   1.76   I .47   1.38   H   0.98   0.88   0   0.44 1 (M 0.4 5.82   3.5   2.33   2.15   1.17   0.78   0.55",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 142
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-143",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 143,
+    "summary": "v   Ta   ble   A6   Ambient temperature correction factors Notes:   I 2 The correction factor is given by: {1   +   0.004   (ambient temp   - 20)]/[1 + 0.004 (10   -   20)} where 0.004 is the simplified resistance coefficient per \"C   at   20   °C given by   BS   EN 60228 for both copper and   aluminum   conductors. (Alternatively the   correction factor is given by (ambient temp + 230)/(10 + 230)).",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 143
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-144",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 144,
+    "summary": "A3   Methods of adjusting tabulated values of   1, (See also 2.6.16 'Earth fault loop impedance verification'.) A circuit is wired in flat twirl and cpc   70   °C thermoplastic (PVC) cable and protected by a   6   A   type   B circuit-breaker   to   BS EN 60898. When tested   at   an ambient   temperature below 20 °C, determine the maximum acceptable measured value of Z5 for the circui Solution: 1 Ztest",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 144
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-145",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 145,
+    "summary": "In   the   previous   example, taking the (RI + Re) reading for the circuit as   0.2   ohm: z5   for the circuit   at   70   °c =   Ze+ F(R1+ R2)test = 0 . 3 5 + 1 . 2 0 ) < 0 . 2 =0.59   Q The temperature-corrected Z5 figure of   0.59   Q   Is   acceptable,   since   it is less than the maximum value of 7.28   Q   given   IN   Table   41.3   of BS 7671.",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 145
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-146",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 146,
+    "summary": "lklng the   same dl*uUit. Zum =   Z¢-I-(R1+ R2)u=sc -0.32+0.2 =0.5S Q From the formula Ztest(max) = 'éZ§ 25   (max)   from BS   7671   =   7.28   Q",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 146
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-147",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 147,
+    "summary": "434.51 543.115 To check compliance with Regulation 4i'>-4.5.2 and/or Regulation 543.1.3, i.e.   to   evaluate the equation 52 1% kz it is necessary   to   establish the impedances of the circuit conductors   to   determine the",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 147
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-148",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 148,
+    "summary": "Table   BI gives values of (Re + R2) per   metro   for   various   combinations of conductors up to and including   50   mm   cross~sectionaI area. It also gives values of resistance (niliohms) per metre for ead*l   size   of conductor. These values   are   at   20 'C V   Tall. II   Values d   resistance/metre for copper dnd aluminum conductors   and   of (RI +   RQ)   per   metro   at   20   'C in milliohms/meter 148 Gudanne Home 3: Inspection a Testing c The Institutional Engineering md Tednology",
+    "keywords": [
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 148
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-149",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 149,
+    "summary": "V   Table B2   Ambient temperature   multipliers   (00   to   Table   B1 *   The   correction   factor   is   given   by:   {1   0.004   (ambient   temp   -   20 °C)] where   0.004   is the simplified resistance coefficient per \"C   at   20 °C given by BS EN 60228 for copper and aluminum conductors. + To assist anyone using Table BI, the following   two   formulas may be helpful: m y / m x L 1000",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 149
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-150",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 150,
+    "summary": "v   Table   B3   Conductor temperature factor   F   for standard devices Multipliers   to   be applied to Table B1 for devices in Tables   41.2,   41.3,   41.4 Not incorporated in a cable and not bunched (notes I, 3) 1.04   1.04   1.04 corporated   in   a   cable   O Table 54.1   Notes: I",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 150
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-151",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 151,
+    "summary": "A 2.5.2 item   0 Access Accuracy of   test   instruments Additional protection Additions and Alterations 4.2 2.5.2 item h, 2.6.19 1.4,   3   Chap 5",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 151
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-152",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 152,
+    "summary": "Index c Calibration (checking of accuracy) Certificate, Electrical Installation 4.2 Client 1.3.1,1.4,1.6,2.1, 2.2, 2.6.2, 2617   3 4   3 8 2   38.4,Chap 5",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 152
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-153",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 153,
+    "summary": "Index 2.6.9 2.6.9 inspection measurement of voltage Electricity   at   Work Regulations 1989 Preface,   1.1,   I, Table 3.2 note 2, 3.3, 3.4, 5.5, 4.9",
+    "keywords": [
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 153
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-154",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 154,
+    "summary": "Index Inspection checklist Inspection Schedule inspector's   competence Instruments Insulation resistance Insulation resistance testers 2.5.3",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 154
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-155",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 155,
+    "summary": "Index hap 5 Ie 3.2 3   3.8.3 Chap I, Table 3.1 3.6 1.2, 3.8.1 3.2",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 155
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-156",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 156,
+    "summary": "Index 2.5.2 item h 2.5.2   item p 619; Table 3.4 4.7 ppx   B A 3.5, Table 3.1, Table   3_2 2.6.16",
+    "keywords": [
+      "inspection_testing",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 156
+    }
+  },
+  {
+    "id": "guidance-note-3-inspection-testing-18th-pdfdrive:page-157",
+    "sourceDocumentId": "guidance-note-3-inspection-testing-18th-pdfdrive",
+    "page": 157,
+    "summary": "ISBN 978-1-78561-452-1",
+    "keywords": [],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "Guidance Note 3 Inspection & Testing 18th ( PDFDrive )",
+      "page": 157
+    }
+  }
+]
