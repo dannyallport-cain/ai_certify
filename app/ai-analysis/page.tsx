@@ -2,7 +2,7 @@ import ImageAnalysisCapture from '@/components/ai/ImageAnalysisCapture';
 
 export const metadata = {
   title: 'AI Image Analysis',
-  description: 'Upload or capture a photo for live OCR analysis.',
+  description: 'Upload or capture a photo to extract OCR text, observations, and structured report data with AI.',
 };
 
 export default function AIAnalysisPage() {
@@ -12,12 +12,12 @@ export default function AIAnalysisPage() {
         <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <div className="space-y-2">
             <div className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">
-              Live OCR analysis
+              AI-powered OCR & photo analysis
             </div>
-            <h1 className="text-2xl font-semibold">Analyze an image with AI</h1>
+            <h1 className="text-2xl font-semibold">Turn photos into usable report data</h1>
             <p className="text-sm text-slate-600">
-              Upload an image from your device or take a photo with your camera to run live OCR analysis.
-              Review the extracted text, observations, and structured report details directly on this page.
+              Upload an image from your device or take a photo with your camera to let AI read the content,
+              extract text, identify observations, and return structured report-ready data in one place.
             </p>
           </div>
         </section>

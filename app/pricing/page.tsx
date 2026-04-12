@@ -24,16 +24,35 @@ export default async function PricingPage() {
         </div>
         <div className="container relative mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
-            Simple, Transparent Pricing
+            Pricing for modern report automation
           </h1>
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-            Choose the plan that best fits your needs. No hidden fees.
+          <p className="text-xl text-slate-400 max-w-3xl mx-auto">
+            Choose a plan that fits your team and start turning existing PDF reports into
+            reusable, branded templates with AI-assisted field detection and live data merge.
           </p>
         </div>
       </section>
 
       <section className="py-20 bg-white dark:bg-slate-950">
         <div className="container mx-auto px-4">
+          <div className="mx-auto mb-12 grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-3">
+            {[
+              'Upload your existing PDF reports and turn them into reusable templates.',
+              'Use AI blank-field detection, manual placement, and branded text overlays.',
+              'Auto-fill reports with live job, client, engineer, and company data from ServiceM8.',
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+              >
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-500" />
+                  <span>{item}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3 max-w-6xl mx-auto">
             {plans.map((plan) => {
               const highlight = (plan.allowances.badge || '').toLowerCase().includes('popular');
@@ -118,6 +137,36 @@ export default async function PricingPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-slate-200 bg-slate-50 py-20 dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="container mx-auto grid max-w-5xl gap-10 px-4 md:grid-cols-2">
+          <div>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
+              Every plan supports the new workflow
+            </h2>
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+              Upload a report once, map the fields visually, replace branding, insert dynamic{' '}
+              <code className="font-semibold text-slate-900 dark:text-white">
+                {'{{handlebars}}'}
+              </code>{' '}
+              tokens, and generate polished documents faster for every job.
+            </p>
+          </div>
+          <div className="space-y-4">
+            {[
+              'Visual template builder with click-to-place and drag-to-draw fields',
+              'AI-assisted blank field detection for faster template setup',
+              'Text and branding editor for logos, headers, footers, and custom copy',
+              'ServiceM8-powered data merge for jobs, clients, engineers, and company details',
+            ].map((item) => (
+              <div key={item} className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500" />
+                <span className="text-slate-700 dark:text-slate-300">{item}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -13,9 +13,10 @@ function InvalidCapturePage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-6">
       <div className="w-full max-w-md rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-slate-200">
-        <h1 className="text-xl font-semibold text-slate-900">This capture link is invalid</h1>
+        <h1 className="text-xl font-semibold text-slate-900">This secure capture link is no longer valid</h1>
         <p className="mt-3 text-sm text-slate-600">
-          Ask the user to open Settings again and generate a fresh QR code.
+          This mobile capture page is opened from a secure link or QR code. Please ask the user to return to
+          Settings and generate a fresh mobile capture link before trying again.
         </p>
       </div>
     </main>
