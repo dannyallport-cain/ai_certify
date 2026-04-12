@@ -65,6 +65,8 @@ export interface WizardState {
   supplyPhase: 'single_phase' | 'three_phase' | 'unknown' | null;
   hasOutbuildingsOrAncillarySupplies: boolean | null;
   consumerUnitMaterial: ConsumerUnitMaterial;
+  hasDamagedAccessory: boolean | null;
+  hasDamagedLuminaire: boolean | null;
   storeyCount: number;
   smokeDetectorCount: number;
   hasSolidFuelAppliance: boolean | null;
@@ -124,6 +126,8 @@ const initialState: JobState = {
     supplyPhase: null,
     hasOutbuildingsOrAncillarySupplies: null,
     consumerUnitMaterial: null,
+    hasDamagedAccessory: null,
+    hasDamagedLuminaire: null,
     storeyCount: 1,
     smokeDetectorCount: 0,
     hasSolidFuelAppliance: null,
@@ -183,6 +187,22 @@ function reducer(state: JobState, action: JobAction): JobState {
 
       if (action.payload.key === 'hasSolidFuelAppliance' && action.payload.value === false) {
         nextWizard.coDetectorTested = false;
+      }
+
+      if (action.payload.key === 'hasDamagedAccessory' && action.payload.value === false) {
+        return {
+          ...state,
+          wizard: nextWizard,
+          capturedImages: state.capturedImages.filter((image) => image.type !== 'damaged_accessory'),
+        };
+      }
+
+      if (action.payload.key === 'hasDamagedLuminaire' && action.payload.value === false) {
+        return {
+          ...state,
+          wizard: nextWizard,
+          capturedImages: state.capturedImages.filter((image) => image.type !== 'damaged_luminaire'),
+        };
       }
 
       if (action.payload.key === 'smokeDetectorCount') {

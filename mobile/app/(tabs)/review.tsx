@@ -5,12 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useJob, type WizardPhotoType } from '@/components/JobStateContext';
 import { createDraftCertificate, uploadMobileImage } from '@/services/api';
 
-const guidedPhotoSummary: { type: WizardPhotoType; label: string; optional?: boolean }[] = [
+const guidedPhotoSummary: { type: WizardPhotoType; label: string }[] = [
   { type: 'consumer_unit_external', label: 'Consumer unit' },
   { type: 'consumer_unit_internal', label: 'Consumer unit with front removed' },
   { type: 'bonding', label: 'Main protective bonding' },
-  { type: 'damaged_accessory', label: 'Damaged socket or switch', optional: true },
-  { type: 'damaged_luminaire', label: 'Damaged luminaire', optional: true },
 ];
 
 const LANDLORD_GUIDANCE_SMOKE =
@@ -38,9 +36,29 @@ export default function ReviewScreen() {
 
   const mandatoryGuidedPhotosComplete =
     !usesPhotoEvidence ||
-    guidedPhotoSummary
-      .filter((item) => !item.optional)
-      .every((item) => !!getImageFor(item.type)?.qualityAssessment?.isSufficient);
+    guidedPhotoSummary.every((item) => !!getImageFor(item.type)?.qualityAssessment?.isSufficient);
+
+  const damagePhotoSummary = [
+    {
+      type: 'damaged_accessory' as const,
+      label: 'Damaged socket, switch, or accessory',
+      present: wizard.hasDamagedAccessory,
+      image: getImageFor('damaged_accessory'),
+    },
+    {
+      type: 'damaged_luminaire' as const,
+      label: 'Damaged luminaire',
+      present: wizard.hasDamagedLuminaire,
+      image: getImageFor('damaged_luminaire'),
+    },
+  ].map((item) => ({
+    ...item,
+    accepted: !!item.image?.qualityAssessment?.isSufficient,
+  }));
+
+  const damagePromptsComplete =
+    !usesPhotoEvidence ||
+    damagePhotoSummary.every((item) => item.present !== null && (item.present === false || item.accepted));
 
   const isDomesticStyleInstallation =
     wizard.installationType === 'domestic' ||
@@ -70,6 +88,69 @@ export default function ReviewScreen() {
     wizard.hasSolidFuelAppliance !== true ||
     (wizard.coDetectorTested && coDetectorPhotoComplete);
 
+  const requiredPhotoChecklist = [
+    ...guidedPhotoSummary.map((item) => {
+      const image = getImageFor(item.type);
+      return {
+        key: item.type,
+        label: item.label,
+        required: true,
+        complete: !!image?.qualityAssessment?.isSufficient,
+        status: image
+          ? image.qualityAssessment?.isSufficient
+            ? `Accepted${image.qualityAssessment?.score ? ` • score ${image.qualityAssessment.score}` : ''}`
+            : 'Retake required due to insufficient quality'
+          : 'Capture required',
+      };
+    }),
+    ...damagePhotoSummary
+      .filter((item) => item.present === true)
+      .map((item) => ({
+        key: item.type,
+        label: item.label,
+        required: true,
+        complete: item.accepted,
+        status: item.image
+          ? item.accepted
+            ? `Accepted${item.image.qualityAssessment?.score ? ` • score ${item.image.qualityAssessment.score}` : ''}`
+            : 'Retake required due to insufficient quality'
+          : 'Capture required',
+      })),
+    ...Array.from({ length: wizard.smokeDetectorCount }, (_, index) => {
+      const image = getImageFor('smoke_detector', index);
+      const accepted = !!image?.qualityAssessment?.isSufficient;
+      return {
+        key: `smoke_detector_${index}`,
+        label: `Smoke detector ${index + 1}`,
+        required: requiresSmokeAndCoFlow,
+        complete: !requiresSmokeAndCoFlow || accepted,
+        status: !requiresSmokeAndCoFlow
+          ? 'Not required'
+          : image
+            ? accepted
+              ? `Accepted${image.qualityAssessment?.score ? ` • score ${image.qualityAssessment.score}` : ''}`
+              : 'Retake required due to insufficient quality'
+            : 'Capture required',
+      };
+    }),
+    {
+      key: 'co_detector',
+      label: 'CO detector',
+      required: wizard.hasSolidFuelAppliance === true,
+      complete: wizard.hasSolidFuelAppliance !== true || coDetectorPhotoComplete,
+      status:
+        wizard.hasSolidFuelAppliance !== true
+          ? 'Not required'
+          : coDetectorPhotoComplete
+            ? 'Accepted'
+            : wizard.coDetectorTested
+              ? 'Capture required'
+              : 'Test detector, then capture photo',
+    },
+  ].filter((item) => item.required);
+
+  const outstandingRequiredPhotos = requiredPhotoChecklist.filter((item) => !item.complete);
+
   const wizardAnswersComplete =
     !!wizard.reportPurpose &&
     !!wizard.installationType &&
@@ -84,6 +165,7 @@ export default function ReviewScreen() {
     !!gpsAddress &&
     wizardAnswersComplete &&
     mandatoryGuidedPhotosComplete &&
+    damagePromptsComplete &&
     smokeAlarmCountMeetsGuidance &&
     smokePhotosComplete &&
     coBranchComplete;
@@ -155,12 +237,19 @@ export default function ReviewScreen() {
             return {
               type: item.type,
               label: item.label,
-              optional: !!item.optional,
               captured: !!image,
               accepted: !!image?.qualityAssessment?.isSufficient,
               score: image?.qualityAssessment?.score ?? null,
             };
           }),
+          damagePrompts: damagePhotoSummary.map((item) => ({
+            type: item.type,
+            label: item.label,
+            present: item.present,
+            captured: !!item.image,
+            accepted: item.accepted,
+            score: item.image?.qualityAssessment?.score ?? null,
+          })),
           smokeDetectorPhotos: Array.from({ length: wizard.smokeDetectorCount }, (_, index) => {
             const image = getImageFor('smoke_detector', index);
             return {
@@ -175,11 +264,12 @@ export default function ReviewScreen() {
       };
 
       if (analysisResult) {
-        formData.mainSwitchRating = analysisResult.mainSwitchRating;
-        formData.numberOfCircuits = String(analysisResult.numberOfCircuits);
-        formData.earthingArrangement = analysisResult.earthingArrangement;
-        formData.supplyVoltage = analysisResult.voltage;
-        formData._mobileCircuits = analysisResult.circuits;
+        const safeAnalysisResult = analysisResult;
+        formData.mainSwitchRating = safeAnalysisResult.mainSwitchRating;
+        formData.numberOfCircuits = String(safeAnalysisResult.numberOfCircuits);
+        formData.earthingArrangement = safeAnalysisResult.earthingArrangement;
+        formData.supplyVoltage = safeAnalysisResult.voltage;
+        formData._mobileCircuits = safeAnalysisResult.circuits;
       }
 
       const cert = await createDraftCertificate({
@@ -254,18 +344,70 @@ export default function ReviewScreen() {
               Manual-only workflow selected. Guided photo evidence is optional for this draft.
             </Text>
           ) : (
-            guidedPhotoSummary.map((item) => {
-              const image = getImageFor(item.type);
-              const accepted = !!image?.qualityAssessment?.isSufficient;
-              return (
-                <Text key={item.type} className={`text-sm ${accepted ? 'text-green-700' : image ? 'text-red-500' : item.optional ? 'text-amber-700' : 'text-red-500'}`}>
-                  {accepted ? '✓' : item.optional && !image ? '•' : '✗'} {item.label}
-                  {accepted
-                    ? (image?.qualityAssessment?.score ? ` (score ${image.qualityAssessment.score})` : '')
-                    : (item.optional && !image ? ' (capture if present)' : ' (retake required)')}
+            <>
+              <View className={`mb-3 rounded-xl border px-3 py-3 ${outstandingRequiredPhotos.length === 0 ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
+                <Text className={`font-medium ${outstandingRequiredPhotos.length === 0 ? 'text-green-800' : 'text-amber-800'}`}>
+                  {outstandingRequiredPhotos.length === 0
+                    ? 'All currently required evidence photos are accepted'
+                    : `${outstandingRequiredPhotos.length} required photo step(s) still need attention`}
                 </Text>
-              );
-            })
+                {outstandingRequiredPhotos.length > 0 ? (
+                  <View className="mt-2">
+                    {outstandingRequiredPhotos.map((item) => (
+                      <Text key={item.key} className="text-sm text-amber-800">
+                        • {item.label}: {item.status}
+                      </Text>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+              {guidedPhotoSummary.map((item) => {
+                const image = getImageFor(item.type);
+                const accepted = !!image?.qualityAssessment?.isSufficient;
+                return (
+                  <Text key={item.type} className={`text-sm ${accepted ? 'text-green-700' : image ? 'text-red-500' : 'text-red-500'}`}>
+                    {accepted ? '✓' : '✗'} {item.label}
+                    {accepted
+                      ? (image?.qualityAssessment?.score ? ` (score ${image.qualityAssessment.score})` : '')
+                      : ' (retake required)'}
+                  </Text>
+                );
+              })}
+              {damagePhotoSummary.map((item) => (
+                <Text
+                  key={item.type}
+                  className={`text-sm ${
+                    item.present === null
+                      ? 'text-amber-700'
+                      : item.present === false
+                        ? 'text-gray-600'
+                        : item.accepted
+                          ? 'text-green-700'
+                          : item.image
+                            ? 'text-red-500'
+                            : 'text-red-500'
+                  }`}
+                >
+                  {item.present === null
+                    ? '•'
+                    : item.present === false
+                      ? '–'
+                      : item.accepted
+                        ? '✓'
+                        : '✗'}{' '}
+                  {item.label}
+                  {item.present === null
+                    ? ' (presence not answered)'
+                    : item.present === false
+                      ? ' (not present)'
+                      : item.accepted
+                        ? (item.image?.qualityAssessment?.score ? ` (score ${item.image.qualityAssessment.score})` : '')
+                        : item.image
+                          ? ' (retake required)'
+                          : ' (capture required)'}
+                </Text>
+              ))}
+            </>
           )}
         </Section>
 
@@ -319,6 +461,18 @@ export default function ReviewScreen() {
             Consumer unit material:{' '}
             <Text className="font-medium text-gray-800">
               {wizard.consumerUnitMaterial ? wizard.consumerUnitMaterial.replaceAll('_', ' ') : 'Not set / skipped'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            Damaged socket / switch / accessory present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasDamagedAccessory === null ? 'Not answered' : wizard.hasDamagedAccessory ? 'Yes' : 'No'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            Damaged luminaire present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasDamagedLuminaire === null ? 'Not answered' : wizard.hasDamagedLuminaire ? 'Yes' : 'No'}
             </Text>
           </Text>
           <Text className="text-sm text-gray-600">
