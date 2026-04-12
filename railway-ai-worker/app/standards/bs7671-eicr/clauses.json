@@ -1,0 +1,166 @@
+[
+  {
+    "id": "bs7671-eicr:page-1",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 1,
+    "summary": "BS 7671:2018+A2:2022 MODEL FORMS FOR CERTIFICATION AND REPORTING Usage and Reproduction of IET Forms Subject to your agreement to the following conditions, you are permitted to, free of charge, photocopy and/ or electronically manipulate the forms for use solely in connection with your electrical contracting business. 1   Photocopies or reproductions of blank forms shall not be made for the purpose of resale. 2   The IET logo must not be reproduced nor imposed on any copies.",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 1
+    }
+  },
+  {
+    "id": "bs7671-eicr:page-2",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 2,
+    "summary": "ELECTRICAL INSTALLATION CONDITION REPORT SECTION A. DETAILS OF THE PERSON ORDERING THE REPORT SECTION B. REASON FOR PRODUCING THIS REPORT SECTION C. DETAILS OF THE INSTALLATION WHICH IS THE SUBJECT OF THIS REPORT SECTION D. EXTENT AND LIMITATIONS OF INSPECTION AND TESTING SECTION E. SUMMARY OF THE CONDITION OF THE INSTALLATION SECTION F. RECOMMENDATIONS SECTION G. DECLARATION",
+    "keywords": [
+      "inspection_testing"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 2
+    }
+  },
+  {
+    "id": "bs7671-eicr:page-3",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 3,
+    "summary": "SECTION I. SUPPLY CHARACTERISTICS AND EARTHING ARRANGEMENTS SECTION J. PARTICULARS OF INSTALLATION REFERRED TO IN THE REPORT Earthing arrangements Supply Protective Device Number and Type of Live Conductors   Nature of Supply Parameters TN-C TN-S TN-C-S",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 3
+    }
+  },
+  {
+    "id": "bs7671-eicr:page-4",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 4,
+    "summary": "GENERIC SCHEDULE OF CIRCUIT DETAILS *   SPD Type. Where a combined T1 + T2 or T2 + T3 device is installed, indicate by ticking both Type boxes. † Where a T3 SPD is installed to protect sensitive equipment, enter details in ‘Remarks’, column 31, of the Schedule of Test Results. (See Section 534 of BS 7671:2018+A2:2022.) ‡ See Table 4A2 of Appendix 4 of BS 7671:2018+A2:2022. § Where the maximum permitted earth fault loop impedance value stated in column 12 is taken from a source other than the tabulated values given in Chapter 41 of BS 7671:2018+A2:2022, state the source of the data in the appropriate cell for the circuit in the ‘Remarks’, column 31, of the Schedule of Test Results. DB reference:   Location:   Supplied from: Distribution circuit OCPD: BS (EN):   Type:   Rating/Setting:",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 4
+    }
+  },
+  {
+    "id": "bs7671-eicr:page-5",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 5,
+    "summary": "GENERIC SCHEDULE OF TEST RESULTS Distribution board details ¶ Not all SPDs have visible functionality indication. # An ‘X’, denoting incorrect polarity, cannot be entered on to this schedule when issued with an Electrical Installation Certificate. ** RCD effectiveness is verified using an alternating current test at rated residual operating current ( I Δn ). DB reference: Confirmed:   Correct polarity   Phase sequence SPD:   Operational status confirmed ¶   N/A",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 5
+    }
+  },
+  {
+    "id": "bs7671-eicr:page-6",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 6,
+    "summary": "CONDITION REPORT INSPECTION SCHEDULE FOR RESIDENTIAL AND SIMILAR PREMISES WITH UP TO 100 A SUPPLY NOTE: This form is suitable for many types of smaller installation, not exclusively residential. The persons responsible for the periodic inspection of the installation should include the relevant items in relation to the electrical installation, the inspection schedule can be reduced or expanded depending on the requirements for the installation. Outcomes Acceptable condition",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 6
+    }
+  },
+  {
+    "id": "bs7671-eicr:page-7",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 7,
+    "summary": "CONDITION REPORT INSPECTION SCHEDULE FOR RESIDENTIAL AND SIMILAR PREMISES WITH UP TO 100 A SUPPLY NOTE: This form is suitable for many types of smaller installation, not exclusively residential. The persons responsible for the periodic inspection of the installation should include the relevant items in relation to the electrical installation, the inspection schedule can be reduced or expanded depending on the requirements for the installation. Outcomes Acceptable condition",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 7
+    }
+  },
+  {
+    "id": "bs7671-eicr:page-8",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 8,
+    "summary": "CONDITION REPORT INSPECTION SCHEDULE FOR RESIDENTIAL AND SIMILAR PREMISES WITH UP TO 100 A SUPPLY NOTE: This form is suitable for many types of smaller installation, not exclusively residential. The persons responsible for the periodic inspection of the installation should include the relevant items in relation to the electrical installation, the inspection schedule can be reduced or expanded depending on the requirements for the installation. Outcomes Acceptable condition",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 8
+    }
+  },
+  {
+    "id": "bs7671-eicr:page-9",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 9,
+    "summary": "CONDITION REPORT Notes for the person producing the Report: 1   This Report should only be used for reporting on the condition of an existing electrical installation, and not for the replacement of a consumer unit/distribution board. An installation which was designed to an earlier edition of BS 7671 or the IEE Wiring Regulations and which does not fully comply with the current edition is not necessarily unsafe for continued use, or requires upgrading. Only damage, deterioration, defects, dangerous conditions and non-compliance with the requirements of BS 7671 or the IEE Wiring Regulations, which may give rise to danger, should be recorded.",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "earthing_bonding"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 9
+    }
+  },
+  {
+    "id": "bs7671-eicr:page-10",
+    "sourceDocumentId": "bs7671-eicr",
+    "page": 10,
+    "summary": "CONDITION REPORT GUIDANCE FOR RECIPIENTS (to be appended to the Report) This Report is an important and valuable document which should be retained for future reference. 1   The purpose of this Report is to confirm, as far as reasonably practicable, whether or not the electrical installation is in a satisfactory condition for continued service (see Section E). The Report should identify any damage, deterioration, defects and/or conditions which may give rise to danger (see Section K). 2   This Report is only valid if accompanied by the Inspection Schedule(s) and the Schedule(s) of Circuit",
+    "keywords": [
+      "consumer_unit",
+      "inspection_testing",
+      "protective_devices",
+      "labeling_identification"
+    ],
+    "sourceCitation": {
+      "standard": "BS 7671",
+      "title": "bs7671-eicr",
+      "page": 10
+    }
+  }
+]

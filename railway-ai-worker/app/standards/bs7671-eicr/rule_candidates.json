@@ -1,0 +1,61 @@
+[
+  {
+    "id": "consumer-unit-spd-review:bs7671-eicr",
+    "sourceDocumentId": "bs7671-eicr",
+    "issueType": "protective_device",
+    "severity": "info",
+    "message": "SPD-related guidance was found in the standards source set.",
+    "suggestedCodes": [],
+    "triggerTokens": [
+      "surge protection",
+      "spd"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs7671-eicr"
+      }
+    ]
+  },
+  {
+    "id": "inspection-labeling-review:bs7671-eicr",
+    "sourceDocumentId": "bs7671-eicr",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs7671-eicr"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:bs7671-eicr",
+    "sourceDocumentId": "bs7671-eicr",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs7671-eicr"
+      }
+    ]
+  }
+]

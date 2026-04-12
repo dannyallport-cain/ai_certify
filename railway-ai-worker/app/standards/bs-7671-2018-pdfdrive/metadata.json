@@ -1,0 +1,19 @@
+{
+  "id": "bs-7671-2018-pdfdrive",
+  "fileName": "BS 7671 2018 ( PDFDrive ).pdf",
+  "relativePath": "archive/root/reference-pdfs/BS 7671 2018 ( PDFDrive ).pdf",
+  "title": "BS 7671 2018 ( PDFDrive )",
+  "standard": "BS 7671",
+  "family": "electrical-installations",
+  "editionHint": "18th Edition",
+  "domains": [
+    "consumer_unit",
+    "inspection_testing",
+    "protective_devices",
+    "labeling_identification",
+    "earthing_bonding"
+  ],
+  "pageCount": 559,
+  "textLength": 1556739,
+  "extractedAt": "2026-04-11T17:49:48.920Z"
+}

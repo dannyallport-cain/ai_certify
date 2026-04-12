@@ -4,12 +4,26 @@ import type { AnalysisResult, Customer } from '@/services/api';
 export type CaptureMode = 'consumer_unit' | 'circuit_label';
 
 export type WizardPhotoType =
-  | 'main_fuse'
-  | 'meter'
-  | 'consumer_unit_cover_on'
-  | 'circuit_schedule'
+  | 'consumer_unit_external'
+  | 'consumer_unit_internal'
+  | 'bonding'
+  | 'damaged_accessory'
+  | 'damaged_luminaire'
   | 'smoke_detector'
   | 'co_detector';
+
+export interface PhotoQualityAssessment {
+  isSufficient: boolean;
+  score: number;
+  reasons: string[];
+  checks: {
+    width: number | null;
+    height: number | null;
+    isLandscape: boolean;
+    hasUsefulTextDetection: boolean;
+    needsHumanReview: boolean;
+  };
+};
 
 export interface CapturedImage {
   uri: string;
@@ -17,19 +31,46 @@ export interface CapturedImage {
   type?: WizardPhotoType;
   label?: string;
   slotIndex?: number;
+  qualityAssessment?: PhotoQualityAssessment;
 }
 
 export type ConsumerUnitMaterial = 'metal' | 'plastic' | 'not_sure' | null;
 
+export type ReportPurpose =
+  | 'private_rented_sector_eicr'
+  | 'change_of_tenancy'
+  | 'homebuyer_vendor'
+  | 'periodic_inspection_maintenance'
+  | 'insurance'
+  | 'pre_purchase'
+  | 'other'
+  | null;
+
+export type InstallationType =
+  | 'domestic'
+  | 'commercial'
+  | 'industrial'
+  | 'caravan'
+  | 'boat'
+  | 'mixed_use'
+  | 'other'
+  | null;
+
 export interface WizardState {
   inspectionDate: string;
+  dataEntryMode: 'guided_photo' | 'manual_only' | 'hybrid';
+  reportPurpose: ReportPurpose;
+  installationType: InstallationType;
+  occupancyType: 'owner_occupied' | 'tenanted' | 'void' | 'managed_block' | 'other' | null;
+  supplyPhase: 'single_phase' | 'three_phase' | 'unknown' | null;
+  hasOutbuildingsOrAncillarySupplies: boolean | null;
   consumerUnitMaterial: ConsumerUnitMaterial;
+  storeyCount: number;
   smokeDetectorCount: number;
   hasSolidFuelAppliance: boolean | null;
   coDetectorTested: boolean;
   activeCaptureType: WizardPhotoType | null;
   activeCaptureLabel: string | null;
-  activeCaptureMode: CaptureMode;
   activeCaptureSlotIndex: number | null;
 }
 
@@ -76,13 +117,19 @@ const initialState: JobState = {
   createdCertificate: null,
   wizard: {
     inspectionDate: getTodayIsoDate(),
+    dataEntryMode: 'guided_photo',
+    reportPurpose: null,
+    installationType: null,
+    occupancyType: null,
+    supplyPhase: null,
+    hasOutbuildingsOrAncillarySupplies: null,
     consumerUnitMaterial: null,
+    storeyCount: 1,
     smokeDetectorCount: 0,
     hasSolidFuelAppliance: null,
     coDetectorTested: false,
     activeCaptureType: null,
     activeCaptureLabel: null,
-    activeCaptureMode: 'consumer_unit',
     activeCaptureSlotIndex: null,
   },
 };
@@ -171,7 +218,6 @@ function reducer(state: JobState, action: JobAction): JobState {
           ...state.wizard,
           activeCaptureType: action.payload.type,
           activeCaptureLabel: action.payload.label,
-          activeCaptureMode: action.payload.mode ?? state.wizard.activeCaptureMode,
           activeCaptureSlotIndex: action.payload.slotIndex ?? null,
         },
       };

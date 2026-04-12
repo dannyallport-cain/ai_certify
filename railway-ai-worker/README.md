@@ -58,11 +58,190 @@ database-backups/YYYY/MM/ai-certify-db-YYYYMMDD-HHMMSS.sql.gz
   "requestedSections": ["consumer-unit", "accessories"],
   "metadata": {
     "jobId": "123"
+  },
+  "certificateContext": {
+    "certificateType": "eicr",
+    "boardReference": "DB-1",
+    "consumerUnit": {
+      "brand": "Hager",
+      "model": "VM123",
+      "serialNumber": "ABC123456",
+      "boardType": "split-load",
+      "hasMainSwitch": true,
+      "hasRcdProtection": true,
+      "hasRcboProtection": false,
+      "hasSpd": true,
+      "rcdType": "type-a"
+    },
+    "circuits": {
+      "total": 12,
+      "rcdProtectedCount": 8,
+      "rcboCount": 2,
+      "mcbCount": 10,
+      "spdProtectedCount": 12
+    },
+    "observations": {
+      "codes": ["C3"],
+      "notes": ["Certificate says SPD present at board DB-1"]
+    },
+    "metadata": {
+      "jobId": "123",
+      "certificateId": "cert-001"
+    }
   }
 }
 ```
 
 At least one of `imageUrl` or `imageBase64` must be provided.
+
+### Optional `certificateContext`
+
+`certificateContext` is optional and is intended for deterministic v1.0 consistency checks between OCR/image findings and structured certificate facts.
+
+Supported nested fields:
+
+- `certificateType`
+- `boardReference`
+- `consumerUnit`
+  - `brand`
+  - `model`
+  - `serialNumber`
+  - `boardType`
+  - `hasMainSwitch`
+  - `hasRcdProtection`
+  - `hasRcboProtection`
+  - `hasSpd`
+  - `rcdType`
+- `circuits`
+  - `total`
+  - `rcdProtectedCount`
+  - `rcboCount`
+  - `mcbCount`
+  - `spdProtectedCount`
+- `observations`
+  - `codes`
+  - `notes`
+- `metadata`
+
+This context allows the rules engine to flag likely mismatches such as:
+
+- certificate says SPD present but image/OCR does not support it
+- certificate says Type A but image text suggests Type AC
+- certificate brand/model/serial does not match the photographed board
+- image quality is too poor for certificate-backed automation
+
+## `POST /analyze-image` response shape
+
+Existing response fields are preserved for backward compatibility:
+
+- `success`
+- `summary`
+- `findings`
+- `prefill`
+- `needsHumanReview`
+- `modelInfo`
+
+The response now also supports:
+
+- `inferenceResults`: explainable deterministic rule outputs
+- `issues`: alias-style issue list for downstream consumers that want a flat problems array
+
+Example:
+
+```json
+{
+  "success": true,
+  "summary": "Analysis completed with review required.",
+  "findings": {
+    "consumerUnit": {
+      "brand": "Hager",
+      "model": "VM123",
+      "serialNumber": "ABC123456",
+      "condition": "used",
+      "confidence": 0.88,
+      "bbox": null
+    },
+    "accessories": [],
+    "textDetections": ["Hager", "Type AC", "SPD"],
+    "observations": ["Labeling partly obscured"]
+  },
+  "prefill": {
+    "observations": ["Labeling partly obscured"],
+    "recommendedCodes": ["FI"],
+    "reportSections": {}
+  },
+  "needsHumanReview": true,
+  "modelInfo": {
+    "detector": "ocr-first",
+    "ocr": "tesseract",
+    "extractor": "rules-regex"
+  },
+  "inferenceResults": [
+    {
+      "ruleId": "rcd-type-ac-detected",
+      "issueType": "safety-observation",
+      "message": "Type AC RCD wording detected in the image.",
+      "severity": "warning",
+      "suggestedCodes": ["C3"],
+      "evidence": [
+        {
+          "text": "Type AC",
+          "field": "findings.textDetections",
+          "value": "Type AC",
+          "bbox": null,
+          "note": "Matched OCR text"
+        }
+      ],
+      "source": "rules.v1",
+      "confidence": 0.91,
+      "needsHumanReview": true
+    }
+  ],
+  "issues": [
+    {
+      "ruleId": "rcd-type-ac-detected",
+      "issueType": "safety-observation",
+      "message": "Type AC RCD wording detected in the image.",
+      "severity": "warning",
+      "suggestedCodes": ["C3"],
+      "evidence": [
+        {
+          "text": "Type AC",
+          "field": "findings.textDetections",
+          "value": "Type AC",
+          "bbox": null,
+          "note": "Matched OCR text"
+        }
+      ],
+      "source": "rules.v1",
+      "confidence": 0.91,
+      "needsHumanReview": true
+    }
+  ]
+}
+```
+
+### Inference item fields
+
+Each item in `inferenceResults` or `issues` includes:
+
+- `ruleId`: stable rule identifier
+- `issueType`: category such as image-quality, certificate-mismatch, safety-observation
+- `message`: human-readable explanation
+- `severity`: one of `info`, `warning`, `medium`, `high`, `critical`
+- `suggestedCodes`: optional recommended codes such as `C1`, `C2`, `C3`, `FI`
+- `evidence`: supporting evidence objects
+- `source`: origin of the result, expected to identify the rule pack or evaluator
+- `confidence`: optional confidence score
+- `needsHumanReview`: whether the result should force or support manual review
+
+Each evidence object may contain:
+
+- `text`
+- `field`
+- `value`
+- `bbox`
+- `note`
 
 ## Local development
 
@@ -91,7 +270,16 @@ curl -X POST http://localhost:8000/analyze-image \
     "reportType": "eicr",
     "inspectionType": "consumer-unit",
     "requestedSections": ["consumer-unit", "accessories"],
-    "metadata": {"jobId": "demo-123"}
+    "metadata": {"jobId": "demo-123"},
+    "certificateContext": {
+      "certificateType": "eicr",
+      "boardReference": "DB-1",
+      "consumerUnit": {
+        "brand": "Hager",
+        "hasSpd": true,
+        "rcdType": "type-a"
+      }
+    }
   }'
 ```
 
@@ -100,6 +288,110 @@ Backup endpoint example:
 ```bash
 curl -X POST http://localhost:8000/backup-database \
   -H "X-Backup-Token: your-shared-secret"
+```
+
+## Local standards extraction worker
+
+A CPU-only local worker script is available to transform reference PDFs into structured standards knowledge without involving the hosted inference API.
+
+Source PDFs are expected in:
+
+```text
+archive/root/reference-pdfs/
+```
+
+Run from the repo root:
+
+```bash
+node scripts/build-standards-knowledge.mjs
+```
+
+Optional flags:
+
+```bash
+node scripts/build-standards-knowledge.mjs --input archive/root/reference-pdfs --output railway-ai-worker/app/standards
+```
+
+Output is written to:
+
+```text
+railway-ai-worker/app/standards/
+```
+
+For each PDF the worker creates:
+
+- `metadata.json`
+- `pages.json`
+- `source.txt`
+- `clauses.json`
+- `rule_candidates.json`
+
+It also creates aggregated files at the standards root:
+
+- `catalog.json`
+- `clauses.json`
+- `rule_candidates.json`
+
+Recommended dissemination flow:
+
+```text
+reference PDFs -> local extraction worker -> standards knowledge store -> curated/compiled rule packs -> app/rules/engine.py
+```
+
+This keeps the expensive PDF parsing local on your CPU and gives the inference engine small, versioned JSON artifacts instead of raw PDFs.
+
+### Compile standards knowledge into an executable rule pack
+
+After generating `rule_candidates.json`, compile them into a runtime rule pack:
+
+```bash
+node scripts/compile-standards-rule-pack.mjs
+```
+
+Optional flags:
+
+```bash
+node scripts/compile-standards-rule-pack.mjs \
+  --candidates railway-ai-worker/app/standards/rule_candidates.json \
+  --output railway-ai-worker/app/rules/v1_1_standards_compiled.json \
+  --name standards-compiled-v1.1
+```
+
+The compiled output is written to:
+
+```text
+railway-ai-worker/app/rules/v1_1_standards_compiled.json
+```
+
+This rule pack uses the same deterministic structure as the existing rules engine and is now auto-loaded alongside the base `v1_0_eicr_consumer_unit.json` pack by `app/rules/engine.py`.
+
+Additional curated domain packs are also auto-loaded:
+
+- `v1_2_bs7671_domain.json`
+- `v1_2_gn3_domain.json`
+- `v1_2_eicr_coding_domain.json`
+- `v1_2_image_observation_domain.json`
+
+These curated packs raise precision by separating:
+- BS 7671 review cues
+- Guidance Note 3 inspection/testing cues
+- EICR coding-oriented review logic
+- practical image-observation mappings from captured board images
+
+End-to-end local workflow:
+
+```bash
+node scripts/build-standards-knowledge.mjs
+node scripts/compile-standards-rule-pack.mjs
+cd railway-ai-worker && ./.venv311/bin/python -m pytest -q tests/test_inference_engine.py
+```
+
+At runtime the worker now evaluates:
+
+```text
+v1.0 base consumer-unit rules
++ v1.1 compiled standards candidates
++ v1.2 curated domain packs
 ```
 
 ## Railway deployment
@@ -117,3 +409,4 @@ Deploy this folder as its own Railway service.
 - The old GitHub daily backup workflow has been replaced by this Vercel Cron → Next.js → Railway worker flow.
 - Keep the worker base URL stable so the Vercel route can call `${RAILWAY_BACKUP_WORKER_URL}/backup-database`.
 - `needsHumanReview` remains `true` for AI analysis responses.
+- The new schema additions are backward compatible because `certificateContext`, `inferenceResults`, and `issues` are optional extensions around the existing contract.

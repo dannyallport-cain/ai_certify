@@ -1,0 +1,43 @@
+[
+  {
+    "id": "inspection-labeling-review:bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "issueType": "labeling",
+    "severity": "medium",
+    "message": "Labelling or identification guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "labelling",
+      "label",
+      "identification"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only"
+      }
+    ]
+  },
+  {
+    "id": "inspection-earthing-review:bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "sourceDocumentId": "bs-7671-2018-a1-2020-inc-corrigendum-may-2020-read-only",
+    "issueType": "earthing_bonding",
+    "severity": "medium",
+    "message": "Earthing/bonding guidance was found in the standards source set.",
+    "suggestedCodes": [
+      "manual-review"
+    ],
+    "triggerTokens": [
+      "earthing",
+      "bonding"
+    ],
+    "authority": [
+      {
+        "standard": "BS 7671",
+        "title": "bs-7671-2018_a1_2020-inc-corrigendum-may-2020_read-only"
+      }
+    ]
+  }
+]

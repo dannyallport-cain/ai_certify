@@ -7,7 +7,11 @@ import { emailVerificationTokens, teamMembers, users } from '@/lib/db/schema';
 async function main() {
   const email = `codex-email-verify-${Date.now()}@example.com`;
   const password = 'Password123!';
-  const priceId = process.env.STRIPE_VERIFICATION_PRICE_ID || 'price_test';
+  const priceId = process.env.STRIPE_VERIFICATION_PRICE_ID;
+
+  if (!priceId) {
+    throw new Error('STRIPE_VERIFICATION_PRICE_ID is not set');
+  }
 
   let verificationUrl: string | null = null;
   const originalLog = console.log;

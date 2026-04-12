@@ -1,0 +1,581 @@
+{
+  "version": "1.2",
+  "name": "image-observation-domain-v1.2",
+  "description": "Curated OCR-visible observation mapping rules for image-assisted consumer unit review.",
+  "rules": [
+    {
+      "id": "image-scorch-burn-heat-damage-review",
+      "issueType": "damage",
+      "severity": "high",
+      "message": "Scorch, burn, or heat-damage wording was detected and should be reviewed against the captured image.",
+      "source": "image_observation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Image Observation Mapping",
+          "title": "Curated image observation mapping pack"
+        }
+      ],
+      "metadata": {
+        "domain": "image_observation",
+        "observationCategory": "thermal_damage",
+        "curationPolicy": "high_precision_review_oriented",
+        "triggerTokens": [
+          "scorch",
+          "scorched",
+          "burn",
+          "burnt",
+          "burned",
+          "heat damage",
+          "heat damaged",
+          "overheat",
+          "overheated",
+          "thermal damage"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "scorch"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "scorched"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "burn"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "burnt"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "burned"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "heat damage"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "heat damaged"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "overheat"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "overheated"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "thermal damage"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "image-corrosion-rust-review",
+      "issueType": "damage",
+      "severity": "medium",
+      "message": "Corrosion or rust wording was detected and should be reviewed in the image context.",
+      "source": "image_observation.curated",
+      "confidence": 0.92,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Image Observation Mapping",
+          "title": "Curated image observation mapping pack"
+        }
+      ],
+      "metadata": {
+        "domain": "image_observation",
+        "observationCategory": "corrosion",
+        "curationPolicy": "high_precision_review_oriented",
+        "triggerTokens": [
+          "corrosion",
+          "corroded",
+          "rust",
+          "rusted",
+          "oxidation"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "corrosion"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "corroded"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "rust"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "rusted"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "oxidation"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "image-broken-missing-cover-review",
+      "issueType": "damage",
+      "severity": "high",
+      "message": "Broken or missing cover wording was detected and should be reviewed from the image.",
+      "source": "image_observation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Image Observation Mapping",
+          "title": "Curated image observation mapping pack"
+        }
+      ],
+      "metadata": {
+        "domain": "image_observation",
+        "observationCategory": "cover_integrity",
+        "curationPolicy": "high_precision_review_oriented",
+        "triggerTokens": [
+          "broken cover",
+          "missing cover",
+          "cover missing",
+          "lid missing",
+          "broken lid",
+          "cover broken"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "broken cover"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "missing cover"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "cover missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "lid missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "broken lid"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "cover broken"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "image-blanking-plate-open-slot-review",
+      "issueType": "access_opening",
+      "severity": "high",
+      "message": "Wording suggesting a missing blanking piece or open slot was detected and should be reviewed carefully from the image.",
+      "source": "image_observation.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Image Observation Mapping",
+          "title": "Curated image observation mapping pack"
+        }
+      ],
+      "metadata": {
+        "domain": "image_observation",
+        "observationCategory": "openings_blanking",
+        "curationPolicy": "high_precision_review_oriented",
+        "triggerTokens": [
+          "blanking plate missing",
+          "missing blank",
+          "open slot",
+          "empty way",
+          "open way",
+          "open aperture"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "blanking plate missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "missing blank"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "open slot"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "empty way"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "open way"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "open aperture"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "image-label-missing-unlabelled-review",
+      "issueType": "labeling",
+      "severity": "medium",
+      "message": "Missing or unclear label wording was detected and should be checked against the image.",
+      "source": "image_observation.curated",
+      "confidence": 0.91,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Image Observation Mapping",
+          "title": "Curated image observation mapping pack"
+        }
+      ],
+      "metadata": {
+        "domain": "image_observation",
+        "observationCategory": "labeling",
+        "curationPolicy": "high_precision_review_oriented",
+        "triggerTokens": [
+          "label missing",
+          "labels missing",
+          "unlabelled",
+          "unlabeled",
+          "no label",
+          "no labels"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "label missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "labels missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unlabelled"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unlabeled"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no label"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no labels"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "image-cracked-enclosure-review",
+      "issueType": "damage",
+      "severity": "high",
+      "message": "Cracked enclosure wording was detected and should be verified from the captured image.",
+      "source": "image_observation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Image Observation Mapping",
+          "title": "Curated image observation mapping pack"
+        }
+      ],
+      "metadata": {
+        "domain": "image_observation",
+        "observationCategory": "enclosure_integrity",
+        "curationPolicy": "high_precision_review_oriented",
+        "triggerTokens": [
+          "cracked enclosure",
+          "enclosure cracked",
+          "cracked case",
+          "case cracked",
+          "housing cracked"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "cracked enclosure"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "enclosure cracked"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "cracked case"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "case cracked"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "housing cracked"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "image-water-ingress-damp-review",
+      "issueType": "environmental_damage",
+      "severity": "high",
+      "message": "Water ingress, damp, or condensation wording was detected and should be reviewed against the image evidence.",
+      "source": "image_observation.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Image Observation Mapping",
+          "title": "Curated image observation mapping pack"
+        }
+      ],
+      "metadata": {
+        "domain": "image_observation",
+        "observationCategory": "moisture_ingress",
+        "curationPolicy": "high_precision_review_oriented",
+        "triggerTokens": [
+          "water ingress",
+          "damp",
+          "condensation",
+          "moisture",
+          "wet inside"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "water ingress"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "damp"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "condensation"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "moisture"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "wet inside"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "image-loose-conductor-review",
+      "issueType": "wiring_observation",
+      "severity": "high",
+      "message": "Loose conductor wording was detected and should be reviewed from the image before any coding decision.",
+      "source": "image_observation.curated",
+      "confidence": 0.93,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Image Observation Mapping",
+          "title": "Curated image observation mapping pack"
+        }
+      ],
+      "metadata": {
+        "domain": "image_observation",
+        "observationCategory": "conductor_security",
+        "curationPolicy": "high_precision_review_oriented",
+        "triggerTokens": [
+          "loose conductor",
+          "loose wire",
+          "loose cable",
+          "conductor loose",
+          "wire loose",
+          "cable loose"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "loose conductor"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "loose wire"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "loose cable"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "conductor loose"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "wire loose"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "cable loose"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    }
+  ]
+}

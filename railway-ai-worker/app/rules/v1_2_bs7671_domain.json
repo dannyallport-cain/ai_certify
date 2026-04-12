@@ -1,0 +1,567 @@
+{
+  "version": "1.2",
+  "name": "bs7671-domain-v1.2",
+  "description": "Curated conservative BS 7671 review prompts for consumer unit and protective device OCR text. These rules are intentionally high-precision, text-driven, and framed for human review rather than definitive compliance conclusions.",
+  "rules": [
+    {
+      "id": "bs7671-type-ac-review",
+      "issueType": "protective_device",
+      "severity": "medium",
+      "message": "Type AC wording was detected in OCR text. Review device suitability against BS 7671 requirements for the connected installation and equipment.",
+      "source": "bs7671.curated",
+      "confidence": 0.96,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "rcd_type",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "type ac",
+          "ac rcd"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "type ac"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "ac rcd"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "bs7671-type-a-detected-review",
+      "issueType": "protective_device",
+      "severity": "info",
+      "message": "Type A wording was detected in OCR text. Review whether protective device type is clearly identified and appropriately documented.",
+      "source": "bs7671.curated",
+      "confidence": 0.93,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "rcd_type",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "type a"
+        ]
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "type a"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "bs7671-rcd-mentioned-no-type-visible",
+      "issueType": "protective_device",
+      "severity": "medium",
+      "message": "RCD wording was detected without an obvious Type AC or Type A marker in OCR text. Review whether device type is visible and adequately identified.",
+      "source": "bs7671.curated",
+      "confidence": 0.84,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "rcd_identification",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "rcd"
+        ]
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "rcd"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "type ac"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "ac rcd"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "type a"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "bs7671-spd-mentioned-review",
+      "issueType": "protective_device",
+      "severity": "info",
+      "message": "SPD-related wording was detected in OCR text. Review whether surge protection provision is clearly identified and documented.",
+      "source": "bs7671.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "spd",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "spd",
+          "surge protection",
+          "surge protective device"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "spd"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "surge protection"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "surge protective device"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "bs7671-consumer-unit-no-spd-mention-review",
+      "issueType": "protective_device",
+      "severity": "medium",
+      "message": "Consumer unit wording was detected but no obvious SPD wording was found in OCR text. Review whether surge protection provision or omission has been assessed and recorded elsewhere.",
+      "source": "bs7671.curated",
+      "confidence": 0.8,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "spd_absence_review",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "consumer unit"
+        ]
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "consumer unit"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "spd"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "surge protection"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "surge protective device"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "bs7671-earthing-mentioned-review",
+      "issueType": "earthing_bonding",
+      "severity": "info",
+      "message": "Earthing-related wording was detected in OCR text. Review whether the earthing arrangement is clearly identified and documented.",
+      "source": "bs7671.curated",
+      "confidence": 0.91,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "earthing",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "earthing",
+          "main earth",
+          "earth terminal"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "earthing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "main earth"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "earth terminal"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "bs7671-bonding-mentioned-review",
+      "issueType": "earthing_bonding",
+      "severity": "info",
+      "message": "Bonding-related wording was detected in OCR text. Review whether main protective bonding is clearly identified and documented.",
+      "source": "bs7671.curated",
+      "confidence": 0.91,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "bonding",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "bonding",
+          "main bonding",
+          "protective bonding"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "bonding"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "main bonding"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "protective bonding"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "bs7671-consumer-unit-no-earthing-bonding-mention-review",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "Consumer unit wording was detected but no obvious earthing or bonding wording was found in OCR text. Review whether these details have been verified elsewhere.",
+      "source": "bs7671.curated",
+      "confidence": 0.77,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "earthing_bonding_absence_review",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "consumer unit"
+        ]
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "consumer unit"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "earthing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "main earth"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "earth terminal"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "bonding"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "main bonding"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "protective bonding"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "bs7671-label-identification-mentioned-review",
+      "issueType": "labeling",
+      "severity": "info",
+      "message": "Labeling or circuit identification wording was detected in OCR text. Review whether schedules, device identification, and notices are clear and complete.",
+      "source": "bs7671.curated",
+      "confidence": 0.89,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "labeling_identification",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "label",
+          "identification",
+          "circuit schedule",
+          "way 1"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "label"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "identification"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "circuit schedule"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "way 1"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "bs7671-missing-label-identification-review",
+      "issueType": "labeling",
+      "severity": "medium",
+      "message": "Wording suggesting missing or unclear labeling or identification was detected in OCR text. Review whether circuits, devices, and safety information are sufficiently identified.",
+      "source": "bs7671.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "C3"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "Curated BS 7671 domain guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "consumer_unit",
+        "topic": "labeling_identification_deficiency",
+        "curation": "high_precision_review",
+        "triggerTokens": [
+          "unlabelled",
+          "unlabeled",
+          "no label",
+          "no labels",
+          "not identified",
+          "no circuit identification"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unlabelled"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unlabeled"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no label"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no labels"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "not identified"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no circuit identification"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    }
+  ]
+}

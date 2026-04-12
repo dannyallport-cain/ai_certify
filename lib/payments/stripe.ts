@@ -42,7 +42,11 @@ export type CreateOneTimeCheckoutParams = {
   metadata?: Record<string, string | undefined>;
 };
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
+if (!stripeSecretKey) {
+  throw new Error('STRIPE_SECRET_KEY is not set');
+}
 
 export const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2025-08-27.basil'
@@ -310,31 +314,6 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
-  if (
-    !process.env.STRIPE_SECRET_KEY ||
-    process.env.STRIPE_SECRET_KEY.includes('placeholder') ||
-    process.env.STRIPE_SECRET_KEY.includes('here')
-  ) {
-    return [
-      {
-        id: 'price_base_mock',
-        productId: 'prod_base_mock',
-        unitAmount: 800,
-        currency: 'usd',
-        interval: 'month',
-        trialPeriodDays: 7
-      },
-      {
-        id: 'price_plus_mock',
-        productId: 'prod_plus_mock',
-        unitAmount: 1200,
-        currency: 'usd',
-        interval: 'month',
-        trialPeriodDays: 7
-      }
-    ];
-  }
-
   const prices = await stripe.prices.list({
     expand: ['data.product'],
     active: true,
@@ -487,151 +466,6 @@ function getApprovedPlanDefaults(planName: string) {
 export async function getAdminStripeSubscriptionPlans(): Promise<
   AdminStripeSubscriptionPlan[]
 > {
-  const hasStripeKey =
-    !!process.env.STRIPE_SECRET_KEY &&
-    !process.env.STRIPE_SECRET_KEY.includes('placeholder') &&
-    !process.env.STRIPE_SECRET_KEY.includes('here');
-
-  if (!hasStripeKey) {
-    return [
-      {
-        id: 'plan_starter',
-        productId: 'prod_starter_mock',
-        priceId: 'price_starter_mock',
-        name: 'Starter',
-        description:
-          'For solo engineers who need compliant certificates, branded PDFs, and a low-friction upgrade path.',
-        active: true,
-        currency: 'gbp',
-        monthlyPrice: 5,
-        annualPrice: 50,
-        interval: 'month',
-        trialPeriodDays: 14,
-        metadata: {
-          certificates: 'Up to 30 certificates / month',
-          teamSeats: '1 user included',
-          additionalSeatPrice: '',
-          targetUser: 'Occasional or newly self-employed engineers',
-          badge: 'Entry Plan',
-          savingsNote: 'Set at ~50% of the common £10 solo benchmark.',
-          competitorAnchor:
-            'Comparable specialist tools often land around £10/month.',
-          features:
-            'Electrical and fire certificate workflows|Branded PDF exports|Customer and installation records|Admin analytics visibility|Email support',
-        },
-        allowances: {
-          certificates: 'Up to 30 certificates / month',
-          teamSeats: '1 user included',
-          additionalSeatPrice: null,
-          targetUser: 'Occasional or newly self-employed engineers',
-          badge: 'Entry Plan',
-          savingsNote: 'Set at ~50% of the common £10 solo benchmark.',
-          competitorAnchor:
-            'Comparable specialist tools often land around £10/month.',
-        },
-        features: [
-          'Electrical and fire certificate workflows',
-          'Branded PDF exports',
-          'Customer and installation records',
-          'Admin analytics visibility',
-          'Email support'
-        ]
-      },
-      {
-        id: 'plan_professional',
-        productId: 'prod_professional_mock',
-        priceId: 'price_professional_mock',
-        name: 'Small Business',
-        description:
-          'Built for growing electrical businesses that need unlimited certificates, faster admin, and room for a small office team.',
-        active: true,
-        currency: 'gbp',
-        monthlyPrice: 9,
-        annualPrice: 90,
-        interval: 'month',
-        trialPeriodDays: 14,
-        metadata: {
-          certificates: 'Unlimited certificates',
-          teamSeats: '3 users included',
-          additionalSeatPrice: '£2.50/month each',
-          targetUser: 'Growing contractors and small electrical businesses',
-          badge: 'Most Popular',
-          savingsNote:
-            'Designed as the best-value plan for day-to-day operational use.',
-          competitorAnchor:
-            'A practical fit for small firms moving beyond solo usage.',
-          features:
-            'Unlimited certificate generation|AI-assisted data extraction and autofill|Shared customer and installation records|Priority PDF generation|Team-ready admin visibility|Priority support',
-        },
-        allowances: {
-          certificates: 'Unlimited certificates',
-          teamSeats: '3 users included',
-          additionalSeatPrice: '£2.50/month each',
-          targetUser: 'Growing contractors and small electrical businesses',
-          badge: 'Most Popular',
-          savingsNote:
-            'Designed as the best-value plan for day-to-day operational use.',
-          competitorAnchor:
-            'A practical fit for small firms moving beyond solo usage.',
-        },
-        features: [
-          'Unlimited certificate generation',
-          'AI-assisted data extraction and autofill',
-          'Shared customer and installation records',
-          'Priority PDF generation',
-          'Team-ready admin visibility',
-          'Priority support'
-        ]
-      },
-      {
-        id: 'plan_team',
-        productId: 'prod_team_mock',
-        priceId: 'price_team_mock',
-        name: 'Enterprise',
-        description:
-          'For larger firms that need broader team access, stronger oversight, and a scalable certificate workflow across the business.',
-        active: true,
-        currency: 'gbp',
-        monthlyPrice: 19,
-        annualPrice: 190,
-        interval: 'month',
-        trialPeriodDays: 14,
-        metadata: {
-          certificates: 'Unlimited certificates',
-          teamSeats: '10 users included',
-          additionalSeatPrice: '£2/month each',
-          targetUser: 'Larger contractors, offices, and compliance-led teams',
-          badge: 'For Larger Teams',
-          savingsNote:
-            'Higher seat allowance and admin controls for larger operational teams.',
-          competitorAnchor:
-            'Structured for businesses needing wider rollout across engineers and admins.',
-          features:
-            'Everything in Small Business|10 included users|Enhanced admin and oversight visibility|Streamlined onboarding for office and field teams|Priority operational support|Designed for multi-user rollout',
-        },
-        allowances: {
-          certificates: 'Unlimited certificates',
-          teamSeats: '10 users included',
-          additionalSeatPrice: '£2/month each',
-          targetUser: 'Larger contractors, offices, and compliance-led teams',
-          badge: 'For Larger Teams',
-          savingsNote:
-            'Higher seat allowance and admin controls for larger operational teams.',
-          competitorAnchor:
-            'Structured for businesses needing wider rollout across engineers and admins.',
-        },
-        features: [
-          'Everything in Small Business',
-          '10 included users',
-          'Enhanced admin and oversight visibility',
-          'Streamlined onboarding for office and field teams',
-          'Priority operational support',
-          'Designed for multi-user rollout'
-        ]
-      }
-    ];
-  }
-
   const [products, prices] = await Promise.all([
     stripe.products.list({
       active: true
@@ -727,76 +561,14 @@ export async function getAdminStripeSubscriptionPlans(): Promise<
       .filter((planKey): planKey is keyof typeof approvedPlanDefaults => planKey !== null)
   );
 
-  const missingApprovedPlans = (
-    Object.entries(approvedPlanDefaults) as Array<
-      [keyof typeof approvedPlanDefaults, (typeof approvedPlanDefaults)[keyof typeof approvedPlanDefaults]]
-    >
-  )
-    .filter(([planKey]) => !existingPlanKeys.has(planKey))
-    .map(([planKey, defaults], index): AdminStripeSubscriptionPlan => ({
-      id: `fallback_${planKey}`,
-      productId: `fallback_product_${planKey}`,
-      priceId: `fallback_price_${planKey}`,
-      name: defaults.displayName,
-      description: defaults.description,
-      active: true,
-      currency: defaults.currency,
-      monthlyPrice: defaults.monthlyPrice,
-      annualPrice: defaults.annualPrice,
-      interval: 'month',
-      trialPeriodDays: 14,
-      metadata: {
-        planId: planKey,
-        annualPrice: defaults.annualPrice.toString(),
-        certificates: defaults.certificates,
-        teamSeats: defaults.teamSeats,
-        additionalSeatPrice: defaults.additionalSeatPrice || '',
-        targetUser: defaults.targetUser,
-        badge: defaults.badge,
-        savingsNote: defaults.savingsNote,
-        competitorAnchor: defaults.competitorAnchor,
-        trialPeriodDays: '14',
-        features: defaults.features.join('|'),
-      },
-      allowances: {
-        certificates: defaults.certificates,
-        teamSeats: defaults.teamSeats,
-        additionalSeatPrice: defaults.additionalSeatPrice,
-        targetUser: defaults.targetUser,
-        badge: defaults.badge,
-        savingsNote: defaults.savingsNote,
-        competitorAnchor: defaults.competitorAnchor,
-      },
-      features: [...defaults.features],
-    }));
+  if (plans.length === 0) {
+    return [];
+  }
 
-  return [...plans, ...missingApprovedPlans].sort(
-    (left, right) => left.monthlyPrice - right.monthlyPrice
-  );
+  return plans.sort((left, right) => left.monthlyPrice - right.monthlyPrice);
 }
 
 export async function getStripeProducts() {
-  if (
-    !process.env.STRIPE_SECRET_KEY ||
-    process.env.STRIPE_SECRET_KEY.includes('placeholder') ||
-    process.env.STRIPE_SECRET_KEY.includes('here')
-  ) {
-    return [
-      {
-        id: 'prod_base_mock',
-        name: 'Base',
-        description: 'Base subscription plan',
-        defaultPriceId: 'price_base_mock'
-      },
-      {
-        id: 'prod_plus_mock',
-        name: 'Plus',
-        description: 'Plus subscription plan',
-        defaultPriceId: 'price_plus_mock'
-      }
-    ];
-  }
-
   const products = await stripe.products.list({
     active: true,
     expand: ['data.default_price']

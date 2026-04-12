@@ -1,0 +1,668 @@
+BS 7671:2018+A2:2022
+MODEL FORMS FOR CERTIFICATION
+AND REPORTING
+Usage and Reproduction of IET Forms
+Subject to your agreement to the following conditions, you are permitted to, free of charge, photocopy and/
+or electronically manipulate the forms for use solely in connection with your electrical contracting business.
+1   Photocopies or reproductions of blank forms shall not be made for the purpose of resale.
+2   The IET logo must not be reproduced nor imposed on any copies.
+3   The IET’s agreement to your usage of the forms may not be construed to mean that the forms have
+been checked by the IET for errors or omissions or that they are suitable for your particular purpose.
+4   This permission shall automatically lapse after seven years from the date hereof but may then,
+subject to written application, be considered for renewal.
+5   Nothing in this agreement shall be construed as a waiver of the IET’s right under UK Copyright Law
+and the international conventions to which the UK is a signatory.
+Forms included in this   f ile
+1   Electrical Installation Condition Report (EICR)
+2   Schedule of Circuit Details
+3   Schedule of Test Results
+4   Schedule of Inspections
+28th March 2022
+
+ELECTRICAL INSTALLATION CONDITION REPORT
+SECTION A. DETAILS OF THE PERSON ORDERING THE REPORT
+SECTION B. REASON FOR PRODUCING THIS REPORT
+SECTION C. DETAILS OF THE INSTALLATION WHICH IS THE SUBJECT OF THIS REPORT
+SECTION D. EXTENT AND LIMITATIONS OF INSPECTION AND TESTING
+SECTION E. SUMMARY OF THE CONDITION OF THE INSTALLATION
+SECTION F. RECOMMENDATIONS
+SECTION G. DECLARATION
+Inspected and tested by:
+SECTION H. SCHEDULE(S)
+Name ...................................................................................................................................................................................................................................
+Address ...............................................................................................................................................................................................................................
+.............................................................................................................................................................................................................................................
+.............................................................................................................................................................................................................................................
+Date(s) on which inspection and testing was carried out ....................................................................................................................................................
+Occupier ..............................................................................................................................................................................................................................
+Address ...............................................................................................................................................................................................................................
+.............................................................................................................................................................................................................................................
+Description of premises
+Residential   Commercial   Industrial   Other (include brief description)   ...................................................................................................
+Estimated age of wiring system …………….. years
+Evidence of additions / alterations? Yes   No   Not apparent   If yes, estimate age ……………. years
+Installation records available? (Regulation 651.1) Yes   No   Date of last inspection …………………………. (date)
+Extent of the electrical installation covered by this report ...................................................................................................................................................
+.............................................................................................................................................................................................................................................
+Agreed limitations including the reasons (see Regulation 653.2) .......................................................................................................................................
+.............................................................................................................................................................................................................................................
+Agreed with: ........................................................................................................................................................................................................................
+Operational limitations including the reasons (see page no..............) ................................................................................................................................
+.............................................................................................................................................................................................................................................
+The inspection and testing detailed in this report and accompanying schedules have been carried out in accordance with BS 7671:2018
+as amended to …………………………………..
+It should be noted that cables concealed within trunking and conduits, under floors, in roof spaces, and generally within the fabric of the building
+or underground, have   not   been inspected unless specifically agreed between the client and inspector prior to the inspection. An inspection
+should be made within an accessible roof space housing other electrical equipment.
+General condition of the installation (in terms of electrical safety) ......................................................................................................................................
+.............................................................................................................................................................................................................................................
+.............................................................................................................................................................................................................................................
+Overall assessment of the installation in terms of its suitability for continued use SATISFACTORY / UNSATISFACTORY* (Delete as appropriate)
+*An unsatisfactory assessment indicates that dangerous (code C1) and/or potentially dangerous (code C2) conditions have been identified.
+Subject to the necessary remedial action being taken, I / We recommend that the installation is further inspected and tested by ………….......… (date)
+for the following reasons………………………………………………………………………………………………………………………………………........……
+Where the overall assessment of the suitability of the installation for continued use above is stated as UNSATISFACTORY, I / we recommend
+that any observations classified as   ‘Danger present’   (code C1) or   ‘Potentially dangerous’   (code C2) are acted upon as a matter of urgency.
+Investigation without delay is recommended for observations identified as   ‘Further investigation required’   (code FI).
+Observations classified as   ‘Improvement recommended’   (code C3) should be given due consideration.
+I/We, being the person(s) responsible for the inspection and testing of the electrical installation (as indicated by my/our signatures below),
+particulars of which are described above, having exercised reasonable skill and care when carrying out the inspection and testing, hereby
+declare that the information in this report, including the observations and the attached schedules, provides an accurate assessment of the
+condition of the electrical installation taking into account the stated extent and limitations in section D of this report.
+…………Inspection Schedule(s) and ……... Schedule(s) of Circuit Details and Test Results are attached.
+The attached schedule(s) are part of this document and this report is valid only when they are attached to it.
+Name (Capitals) .........................................................................................
+Signature ....................................................................................................
+For/on behalf of ..........................................................................................
+Position .......................................................................................................
+Address ......................................................................................................
+Date ............................................................................................................
+Report authorised for issue by:
+Name (Capitals) .........................................................................................
+Signature ....................................................................................................
+For/on behalf of ..........................................................................................
+Position .......................................................................................................
+Address ......................................................................................................
+Date ............................................................................................................
+Report No.: .........................
+
+SECTION I. SUPPLY CHARACTERISTICS AND EARTHING ARRANGEMENTS
+SECTION J. PARTICULARS OF INSTALLATION REFERRED TO IN THE REPORT
+Earthing
+arrangements
+Supply Protective Device Number and Type of Live Conductors   Nature of Supply Parameters
+TN-C
+TN-S
+TN-C-S
+TT
+IT
+Nominal voltage, U / U 0
+(1)   ............................
+Nominal frequency, f (1)   ...............................
+Prospective fault current, I pf
+(2)   ......................
+External earth fault
+loop impedance, Z e
+(2)   ..................................
+(Note: (1) by enquiry (2) by enquiry or by measurement)
+BS (EN)   ............................ ....
+Type   ............................ .........
+Rated current   .......................
+V
+Hz
+kA
+Ω
+A
+1-phase, 2-wire
+2-phase, 3-wire
+3-phase, 3-wire
+3-phase, 4-wire
+AC   DC
+2-wire
+3-wire
+Other
+Confirmation of supply polarity
+Other sources of supply (as detailed on attached schedule)
+Main Protective Conductors
+FI – Further investigation required without delay
+C2 – Potentially dangerous - urgent remedial action required
+C3 – Improvement recommended
+C1 – Danger present. Risk of injury. Immediate remedial action required
+One of the following codes, as appropriate, has been allocated to each of the observations made above to indicate to the person(s)
+responsible for the installation the degree of urgency for remedial action.
+Main switch / Switch-fuse / Circuit-breaker / RCD
+Means of Earthing
+Distributor’s facility
+Installation earth electrode
+Details of Installation Earth Electrode   (where applicable)
+Type (e.g. rod(s), tape etc) ..................................................................................................................................
+Location ....................................................................................................................................................................
+Electrode resistance to Earth ...............................................................................................................................
+Earthing conductor   Material .............................................   csa ............................................. mm 2   Connection / continuity verified
+To water installation pipes   To gas installation pipes   To oil installation pipes   To structural steel   To lightning protection
+To other   Specify ............................................................................................................................................................................................................
+Main protective   Material .............................................   csa ............................................. mm 2   Connection / continuity verified
+bonding conductors
+Location   ............................ ................................
+............................ ..............................................
+BS (EN)   ............................ ................................
+No of poles   .......................................................
+Current rating   ............................ ....................
+Fuse / device rating or setting   .......................
+Voltage rating   ................................................
+RCD Type   ............................ ........................
+Rated residual operating current ( I Δn )   ...........
+Rated time delay   ...........................................
+Measured operating time   ..............................
+If RCD main switch A
+A
+V   mA
+ms
+ms
+SECTION K. OBSERVATIONS
+Referring to the attached inspection schedule(s) and schedule(s) of circuit details and test results, and subject to the limitations specified at the
+Extent and limitations of inspection and testing   section ...................................................................................................................................................
+No remedial action is required   The following observations are made   (see below):
+Classification code OBSERVATION(S)   Include schedule reference, as appropriate
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.....................................................................................................................................................................................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+.................................
+Report No.: .........................
+
+GENERIC SCHEDULE OF CIRCUIT DETAILS
+*   SPD Type. Where a combined T1 + T2 or T2 + T3 device is installed, indicate by ticking both Type boxes.
+† Where a T3 SPD is installed to protect sensitive equipment, enter details in ‘Remarks’, column 31, of the Schedule of Test Results. (See Section 534 of BS 7671:2018+A2:2022.)
+‡ See Table 4A2 of Appendix 4 of BS 7671:2018+A2:2022.
+§ Where the maximum permitted earth fault loop impedance value stated in column 12 is taken from a source other than the tabulated values given in Chapter 41 of BS 7671:2018+A2:2022, state the source of the data in the
+appropriate cell for the circuit in the ‘Remarks’, column 31, of the Schedule of Test Results.
+DB reference:   Location:   Supplied from:
+Distribution circuit OCPD: BS (EN):   Type:   Rating/Setting:
+SPD Details:   Type(s)*:   T1   T2   T3
+†
+N/A
+A
+Distribution board details
+Circuit description
+1   2   3   5 4   6   8   9   10   12   13   14   15   16 11 7 Circuit number Type of wiring Reference method
+‡
+Number of points served Live (mm
+2 )
+cpc (mm
+2 )
+BS (EN) Type Rating (A) Breaking capacity (kA) Maximum permitted Z
+s
+(Ω)
+§
+BS (EN) Type I Δn
+(mA)
+Rating (A)
+Conductor details
+Number & size
+Overcurrent protective device   RCD
+A   C   E   G B   D   F   H   O
+Thermoplastic insulated/
+sheathed cables
+Thermoplastic cables in
+non-metallic conduit
+Thermoplastic cables in
+non-metallic trunking
+Thermosetting
+SWA cables
+Thermoplastic cables in
+metallic conduit
+Thermoplastic cables in
+metallic trunking
+Thermoplastic
+SWA cables
+Mineral insulated cables
+Other - please state
+CODES FOR TYPES OF WIRING
+CIRCUIT DETAILS
+Certificate/Report No.: .........................
+
+GENERIC SCHEDULE OF TEST RESULTS
+Distribution board details
+¶ Not all SPDs have visible functionality indication.
+# An ‘X’, denoting incorrect polarity, cannot be entered on to this schedule when issued with an Electrical Installation Certificate.
+** RCD effectiveness is verified using an alternating current test at rated residual operating current ( I Δn ).
+DB reference:
+Confirmed:   Correct polarity   Phase sequence
+SPD:   Operational status confirmed ¶   N/A
+Tested by name (Capitals):
+Signature:   Date:
+Circuit number r 1   (line) (Ω)
+r n   (neutral)
+r 2   (cpc)
+Test voltage (V) Maximum measured (R
+1   + R
+2 )
+Live - Live (MΩ) Disconnection time (ms)
+**
+R
+2
+Live - Earth (MΩ) Test button operation Polarity
+#
+Manual test button operation
+Ring final circuit   (R 1   + R 2 ) or R 2
+Continuity (Ω)   Insulation resistance   Z s   (Ω)   AFDD RCD
+17   19 18   20   23   27 21   24   28 22   25   29 26   30   31
+Remarks
+Include details of circuits and/or installed equipment
+vulnerable to damage when testing
+(continue on a separate sheet if necessary)
+Multifunction:
+Continuity:
+Insulation resistance:
+Earth fault loop impedance:
+RCD:
+Earth electrode resistance:
+TEST RESULT DETAILS
+Details of test instruments used (serial and/or asset numbers)
+Z db   Ω   I pf
+kA
+Certificate/Report No.: .........................
+
+CONDITION REPORT INSPECTION SCHEDULE FOR RESIDENTIAL
+AND SIMILAR PREMISES WITH UP TO 100 A SUPPLY
+NOTE: This form is suitable for many types of smaller installation, not exclusively residential.
+The persons responsible for the periodic inspection of the installation should include the relevant items in relation to the electrical
+installation, the inspection schedule can be reduced or expanded depending on the requirements for the installation.
+Outcomes
+Acceptable
+condition
+✓
+Unacceptable
+condition
+C1
+or
+C2
+Improvement
+recommended
+Further
+investigation
+Not
+verified
+Limitation
+Not
+app l icable
+C3   FI   N/V   LIM   N/A
+Outcome Description Item No
+INTAKE EQUIPMENT (VISUAL INSPECTION ONLY)
+An outcome against an item in this section, other than access to live parts,
+should not be used to determine the overall outcome.
+1.0
+–   Service cable
+–   Service head
+–   Earthing arrangement
+–   Meter tails
+–   Metering equipment
+–   Isolator (where present)
+NOTE 1:   Where inadequacies in the intake equipment are encountered, which
+may result in a dangerous or potentially dangerous situation, the person ordering
+the work and/or dutyholder must be informed. It is strongly recommended that
+the person ordering the work informs the appropriate authority.
+NOTE 2:   For this section only, where inadequacies are found, an ‘X’ should be
+put against the appropriate item and a comment made in Section K.
+Person ordering work/dutyholder notified (Delete as appropriate)   Y / N/A
+1.1
+Consumer’s isolator (where present) 1.2
+Consumer’s meter tails 1.3
+EARTHING / BONDING ARRANGEMENTS (411.3; Chap 54)
+CONSUMER UNIT(S) / DISTRIBUTION BOARD(S)
+3.0
+4.0
+PRESENCE OF ADEQUATE ARRANGEMENTS FOR OTHER
+SOURCES SUCH AS MICROGENERATORS (551.6; 551.7)
+2.0
+(Use codes above. Provide additional
+comment where appropriate. C1, C2,
+C3 and FI coded items to be recorded
+in Section K of the Condition Report)
+Presence and condition of distributor’s earthing arrangement (542.1.2.1; 542.1.2.2)
+Adequacy of working space/accessibility to consumer unit/distribution board (132.12; 513.1)
+3.1
+4.1
+3.5
+4.5
+4.10
+3.3
+4.3
+3.7
+4.7
+4.12
+3.2
+4.2
+3.6
+4.6
+4.11
+3.4
+4.4
+4.9
+Accessibility and condition of earthing conductor at MET (543.3.2)
+Enclosure not damaged/deteriorated so as to impair safety (651.2)
+Presence of RCD six-monthly test notice, where required (514.12.2)
+Provision of earthing/bonding labels at all appropriate locations (514.13.1)
+Condition of enclosure(s) in terms of IP rating etc (416.2)
+Condition and accessibility of main protective bonding conductor connections (543.3.2; 544.1.2)
+Operation of main switch (functional check) (643.10)
+Presence of other required labelling (please specify) (Section 514)
+Presence and condition of earth electrode connection where applicable (542.1.2.3)
+Security of fixing (134.1.1)
+Confirmation of main protective bonding conductor sizes (544.1)
+Presence of main linked switch (as required by 462.1.201)
+Presence of alternative supply warning notice at or near consumer unit/distribution board (514.15)
+Confirmation of earthing conductor size (542.3; 543.1.1)
+Condition of enclosure(s) in terms of fire rating etc (421.1.201; 526.5)
+Correct identification of circuit details and prote c tive devices (514.8.1; 514.9.1)
+Accessibility and condition of other protective bonding connections (543.3.1; 543.3.2)
+Manual operation of circuit-breakers and RCDs to prove disconnection (643.10)
+3.8
+4.8
+Report No.: .........................
+
+CONDITION REPORT INSPECTION SCHEDULE FOR RESIDENTIAL
+AND SIMILAR PREMISES WITH UP TO 100 A SUPPLY
+NOTE: This form is suitable for many types of smaller installation, not exclusively residential.
+The persons responsible for the periodic inspection of the installation should include the relevant items in relation to the electrical
+installation, the inspection schedule can be reduced or expanded depending on the requirements for the installation.
+Outcomes
+Acceptable
+condition
+✓
+Unacceptable
+condition
+C1
+or
+C2
+Improvement
+recommended
+Further
+investigation
+Not
+verified
+Limitation
+Not
+app l icable
+C3   FI   N/V   LIM   N/A
+Outcome Description Item No
+(Use codes above. Provide additional
+comment where appropriate. C1, C2,
+C3 and FI coded items to be recorded
+in Section K of the Condition Report)
+Compatibility of protective devices, bases and other components; correct type
+and rating (No signs of unacceptable thermal damage, arcing or overheating)
+(411.3.2; 411.4; 411.5; 411.6; Sections 432, 433)
+4.13
+4.15
+4.14
+Protection against mechanical damage where cables enter consumer unit/distribution
+board (522.8.1; 522.8.5; 522.8.11)
+Single-pole switching or protective devices in line conductor only (132.14.1; 530.3.3)
+4.16   Protection against electromagnetic effects where cables enter consumer
+unit/distribution board/enclosures (521.5.1)
+4.17
+4.19
+4.18
+RCD’s provided for fault protection - includes RCBOs (411.4.204; 411.5.2; 531.2)
+Confirmation of indication that SPD is functional (651.4)
+RCD(s) provided for additional protection/requirements - includes RCBOs (411.3.3; 415.1)
+4.21
+4.22   Adequate arrangements where a generating set operates in parallel
+with the public supply (551.7)
+Adequate arrangements where a generating set operates as a switched
+alternative to the public supply (551.6)
+Confirmation that ALL conductor connections, including connections to busbars, are
+correctly located in terminals and are tight and secure (526.1)
+4.20
+FINAL CIRCUITS 5.0
+Identification of conductors (514.3.1) 5.1
+5.3
+5.2
+5.4
+5.12
+Condition of insulation of live parts (416.1)
+Cables correctly supported throughout their run (521.10.202; 522.8.5)
+Non-sheathed cables protected by enclosure in conduit, ducting or trunking (521.10.1)
+•   To include the integrity of conduit and trunking systems (metallic and plastic)
+Provision of additional requirements for protection by RCD not exceeding 30 mA
+•   for all socket-outlets of rating 32 A or less, unless an exception is permitted (411.3.3)
+•   for the supply of mobile equipment not exceeding 32 A rating for use outdoors (411.3.3)
+•   for cables concealed in walls at a depth of less than 50 mm (522.6.202; 522.6.203)
+•   for cables concealed in walls/partitions containing metal parts regardless of depth (522.6.203)
+•   Final circuits supplying luminaires within domestic (household) premises (411.3.4)
+5.5   Adequacy of cables for current-carrying capacity with regard for the type
+and nature of installation (Section 523)
+5.10
+5.13
+5.7
+5.6
+5.11
+5.9
+Concealed cables installed in prescribed zones (see Section D. Extent of limitations) (522.6.202)
+Provision of fire barriers, sealing arrangements and protection against
+thermal effects (Section 527)
+Adequacy of protective devices: type and rated current for fault protection (411.3)
+Coordination between conductors and overload protective devices (433.1; 533.2.1)
+Cables concealed under floors, above ceilings or in walls/partitions, adequately protected
+against damage (see Section D. Extent and limitations) (522.6.2.4)
+Wiring system(s) appropriate for the types and nature of the installation
+and external influences (Section 522)
+Presence and adequacy of circuit protective conductors (411.3.1; Section 543)
+Band   II   cables segregated/separated from Band   I   cables (528.1)
+Cables segregated/separated from communications cabling (528.2)
+5.8
+5.14
+5.15
+Report No.: .........................
+
+CONDITION REPORT INSPECTION SCHEDULE FOR RESIDENTIAL
+AND SIMILAR PREMISES WITH UP TO 100 A SUPPLY
+NOTE: This form is suitable for many types of smaller installation, not exclusively residential.
+The persons responsible for the periodic inspection of the installation should include the relevant items in relation to the electrical
+installation, the inspection schedule can be reduced or expanded depending on the requirements for the installation.
+Outcomes
+Acceptable
+condition
+✓
+Unacceptable
+condition
+C1
+or
+C2
+Improvement
+recommended
+Further
+investigation
+Not
+verified
+Limitation
+Not
+app l icable
+C3   FI   N/V   LIM   N/A
+Outcome Description Item No
+(Use codes above. Provide additional
+comment where appropriate. C1, C2,
+C3 and FI coded items to be recorded
+in Section K of the Condition Report)
+Cables segregated/separated from non-electrical services (528.3)
+Condition of accessories including socket-outlets, switches and joint boxes (651.2(v))
+Suitability of accessories for external influences (512.2)
+Adequacy of working space/accessibility to equipment (132.12; 513.1)
+Single-pole switching or protective devices in line conductors only (132.14.1; 530.3.3)
+Where used as a protective measure, requirements for SELV or PELV met (701.414.4.5)
+Shaver supply units comply with BS EN 61558-2-5 formerly BS 3535 (701.512.3)
+Presence of supplementary bonding conductors, unless not required
+by BS 7671:2018 (701.415.2)
+Termination of cables at enclosures - indicate extent of sampling in
+Section D of the report (Section 526)
+•   Connections soundly made and under no undue strain (526.6)
+•   No basic insulation of a conductor visible outside enclosure (526.8)
+•   Connections of live conductors adequately enclosed (526.5)
+•   Adequately connected at point of entry to enclosure (glands, bushes etc.) (522.8.5)
+5.16
+5.18
+5.19
+5.20
+5.21
+6.2
+6.3
+6.4
+5.17
+LOCATION(S) CONTAINING A BATH OR SHOWER
+OTHER PART 7 SPECIAL INSTALLATIONS OR LOCATIONS
+PROSUMER’S LOW VOLTAGE ELECTRICAL INSTALLATION(S)
+6.0
+7.0
+8.0
+Additional protection for all low voltage (LV) circuits by RCD not exceeding 30 mA (701.411.3.3)
+List all other special installations or locations present, if any. (Record separately the
+results of particular inspections applied.)
+Where the installation includes additional requirements and recommendations
+relating to Chapter 82, additional inspection items should be added to the checklist.
+6.1
+7.1
+8.1
+Low voltage (e.g. 230 V) socket-outlets sited at least 2.5 m from zone 1 (701.512.3)
+Suitability of accessories and controlgear etc. for a particular zone (701.512.3)
+Suitability of current-using equipment for particular position within the location (701.55)
+Suitability of equipment for external influences for installed location in
+terms of IP rating (701.512.2)
+6.5
+6.7
+6.8
+6.6
+Inspected by:
+Name (Capitals) .......................................................................... Signature ....................................................... Date .......................................................
+Report No.: .........................
+
+CONDITION REPORT
+Notes for the person producing the Report:
+1   This Report should only be used for reporting on the condition of an existing electrical installation, and not
+for the replacement of a consumer unit/distribution board. An installation which was designed to an earlier
+edition of BS 7671 or the IEE Wiring Regulations and which does not fully comply with the current edition
+is not necessarily unsafe for continued use, or requires upgrading. Only damage, deterioration, defects,
+dangerous conditions and non-compliance with the requirements of BS 7671 or the IEE Wiring Regulations,
+which may give rise to danger, should be recorded.
+2   The report, normally comprising at least five pages, should include schedules of both the inspection and the
+test results. Additional pages may be necessary for other than a simple installation and for the ‘Guidance for
+recipients’. The number of each page should be indicated, together with the total number of pages involved.
+3   The reason for producing this Report, such as change of occupancy or landlord’s periodic maintenance,
+should be identified in Section B.
+4   Those elements of the installation that are covered by the Report and those that are not should be identified
+in Section D (Extent and limitations). These aspects should have been agreed with the person ordering the
+report and other interested parties before the inspection and testing commenced. Any operational limitations,
+such as inability to gain access to parts of the installation or an item of equipment, should also be
+recorded in Section D.
+5   The maximum prospective value of fault current (Ipf) recorded should be the greater of either the prospective
+value of short-circuit current or the prospective value of earth fault current.
+6   Where an installation has an alternative source of supply a further schedule of supply characteristics and
+earthing arrangements based upon Section I of this Report should be provided.
+7   A summary of the condition of the installation in terms of safety should be clearly stated in Section E.
+Observations, if any, should be categorised in Section K using the coding C1 to C3 as appropriate. Any
+observation given a code C1 or C2 classification should result in the overall condition of the installation being
+reported as unsatisfactory.
+8   Wherever practicable,   items classified as ‘Danger present’ (C1) should be made safe on discovery .
+Where this is not possible the owner or user should be given written notification as a matter of urgency.
+9   Where an observation requires further investigation (FI) because the inspection has revealed an apparent
+deficiency which could not, owing to the extent or limitations of the inspection, be fully identified and further
+investigation may reveal a code C1 or C2 item, this should be recorded within Section K, given the code FI
+and marked as unsatisfactory in Section E.
+10   If the space available for observations in Section K is insufficient, additional pages should be provided as
+necessary.
+11   The date by which the next Electrical Installation Condition Report is recommended should be given in
+Section F. The interval between inspections should take into account the requirements of Regulation 652.1
+and the overall condition of the installation.
+12   Any deficiencies with intake equipment should be reported to the person ordering the work.
+28th March 2022
+CONDITION REPORT INSPECTION SCHEDULE
+GUIDANCE FOR THE INSPECTOR
+1   Section 1.0. Where inadequacies in the intake equipment are encountered the inspector should advise
+the person ordering the work to inform the appropriate authority.
+2   The schedule is not exhaustive.
+3.   Numbers in brackets are regulation references to specific requirements
+
+CONDITION REPORT
+GUIDANCE FOR RECIPIENTS (to be appended to the Report)
+This Report is an important and valuable document which
+should be retained for future reference.
+1   The purpose of this Report is to confirm, as far as reasonably practicable, whether or not the electrical
+installation is in a satisfactory condition for continued service (see Section E). The Report should identify
+any damage, deterioration, defects and/or conditions which may give rise to danger (see Section K).
+2   This Report is only valid if accompanied by the Inspection Schedule(s) and the Schedule(s) of Circuit
+Details and Test Results.
+3   The person ordering the Report should have received the ‘original’ Report and the inspector should
+have retained a duplicate.
+4   The ‘original’ Report should be retained in a safe place and be made available to any person inspecting or
+undertaking work on the electrical installation in the future. If the property is vacated, this Report will provide the
+new owner/occupier with details of the condition of the electrical installation at the time the Report was issued.
+5   Section D (Extent and Limitations) should identify fully the extent of the installation covered by this Report
+and any limitations on the inspection and testing. The inspector should have agreed these aspects with the
+person ordering the Report and with other interested parties (licensing authority, insurance company, mortgage
+provider and the like) before the inspection was carried out.
+6   Some operational limitations such as inability to gain access to parts of the installation or an item of equipment
+may have been encountered during the inspection. The inspector should have noted these in Section D.
+7.   For items classified in Section K as C1 (‘Danger present’)   the safety of those using the installation is at risk ,
+and it is recommended that a skilled person or persons competent in electrical installation work undertakes the
+necessary remedial work immediately.
+8   For items classified in Section K as C2 (‘Potentially dangerous’)   the safety of those using the installation
+may be at risk   and it is recommended that a skilled person or persons competent in electrical installation
+work undertakes the necessary remedial work as a matter of urgency.
+9   Where it has been stated in Section K that an observation requires further investigation (code FI) the inspection
+has revealed an apparent deficiency which may result in a code C1 or C2, and could not, due to the extent or
+limitations of the inspection, be fully identified. Such observations should be investigated without delay. A further
+examination of the installation will be necessary, to determine the nature and extent of the apparent deficiency
+(see Section F).
+10   For safety reasons, the electrical installation should be re-inspected at appropriate intervals by a skilled person
+or persons, competent in such work . The recommended date by which the next inspection is due is stated in
+Section F of the Report under ‘Recommendations’.
+11   Where the installation includes a residual current device (RCD) it should be tested six-monthly by pressing
+the button market ’T’ or ’Test’. The device should switch off the supply and should then be switched on to
+restore the supply. If the device does not switch off the supply when the button is presses, seek expert
+advice.   For safety reasons it is important that this instruction is followed.
+12   Where the installation includes an arc fault detection device (AFDD) having a manual test facility it should
+be tested six-monthly by pressing the test button. Where an AFDD has both a test button and automatic test
+function, manufacturer’s instructions shall be followed with respect to test button operation.
+13   Where the installation includes a surge protective device (SPD) the status indicator should be checked to confirm
+it is in operational condition in accordance with manufacturer’s information. If the indication shows that the device
+is not operational, seek expert advice.   For safety reasons it is important that this instruction is followed .
+14   Where the installation includes alternative or additional sources of supply, warning notices should be found
+at the origin or meter position or, if remote from the origin, at the consumer unit or distribution board and
+at all points of isolation of all sources of supply.
+28th March 2022
