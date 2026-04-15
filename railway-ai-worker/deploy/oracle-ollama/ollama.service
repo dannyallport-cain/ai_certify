@@ -1,0 +1,16 @@
+[Unit]
+Description=Ollama Docker Compose stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/ollama
+ExecStart=/usr/bin/docker compose -f /opt/ollama/ollama-compose.yaml up -d
+ExecStop=/usr/bin/docker compose -f /opt/ollama/ollama-compose.yaml down
+RemainAfterExit=yes
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

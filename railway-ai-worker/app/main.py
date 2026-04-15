@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI, Header, HTTPException, status
+from fastapi import FastAPI, Header, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.llm_provider import probe_local_llm_provider
 from app.schemas import (
     AnalyzeImageRequest,
     AnalyzeImageResponse,
@@ -13,6 +14,7 @@ from app.schemas import (
     DeleteBackupResponse,
     HealthResponse,
     ListBackupsResponse,
+    LocalLLMInfo,
     RestoreDatabaseRequest,
     RestoreDatabaseResponse,
 )
@@ -72,8 +74,29 @@ def _require_backup_token(x_backup_token: str | None) -> None:
 
 
 @app.get("/health", response_model=HealthResponse)
-async def health() -> HealthResponse:
-    return HealthResponse(status="ok", service="railway-ai-worker")
+async def health(probe_provider: bool = Query(default=False, alias="probeProvider")) -> HealthResponse:
+    if probe_provider:
+        probe = await probe_local_llm_provider()
+        local_llm = LocalLLMInfo(
+            provider=probe.provider,
+            enabled=probe.enabled,
+            baseUrl=probe.base_url,
+            model=probe.model,
+            apiStyle=probe.api_style,
+            source=probe.source,
+            status=probe.status,
+            reachable=probe.reachable,
+            healthy=probe.healthy,
+            selectedModelAvailable=probe.selected_model_available,
+            availableModels=probe.available_models or [],
+            detail=probe.detail,
+        )
+    else:
+        from app.pipeline import _build_local_llm_info
+
+        local_llm = _build_local_llm_info()
+
+    return HealthResponse(status="ok", service="railway-ai-worker", localLlm=local_llm)
 
 
 @app.post("/analyze-image", response_model=AnalyzeImageResponse)

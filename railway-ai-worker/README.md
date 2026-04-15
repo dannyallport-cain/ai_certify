@@ -243,6 +243,192 @@ Each evidence object may contain:
 - `bbox`
 - `note`
 
+## Local LLM provider support
+
+The worker now supports an optional local-model provider abstraction for provider detection, status reporting, and future LLM-assisted workflows.
+
+Supported provider modes:
+
+- `disabled`
+- `ollama`
+- `lmstudio`
+
+This support is intentionally additive. The existing OCR + deterministic rules pipeline remains the primary analysis flow, and `/analyze-image` does not require a model provider to be available in order to succeed.
+
+### Important Railway runtime note
+
+Do **not** try to run Ollama or LM Studio inside this Railway worker image.
+
+This service is intended to run the FastAPI worker only. In practice, Railway should connect to a model runtime that is running elsewhere and reachable over the network, for example:
+
+- Ollama on a separate VM, server, desktop, or homelab host
+- LM Studio on another machine with its API server enabled
+- another reachable environment exposing the expected provider API
+
+In other words:
+
+- Railway hosts the worker
+- Ollama or LM Studio should run outside the worker image
+- the worker reaches that provider over HTTP
+
+If you point the worker at `localhost` in Railway, that refers to the Railway container itself, not your laptop or a separate model machine.
+
+### Provider API style
+
+- **Ollama** typically exposes its own native Ollama HTTP API
+- **LM Studio** typically exposes an OpenAI-compatible API
+
+The worker can probe each provider appropriately, but you still need to configure the correct base URL for the provider you are using.
+
+### Provider environment variables
+
+Provider selection prefers `LOCAL_LLM_PROVIDER` when explicitly set. If it is unset, provider-specific variables may be used to infer the provider.
+
+#### Shared provider variables
+
+- `LOCAL_LLM_PROVIDER` — one of `disabled`, `ollama`, `lmstudio`
+- `LOCAL_LLM_BASE_URL` — optional explicit base URL for the selected provider
+- `LOCAL_LLM_MODEL` — optional model name for the selected provider
+
+#### Ollama-specific variables
+
+- `OLLAMA_BASE_URL` — base URL for the Ollama server, for example `http://192.168.1.50:11434`
+- `OLLAMA_MODEL` — model name, for example `llama3.1:8b`
+
+#### LM Studio-specific variables
+
+- `LM_STUDIO_BASE_URL` — base URL for the LM Studio server, for example `http://192.168.1.60:1234`
+- `LM_STUDIO_MODEL` — model identifier to use/report for LM Studio
+
+### Example: Ollama running on another machine
+
+If Ollama is running on a reachable host:
+
+```bash
+LOCAL_LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://192.168.1.50:11434
+OLLAMA_MODEL=llama3.1:8b
+```
+
+You can also use the shared variables:
+
+```bash
+LOCAL_LLM_PROVIDER=ollama
+LOCAL_LLM_BASE_URL=http://192.168.1.50:11434
+LOCAL_LLM_MODEL=llama3.1:8b
+```
+
+Typical setup on the Ollama host:
+
+```bash
+ollama serve
+ollama pull llama3.1:8b
+```
+
+Then ensure the Railway worker can reach that host and port.
+
+### Oracle Always Free + Ollama
+
+A practical low-cost setup is:
+
+- Railway hosts this FastAPI worker
+- Oracle Cloud Always Free hosts a small Ollama instance on an Ampere A1 VM
+- the worker calls Ollama over HTTP using the provider abstraction above
+
+Recommended Railway variables for an Oracle-hosted Ollama instance:
+
+```bash
+LOCAL_LLM_PROVIDER=ollama
+LOCAL_LLM_BASE_URL=http://your-oracle-vm-or-domain:11434
+LOCAL_LLM_MODEL=qwen2.5:3b-instruct
+```
+
+You can also use the Ollama-specific variables, but the shared `LOCAL_LLM_*` variables are the clearest option when configuring Railway.
+
+Recommended starting models for CPU-only Oracle Always Free usage:
+
+- `qwen2.5:1.5b-instruct`
+- `qwen2.5:3b-instruct`
+- other small instruction-tuned models in roughly the 1B to 3B range
+
+Keep expectations realistic:
+
+- Oracle Always Free Ampere A1 is CPU-only
+- inference will be much slower than managed GPU APIs
+- larger models can feel unresponsive or consume too much memory
+- concurrent requests will increase latency quickly
+
+For that reason, prefer small models and short prompts if you want usable response times.
+
+#### Verify provider connectivity from Railway
+
+After deployment, confirm the worker can reach the Oracle-hosted Ollama server:
+
+```bash
+curl "https://your-railway-app.up.railway.app/health?probeProvider=true"
+```
+
+When provider probing is enabled, the response may include `localLlm` metadata showing:
+
+- selected provider
+- configured base URL
+- configured model
+- probe success or failure details
+
+This is the quickest way to confirm that Railway networking, DNS, firewall rules, and provider configuration are all aligned.
+
+#### Oracle-hosted Ollama caveats
+
+- Do not expose an unauthenticated Ollama port directly to the public internet unless you understand the risk.
+- Prefer a reverse proxy, TLS, IP allowlisting, VPN, Tailscale, or similar access controls in front of Ollama.
+- Keep the Railway service and Oracle VM in nearby regions where possible to reduce round-trip latency.
+- Treat this as a practical private or low-cost local-model option, not as a high-throughput production GPU replacement.
+
+### Example: LM Studio running on another machine
+
+If LM Studio is running on a reachable host and its API server is enabled:
+
+```bash
+LOCAL_LLM_PROVIDER=lmstudio
+LM_STUDIO_BASE_URL=http://192.168.1.60:1234
+LM_STUDIO_MODEL=local-model
+```
+
+Or using shared variables:
+
+```bash
+LOCAL_LLM_PROVIDER=lmstudio
+LOCAL_LLM_BASE_URL=http://192.168.1.60:1234
+LOCAL_LLM_MODEL=local-model
+```
+
+Typical LM Studio setup:
+
+1. Start LM Studio on a machine you control
+2. Load a model in LM Studio
+3. Enable the local server / API mode
+4. Make the host reachable from Railway
+5. Configure the worker with the matching base URL and model
+
+Because LM Studio usually exposes an OpenAI-compatible API, use the base URL for that server rather than an Ollama-specific endpoint shape.
+
+### Example: disable provider integration
+
+If you only want OCR + deterministic extraction:
+
+```bash
+LOCAL_LLM_PROVIDER=disabled
+```
+
+This is a valid and expected mode.
+
+### Operational notes
+
+- `/health` may include optional provider status or probe metadata when configured
+- `modelInfo` in `/analyze-image` remains backward compatible and may include optional provider metadata
+- provider connectivity is optional and should not block normal OCR/rules analysis
+- use reachable hostnames or IPs rather than assuming Railway can access your local machine automatically
+
 ## Local development
 
 From `railway-ai-worker/`:
@@ -403,6 +589,7 @@ Deploy this folder as its own Railway service.
 - The worker keeps the existing AI endpoints intact
 - The backup endpoint requires PostgreSQL client tools so `pg_dump` is available at runtime
 - Railway environment variables must include both database access and R2 credentials
+- If using local-model provider support, configure Railway to reach an external Ollama or LM Studio instance rather than trying to host that runtime inside this service
 
 ## Notes
 
@@ -410,3 +597,4 @@ Deploy this folder as its own Railway service.
 - Keep the worker base URL stable so the Vercel route can call `${RAILWAY_BACKUP_WORKER_URL}/backup-database`.
 - `needsHumanReview` remains `true` for AI analysis responses.
 - The new schema additions are backward compatible because `certificateContext`, `inferenceResults`, and `issues` are optional extensions around the existing contract.
+- Local-model provider support is optional, non-breaking, and intended for externally reachable Ollama or LM Studio servers.
