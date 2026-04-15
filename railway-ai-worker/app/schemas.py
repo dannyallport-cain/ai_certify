@@ -220,10 +220,26 @@ class InferenceResult(BaseModel):
     needsHumanReview: bool = True
 
 
+class LocalLLMInfo(BaseModel):
+    provider: Literal["disabled", "ollama", "lmstudio"]
+    enabled: bool
+    baseUrl: str | None = None
+    model: str | None = None
+    apiStyle: Literal["none", "ollama", "openai-compatible"] | None = None
+    source: str | None = None
+    status: str | None = None
+    reachable: bool | None = None
+    healthy: bool | None = None
+    selectedModelAvailable: bool | None = None
+    availableModels: list[str] = Field(default_factory=list)
+    detail: str | None = None
+
+
 class ModelInfo(BaseModel):
     detector: str
     ocr: str
     extractor: str
+    localLlm: LocalLLMInfo | None = None
 
 
 class AnalyzeImageResponse(BaseModel):
@@ -240,6 +256,7 @@ class AnalyzeImageResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     service: str
+    localLlm: LocalLLMInfo | None = None
 
 
 class BackupDatabaseResponse(BaseModel):

@@ -504,6 +504,7 @@ def test_missing_schema_fields_for_measured_value_and_bonding_validation_are_doc
         "mcbCount",
         "spdProtectedCount",
         "ratedCurrentValues",
+        "rows",
     } == circuit_fields
     assert {"codes", "notes"} == observation_fields
 

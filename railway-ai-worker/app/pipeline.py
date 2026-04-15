@@ -6,6 +6,7 @@ from app.extractors import (
     build_text_detections,
     extract_consumer_unit_hints,
 )
+from app.llm_provider import resolve_local_llm_provider_config
 from app.ocr import ocr_from_inputs
 from app.rules import evaluate_rules
 from app.schemas import (
@@ -15,6 +16,7 @@ from app.schemas import (
     Findings,
     InferenceIssue,
     InferenceResult,
+    LocalLLMInfo,
     ModelInfo,
     ObservationSuggestion,
     Prefill,
@@ -345,6 +347,24 @@ def _merge_certificate_context_prefill(
         }
 
 
+def _build_local_llm_info() -> LocalLLMInfo:
+    config = resolve_local_llm_provider_config()
+    return LocalLLMInfo(
+        provider=config.provider,
+        enabled=config.enabled,
+        baseUrl=config.base_url,
+        model=config.model,
+        apiStyle=config.api_style,
+        source=config.source,
+        status="disabled" if not config.enabled else "configured",
+        detail=(
+            "Local LLM provider is disabled; OCR and rules pipeline remains available."
+            if not config.enabled
+            else "Local LLM provider is configured for external connectivity and not used during OCR analysis."
+        ),
+    )
+
+
 def analyze_image(payload: AnalyzeImageRequest) -> AnalyzeImageResponse:
     ocr_result = ocr_from_inputs(image_url=payload.imageUrl, image_base64=payload.imageBase64)
     text_lines = build_text_detections(ocr_result.get("textLines", []))
@@ -436,6 +456,7 @@ def analyze_image(payload: AnalyzeImageRequest) -> AnalyzeImageResponse:
             detector="not-enabled",
             ocr="pytesseract-ocr-v1",
             extractor="ocr-rules-v1.0+standards-v1.1+curated-v1.2",
+            localLlm=_build_local_llm_info(),
         ),
         inferenceResults=inference_results,
         issues=issues,
