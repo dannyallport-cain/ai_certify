@@ -71,7 +71,7 @@ export default function FeaturesPage() {
             },
             {
               title: 'Dynamic Auto-Fill Tokens',
-              description: 'Insert dynamic {{handlebars}} tokens anywhere you need live data to appear. Merge job, client, and company details into your reports automatically so every document is accurate, consistent, and ready to send.',
+              description: 'Insert dynamic {{handlebars}} tokens anywhere you need live data to appear. Merge job, customer, and company details into your reports automatically so every document is accurate, consistent, and ready to send.',
               benefits: ['Use dynamic tokens such as {{job.address}} and {{client.name}}', 'Auto-fill company details, contact information, and job data', 'Generate consistent reports without copy-and-paste errors'],
               icon: Shield,
               color: 'text-indigo-500',
@@ -80,8 +80,8 @@ export default function FeaturesPage() {
             },
             {
               title: 'ServiceM8 Data Mapping',
-              description: 'Connect your report templates to live ServiceM8 information so mapped fields pull through the right job, client, and company values at generation time. This keeps your workflows aligned with the data your team already relies on operationally.',
-              benefits: ['Map template fields to ServiceM8 job, client, and company data', 'Keep generated reports aligned with live operational records', 'Streamline report production across office and field workflows'],
+              description: 'Connect your report templates to live ServiceM8 information so mapped fields pull through the right job, customer, and company values at generation time. This keeps your workflows aligned with the data your team already relies on operationally.',
+              benefits: ['Map template fields to ServiceM8 job, customer, and company data', 'Keep generated reports aligned with live operational records', 'Streamline report production across office and field workflows'],
               icon: BarChart3,
               color: 'text-cyan-500',
               bg: 'bg-cyan-50 dark:bg-cyan-900/20',

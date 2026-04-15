@@ -52,7 +52,7 @@ const sections: RoadmapSection[] = [
       {
         title: 'ServiceM8 Sync & Data Mapping',
         description:
-          'Connect ServiceM8 to pull jobs, clients, staff, and company details into your workflow so report templates can map directly to live business data instead of relying on manual re-entry.',
+          'Connect ServiceM8 to pull jobs, customers, staff, and company details into your workflow so report templates can map directly to live business data instead of relying on manual re-entry.',
         icon: Zap,
         tag: 'Integration',
       },
@@ -85,7 +85,7 @@ const sections: RoadmapSection[] = [
       {
         title: 'Dynamic {{handlebars}} Tokens',
         description:
-          'Insert reusable tokens such as job, client, company, and engineer data into text overlays so reports can auto-fill from connected data sources at generation time.',
+          'Insert reusable tokens such as job, customer, company, and engineer data into text overlays so reports can auto-fill from connected data sources at generation time.',
         icon: Edit3,
         tag: 'New',
       },

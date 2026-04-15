@@ -39,7 +39,7 @@ export default async function PricingPage() {
             {[
               'Upload your existing PDF reports and turn them into reusable templates.',
               'Use AI blank-field detection, manual placement, and branded text overlays.',
-              'Auto-fill reports with live job, client, engineer, and company data from ServiceM8.',
+              'Auto-fill reports with live job, customer, engineer, and company data from ServiceM8.',
             ].map((item) => (
               <div
                 key={item}
@@ -160,7 +160,7 @@ export default async function PricingPage() {
               'Visual template builder with click-to-place and drag-to-draw fields',
               'AI-assisted blank field detection for faster template setup',
               'Text and branding editor for logos, headers, footers, and custom copy',
-              'ServiceM8-powered data merge for jobs, clients, engineers, and company details',
+              'ServiceM8-powered data merge for jobs, customers, engineers, and company details',
             ].map((item) => (
               <div key={item} className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500" />

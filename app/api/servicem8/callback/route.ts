@@ -1,9 +1,8 @@
 /**
- * ServiceM8 OAuth Callback Endpoint
- * 
- * After the user authorizes the addon in ServiceM8, they're redirected here
- * with an authorization code. We exchange it for access/refresh tokens and
- * store them in the database.
+ * ServiceM8 external integration OAuth callback.
+ *
+ * After the user authorizes AI Certify in ServiceM8, this route exchanges the
+ * returned authorization code and stores the tokens against the current team.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

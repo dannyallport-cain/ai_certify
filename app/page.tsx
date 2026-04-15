@@ -57,7 +57,7 @@ export default function LandingPage() {
               <p className="text-xl text-slate-400 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                 Upload your existing certificate or report template, detect blank fields with AI,
                 place fields visually, replace logos and text, and generate polished documents with
-                live ServiceM8 job, client, and company data.
+                live ServiceM8 job, customer, and company data.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
@@ -250,7 +250,7 @@ export default function LandingPage() {
               {
                 step: '03',
                 title: 'Generate, Store & Reuse',
-                desc: 'Create finished reports with live job, client, and company data merged in automatically, then store templates and outputs securely in the cloud.'
+                desc: 'Create finished reports with live job, customer, and company data merged in automatically, then store templates and outputs securely in the cloud.'
               }
             ].map((item, i) => (
               <div key={i} className="relative flex flex-col items-center text-center">

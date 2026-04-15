@@ -83,6 +83,7 @@
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "baseline-browser-mapping": "^2.10.11",
+    "puppeteer-core": "^24.40.0",
     "tsx": "^4.21.0"
   }
 }

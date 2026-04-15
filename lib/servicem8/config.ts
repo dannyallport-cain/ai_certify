@@ -1,8 +1,5 @@
 /**
  * ServiceM8 Integration Configuration
- * 
- * ServiceM8 App Id: 337875
- * Addon Type: External Integration
  */
 
 const getBaseUrl = () => {
@@ -14,9 +11,21 @@ const getBaseUrl = () => {
   );
 };
 
+function getRequiredEnv(name: 'SERVICEM8_APP_ID' | 'SERVICEM8_APP_SECRET') {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`Missing required ServiceM8 environment variable: ${name}`);
+  }
+  return value;
+}
+
 export const SERVICEM8_CONFIG = {
-  appId: process.env.SERVICEM8_APP_ID || '337875',
-  appSecret: process.env.SERVICEM8_APP_SECRET || '',
+  get appId() {
+    return getRequiredEnv('SERVICEM8_APP_ID');
+  },
+  get appSecret() {
+    return getRequiredEnv('SERVICEM8_APP_SECRET');
+  },
   
   // OAuth endpoints
   authorizationUrl: 'https://go.servicem8.com/oauth/authorize',
@@ -25,12 +34,12 @@ export const SERVICEM8_CONFIG = {
   // API base URL
   apiBaseUrl: 'https://api.servicem8.com/api_1.0',
   
-  // Callback URL (set in env for different environments)
+  // OAuth callback URL for the external integration flow.
   get callbackUrl() {
     return process.env.SERVICEM8_CALLBACK_URL || `${getBaseUrl()}/api/servicem8/callback`;
   },
   
-  // Activation URL - the URL ServiceM8 redirects to when a user activates the addon
+  // Activation URL used by the ServiceM8 listing to begin OAuth.
   get activationUrl() {
     return process.env.SERVICEM8_ACTIVATION_URL || `${getBaseUrl()}/api/servicem8/activate`;
   },
@@ -41,8 +50,6 @@ export const SERVICEM8_CONFIG = {
   // exact app/addon permissions enabled in the ServiceM8 developer configuration.
   scopes: [
     'read_jobs',
-    'read_clients',
-    'read_staff',
-    'read_company',
+    'read_customers',
   ],
 } as const;
