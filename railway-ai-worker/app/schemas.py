@@ -20,6 +20,38 @@ class CertificateConsumerUnitContext(BaseModel):
     spdType: str | None = None
 
 
+class CertificateCircuitRowContext(BaseModel):
+    circuitNumber: str | None = None
+    ringFinal: str | None = None
+    designation: str | None = None
+    wiringType: str | None = None
+    refMethod: str | None = None
+    numPoints: str | None = None
+    liveCsa: str | None = None
+    cpcCsa: str | None = None
+    maxDiscTime: str | None = None
+    bsen: str | None = None
+    deviceType: str | None = None
+    rating: str | None = None
+    capacity: str | None = None
+    rcdRating: str | None = None
+    maxZs: str | None = None
+    r1Line: str | None = None
+    rnNeutral: str | None = None
+    r2Cpc: str | None = None
+    r1r2: str | None = None
+    r2: str | None = None
+    insResLN: str | None = None
+    insResLL: str | None = None
+    insResLE: str | None = None
+    testVoltage: str | None = None
+    polarity: str | None = None
+    measuredZs: str | None = None
+    discTime: str | None = None
+    rcdTestButton: str | None = None
+    afddTestButton: str | None = None
+
+
 class CertificateCircuitsContext(BaseModel):
     total: int | None = None
     rcdProtectedCount: int | None = None
@@ -27,6 +59,7 @@ class CertificateCircuitsContext(BaseModel):
     mcbCount: int | None = None
     spdProtectedCount: int | None = None
     ratedCurrentValues: list[float] = Field(default_factory=list)
+    rows: list[CertificateCircuitRowContext] = Field(default_factory=list)
 
 
 class CertificateObservationsContext(BaseModel):
@@ -53,6 +86,20 @@ class CertificateBondingContext(BaseModel):
     structuralSteel: BondingDetailContext | None = None
 
 
+class CertificateEarthElectrodeContext(BaseModel):
+    present: bool | None = None
+    accessible: bool | None = None
+    resistance: float | None = None
+    location: str | None = None
+    type: str | None = None
+
+
+class CertificateEarthingContext(BaseModel):
+    earthingArrangement: str | None = None
+    meansOfEarthing: str | None = None
+    earthElectrode: CertificateEarthElectrodeContext | None = None
+
+
 class CertificateContext(BaseModel):
     certificateType: str | None = None
     boardReference: str | None = None
@@ -61,6 +108,7 @@ class CertificateContext(BaseModel):
     observations: CertificateObservationsContext | None = None
     measurements: CertificateMeasurementsContext | None = None
     bonding: CertificateBondingContext | None = None
+    earthing: CertificateEarthingContext | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

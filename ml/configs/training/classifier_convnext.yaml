@@ -1,0 +1,81 @@
+version: 1
+name: classifier_convnext_baseline
+task: manufacturer_classification
+description: >
+  Baseline manufacturer classifier configuration placeholder for reviewed device crops.
+  Intended to run after coarse detection and before optional OCR-assisted reranking.
+
+dataset:
+  config_path: ml/configs/datasets/manufacturer_v1.yaml
+  train_split: train
+  val_split: val
+  test_split: test
+
+model:
+  family: convnext
+  variant: tiny
+  pretrained: false
+  export_targets:
+    - coreml
+  label_names:
+    - Apollo
+    - Hochiki
+    - Gent
+    - Advanced
+    - Morley
+    - Notifier
+    - Kentec
+    - C-Tec
+    - Siemens
+    - Eaton
+    - Hyfire
+    - System Sensor
+    - Unknown
+
+training:
+  image_size: 224
+  batch_size: 32
+  epochs: 50
+  optimizer: adamw
+  learning_rate: 0.0003
+  weight_decay: 0.0001
+  label_smoothing: 0.05
+  early_stopping_patience: 10
+  mixed_precision: true
+  seed: 42
+
+augmentation:
+  random_resized_crop: true
+  horizontal_flip: 0.3
+  color_jitter: 0.2
+  random_erasing: 0.1
+  notes:
+    - Preserve visible logos, text, and panel layouts where possible.
+    - Avoid augmentation that destroys branding evidence.
+
+evaluation:
+  primary_metric: top1_accuracy
+  report_metrics:
+    - top1_accuracy
+    - top3_accuracy
+    - calibration_error
+    - confusion_matrix
+    - unknown_precision
+
+inference_contract:
+  output_fields:
+    - top1_label
+    - top1_confidence
+    - topk_labels
+    - topk_confidences
+  intended_use:
+    - manufacturer evidence for reviewed export
+    - OCR fusion input
+    - post-detection reranking
+  not_intended_use:
+    - sole source of truth when evidence is weak
+
+governance:
+  require_reviewed_crops: true
+  block_unclear_license_assets: true
+  prefer_unknown_over_forced_label: true

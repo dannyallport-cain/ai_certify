@@ -1,0 +1,222 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-certify.local/ml/datasets/schemas/asset.schema.json",
+  "title": "Fire Alarm Asset Record",
+  "description": "Canonical metadata record for a collected source asset used to bootstrap, review, and curate fire alarm device datasets. Internet collection is bootstrap-only until the source and asset are explicitly approved. Unclear-license sources must not be treated as training-approved.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "asset_id",
+    "source_url",
+    "source_domain",
+    "license_status",
+    "collected_at",
+    "content_type",
+    "sha256",
+    "review_status"
+  ],
+  "properties": {
+    "asset_id": {
+      "type": "string",
+      "description": "Stable unique identifier for the asset record.",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+    },
+    "source_url": {
+      "type": "string",
+      "description": "Original source URL or internal URI where the asset was obtained.",
+      "minLength": 1
+    },
+    "source_domain": {
+      "type": "string",
+      "description": "Registered domain or internal source identifier for provenance tracking.",
+      "minLength": 1
+    },
+    "license_status": {
+      "type": "string",
+      "description": "Conservative asset licensing status. Only explicitly approved assets should be used for training.",
+      "enum": [
+        "allowed_training",
+        "allowed_review_only",
+        "allowed_embedding_only",
+        "blocked"
+      ]
+    },
+    "collected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the asset was collected into the ML workspace."
+    },
+    "content_type": {
+      "type": "string",
+      "description": "Detected MIME type such as image/jpeg, application/pdf, or text/html.",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "description": "SHA-256 digest of the raw asset bytes in lowercase hexadecimal.",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "phash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional perceptual hash for duplicate analysis."
+    },
+    "ocr_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Extracted OCR text or document text snippet associated with the asset."
+    },
+    "weak_labels": {
+      "type": "object",
+      "description": "Optional weak labels inferred from filenames, surrounding text, page content, or source metadata. These are not gold labels.",
+      "additionalProperties": false,
+      "properties": {
+        "manufacturer": {
+          "type": "string",
+          "description": "Weak manufacturer hint. Unknown is allowed until human review.",
+          "enum": [
+            "Apollo",
+            "Advanced",
+            "C-TEC",
+            "Eaton",
+            "Gent",
+            "Hochiki",
+            "Hyfire",
+            "Kentec",
+            "Morley",
+            "Notifier",
+            "Siemens",
+            "System Sensor",
+            "Unknown"
+          ]
+        },
+        "device_type": {
+          "type": "string",
+          "description": "Weak coarse device type hint aligned to the public module contract.",
+          "enum": [
+            "panel",
+            "sounder",
+            "detector",
+            "interface",
+            "io_unit",
+            "vad",
+            "unknown"
+          ]
+        },
+        "subtype": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Optional richer internal subtype hint such as smoke, heat, wall sounder, or sounder-beacon."
+        },
+        "model_hint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Optional weak model family hint extracted from text."
+        },
+        "confidence": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Confidence score for the weak label set when available.",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "manufacturer": {
+      "type": "string",
+      "description": "Reviewed or declared manufacturer for the asset as a whole when known.",
+      "enum": [
+        "Apollo",
+        "Advanced",
+        "C-TEC",
+        "Eaton",
+        "Gent",
+        "Hochiki",
+        "Hyfire",
+        "Kentec",
+        "Morley",
+        "Notifier",
+        "Siemens",
+        "System Sensor",
+        "Unknown"
+      ],
+      "default": "Unknown"
+    },
+    "device_types": {
+      "type": "array",
+      "description": "Possible coarse device types depicted or described by the asset.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "panel",
+          "sounder",
+          "detector",
+          "interface",
+          "io_unit",
+          "vad",
+          "unknown"
+        ]
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "review_status": {
+      "type": "string",
+      "description": "Workflow state for human review and downstream use approval.",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "needs_clarification"
+      ]
+    },
+    "approval_notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Reviewer notes about licensing, provenance, label quality, or rejection reasons."
+    },
+    "bootstrap_only": {
+      "type": "boolean",
+      "description": "True when the asset was obtained through bootstrap internet collection and still requires explicit source approval before training use.",
+      "default": false
+    },
+    "file_name": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Original file name when known."
+    },
+    "raw_path": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Relative workspace path to the stored raw asset."
+    },
+    "preview_path": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Relative workspace path to a preview image or rendered thumbnail."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional ingestion metadata kept open for practical tool-specific extensions.",
+      "default": {}
+    }
+  }
+}

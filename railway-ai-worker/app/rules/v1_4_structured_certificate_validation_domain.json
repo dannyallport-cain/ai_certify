@@ -236,6 +236,120 @@
       }
     },
     {
+      "id": "cert-no-extraneous-conductive-parts-bonding-items-na",
+      "issueType": "earthing_bonding_applicability",
+      "severity": "info",
+      "message": "No main protective bonding to extraneous-conductive-parts is recorded, so bonding-specific inspection schedule items should be marked not applicable.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.96,
+      "needsHumanReview": false,
+      "suggestedCodes": [
+        "NA"
+      ],
+      "summaryComment": "Main protective bonding items have been marked not applicable because no bonded extraneous-conductive-parts are recorded.",
+      "reportTargets": [
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "gas.present",
+          "highlight": true,
+          "expectedValue": false,
+          "reason": "Gas bonding is recorded absent."
+        },
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "water.present",
+          "highlight": true,
+          "expectedValue": false,
+          "reason": "Water bonding is recorded absent."
+        },
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "oil.present",
+          "highlight": true,
+          "expectedValue": false,
+          "reason": "Oil bonding is recorded absent."
+        },
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "structuralSteel.present",
+          "highlight": true,
+          "expectedValue": false,
+          "reason": "Structural steel bonding is recorded absent."
+        },
+        {
+          "sectionKey": "inspectionSchedule",
+          "fieldPath": "3.3",
+          "highlight": true,
+          "expectedValue": "N/A",
+          "reason": "Bonding labels for extraneous-conductive-parts are not applicable where no such bonding is present."
+        },
+        {
+          "sectionKey": "inspectionSchedule",
+          "fieldPath": "3.6",
+          "highlight": true,
+          "expectedValue": "N/A",
+          "reason": "Main protective bonding conductor size confirmation is not applicable where no bonding conductors are present."
+        },
+        {
+          "sectionKey": "inspectionSchedule",
+          "fieldPath": "3.7",
+          "highlight": true,
+          "expectedValue": "N/A",
+          "reason": "Main protective bonding conductor connection checks are not applicable where no bonding conductors are present."
+        }
+      ],
+      "observation": {
+        "code": "NA",
+        "title": "Main protective bonding inspection items not applicable",
+        "comment": "No main protective bonding to extraneous-conductive-parts is recorded, so inspection items 3.3, 3.6 and 3.7 should be marked N/A.",
+        "classification": "not-applicable",
+        "scheduleItems": [
+          {
+            "sectionKey": "inspectionSchedule",
+            "itemKey": "3.3",
+            "code": "NA",
+            "comment": "No main protective bonding to extraneous-conductive-parts is recorded."
+          },
+          {
+            "sectionKey": "inspectionSchedule",
+            "itemKey": "3.6",
+            "code": "NA",
+            "comment": "No main protective bonding to extraneous-conductive-parts is recorded."
+          },
+          {
+            "sectionKey": "inspectionSchedule",
+            "itemKey": "3.7",
+            "code": "NA",
+            "comment": "No main protective bonding to extraneous-conductive-parts is recorded."
+          }
+        ]
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.bonding.gas.present",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "path": "certificate.bonding.water.present",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "path": "certificate.bonding.oil.present",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "path": "certificate.bonding.structuralSteel.present",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
       "id": "cert-ze-flagged-impossible-or-suspicious",
       "issueType": "inspection_testing",
       "severity": "high",
@@ -536,6 +650,304 @@
               "low",
               "high",
               "unsafe"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-earth-electrode-recorded-when-not-applicable-by-earthing-arrangement",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "Earth electrode details are recorded even though the earthing arrangement is not TT or IT, so the electrode entries should be reviewed and blanked if not applicable.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Earth electrode details are populated for a non-TT/non-IT arrangement and should be reviewed for applicability.",
+      "reportTargets": [
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthingArrangement",
+          "highlight": true,
+          "reason": "Earthing arrangement determines whether installation earth electrode details are applicable."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode",
+          "highlight": true,
+          "reason": "Earth electrode details should normally be blank where the earthing arrangement is not TT or IT."
+        }
+      ],
+      "observation": {
+        "title": "Earth electrode details may be not applicable",
+        "comment": "Structured certificate data records earth electrode details even though the earthing arrangement is not TT or IT.",
+        "classification": "data-applicability-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.earthing.earthingArrangement",
+            "op": "exists"
+          },
+          {
+            "path": "certificate.earthing.earthingArrangement",
+            "op": "not_contains",
+            "value": "tt"
+          },
+          {
+            "path": "certificate.earthing.earthingArrangement",
+            "op": "not_contains",
+            "value": "it"
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.present",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.resistance",
+                "op": "exists"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-earth-electrode-recorded-when-distributor-facility-selected",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "Earth electrode details are recorded while the means of earthing is marked as distributor's facility, so the electrode entries should be reviewed and blanked if not applicable.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Earth electrode details conflict with means of earthing being recorded as distributor's facility.",
+      "reportTargets": [
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.meansOfEarthing",
+          "highlight": true,
+          "reason": "Means of earthing should align with whether installation earth electrode details are applicable."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode",
+          "highlight": true,
+          "reason": "Earth electrode details should normally be blank when distributor's facility is recorded as the means of earthing."
+        }
+      ],
+      "observation": {
+        "title": "Earth electrode details conflict with means of earthing",
+        "comment": "Structured certificate data records earth electrode details while means of earthing is marked as distributor's facility.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.earthing.meansOfEarthing",
+            "op": "contains",
+            "value": "distributor"
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.present",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.resistance",
+                "op": "exists"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-earth-electrode-missing-for-tt-arrangement",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "The earthing arrangement is recorded as TT, so installation earth electrode details should be applicable and the missing entries should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.93,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "TT earthing arrangement is recorded without complete installation earth electrode details.",
+      "reportTargets": [
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthingArrangement",
+          "highlight": true,
+          "reason": "TT arrangements normally require installation earth electrode details to be recorded."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.type",
+          "highlight": true,
+          "reason": "Earth electrode type should be recorded where TT earthing applies."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.location",
+          "highlight": true,
+          "reason": "Earth electrode location should be recorded where TT earthing applies."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.resistance",
+          "highlight": true,
+          "reason": "Earth electrode resistance should be recorded where TT earthing applies."
+        }
+      ],
+      "observation": {
+        "title": "TT earthing should include earth electrode details",
+        "comment": "Structured certificate data marks the earthing arrangement as TT without complete earth electrode entries.",
+        "classification": "data-completeness-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.earthing.earthingArrangement",
+            "op": "contains",
+            "value": "tt"
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.resistance",
+                "op": "exists"
+              }
+            ]
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.present",
+                "op": "eq",
+                "value": false
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "not_contains",
+                "value": ""
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "not_contains",
+                "value": ""
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-earth-electrode-missing-when-installation-electrode-selected",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "The means of earthing is recorded as installation earth electrode, so the earth electrode details should be applicable and missing entries should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Means of earthing indicates installation earth electrode without complete electrode details.",
+      "reportTargets": [
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.meansOfEarthing",
+          "highlight": true,
+          "reason": "Installation earth electrode selection means electrode details should normally be completed."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.type",
+          "highlight": true,
+          "reason": "Earth electrode type should be recorded when installation earth electrode is selected."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.location",
+          "highlight": true,
+          "reason": "Earth electrode location should be recorded when installation earth electrode is selected."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.resistance",
+          "highlight": true,
+          "reason": "Earth electrode resistance should be recorded when installation earth electrode is selected."
+        }
+      ],
+      "observation": {
+        "title": "Installation earth electrode selection should include details",
+        "comment": "Structured certificate data marks means of earthing as installation earth electrode without complete earth electrode entries.",
+        "classification": "data-completeness-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.earthing.meansOfEarthing",
+            "op": "contains",
+            "value": "installation earth electrode"
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.present",
+                "op": "eq",
+                "value": false
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "not_contains",
+                "value": ""
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "not_contains",
+                "value": ""
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.resistance",
+                "op": "not_contains",
+                "value": ""
+              }
             ]
           }
         ]

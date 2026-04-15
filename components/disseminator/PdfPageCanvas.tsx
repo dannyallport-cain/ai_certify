@@ -15,6 +15,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Stage, Layer, Rect, Circle, Text, Transformer } from 'react-konva';
+import { pdfBoundingBoxToCanvasRect } from '@/components/disseminator/pdfPageSurface';
 import { buildCanvasFallbackRedactions, buildFieldLabelRedactions, buildPdfValueRedactions } from '@/components/disseminator/pdfRedaction';
 import { configurePdfJsWorker } from '@/lib/pdf/pdfjs-worker';
 
@@ -709,12 +710,7 @@ export function PdfPageCanvas({
 
   const previewRect = getNormalizedDraftRect();
   const suggestedRect = suggestedBoundingBox
-    ? {
-        left: suggestedBoundingBox.x * scale,
-        top: viewportHeight - (suggestedBoundingBox.y + suggestedBoundingBox.height) * scale,
-        width: suggestedBoundingBox.width * scale,
-        height: suggestedBoundingBox.height * scale,
-      }
+    ? pdfBoundingBoxToCanvasRect(suggestedBoundingBox, { scale, viewportHeight })
     : null;
 
   // Helper: build a pending overlay from a text item (canvas coords → PDF coords)
@@ -757,21 +753,20 @@ export function PdfPageCanvas({
 
                 // boundingBox is {x, y, width, height} in PDF points (origin bottom-left)
                 // Convert to canvas coords (origin top-left)
-                const { x: x1, y: y1, width: bw, height: bh } = field.boundingBox as { x: number; y: number; width: number; height: number };
-                const canvasX = x1 * scale;
-                const canvasY = viewportHeight - (y1 + bh) * scale;
-                const w = bw * scale;
-                const h = bh * scale;
+                const rect = pdfBoundingBoxToCanvasRect(field.boundingBox, {
+                  scale,
+                  viewportHeight,
+                });
                 const isSelected = field.id === selectedId;
 
                 return (
                   <React.Fragment key={field.id}>
                     <Rect
                       ref={isSelected ? selectedRectRef : undefined}
-                      x={canvasX}
-                      y={canvasY}
-                      width={w}
-                      height={h}
+                      x={rect.left}
+                      y={rect.top}
+                      width={rect.width}
+                      height={rect.height}
                       stroke={isSelected ? '#2563eb' : '#f59e0b'}
                       strokeWidth={isSelected ? 2 : 1}
                       fill={isSelected ? 'rgba(37,99,235,0.08)' : 'transparent'}
@@ -802,8 +797,8 @@ export function PdfPageCanvas({
                       onClick={() => onSelectField?.(field.id)}
                     />
                     <Text
-                      x={canvasX + 2}
-                      y={canvasY + 2}
+                      x={rect.left + 2}
+                      y={rect.top + 2}
                       text={field.label}
                       fontSize={9}
                       fill={isSelected ? '#2563eb' : '#92400e'}

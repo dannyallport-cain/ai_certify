@@ -1,0 +1,99 @@
+version: 1
+name: ocr_fusion_v1
+task: evidence_reranking
+description: >
+  OCR and logo assisted reranking configuration for Fire Alarm RoomPlan.
+  This stage is intended to combine classifier outputs with extracted text and
+  optional product-family hints. It should assist review, not replace it.
+
+inputs:
+  classifier_predictions:
+    required: true
+    fields:
+      - topk_labels
+      - topk_confidences
+  ocr_text:
+    required: false
+    fields:
+      - raw_text
+      - normalized_text
+  logo_hits:
+    required: false
+    fields:
+      - label
+      - confidence
+  metadata_hints:
+    required: false
+    fields:
+      - device_type
+      - subtype
+      - source_domain
+
+fusion_rules:
+  minimum_classifier_confidence_for_direct_accept: 0.90
+  minimum_ocr_match_score_for_boost: 0.70
+  logo_confidence_boost_threshold: 0.80
+  unknown_fallback_enabled: true
+
+manufacturer_aliases:
+  Apollo:
+    - apollo
+    - apollo fire
+    - discovery
+    - xp95
+  Hochiki:
+    - hochiki
+    - esp
+    - ekho
+  Gent:
+    - gent
+    - vigilon
+    - s-quad
+  Advanced:
+    - advanced
+    - mxpro
+    - axis
+  Morley:
+    - morley
+    - morley-ias
+  Notifier:
+    - notifier
+  Kentec:
+    - kentec
+  C-Tec:
+    - c-tec
+    - ctec
+  Siemens:
+    - siemens
+    - cerberus
+  Eaton:
+    - eaton
+    - cooper
+  Hyfire:
+    - hyfire
+    - tau
+  System Sensor:
+    - system sensor
+    - systemsensor
+
+conflict_resolution:
+  prefer_exact_text_match_over_small_classifier_margin: true
+  require_manual_review_when:
+    - classifier_top1_below_0_60
+    - ocr_matches_multiple_manufacturers
+    - classifier_and_ocr_strongly_disagree
+    - device_type_is_unknown
+  fallback_label: Unknown
+
+outputs:
+  fields:
+    - final_manufacturer
+    - final_confidence
+    - evidence_summary
+    - review_required
+    - matched_aliases
+
+notes:
+  - OCR text from public assets inherits source approval constraints.
+  - Fusion should improve ranking and review efficiency, not create unjustified certainty.
+  - If evidence remains weak or contradictory, emit Unknown and require review.

@@ -1,0 +1,189 @@
+version: 1
+description: >
+  Approved or review-eligible source registry for the Fire Alarm RoomPlan ML workspace.
+  Internet collection is bootstrap-only. Inclusion here does not automatically approve every
+  asset for training. Each asset still requires provenance capture and review.
+
+policy_defaults:
+  bootstrap_scraping_only: true
+  require_asset_level_review: true
+  unclear_license_action: blocked
+  default_asset_status: allowed_review_only
+  prohibited_without_explicit_review:
+    - training_use
+    - redistribution
+    - public_demo_packaging
+
+required_metadata_fields:
+  - domain
+  - source_type
+  - robots_status
+  - copyright_note
+  - terms_reviewed_by
+  - training_approval
+  - rate_limit_policy
+  - notes
+
+sources:
+  - id: apollo-fire
+    name: Apollo Fire Detectors
+    domain: apollo-fire.co.uk
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Manufacturer-owned product imagery and literature; do not assume training rights.
+    terms_reviewed_by: pending
+    notes: >
+      Priority manufacturer from roomplan.md shortlist. Product pages and brochures may help weak
+      labeling and review, but every asset requires explicit approval before training use.
+
+  - id: hochiki-europe
+    name: Hochiki Europe
+    domain: hochikieurope.com
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Rights must be checked per asset and document.
+    terms_reviewed_by: pending
+    notes: >
+      Suitable for candidate asset discovery and product-family normalization after manual review.
+
+  - id: gent-by-honeywell
+    name: Gent
+    domain: gent.co.uk
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Do not infer permission from public accessibility.
+    terms_reviewed_by: pending
+    notes: >
+      Manufacturer shortlist source. Treat brochures and page imagery as review candidates only
+      until rights are confirmed.
+
+  - id: advanced
+    name: Advanced
+    domain: advancedco.com
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Public product materials may still be restricted for ML reuse.
+    terms_reviewed_by: pending
+    notes: >
+      Include panel and control-equipment material for candidate collection and metadata extraction.
+
+  - id: morley-ias
+    name: Morley-IAS
+    domain: morley-ias.co.uk
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Requires explicit approval before training use.
+    terms_reviewed_by: pending
+    notes: >
+      Candidate source for detectors, sounders, and interface modules.
+
+  - id: notifier
+    name: Notifier
+    domain: notifierfiresystems.co.uk
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Rights and regional site terms must be reviewed.
+    terms_reviewed_by: pending
+    notes: >
+      Useful for manufacturer shortlist coverage, especially panels and wall devices.
+
+  - id: kentec
+    name: Kentec
+    domain: kentec.co.uk
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Product images and PDFs require asset-level review.
+    terms_reviewed_by: pending
+    notes: >
+      Candidate source for panels and peripherals in the shortlist.
+
+  - id: c-tec
+    name: C-TEC
+    domain: c-tec.com
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Accessibility does not equal training permission.
+    terms_reviewed_by: pending
+    notes: >
+      Candidate source for call-system-adjacent and fire alarm interface hardware where relevant.
+
+  - id: siemens-fire
+    name: Siemens Fire Safety
+    domain: buildingsproducts.co.uk
+    source_type: manufacturer_or_distributor_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Corporate materials often have restricted reuse rights.
+    terms_reviewed_by: pending
+    notes: >
+      Include only after domain scope is confirmed for relevant fire alarm product content.
+
+  - id: eaton
+    name: Eaton
+    domain: eaton.com
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Rights review required across regional product pages and downloads.
+    terms_reviewed_by: pending
+    notes: >
+      Candidate source for VADs, sounders, interfaces, and panels where product coverage exists.
+
+  - id: hyfire
+    name: Hyfire
+    domain: hyfirewireless.com
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Wireless product imagery and manuals require review.
+    terms_reviewed_by: pending
+    notes: >
+      Candidate shortlist source for wireless detectors, sounders, and interfaces.
+
+  - id: system-sensor-europe
+    name: System Sensor Europe
+    domain: systemsensoreurope.com
+    source_type: manufacturer_product_pages
+    status: allowed_review_only
+    robots_status: must_check_before_crawl
+    training_approval: pending_asset_review
+    rate_limit_policy: conservative_manual_or_low_rate_only
+    copyright_note: Use only after explicit source and asset review.
+    terms_reviewed_by: pending
+    notes: >
+      Important for detector and notification appliance coverage.
+
+review_notes:
+  - Do not mark a source or asset as allowed_training without a documented reviewer decision.
+  - If robots or terms prohibit automated collection, move the source to blocked or manual-only review.
+  - Unclear-license assets must remain out of training exports.

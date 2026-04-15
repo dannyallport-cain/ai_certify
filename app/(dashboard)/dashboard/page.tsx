@@ -42,9 +42,9 @@ export default async function DashboardPage() {
     <main className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Fire Safety Dashboard</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Certificate Dashboard</h2>
           <p className="text-muted-foreground">
-            Overview of your fire safety certificate management system
+            Overview of your certificate management system
           </p>
         </div>
         <div className="flex items-center space-x-2">

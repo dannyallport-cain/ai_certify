@@ -44,9 +44,9 @@ export default async function CertificatesPage() {
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Fire Safety Certificates</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Certificates</h2>
           <p className="text-muted-foreground">
-            Manage and create fire safety certificates for your customers
+            Manage and create certificates for your customers
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -69,7 +69,7 @@ export default async function CertificatesPage() {
             <CardContent>
               <div className="text-2xl font-bold">+</div>
               <p className="text-xs text-muted-foreground">
-                Start a new fire safety certificate
+                Start a new certificate
               </p>
             </CardContent>
           </Link>
@@ -139,7 +139,7 @@ export default async function CertificatesPage() {
               No Certificates Yet
             </CardTitle>
             <CardDescription>
-              Get started by creating your first fire safety certificate.
+              Get started by creating your first certificate.
             </CardDescription>
           </CardHeader>
           <CardContent>

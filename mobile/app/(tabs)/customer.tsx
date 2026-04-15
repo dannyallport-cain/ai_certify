@@ -111,6 +111,14 @@ export default function CustomerScreen() {
                   <View className="flex-1">
                     <Text className="font-semibold text-gray-900">{customer.name}</Text>
                     {customer.email ? <Text className="text-gray-400 text-sm">{customer.email}</Text> : null}
+                    {selected ? (
+                      <TouchableOpacity
+                        className="mt-3 bg-brand rounded-xl py-3 items-center"
+                        onPress={() => router.push('/(tabs)/review')}
+                      >
+                        <Text className="text-white font-bold text-base">Next: Review</Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                   {selected && <Ionicons name="checkmark-circle" size={22} color="#BE0000" />}
                 </TouchableOpacity>
@@ -118,20 +126,6 @@ export default function CustomerScreen() {
             })
           )}
         </ScrollView>
-      )}
-
-      {state.selectedCustomer && (
-        <View className="px-4 pb-8 pt-3 border-t border-gray-100">
-          <Text className="text-gray-500 text-sm mb-3">
-            Selected: <Text className="font-semibold text-gray-800">{state.selectedCustomer.name}</Text>
-          </Text>
-          <TouchableOpacity
-            className="bg-brand rounded-xl py-4 items-center"
-            onPress={() => router.push('/(tabs)/review')}
-          >
-            <Text className="text-white font-bold text-base">Next: Review</Text>
-          </TouchableOpacity>
-        </View>
       )}
 
       {/* New customer modal */}

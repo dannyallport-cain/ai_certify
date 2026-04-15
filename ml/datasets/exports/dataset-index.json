@@ -1,0 +1,61 @@
+{
+  "counts_by_type": {
+    "unknown": 4
+  },
+  "dataset_root": "/Users/admin/Development/ai_certify/ml/datasets",
+  "record_count": 4,
+  "records": [
+    {
+      "keys": [
+        "counts_by_type",
+        "dataset_root",
+        "record_count",
+        "records",
+        "request"
+      ],
+      "path": "exports/dataset-index.json",
+      "record_type": "unknown",
+      "relative_path": "exports/dataset-index.json"
+    },
+    {
+      "keys": [
+        "dataset_root",
+        "duplicate_groups",
+        "group_count",
+        "group_types"
+      ],
+      "path": "exports/duplicate-report.json",
+      "record_type": "unknown",
+      "relative_path": "exports/duplicate-report.json"
+    },
+    {
+      "keys": [
+        "record_count",
+        "records",
+        "reviewed_dir"
+      ],
+      "path": "exports/reviewed-manifest.json",
+      "record_type": "unknown",
+      "relative_path": "exports/reviewed-manifest.json"
+    },
+    {
+      "keys": [
+        "assignment_count",
+        "assignments",
+        "dataset_root",
+        "group_count",
+        "ratios",
+        "records",
+        "seed",
+        "split_counts"
+      ],
+      "path": "exports/splits/splits.json",
+      "record_type": "unknown",
+      "relative_path": "exports/splits/splits.json"
+    }
+  ],
+  "request": {
+    "dataset_root": "ml/datasets",
+    "output_path": "ml/datasets/exports/dataset-index.json"
+  }
+}

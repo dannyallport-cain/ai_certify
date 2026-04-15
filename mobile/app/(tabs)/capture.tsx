@@ -1,25 +1,18 @@
-import { useMemo, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  Modal,
-} from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { useMemo, useState } from "react";
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import {
   useJob,
   type CaptureMode,
   type CapturedImage,
   type PhotoQualityAssessment,
   type WizardPhotoType,
-} from '@/components/JobStateContext';
-import { analyseImage, type AnalysisResult } from '@/services/api';
+} from "@/components/JobStateContext";
+import { analyseImage, type AnalysisResult } from "@/services/api";
 
 type CapturedPreview = {
   uri: string;
@@ -31,136 +24,65 @@ type CaptureRequirement = {
   description: string;
   reason: string;
   guidance: string[];
-  qualityHints: string[];
 };
 
 const wizardPhotoModeMap: Record<WizardPhotoType, CaptureMode> = {
-  consumer_unit_external: 'consumer_unit',
-  consumer_unit_internal: 'consumer_unit',
-  bonding: 'consumer_unit',
-  damaged_accessory: 'consumer_unit',
-  damaged_luminaire: 'consumer_unit',
-  smoke_detector: 'consumer_unit',
-  co_detector: 'consumer_unit',
+  consumer_unit_external: "consumer_unit",
+  consumer_unit_internal: "consumer_unit",
+  bonding: "consumer_unit",
+  damaged_accessory: "consumer_unit",
+  damaged_luminaire: "consumer_unit",
+  smoke_detector: "consumer_unit",
+  co_detector: "consumer_unit",
 };
 
 const captureRequirementMap: Record<WizardPhotoType, CaptureRequirement> = {
   consumer_unit_external: {
-    title: 'Consumer Unit',
-    description: 'Take a full photo of the consumer unit with the front cover in place.',
-    reason: 'This shows the condition, location, enclosure type, and any visible damage before removing the front.',
-    guidance: [
-      'Hold the phone in landscape for a wider shot.',
-      'Fit the whole consumer unit in frame.',
-      'Avoid cutting off the top, bottom, or sides.',
-      'Step back slightly if the enclosure edges are cropped.',
-    ],
-    qualityHints: [
-      'The full board should be visible.',
-      'Labels and protective devices should not be blurry.',
-      'Use extra light if the cupboard is dark.',
-    ],
+    title: "Consumer Unit",
+    description: "Take a full photo of the consumer unit with the front cover in place.",
+    reason: "This records the enclosure, condition, and location before removal.",
+    guidance: ["Use landscape where possible.", "Fit the whole board in frame.", "Retake if any edge is cropped."],
   },
   consumer_unit_internal: {
-    title: 'Consumer Unit With Front Removed',
-    description: 'Take a clear photo of the consumer unit with the front removed, where safe and appropriate.',
-    reason: 'This provides evidence of internal condition, device layout, and visible wiring arrangements.',
-    guidance: [
-      'Keep the entire opened consumer unit in frame.',
-      'Ensure devices and labelling are visible.',
-      'Keep the phone steady and avoid glare on devices.',
-      'Retake if the image is soft or any part is cropped.',
-    ],
-    qualityHints: [
-      'The device layout should be readable.',
-      'Avoid deep shadows over the breakers or terminals.',
-      'Retake if the internal view is obscured or blurred.',
-    ],
+    title: "Consumer Unit Internal View",
+    description: "Take a clear internal photo after removing the front where safe.",
+    reason: "This records device layout and visible wiring condition.",
+    guidance: ["Keep the full internal view in frame.", "Avoid glare and shadows.", "Retake if devices are blurry."],
   },
   bonding: {
-    title: 'Bonding',
-    description: 'Take a photo showing the main protective bonding connection and clamp.',
-    reason: 'This helps confirm presence and condition of bonding arrangements.',
-    guidance: [
-      'Centre the bonding conductor and clamp in frame.',
-      'Move close enough to show clamp detail clearly.',
-      'Include enough surrounding context to identify the connection point.',
-      'Use additional light if the area is dark.',
-    ],
-    qualityHints: [
-      'The clamp and conductor should be clearly visible.',
-      'Avoid motion blur on close-up images.',
-      'Retake if the bonding connection cannot be identified.',
-    ],
+    title: "Bonding",
+    description: "Take a photo of the bonding conductor and clamp.",
+    reason: "This supports evidence of bonding arrangements.",
+    guidance: ["Move close enough to show the clamp clearly.", "Keep the conductor centred.", "Use extra light if needed."],
   },
   damaged_accessory: {
-    title: 'Damaged Socket, Switch, or Accessory',
-    description: 'Take a close photo of any damaged socket, switch, or similar accessory.',
-    reason: 'This records visible damage and supports observations and coding.',
-    guidance: [
-      'Fill most of the frame with the damaged item.',
-      'Show the full accessory and the damaged area.',
-      'Take more than one retake if cracking or burning is hard to see.',
-      'Keep the phone square to the accessory face.',
-    ],
-    qualityHints: [
-      'The damage should be obvious in the image.',
-      'Avoid reflections hiding the defect.',
-      'Retake if scorch marks, cracks, or missing parts are unclear.',
-    ],
+    title: "Damaged Accessory",
+    description: "Take a close photo of the damaged socket, switch, or accessory.",
+    reason: "This records visible damage for the report.",
+    guidance: ["Fill most of the frame with the accessory.", "Show the damage clearly.", "Retake if reflections hide the defect."],
   },
   damaged_luminaire: {
-    title: 'Damaged Luminaire',
-    description: 'Take a clear photo of any damaged luminaire or fitting.',
-    reason: 'This records visible damage, deterioration, and suitability concerns.',
-    guidance: [
-      'Capture the full fitting and the damaged detail.',
-      'Step back slightly if the fitting is cut off.',
-      'Move closer if the damage is too small to see.',
-      'Use steady framing to avoid blur.',
-    ],
-    qualityHints: [
-      'The fitting and the damage should both be visible.',
-      'Retake if the defect is too small or out of focus.',
-      'Use more light if the fitting is in a dark area.',
-    ],
+    title: "Damaged Luminaire",
+    description: "Take a clear photo of the damaged fitting.",
+    reason: "This records visible deterioration or damage.",
+    guidance: ["Show both the fitting and the defect.", "Move closer if damage is too small.", "Retake if out of focus."],
   },
   smoke_detector: {
-    title: 'Smoke Detector',
-    description: 'Take a photo of the smoke detector.',
-    reason: 'This confirms presence and condition of smoke detection equipment.',
-    guidance: [
-      'Keep the detector centred in frame.',
-      'Move close enough to show the detector clearly.',
-      'Avoid strong backlight from windows or downlights.',
-      'Retake if the detector is too small to inspect.',
-    ],
-    qualityHints: [
-      'The detector should be easy to identify.',
-      'Retake if the device edges are soft or blurry.',
-      'Ensure the full detector is visible.',
-    ],
+    title: "Smoke Detector",
+    description: "Take a photo of the smoke detector.",
+    reason: "This confirms presence and condition.",
+    guidance: ["Keep the detector centred.", "Move close enough for a clear view.", "Retake if blurry."],
   },
   co_detector: {
-    title: 'CO Detector',
-    description: 'Take a photo of the CO detector after testing.',
-    reason: 'This confirms the detector is present and supports the solid fuel branch evidence.',
-    guidance: [
-      'Capture the full CO detector square-on.',
-      'Move closer until labels and test button area are clear.',
-      'Avoid glare from flash or strong lighting.',
-      'Retake if the detector is not obvious in frame.',
-    ],
-    qualityHints: [
-      'The detector should be recognisable at a glance.',
-      'Retake if the image is dark or soft.',
-      'Keep the full detector in view.',
-    ],
+    title: "CO Detector",
+    description: "Take a photo of the CO detector.",
+    reason: "This confirms presence of CO detection.",
+    guidance: ["Capture the full detector square-on.", "Avoid glare.", "Retake if unclear."],
   },
 };
 
 function getBrandModel(result: AnalysisResult | null | undefined) {
-  return [result?.consumerUnit?.brand, result?.consumerUnit?.model].filter(Boolean).join(' ');
+  return [result?.consumerUnit?.brand, result?.consumerUnit?.model].filter(Boolean).join(" ");
 }
 
 function getTextDetectionCount(result: AnalysisResult | null | undefined) {
@@ -172,19 +94,15 @@ function getObservationCount(result: AnalysisResult | null | undefined) {
 }
 
 function buildAnalysisMessage(result: AnalysisResult) {
-  const summary = result.summary || 'Analysis completed successfully.';
-  const brandModel = getBrandModel(result);
-  const textCount = getTextDetectionCount(result);
-  const needsHumanReview = result.needsHumanReview ? 'Yes' : 'No';
+  const lines = [
+    result.summary || "Analysis completed successfully.",
+    getBrandModel(result) ? `Consumer unit: ${getBrandModel(result)}` : null,
+    `Extracted text items: ${getTextDetectionCount(result)}`,
+    `Observations: ${getObservationCount(result)}`,
+    `Needs human review: ${result.needsHumanReview ? "Yes" : "No"}`,
+  ];
 
-  return [
-    summary,
-    brandModel ? `Consumer unit: ${brandModel}` : null,
-    `Extracted text items: ${textCount}`,
-    `Needs human review: ${needsHumanReview}`,
-  ]
-    .filter(Boolean)
-    .join('\n');
+  return lines.filter(Boolean).join("\n");
 }
 
 function getImageDimensions(uri: string) {
@@ -192,7 +110,7 @@ function getImageDimensions(uri: string) {
     Image.getSize(
       uri,
       (width, height) => resolve({ width, height }),
-      () => reject(new Error('Unable to read image dimensions.')),
+      () => reject(new Error("Unable to read image dimensions.")),
     );
   });
 }
@@ -202,70 +120,42 @@ function buildQualityAssessment(params: {
   height: number | null;
   mode: CaptureMode;
   result: AnalysisResult | null;
-  targetType?: WizardPhotoType | null;
 }): PhotoQualityAssessment {
-  const { width, height, mode, result, targetType } = params;
+  const { width, height, mode, result } = params;
   const reasons: string[] = [];
   let score = 100;
-  const isLandscape = typeof width === 'number' && typeof height === 'number' ? width >= height : false;
-  const textCount = Array.isArray(result?.textDetections) ? result.textDetections.length : 0;
-  const hasUsefulTextDetection = textCount >= (mode === 'circuit_label' ? 3 : 1);
+
+  const isLandscape = typeof width === "number" && typeof height === "number" ? width >= height : false;
+  const textCount = getTextDetectionCount(result);
+  const hasUsefulTextDetection = textCount >= (mode === "circuit_label" ? 3 : 1);
   const needsHumanReview = !!result?.needsHumanReview;
 
-  if (typeof width !== 'number' || typeof height !== 'number') {
-    score -= 25;
-    reasons.push('The app could not confirm the image dimensions.');
+  if (typeof width !== "number" || typeof height !== "number") {
+    score -= 20;
+    reasons.push("The app could not confirm the image dimensions.");
   } else {
     if (width < 1200 || height < 900) {
-      score -= 35;
-      reasons.push('The image resolution looks low. Move closer and retake with a steadier hand.');
+      score -= 30;
+      reasons.push("The image resolution looks low.");
     }
-
     if (!isLandscape) {
-      score -= 15;
-      reasons.push('Landscape framing is recommended so the full subject is easier to review.');
-    }
-  }
-
-  if (!hasUsefulTextDetection && mode !== 'consumer_unit') {
-    score -= 25;
-    reasons.push('Very little readable text was detected. Move closer until labels can be read.');
-  }
-
-  if (
-    targetType &&
-    ['bonding', 'damaged_accessory', 'damaged_luminaire', 'smoke_detector', 'co_detector'].includes(targetType)
-  ) {
-    if (typeof width === 'number' && typeof height === 'number') {
-      const longestSide = Math.max(width, height);
-      if (longestSide < 1400) {
-        score -= 15;
-        reasons.push('Move closer so the detail fills more of the frame.');
-      }
-    }
-
-    if (textCount === 0 && !needsHumanReview) {
       score -= 10;
-      reasons.push('The subject may be too small or unclear. Try a closer, steadier photo.');
+      reasons.push("Landscape framing is recommended.");
     }
   }
 
-  if (targetType === 'consumer_unit_external' || targetType === 'consumer_unit_internal') {
-    if (typeof width === 'number' && typeof height === 'number' && !isLandscape) {
-      score -= 10;
-      reasons.push('A landscape photo is preferred so the whole consumer unit fits clearly in frame.');
-    }
+  if (!hasUsefulTextDetection && mode !== "consumer_unit") {
+    score -= 20;
+    reasons.push("Very little readable text was detected.");
   }
 
   if (needsHumanReview) {
     score -= 15;
-    reasons.push('The AI flagged this image for human review, which can indicate blur, glare, or incomplete framing.');
+    reasons.push("The AI flagged this image for human review.");
   }
 
-  const isSufficient = score >= 70 && reasons.length <= 2;
-
   return {
-    isSufficient,
+    isSufficient: score >= 70,
     score: Math.max(0, Math.min(100, score)),
     reasons,
     checks: {
@@ -282,55 +172,29 @@ export default function CaptureScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [analysing, setAnalysing] = useState(false);
   const [capturedPreview, setCapturedPreview] = useState<CapturedPreview | null>(null);
-  const [previewQuality, setPreviewQuality] = useState<PhotoQualityAssessment | null>(null);
-  const cameraRef = useRef<CameraView>(null);
   const { state, dispatch } = useJob();
 
-  const activeCaptureMode = state.wizard.activeCaptureType
+  const activeCaptureMode: CaptureMode = state.wizard.activeCaptureType
     ? wizardPhotoModeMap[state.wizard.activeCaptureType]
-    : 'consumer_unit';
-
-  const activeTargetImage = useMemo(
-    () =>
-      state.wizard.activeCaptureType
-        ? state.capturedImages.find(
-            (image) =>
-              image.type === state.wizard.activeCaptureType &&
-              (image.slotIndex ?? null) === (state.wizard.activeCaptureSlotIndex ?? null),
-          ) ?? null
-        : null,
-    [state.capturedImages, state.wizard.activeCaptureSlotIndex, state.wizard.activeCaptureType],
-  );
+    : "consumer_unit";
 
   const activeRequirement = state.wizard.activeCaptureType ? captureRequirementMap[state.wizard.activeCaptureType] : null;
+  const activeTitle = activeRequirement?.title ?? "Inspection Evidence";
 
   const guidance = useMemo(() => {
-    if (activeRequirement) {
-      return activeRequirement.guidance;
-    }
-
-    if (activeCaptureMode === 'consumer_unit') {
-      return [
-        'Hold the phone in landscape for a wider, flatter shot.',
-        'Centre the full subject inside the guide frame.',
-        'Move closer if labels are hard to read.',
-        'Move back if the edges are cut off.',
-      ];
-    }
-
+    if (activeRequirement) return activeRequirement.guidance;
     return [
-      'Use landscape where possible for longer labels.',
-      'Centre the label and keep it flat in frame.',
-      'Move closer until text is sharp and readable.',
-      'Move back slightly if any text is cropped.',
+      "Keep the subject centred inside the guide.",
+      "Use landscape where possible.",
+      "Retake if the image is blurry or cropped.",
     ];
-  }, [activeCaptureMode, activeRequirement]);
+  }, [activeRequirement]);
 
   const analysisSummary = useMemo(() => {
     if (!state.analysisResult) return null;
 
     return {
-      summary: state.analysisResult.summary || 'No summary returned.',
+      summary: state.analysisResult.summary || "No summary returned.",
       brandModel: getBrandModel(state.analysisResult),
       textCount: getTextDetectionCount(state.analysisResult),
       observationCount: getObservationCount(state.analysisResult),
@@ -338,38 +202,53 @@ export default function CaptureScreen() {
     };
   }, [state.analysisResult]);
 
-  if (!permission) return <View className="flex-1 bg-black" />;
+  function clearActiveCapture() {
+    dispatch({
+      type: "SET_ACTIVE_CAPTURE",
+      payload: { type: null, label: null, mode: "consumer_unit", slotIndex: null },
+    });
+  }
 
-  if (!permission.granted) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white px-8">
-        <Ionicons name="camera-outline" size={60} color="#9ca3af" />
-        <Text className="mt-4 mb-2 text-lg font-semibold text-gray-800">Camera Access Required</Text>
-        <Text className="mb-6 text-center text-gray-500">
-          We need camera access to photograph the inspection evidence.
-        </Text>
-        <TouchableOpacity className="rounded-lg bg-brand px-8 py-3" onPress={requestPermission}>
-          <Text className="font-semibold text-white">Grant Access</Text>
-        </TouchableOpacity>
-      </View>
-    );
+  function setPreviewFromUri(uri: string) {
+    setCapturedPreview({ uri, mode: activeCaptureMode });
   }
 
   async function takePicture() {
-    if (!cameraRef.current || analysing) return;
+    if (analysing) return;
+
+    Alert.alert(
+      "Camera capture unavailable in Expo Go",
+      "Live camera capture requires a development build for this Expo SDK version. Use the photo library button for now, or run a native iOS development build to enable in-app capture.",
+    );
+  }
+
+  async function pickImage() {
+    if (analysing) return;
 
     try {
-      const photo = await cameraRef.current.takePictureAsync({
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert("Permission required", "Photo library access is needed to upload an image.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
         quality: 0.8,
-        shutterSound: false,
       });
 
-      if (!photo?.uri) return;
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        const asset = result.assets[0];
+        const safeUri =
+          typeof asset.uri === "string" && asset.uri.startsWith("ph://")
+            ? asset.uri.replace("ph://", "assets-library://asset/asset.JPG?id=")
+            : asset.uri;
 
-      setPreviewQuality(null);
-      setCapturedPreview({ uri: photo.uri, mode: activeCaptureMode });
+        setPreviewFromUri(safeUri);
+      }
     } catch {
-      Alert.alert('Error', 'Failed to take picture. Please try again.');
+      Alert.alert("Error", "Failed to open the photo library. Please try again.");
     }
   }
 
@@ -380,9 +259,10 @@ export default function CaptureScreen() {
 
     try {
       let result: AnalysisResult | null = null;
-      if (capturedPreview.mode === 'consumer_unit' || capturedPreview.mode === 'circuit_label') {
+
+      if (capturedPreview.mode === "consumer_unit" || capturedPreview.mode === "circuit_label") {
         result = await analyseImage(capturedPreview.uri, capturedPreview.mode);
-        dispatch({ type: 'SET_ANALYSIS', payload: result });
+        dispatch({ type: "SET_ANALYSIS", payload: result });
       }
 
       let dimensions: { width: number; height: number } | null = null;
@@ -397,16 +277,12 @@ export default function CaptureScreen() {
         height: dimensions?.height ?? null,
         mode: capturedPreview.mode,
         result,
-        targetType: state.wizard.activeCaptureType,
       });
-
-      setPreviewQuality(qualityAssessment);
 
       if (!qualityAssessment.isSufficient) {
         Alert.alert(
-          'Photo quality looks insufficient',
-          qualityAssessment.reasons.join('\n') || 'Please retake this photo before continuing.',
-          [{ text: 'OK' }],
+          "Photo quality looks insufficient",
+          qualityAssessment.reasons.join("\n") || "Please retake this photo before continuing.",
         );
         return;
       }
@@ -420,18 +296,23 @@ export default function CaptureScreen() {
         qualityAssessment,
       };
 
-      dispatch({ type: 'ADD_IMAGE', payload: imagePayload });
+      dispatch({ type: "ADD_IMAGE", payload: imagePayload });
+
+      setCapturedPreview(null);
+
       if (state.wizard.activeCaptureType) {
         clearActiveCapture();
+        router.push("/(tabs)/wizard");
+      } else {
+        router.push("/(tabs)/location");
       }
-      setCapturedPreview(null);
-      setPreviewQuality(null);
 
       if (result) {
-        Alert.alert('Analysis Complete', buildAnalysisMessage(result), [{ text: 'OK' }]);
+        Alert.alert("Analysis Complete", buildAnalysisMessage(result));
       }
-    } catch {
-      Alert.alert('Analysis Failed', 'Image captured but AI analysis failed. Please retake the photo.');
+    } catch (error) {
+      console.warn("Image analysis failed", error);
+      Alert.alert("Analysis Failed", "Image captured but AI analysis failed. Please retake the photo.");
     } finally {
       setAnalysing(false);
     }
@@ -439,253 +320,175 @@ export default function CaptureScreen() {
 
   function retakePhoto() {
     setCapturedPreview(null);
-    setPreviewQuality(null);
-  }
-
-  function clearActiveCapture() {
-    dispatch({
-      type: 'SET_ACTIVE_CAPTURE',
-      payload: { type: null, label: null, mode: 'consumer_unit', slotIndex: null },
-    });
   }
 
   function handleBack() {
     if (state.wizard.activeCaptureType) {
       clearActiveCapture();
-      router.push('/(tabs)/wizard');
+      router.push("/(tabs)/wizard");
       return;
     }
+
     router.back();
   }
 
-  function handleContinue() {
-    if (state.wizard.activeCaptureType) {
-      clearActiveCapture();
-      router.push('/(tabs)/wizard');
-      return;
-    }
-    router.push('/(tabs)/location');
+  if (!permission) {
+    return <View className="flex-1 bg-black" />;
   }
 
-  const title = activeRequirement?.title ?? 'Inspection Evidence';
+  if (!permission.granted) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#f8f5f1] px-8">
+        <View className="mb-5 h-20 w-20 items-center justify-center rounded-[28px] bg-[#efe6dc]">
+          <Ionicons name="camera-outline" size={36} color="#7c5a45" />
+        </View>
+        <Text className="mb-2 text-center text-2xl font-bold text-[#1f2937]">Camera access required</Text>
+        <Text className="mb-6 text-center text-base leading-6 text-[#6b7280]">
+          Enable camera access to capture inspection evidence in the mobile workflow.
+        </Text>
+        <TouchableOpacity className="rounded-[20px] bg-[#7c5a45] px-8 py-4" onPress={requestPermission}>
+          <Text className="font-semibold text-[#fffdf9]">Grant Access</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <View className="flex-1 bg-black">
-      <View className="bg-black/70 px-4 pt-3 pb-2">
-        <Text className="text-lg font-semibold text-white">{title}</Text>
-        <Text className="text-sm text-white/70">
-          {activeRequirement?.description ?? 'Capture a clear evidence photo for the inspection record.'}
-        </Text>
-      </View>
+    <SafeAreaView className="flex-1 bg-black" edges={["top", "bottom"]}>
+      <View className="flex-1 bg-black">
+        <CameraView style={{ flex: 1 }} active={!capturedPreview} facing="back" />
 
-      <View className="bg-black/75 px-4 pb-3">
-        {activeRequirement ? (
-          <View className="mb-3 rounded-2xl border border-white/10 bg-brand/20 px-4 py-3">
-            <Text className="font-semibold text-white">Why this photo matters</Text>
-            <Text className="mt-1 text-sm text-white/85">{activeRequirement.reason}</Text>
-          </View>
-        ) : null}
-
-        <View className="mb-2 flex-row items-center">
-          <Ionicons name="flash" size={16} color="#facc15" />
-          <Text className="ml-2 text-xs font-semibold text-yellow-300">
-            Flash is set to auto to help with dark cupboards and labels
-          </Text>
-        </View>
-
-        <View className="rounded-2xl bg-white/10 px-4 py-3">
-          <Text className="mb-2 font-semibold text-white">{`How to frame ${title.toLowerCase()}`}</Text>
-          {guidance.map((item) => (
-            <View key={item} className="mb-1.5 flex-row items-start">
-              <Text className="mr-2 text-brand">•</Text>
-              <Text className="flex-1 text-sm text-white/85">{item}</Text>
-            </View>
-          ))}
-
-          {activeRequirement?.qualityHints.map((item) => (
-            <View key={item} className="mb-1.5 flex-row items-start">
-              <Text className="mr-2 text-yellow-300">•</Text>
-              <Text className="flex-1 text-sm text-white/85">{item}</Text>
-            </View>
-          ))}
-
-          {activeTargetImage?.qualityAssessment?.isSufficient ? (
-            <Text className="mt-2 text-xs text-green-300">A previously saved acceptable photo exists for this step.</Text>
-          ) : null}
-        </View>
-      </View>
-
-      {analysisSummary ? (
-        <View className="mx-4 mt-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3">
-          <View className="mb-2 flex-row items-center justify-between">
-            <Text className="font-semibold text-white">Latest analysis</Text>
-            {analysisSummary.needsHumanReview ? (
-              <Text className="text-xs font-semibold text-amber-300">Needs review</Text>
-            ) : null}
-          </View>
-          <Text className="text-sm text-white/90">{analysisSummary.summary}</Text>
-          {analysisSummary.brandModel ? (
-            <Text className="mt-2 text-sm text-white/80">Consumer unit: {analysisSummary.brandModel}</Text>
-          ) : null}
-          <View className="mt-3 flex-row gap-2">
-            <View className="flex-1 rounded-xl bg-black/30 px-3 py-2">
-              <Text className="text-[11px] uppercase text-white/60">Text</Text>
-              <Text className="mt-1 font-semibold text-white">{analysisSummary.textCount}</Text>
-            </View>
-            <View className="flex-1 rounded-xl bg-black/30 px-3 py-2">
-              <Text className="text-[11px] uppercase text-white/60">Observations</Text>
-              <Text className="mt-1 font-semibold text-white">{analysisSummary.observationCount}</Text>
-            </View>
-          </View>
-        </View>
-      ) : null}
-
-      <View className="relative flex-1 bg-black">
-        <CameraView
-          ref={cameraRef}
-          style={{ flex: 1 }}
-          active={!capturedPreview}
-          facing="back"
-          enableTorch={false}
-          flash="auto"
-        />
-
-        <View className="absolute inset-0 items-center justify-center px-8" pointerEvents="none">
-          <View className="aspect-[1.45] w-full max-w-[340px] rounded-3xl border-4 border-white bg-transparent">
-            <View className="absolute top-3 left-3 h-8 w-8 rounded-tl-lg border-t-4 border-l-4 border-brand" />
-            <View className="absolute top-3 right-3 h-8 w-8 rounded-tr-lg border-t-4 border-r-4 border-brand" />
-            <View className="absolute bottom-3 left-3 h-8 w-8 rounded-bl-lg border-b-4 border-l-4 border-brand" />
-            <View className="absolute bottom-3 right-3 h-8 w-8 rounded-br-lg border-b-4 border-r-4 border-brand" />
-          </View>
-          <Text className="mt-4 overflow-hidden rounded-full bg-black/55 px-4 py-2 text-center text-sm text-white">
-            Keep the subject centred and fill most of the frame
-          </Text>
-        </View>
-      </View>
-
-      {state.capturedImages.length > 0 && (
-        <ScrollView horizontal className="absolute bottom-28 left-0 right-0 px-4">
-          {state.capturedImages.map((img, i) => (
-            <View key={`${img.uri}-${i}`} className="relative mr-2">
-              <Image source={{ uri: img.uri }} className="h-16 w-16 rounded-lg" />
-              <View className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-black/70 px-1 py-0.5">
-                <Text className="text-[9px] text-white" numberOfLines={1}>
-                  {img.label ?? img.type ?? img.mode}
+        <ScrollView
+          className="absolute inset-0"
+          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="rounded-[28px] border border-white/10 bg-black/55 px-4 py-4">
+            <View className="mb-3 flex-row items-start justify-between">
+              <View className="mr-3 flex-1">
+                <Text className="text-2xl font-bold text-white">{activeTitle}</Text>
+                <Text className="mt-1 text-sm leading-5 text-white/75">
+                  {activeRequirement?.description ?? "Capture a clear evidence photo for the inspection record."}
                 </Text>
               </View>
-              {img.qualityAssessment ? (
-                <View
-                  className={`absolute left-1 top-1 rounded-full px-1.5 py-0.5 ${img.qualityAssessment.isSufficient ? 'bg-green-600' : 'bg-red-600'}`}
-                >
-                  <Text className="text-[8px] font-semibold text-white">{img.qualityAssessment.score}</Text>
-                </View>
-              ) : null}
-              <TouchableOpacity
-                className="absolute -top-1 -right-1 h-5 w-5 items-center justify-center rounded-full bg-red-600"
-                onPress={() =>
-                  img.type
-                    ? dispatch({
-                        type: 'REMOVE_IMAGE_BY_TARGET',
-                        payload: { type: img.type, slotIndex: img.slotIndex ?? null },
-                      })
-                    : dispatch({ type: 'REMOVE_IMAGE', payload: i })
-                }
-              >
-                <Text className="text-xs font-bold text-white">×</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      )}
-
-      <View className="flex-row items-center justify-around bg-black px-8 pt-4 pb-10">
-        <TouchableOpacity onPress={handleBack} disabled={analysing}>
-          <Ionicons name="arrow-back" size={28} color={analysing ? '#6b7280' : 'white'} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="h-18 w-18 items-center justify-center rounded-full bg-white"
-          onPress={takePicture}
-          disabled={analysing}
-        >
-          {analysing ? <ActivityIndicator color="#BE0000" /> : <View className="h-16 w-16 rounded-full border-4 border-brand" />}
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleContinue} disabled={analysing}>
-          <Ionicons
-            name="arrow-forward"
-            size={28}
-            color={!analysing && state.capturedImages.length > 0 ? 'white' : '#6b7280'}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <Modal visible={!!capturedPreview} animationType="slide" presentationStyle="fullScreen">
-        <View className="flex-1 bg-black">
-          <View className="flex-row items-center justify-between px-5 pt-14 pb-4">
-            <TouchableOpacity onPress={retakePhoto} disabled={analysing}>
-              <Text className="text-base font-medium text-white">Retake</Text>
-            </TouchableOpacity>
-            <Text className="text-lg font-semibold text-white">Preview Capture</Text>
-            <TouchableOpacity onPress={confirmPhoto} disabled={analysing}>
-              <Text className={`text-base font-semibold ${analysing ? 'text-gray-500' : 'text-brand'}`}>Use Photo</Text>
-            </TouchableOpacity>
-          </View>
-
-          {capturedPreview && <Image source={{ uri: capturedPreview.uri }} className="flex-1 w-full" resizeMode="contain" />}
-
-          <View className="bg-black/90 px-5 py-5">
-            <Text className="mb-2 font-semibold text-white">Quick check before using this image</Text>
-            <View className="rounded-2xl bg-white/10 px-4 py-3">
-              <Text className="mb-1 text-sm text-white/85">• Is the requested item fully visible?</Text>
-              <Text className="mb-1 text-sm text-white/85">• Is the image sharp enough to inspect?</Text>
-              <Text className="mb-1 text-sm text-white/85">• Is any damage, bonding, or labelling easy to see?</Text>
-              <Text className="text-sm text-white/85">• Would a brighter or more landscape shot be clearer?</Text>
+              <View className="h-12 w-12 items-center justify-center rounded-2xl bg-[#7c5a45]/80">
+                <Ionicons name="camera-outline" size={22} color="#fffdf9" />
+              </View>
             </View>
 
-            {previewQuality ? (
-              <View
-                className={`mt-4 rounded-2xl border px-4 py-3 ${previewQuality.isSufficient ? 'border-green-500 bg-green-500/15' : 'border-red-500 bg-red-500/15'}`}
-              >
-                <View className="flex-row items-center justify-between">
-                  <Text className="font-semibold text-white">
-                    {previewQuality.isSufficient ? 'Photo quality accepted' : 'Photo quality insufficient'}
-                  </Text>
-                  <Text className="text-sm font-semibold text-white">Score {previewQuality.score}</Text>
-                </View>
-                {previewQuality.reasons.length > 0 ? (
-                  <View className="mt-2">
-                    {previewQuality.reasons.map((reason) => (
-                      <Text key={reason} className="mb-1 text-sm text-white/85">
-                        • {reason}
-                      </Text>
-                    ))}
-                  </View>
-                ) : (
-                  <Text className="mt-2 text-sm text-white/85">The image passed the current quality checks.</Text>
-                )}
+            {activeRequirement ? (
+              <View className="mb-3 rounded-[20px] bg-[#7c5a45]/75 px-4 py-3">
+                <Text className="font-semibold text-[#fffdf9]">Why this photo matters</Text>
+                <Text className="mt-1 text-sm leading-5 text-[#f3e9df]">{activeRequirement.reason}</Text>
               </View>
             ) : null}
 
-            <View className="mt-4 flex-row gap-3">
-              <TouchableOpacity
-                className="flex-1 items-center rounded-xl border border-white/25 py-4"
-                onPress={retakePhoto}
-                disabled={analysing}
-              >
-                <Text className="font-semibold text-white">Retake Photo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 items-center rounded-xl bg-brand py-4"
-                onPress={confirmPhoto}
-                disabled={analysing}
-              >
-                {analysing ? <ActivityIndicator color="white" /> : <Text className="font-semibold text-white">Run Quality Check</Text>}
-              </TouchableOpacity>
+            <View className="rounded-[20px] bg-white/10 px-4 py-3">
+              <Text className="mb-2 font-semibold text-white">Framing guidance</Text>
+              {guidance.map((item) => (
+                <View key={item} className="mb-1 flex-row items-start">
+                  <Text className="mr-2 text-[#e7d8c9]">•</Text>
+                  <Text className="flex-1 text-sm text-white/85">{item}</Text>
+                </View>
+              ))}
             </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+
+          {analysisSummary ? (
+            <View className="mt-4 rounded-[24px] border border-white/10 bg-black/55 px-4 py-4">
+              <Text className="font-semibold text-white">Latest analysis</Text>
+              <Text className="mt-2 text-sm leading-5 text-white/85">{analysisSummary.summary}</Text>
+              {analysisSummary.brandModel ? (
+                <Text className="mt-2 text-sm text-white/75">Consumer unit: {analysisSummary.brandModel}</Text>
+              ) : null}
+              <Text className="mt-2 text-sm text-white/75">Text detected: {analysisSummary.textCount}</Text>
+              <Text className="mt-1 text-sm text-white/75">Observations: {analysisSummary.observationCount}</Text>
+            </View>
+          ) : null}
+
+          <View className="pointer-events-none items-center justify-center px-4 py-8">
+            <View className="h-[220px] w-full max-w-[340px] rounded-[34px] border-2 border-white/70" />
+            <Text className="mt-4 rounded-full bg-black/55 px-4 py-2 text-center text-sm text-white">
+              Keep the subject centred and fill most of the guide
+            </Text>
+          </View>
+
+          {state.capturedImages.length > 0 ? (
+            <ScrollView horizontal className="mb-4" showsHorizontalScrollIndicator={false}>
+              {state.capturedImages.map((img, index) => (
+                <View key={`${img.uri}-${index}`} className="mr-3 rounded-2xl bg-black/55 p-2">
+                  <Image source={{ uri: img.uri }} style={{ width: 64, height: 64, borderRadius: 12 }} />
+                  <Text className="mt-2 max-w-[64px] text-center text-[11px] text-white/80" numberOfLines={2}>
+                    {img.label ?? img.type ?? img.mode}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          ) : null}
+
+          <View className="rounded-[30px] bg-black/70 px-4 py-4">
+            {capturedPreview ? (
+              <View className="items-center">
+                <Image
+                  source={{ uri: capturedPreview.uri }}
+                  style={{ width: "100%", height: 220, borderRadius: 24, marginBottom: 16 }}
+                  resizeMode="contain"
+                />
+                <View className="w-full flex-row gap-3">
+                  <TouchableOpacity
+                    className="flex-1 items-center rounded-[20px] border border-white/20 bg-white/10 px-4 py-4"
+                    onPress={retakePhoto}
+                    disabled={analysing}
+                  >
+                    <Text className="font-semibold text-white">Retake</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-1 items-center rounded-[20px] bg-[#7c5a45] px-4 py-4"
+                    onPress={confirmPhoto}
+                    disabled={analysing}
+                  >
+                    {analysing ? (
+                      <ActivityIndicator color="#fffdf9" />
+                    ) : (
+                      <Text className="font-semibold text-[#fffdf9]">Use photo</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View>
+                <View className="mb-4 flex-row items-center justify-between">
+                  <TouchableOpacity
+                    className="h-12 w-12 items-center justify-center rounded-full bg-white/10"
+                    onPress={handleBack}
+                  >
+                    <Ionicons name="chevron-back" size={22} color="#ffffff" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    className="h-[74px] w-[74px] items-center justify-center rounded-full border-4 border-white bg-[#7c5a45]"
+                    onPress={takePicture}
+                  >
+                    <View className="h-[54px] w-[54px] rounded-full bg-white" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    className="h-12 w-12 items-center justify-center rounded-full bg-white/10"
+                    onPress={pickImage}
+                  >
+                    <Ionicons name="images-outline" size={22} color="#ffffff" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text className="text-center text-sm text-white/75">
+                  Take a new photo or choose one from the library.
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 }

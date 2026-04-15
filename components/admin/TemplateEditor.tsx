@@ -1,14 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Group,
-  Layer,
-  Line as KonvaLine,
-  Rect,
-  Stage,
-  Text as KonvaText,
-} from 'react-konva';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { Layer, Line as KonvaLine, Stage } from 'react-konva';
 import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd';
 import {
   Eye,
@@ -46,9 +39,7 @@ import {
   createDefaultDragDropEditor,
   createEditorElement,
   createEditorPage,
-  DEFAULT_TEMPLATE_FONTS,
   getDynamicFieldLabel,
-  getDynamicFieldSampleValue,
   normalizeTemplateConfig,
   type CertificateTemplateConfig,
   type CertificateTemplateDynamicFieldKey,
@@ -56,37 +47,37 @@ import {
   type DragDropEditorElementType,
   type DragDropEditorDynamicTextElement,
   type DragDropEditorImageElement,
-  type DragDropEditorLineElement,
   type DragDropEditorPage,
   type DragDropEditorRectangleElement,
   type DragDropEditorStaticTextElement,
   type DragDropEditorTextStyle,
   type LegacyTemplateSection,
 } from '@/lib/certificate-template-editor';
+import {
+  MIN_VIEWPORT_SIZE,
+  REPORT_PREVIEW_BASE_HEIGHT,
+  REPORT_PREVIEW_BASE_WIDTH,
+  clampNumber,
+  fontOptions,
+  getActivePage,
+  getCanvasGridLineCounts,
+  getElementLabel,
+  getPageElements,
+  getPageElementPreview,
+  getPreviewScale,
+  getSelectedEditorVariants,
+  getSortedEditorPages,
+  getPageViewport,
+  renderCanvasElement,
+  sectionTypes,
+  toPreviewCertificateType,
+} from './template-editor-helpers';
 
 interface TemplateEditorProps {
   template: CertificateTemplateConfig;
   certificateType?: string;
   onChange: (template: CertificateTemplateConfig) => void;
 }
-
-const sectionTypes = [
-  { value: 'header', label: 'Company Header', icon: '🏢' },
-  { value: 'title', label: 'Certificate Title', icon: '📋' },
-  { value: 'certificate-number', label: 'Certificate Number', icon: '🏷️' },
-  { value: 'data-table', label: 'Data Table', icon: '📊' },
-  { value: 'items-table', label: 'Items Table', icon: '📋' },
-  { value: 'defects', label: 'Defects & Recommendations', icon: '⚠️' },
-  { value: 'certification', label: 'Certification Statement', icon: '✅' },
-  { value: 'signatures', label: 'Signatures', icon: '✍️' },
-];
-
-const fontOptions = ['Helvetica', 'Arial', 'Times New Roman', 'Calibri', 'Verdana', 'Georgia'];
-const REPORT_PREVIEW_BASE_WIDTH = 1123;
-const REPORT_PREVIEW_BASE_HEIGHT = 794;
-const MIN_VIEWPORT_SIZE = 240;
-
-const clampNumber = (value: number, min = 0) => (Number.isFinite(value) ? Math.max(min, value) : min);
 
 function ColorField({
   label,
@@ -122,42 +113,6 @@ function ElementListIcon({ type }: { type: DragDropEditorElementType }) {
   if (type === 'rectangle') return <RectangleHorizontal className="h-4 w-4" />;
   if (type === 'line') return <Minus className="h-4 w-4" />;
   return <ImageIcon className="h-4 w-4" />;
-}
-
-function getElementLabel(element: DragDropEditorElement) {
-  switch (element.type) {
-    case 'static-text':
-      return element.text || 'Static text';
-    case 'dynamic-text':
-      return element.label || getDynamicFieldLabel(element.fieldKey);
-    case 'rectangle':
-      return 'Rectangle';
-    case 'line':
-      return 'Line';
-    case 'image':
-      return element.alt || 'Image';
-    default:
-      return 'Element';
-  }
-}
-
-function getPageElementPreview(element: DragDropEditorElement) {
-  if (element.type === 'static-text') return element.text;
-  if (element.type === 'dynamic-text') return getDynamicFieldSampleValue(element.fieldKey);
-  if (element.type === 'image') return element.alt || 'Image';
-  if (element.type === 'rectangle') return 'Rectangle';
-  return 'Line';
-}
-
-function toPreviewCertificateType(certificateType?: string): string {
-  switch (certificateType) {
-    case 'BS5839-1':
-      return 'BS5839_1';
-    case 'BS5839-6':
-      return 'BS5839_6';
-    default:
-      return certificateType || 'BS5839_1';
-  }
 }
 
 function getPreviewData(certificateType?: string): CertificatePreviewData {
@@ -365,20 +320,15 @@ export default function TemplateEditor({ template, certificateType, onChange }: 
   const [realBlockOffsets, setRealBlockOffsets] = useState<Record<string, { x: number; y: number }>>({});
   const previewMeasureRef = useRef<HTMLDivElement | null>(null);
 
-  const pages = normalizedTemplate.dragDropEditor.pages
-    .slice()
-    .sort((a, b) => a.order - b.order);
+  const pages = getSortedEditorPages(normalizedTemplate);
 
-  const activePage =
-    pages.find((page) => page.id === normalizedTemplate.dragDropEditor.activePageId) ?? pages[0] ?? null;
+  const activePage = getActivePage(normalizedTemplate, pages);
 
   const selectedSection = selectedSectionId
     ? normalizedTemplate.sections.find((section) => section.id === selectedSectionId) ?? null
     : null;
 
-  const activePageElements = normalizedTemplate.dragDropEditor.elements
-    .filter((element) => element.pageId === activePage?.id)
-    .sort((a, b) => a.zIndex - b.zIndex);
+  const activePageElements = getPageElements(normalizedTemplate, activePage?.id);
 
   const selectedElement =
     selectedElementId && activePage
@@ -389,34 +339,9 @@ export default function TemplateEditor({ template, certificateType, onChange }: 
   const hasOverlayElements = activePageElements.length > 0;
   const showOverlayElements = !realLayoutEditEnabled && hasOverlayElements;
 
-  const pageViewport = useMemo(() => {
-    if (!activePage) {
-      return {
-        width: REPORT_PREVIEW_BASE_WIDTH,
-        height: REPORT_PREVIEW_BASE_HEIGHT,
-        scale: 1,
-      };
-    }
+  const pageViewport = useMemo(() => getPageViewport(activePage), [activePage]);
 
-    const viewportWidth = Math.max(activePage.canvas.viewportWidth, MIN_VIEWPORT_SIZE);
-    const viewportHeight = Math.max(activePage.canvas.viewportHeight, MIN_VIEWPORT_SIZE);
-    const zoom = Math.max(activePage.canvas.zoom, 0.1);
-
-    return {
-      width: viewportWidth,
-      height: viewportHeight,
-      scale: zoom,
-    };
-  }, [activePage]);
-
-  const previewScale = useMemo(() => {
-    if (!activePage) return 1;
-
-    const widthScale = activePage.canvas.width / REPORT_PREVIEW_BASE_WIDTH;
-    const heightScale = activePage.canvas.height / REPORT_PREVIEW_BASE_HEIGHT;
-
-    return Math.min(widthScale, heightScale);
-  }, [activePage]);
+  const previewScale = useMemo(() => getPreviewScale(activePage), [activePage]);
 
   const renderedPageWidth = REPORT_PREVIEW_BASE_WIDTH * previewScale;
   const renderedPageHeight = REPORT_PREVIEW_BASE_HEIGHT * previewScale;
@@ -765,203 +690,6 @@ export default function TemplateEditor({ template, certificateType, onChange }: 
     setSelectedElementId(null);
   };
 
-  const renderTextElement = (
-    element: DragDropEditorStaticTextElement | DragDropEditorDynamicTextElement,
-    isSelected: boolean,
-    snapToGrid: boolean,
-    gridSize: number
-  ) => {
-    const text =
-      element.type === 'dynamic-text'
-        ? getDynamicFieldSampleValue(element.fieldKey)
-        : element.text;
-
-    const style = element.style;
-
-    return (
-      <Group
-        key={element.id}
-        x={element.x}
-        y={element.y}
-        rotation={element.rotation ?? 0}
-        opacity={element.opacity ?? 1}
-        draggable={!element.locked}
-        dragBoundFunc={(position) =>
-          snapToGrid
-            ? {
-                x: Math.round(position.x / gridSize) * gridSize,
-                y: Math.round(position.y / gridSize) * gridSize,
-              }
-            : position
-        }
-        onClick={() => setSelectedElementId(element.id)}
-        onTap={() => setSelectedElementId(element.id)}
-        onDragEnd={(event) =>
-          updateElement(element.id, (current) => ({
-            ...current,
-            x: event.target.x(),
-            y: event.target.y(),
-          }))
-        }
-      >
-        {isSelected ? (
-          <Rect
-            x={-6}
-            y={-6}
-            width={(element.width ?? 240) + 12}
-            height={(element.height ?? style.fontSize + 18) + 12}
-            stroke="#2563eb"
-            strokeWidth={1}
-            dash={[6, 4]}
-            listening={false}
-          />
-        ) : null}
-        <KonvaText
-          width={element.width ?? 240}
-          height={element.height}
-          text={text}
-          fill={style.color}
-          fontFamily={style.fontFamily}
-          fontSize={style.fontSize}
-          fontStyle={`${style.fontWeight === 'bold' ? 'bold ' : ''}${style.fontStyle}`.trim()}
-          align={style.textAlign}
-          lineHeight={style.lineHeight}
-          letterSpacing={style.letterSpacing}
-          textDecoration={style.textDecoration === 'underline' ? 'underline' : ''}
-        />
-      </Group>
-    );
-  };
-
-  const renderRectangleElement = (
-    element: DragDropEditorRectangleElement,
-    isSelected: boolean,
-    snapToGrid: boolean,
-    gridSize: number
-  ) => (
-    <Rect
-      key={element.id}
-      x={element.x}
-      y={element.y}
-      width={element.width ?? 180}
-      height={element.height ?? 100}
-      rotation={element.rotation ?? 0}
-      opacity={element.opacity ?? 1}
-      cornerRadius={element.cornerRadius ?? 0}
-      fill={element.style.fill}
-      stroke={isSelected ? '#2563eb' : element.style.stroke}
-      strokeWidth={isSelected ? Math.max((element.style.strokeWidth ?? 1) + 1, 2) : element.style.strokeWidth}
-      dash={element.style.dash}
-      draggable={!element.locked}
-      dragBoundFunc={(position) =>
-        snapToGrid
-          ? {
-              x: Math.round(position.x / gridSize) * gridSize,
-              y: Math.round(position.y / gridSize) * gridSize,
-            }
-          : position
-      }
-      onClick={() => setSelectedElementId(element.id)}
-      onTap={() => setSelectedElementId(element.id)}
-      onDragEnd={(event) =>
-        updateElement(element.id, (current) => ({
-          ...current,
-          x: event.target.x(),
-          y: event.target.y(),
-        }))
-      }
-    />
-  );
-
-  const renderLineElement = (
-    element: DragDropEditorLineElement,
-    isSelected: boolean,
-    snapToGrid: boolean,
-    gridSize: number
-  ) => (
-    <KonvaLine
-      key={element.id}
-      x={element.x}
-      y={element.y}
-      points={element.points}
-      rotation={element.rotation ?? 0}
-      opacity={element.opacity ?? 1}
-      stroke={isSelected ? '#2563eb' : element.style.stroke}
-      strokeWidth={isSelected ? Math.max((element.style.strokeWidth ?? 1) + 1, 2) : element.style.strokeWidth}
-      dash={element.style.dash}
-      draggable={!element.locked}
-      dragBoundFunc={(position) =>
-        snapToGrid
-          ? {
-              x: Math.round(position.x / gridSize) * gridSize,
-              y: Math.round(position.y / gridSize) * gridSize,
-            }
-          : position
-      }
-      onClick={() => setSelectedElementId(element.id)}
-      onTap={() => setSelectedElementId(element.id)}
-      onDragEnd={(event) =>
-        updateElement(element.id, (current) => ({
-          ...current,
-          x: event.target.x(),
-          y: event.target.y(),
-        }))
-      }
-    />
-  );
-
-  const renderImageElement = (
-    element: DragDropEditorImageElement,
-    isSelected: boolean,
-    snapToGrid: boolean,
-    gridSize: number
-  ) => (
-    <Group
-      key={element.id}
-      x={element.x}
-      y={element.y}
-      rotation={element.rotation ?? 0}
-      opacity={element.opacity ?? 1}
-      draggable={!element.locked}
-      dragBoundFunc={(position) =>
-        snapToGrid
-          ? {
-              x: Math.round(position.x / gridSize) * gridSize,
-              y: Math.round(position.y / gridSize) * gridSize,
-            }
-          : position
-      }
-      onClick={() => setSelectedElementId(element.id)}
-      onTap={() => setSelectedElementId(element.id)}
-      onDragEnd={(event) =>
-        updateElement(element.id, (current) => ({
-          ...current,
-          x: event.target.x(),
-          y: event.target.y(),
-        }))
-      }
-    >
-      <Rect
-        width={element.width ?? 180}
-        height={element.height ?? 120}
-        cornerRadius={element.style?.borderRadius ?? 0}
-        fill="#f8fafc"
-        stroke={isSelected ? '#2563eb' : '#cbd5e1'}
-        dash={element.src ? undefined : [6, 4]}
-      />
-      <KonvaText
-        x={12}
-        y={(element.height ?? 120) / 2 - 10}
-        width={(element.width ?? 180) - 24}
-        align="center"
-        text={element.src ? element.alt || 'Image' : 'Image placeholder'}
-        fill="#64748b"
-        fontFamily={DEFAULT_TEMPLATE_FONTS.body}
-        fontSize={14}
-      />
-    </Group>
-  );
-
   const updateTextStyle = (elementId: string, updates: Partial<DragDropEditorTextStyle>) => {
     updateElement(elementId, (current) => {
       if (current.type !== 'static-text' && current.type !== 'dynamic-text') {
@@ -978,21 +706,12 @@ export default function TemplateEditor({ template, certificateType, onChange }: 
     });
   };
 
-  const selectedTextElement =
-    selectedElement && (selectedElement.type === 'static-text' || selectedElement.type === 'dynamic-text')
-      ? selectedElement
-      : null;
-
-  const selectedRectangleElement =
-    selectedElement?.type === 'rectangle' ? selectedElement : null;
-
-  const selectedLineOrRectangleElement =
-    selectedElement && (selectedElement.type === 'line' || selectedElement.type === 'rectangle')
-      ? selectedElement
-      : null;
-
-  const selectedImageElement =
-    selectedElement?.type === 'image' ? selectedElement : null;
+  const {
+    selectedTextElement,
+    selectedRectangleElement,
+    selectedLineOrRectangleElement,
+    selectedImageElement,
+  } = getSelectedEditorVariants(selectedElement);
 
   return (
     <div className="flex h-full flex-col gap-4 xl:flex-row">
@@ -1392,8 +1111,11 @@ export default function TemplateEditor({ template, certificateType, onChange }: 
                                   {activePage.canvas.showGrid
                                     ? Array.from(
                                         {
-                                          length:
-                                            Math.floor(renderedPageHeight / activePage.canvas.gridSize) + 1,
+                                          length: getCanvasGridLineCounts(
+                                            renderedPageWidth,
+                                            renderedPageHeight,
+                                            activePage.canvas.gridSize
+                                          ).horizontal,
                                         },
                                         (_, index) => (
                                           <KonvaLine
@@ -1412,47 +1134,21 @@ export default function TemplateEditor({ template, certificateType, onChange }: 
                                       )
                                     : null}
 
-                                  {showOverlayElements && activePageElements.map((element) => {
-                                    const isSelected = element.id === selectedElementId;
-
-                                    if (element.visible === false) {
-                                      return null;
-                                    }
-
-                                    if (element.type === 'static-text' || element.type === 'dynamic-text') {
-                                      return renderTextElement(
-                                        element,
-                                        isSelected,
-                                        activePage.canvas.snapToGrid,
-                                        activePage.canvas.gridSize
-                                      );
-                                    }
-
-                                    if (element.type === 'rectangle') {
-                                      return renderRectangleElement(
-                                        element,
-                                        isSelected,
-                                        activePage.canvas.snapToGrid,
-                                        activePage.canvas.gridSize
-                                      );
-                                    }
-
-                                    if (element.type === 'line') {
-                                      return renderLineElement(
-                                        element,
-                                        isSelected,
-                                        activePage.canvas.snapToGrid,
-                                        activePage.canvas.gridSize
-                                      );
-                                    }
-
-                                    return renderImageElement(
+                                  {showOverlayElements && activePageElements.map((element) =>
+                                    renderCanvasElement({
                                       element,
-                                      isSelected,
-                                      activePage.canvas.snapToGrid,
-                                      activePage.canvas.gridSize
-                                    );
-                                  })}
+                                      isSelected: element.id === selectedElementId,
+                                      snapToGrid: activePage.canvas.snapToGrid,
+                                      gridSize: activePage.canvas.gridSize,
+                                      onSelect: setSelectedElementId,
+                                      onMove: (elementId, position) =>
+                                        updateElement(elementId, (current) => ({
+                                          ...current,
+                                          x: position.x,
+                                          y: position.y,
+                                        })),
+                                    })
+                                  )}
                                 </Layer>
                               </Stage>
                             </div>

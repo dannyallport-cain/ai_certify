@@ -295,6 +295,14 @@ export default function ReviewScreen() {
   return (
     <ScrollView className="flex-1 bg-gray-50">
       <View className="px-5 pt-6 pb-8">
+        <TouchableOpacity
+          className="mb-4 flex-row items-center self-start rounded-full bg-white px-3 py-2"
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={18} color="#111827" />
+          <Text className="ml-2 font-medium text-gray-900">Back</Text>
+        </TouchableOpacity>
+
         <Text className="mb-1 text-2xl font-bold text-gray-900">Review Job</Text>
         <Text className="mb-6 text-gray-500">
           Check the captured evidence and wizard answers before creating the draft EICR.
@@ -307,10 +315,12 @@ export default function ReviewScreen() {
           onEdit={() => router.push('/(tabs)/customer')}
         >
           {selectedCustomer ? (
-            <>
+            <View>
               <Text className="font-semibold text-gray-800">{selectedCustomer.name}</Text>
-              {selectedCustomer.email ? <Text className="text-sm text-gray-500">{selectedCustomer.email}</Text> : null}
-            </>
+              {selectedCustomer.email ? (
+                <Text className="text-sm text-gray-500">{selectedCustomer.email}</Text>
+              ) : null}
+            </View>
           ) : (
             <Text className="text-sm text-red-500">Not selected</Text>
           )}

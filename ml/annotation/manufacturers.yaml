@@ -1,0 +1,97 @@
+version: 1
+description: >
+  Initial manufacturer shortlist for Fire Alarm RoomPlan manufacturer classification.
+  This list is intentionally narrow and should expand only after source approval,
+  annotation capacity, and confusion analysis support it.
+
+manufacturers:
+  - id: Apollo
+    normalized_name: Apollo
+    trainable_in_v1: true
+    aliases:
+      - Apollo Fire
+      - Apollo Fire Detectors
+
+  - id: Hochiki
+    normalized_name: Hochiki
+    trainable_in_v1: true
+    aliases:
+      - Hochiki Europe
+
+  - id: Gent
+    normalized_name: Gent
+    trainable_in_v1: true
+    aliases:
+      - Gent by Honeywell
+
+  - id: Advanced
+    normalized_name: Advanced
+    trainable_in_v1: true
+    aliases:
+      - Advanced Electronics
+
+  - id: Morley
+    normalized_name: Morley
+    trainable_in_v1: true
+    aliases:
+      - Morley-IAS
+      - Morley IAS
+
+  - id: Notifier
+    normalized_name: Notifier
+    trainable_in_v1: true
+    aliases: []
+
+  - id: Kentec
+    normalized_name: Kentec
+    trainable_in_v1: true
+    aliases: []
+
+  - id: C-Tec
+    normalized_name: C-Tec
+    trainable_in_v1: true
+    aliases:
+      - C-TEC
+      - CTEC
+
+  - id: Siemens
+    normalized_name: Siemens
+    trainable_in_v1: true
+    aliases:
+      - Cerberus
+      - Cerberus Pro
+
+  - id: Eaton
+    normalized_name: Eaton
+    trainable_in_v1: true
+    aliases:
+      - Cooper
+      - Cooper Fire
+
+  - id: Hyfire
+    normalized_name: Hyfire
+    trainable_in_v1: true
+    aliases:
+      - HyFire
+      - Tau
+
+  - id: System Sensor
+    normalized_name: System Sensor
+    trainable_in_v1: true
+    aliases:
+      - SystemSensor
+      - System Sensor Europe
+
+  - id: Unknown
+    normalized_name: Unknown
+    trainable_in_v1: true
+    aliases: []
+
+rules:
+  default_when_unreadable: Unknown
+  do_not_force_guess_from_context: true
+  unclear_branding_requires_unknown: true
+
+notes:
+  - Unknown is allowed and expected where device branding is absent or unreliable.
+  - A manufacturer label should reflect visible evidence or explicitly reviewed metadata, not assumption.

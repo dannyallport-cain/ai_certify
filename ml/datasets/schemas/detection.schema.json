@@ -1,0 +1,201 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-certify.local/ml/datasets/schemas/detection.schema.json",
+  "title": "Fire Alarm Detection Annotation Record",
+  "description": "Annotation record for one reviewed scene image used in coarse fire alarm device detection tasks. The schema supports practical review metadata while keeping labels aligned to the public device type contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "image_id",
+    "asset_id",
+    "split",
+    "width",
+    "height",
+    "annotations"
+  ],
+  "properties": {
+    "image_id": {
+      "type": "string",
+      "description": "Unique identifier for the scene image.",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+    },
+    "asset_id": {
+      "type": "string",
+      "description": "Identifier of the source asset from which this image was derived.",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+    },
+    "split": {
+      "type": "string",
+      "description": "Dataset split assignment. Splits should be generated to avoid near-duplicate leakage across train, validation, and test.",
+      "enum": [
+        "train",
+        "validation",
+        "test",
+        "holdout"
+      ]
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Image width in pixels."
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Image height in pixels."
+    },
+    "image_path": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Relative workspace path to the normalized scene image."
+    },
+    "source_domain": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Convenience provenance field copied from the source asset when useful for split auditing."
+    },
+    "capture_session_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional mobile scan session identifier for field-captured images."
+    },
+    "annotations": {
+      "type": "array",
+      "description": "Bounding box annotations for the scene image.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "bbox",
+          "device_type",
+          "visibility",
+          "reviewed"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique annotation identifier within the dataset.",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,127}$"
+          },
+          "bbox": {
+            "type": "array",
+            "description": "Bounding box in pixel coordinates as [x, y, width, height].",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "device_type": {
+            "type": "string",
+            "description": "Coarse public device type label.",
+            "enum": [
+              "panel",
+              "sounder",
+              "detector",
+              "interface",
+              "io_unit",
+              "vad",
+              "unknown"
+            ]
+          },
+          "subtype": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional richer internal subtype such as smoke, heat, wall sounder, or sounder-beacon."
+          },
+          "manufacturer": {
+            "type": "string",
+            "description": "Manufacturer label if known at annotation time.",
+            "enum": [
+              "Apollo",
+              "Advanced",
+              "C-TEC",
+              "Eaton",
+              "Gent",
+              "Hochiki",
+              "Hyfire",
+              "Kentec",
+              "Morley",
+              "Notifier",
+              "Siemens",
+              "System Sensor",
+              "Unknown"
+            ],
+            "default": "Unknown"
+          },
+          "model_hint": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional model family hint when visible or supported by approved source text."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Visibility quality for annotation consistency and training filtering.",
+            "enum": [
+              "clear",
+              "partial",
+              "occluded",
+              "tiny",
+              "blurred"
+            ]
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "True when the device extends outside the image frame.",
+            "default": false
+          },
+          "iscrowd": {
+            "type": "boolean",
+            "description": "Crowd-style flag for dense or ambiguous grouped regions if needed by downstream tooling.",
+            "default": false
+          },
+          "reviewed": {
+            "type": "boolean",
+            "description": "True when the annotation has been human-reviewed."
+          },
+          "review_notes": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional annotation notes for ambiguity, occlusion, or label rationale."
+          }
+        }
+      }
+    },
+    "review_status": {
+      "type": "string",
+      "description": "Record-level review state for QA workflows.",
+      "enum": [
+        "pending",
+        "reviewed",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending"
+    },
+    "tags": {
+      "type": "array",
+      "description": "Freeform tags for filtering, QA, or benchmark subsets.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": []
+    }
+  }
+}

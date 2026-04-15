@@ -1,0 +1,55 @@
+{
+  "assignment_count": 2,
+  "assignments": [
+    {
+      "group_key": "splits",
+      "record_count": 1,
+      "split": "train"
+    },
+    {
+      "group_key": "exports",
+      "record_count": 3,
+      "split": "val"
+    }
+  ],
+  "dataset_root": "/Users/admin/Development/ai_certify/ml/datasets",
+  "group_count": 2,
+  "ratios": {
+    "test": 0.15,
+    "train": 0.7,
+    "val": 0.15
+  },
+  "records": {
+    "test": [],
+    "train": [
+      {
+        "group_key": "splits",
+        "id": "exports/splits/splits.json",
+        "relative_path": "exports/splits/splits.json"
+      }
+    ],
+    "val": [
+      {
+        "group_key": "exports",
+        "id": "exports/dataset-index.json",
+        "relative_path": "exports/dataset-index.json"
+      },
+      {
+        "group_key": "exports",
+        "id": "exports/duplicate-report.json",
+        "relative_path": "exports/duplicate-report.json"
+      },
+      {
+        "group_key": "exports",
+        "id": "exports/reviewed-manifest.json",
+        "relative_path": "exports/reviewed-manifest.json"
+      }
+    ]
+  },
+  "seed": 42,
+  "split_counts": {
+    "test": 0,
+    "train": 1,
+    "val": 3
+  }
+}

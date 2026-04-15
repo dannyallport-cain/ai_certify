@@ -13,7 +13,7 @@ export default async function CustomersPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
           <p className="text-muted-foreground">
-            Manage your customer database for fire safety certificates
+            Manage your customer database for certifications
           </p>
         </div>
         <div className="flex items-center space-x-2">

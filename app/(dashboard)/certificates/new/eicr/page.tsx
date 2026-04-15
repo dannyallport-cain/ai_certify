@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createCertificate } from '../../../actions';
-import { useState, useEffect, useRef, type ChangeEvent, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent, type ReactNode, type InputHTMLAttributes } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
@@ -30,6 +30,8 @@ import {
   X,
   Sparkles,
   Upload,
+  ListPlus,
+  GripVertical,
 } from 'lucide-react';
 import { isAdminRole } from '@/lib/auth/roles';
 import { calculateMaxZs } from '@/lib/utils/calculate-zs';
@@ -56,6 +58,7 @@ interface Observation {
 
 type CircuitRow = {
   circuitNumber: string;
+  ringFinal: string;
   designation: string;
   wiringType: string;
   refMethod: string;
@@ -74,6 +77,7 @@ type CircuitRow = {
   r2Cpc: string;
   r1r2: string;
   r2: string;
+  insResLN: string;
   insResLL: string;
   insResLE: string;
   testVoltage: string;
@@ -106,8 +110,116 @@ const REINSPECTION_PERIODS = [
   { label: '10 Years', months: 120 },
 ] as const;
 
-const SUPPLY_PROTECTIVE_DEVICE_TYPE_OPTIONS = ['Fuse', 'MCB', 'MCCB', 'RCBO', 'RCD', 'Switch-fuse', 'Other'] as const;
-const SUPPLY_PROTECTIVE_DEVICE_STANDARDS = ['BS 1361', 'BS 88', 'BS EN 60898', 'BS EN 61009', 'BS EN 60947-2', 'Other'] as const;
+const REASON_FOR_REPORT_OPTIONS = [
+  'Periodic inspection and testing.',
+  'Change of occupancy / tenancy.',
+  'Landlord safety compliance.',
+  'Insurance requirement.',
+  'Routine condition assessment to BS 7671.',
+  'Pre-purchase / pre-acquisition inspection.',
+  'Post-remedial verification of existing installation.',
+] as const;
+
+const GENERAL_CONDITION_OPTIONS = [
+  'The installation appears to be in a generally satisfactory condition for continued service.',
+  'The installation is in serviceable condition, however minor improvements are recommended.',
+  'The installation shows signs of age-related wear and should be monitored and maintained accordingly.',
+  'The general condition of the installation is consistent with continued use subject to the observations recorded in this report.',
+  'The installation was found to be in generally good condition with no immediate danger observed at the time of inspection.',
+] as const;
+
+const EICR_INTERVAL_PRESETS = {
+  Domestic: {
+    label: 'Domestic (owner-occupied)',
+    period: '10 Years',
+    note: 'Typical recommendation: every 10 years or on change of occupancy.',
+  },
+  DomesticRented: {
+    label: 'Domestic (rented accommodation)',
+    period: '5 Years',
+    note: 'Typical recommendation: every 5 years or at change of tenancy.',
+  },
+  HMO: {
+    label: 'HMO / communal landlord areas',
+    period: '5 Years',
+    note: 'Typical landlord/HMO recommendation: every 5 years unless risk assessment or licensing conditions require earlier.',
+  },
+  Commercial: {
+    label: 'Commercial premises',
+    period: '5 Years',
+    note: 'Typical recommendation: every 5 years, subject to use and risk profile.',
+  },
+  Industrial: {
+    label: 'Industrial installation',
+    period: '3 Years',
+    note: 'Typical recommendation: every 3 years, subject to environment and maintenance regime.',
+  },
+  HighRisk: {
+    label: 'High-risk or special installation',
+    period: '1 Year',
+    note: 'Typical recommendation: every 1 year where the environment or duty of care warrants a shorter interval.',
+  },
+} as const;
+
+type EicrIntervalPresetKey = keyof typeof EICR_INTERVAL_PRESETS;
+type NextInspectionPeriodLabel = (typeof REINSPECTION_PERIODS)[number]['label'];
+
+const OBSERVATION_CODE_GUIDANCE: Array<{
+  code: Observation['code'];
+  title: string;
+  summary: string;
+  examples: string;
+}> = [
+  {
+    code: 'C1',
+    title: 'Danger present',
+    summary: 'Immediate risk of injury. Immediate remedial action is required.',
+    examples: 'Examples: exposed live parts, missing earthing/bonding creating immediate danger, severe overheating.',
+  },
+  {
+    code: 'C2',
+    title: 'Potentially dangerous',
+    summary: 'Urgent remedial action is required because injury may arise under fault conditions.',
+    examples: 'Examples: inadequate fault protection, missing CPC continuity, absent RCD protection where required.',
+  },
+  {
+    code: 'C3',
+    title: 'Improvement recommended',
+    summary: 'The installation is not unsafe, but improvement is recommended to align with current standards.',
+    examples: 'Examples: older but serviceable equipment, labelling improvements, non-dangerous departures from current BS 7671.',
+  },
+  {
+    code: 'FI',
+    title: 'Further investigation',
+    summary: 'Further investigation is required without delay before the item can be properly classified.',
+    examples: 'Examples: inaccessible areas, unclear test results, suspected concealed defects requiring additional work.',
+  },
+];
+
+const SUPPLY_PROTECTIVE_DEVICE_TYPE_OPTIONS = [
+  'BS 1361 Type IIb cartridge fuse',
+  'BS 88 gG cartridge fuse',
+  'BS 88 aM cartridge fuse',
+  'BS 88 switch-fuse',
+  'BS 88 other fuse',
+  'BS EN 60898 MCB',
+  'BS EN 60947-2 MCCB',
+  'BS EN 61009 RCBO',
+  'BS EN 61008 RCCB/RCD',
+  'Other',
+] as const;
+const SUPPLY_PROTECTIVE_DEVICE_STANDARDS = [
+  'BS 1361 Type IIb',
+  'BS 88 gG',
+  'BS 88 aM',
+  'BS 88 switch-fuse',
+  'BS 88 other',
+  'BS EN 60898',
+  'BS EN 61009',
+  'BS EN 61008',
+  'BS EN 60947-2',
+  'Other',
+] as const;
 const CONDUCTOR_MATERIAL_OPTIONS = ['Copper', 'Aluminium', 'Other'] as const;
 const EARTH_ELECTRODE_TYPE_OPTIONS = ['Rod', 'Tape', 'Plate', 'Foundation', 'Mesh', 'N/A', 'Other'] as const;
 const EARTH_ELECTRODE_MEASUREMENT_OPTIONS = ['Measured', 'By calculation', 'Estimated', 'N/A', 'Other'] as const;
@@ -126,7 +238,7 @@ const MAIN_SWITCH_POLE_OPTIONS = ['1', '2', '3', '4'] as const;
 const DEFAULT_CIRCUIT_ROW_COUNT = 15;
 const EDITOR_CARD_CLASS = 'overflow-hidden rounded-none border-[#c8102e] py-0 shadow-none';
 const EDITOR_HEADER_CLASS = 'border-b border-[#96172b] bg-[#c8102e] px-4 py-2 text-white [&_[data-slot=card-title]]:text-[13px] [&_[data-slot=card-title]]:font-semibold [&_[data-slot=card-title]]:uppercase [&_[data-slot=card-title]]:tracking-[0.06em] [&_[data-slot=card-description]]:text-[11px] [&_[data-slot=card-description]]:leading-4 [&_[data-slot=card-description]]:text-red-100/95';
-const EDITOR_CONTENT_CLASS = 'p-0 [&_label]:text-[10px] [&_label]:font-semibold [&_label]:uppercase [&_label]:tracking-[0.05em] [&_label]:text-slate-700 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:h-8 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:rounded-none [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:border-slate-300 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:bg-white [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:px-2 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:text-xs [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:shadow-none [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:focus-visible:ring-1 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:focus-visible:ring-[#c8102e]/20 [&_[data-slot=textarea]]:rounded-none [&_[data-slot=textarea]]:border-slate-300 [&_[data-slot=textarea]]:bg-white [&_[data-slot=textarea]]:px-2 [&_[data-slot=textarea]]:py-1.5 [&_[data-slot=textarea]]:text-xs [&_[data-slot=textarea]]:leading-4 [&_[data-slot=textarea]]:shadow-none [&_[data-slot=textarea]]:focus-visible:ring-1 [&_[data-slot=textarea]]:focus-visible:ring-[#c8102e]/20 [&_[role=combobox]]:h-8 [&_[role=combobox]]:rounded-none [&_[role=combobox]]:border-slate-300 [&_[role=combobox]]:bg-white [&_[role=combobox]]:px-2 [&_[role=combobox]]:text-xs [&_[role=combobox]]:shadow-none [&_[role=combobox]]:focus:ring-1 [&_[role=combobox]]:focus:ring-[#c8102e]/20 [&_[role=combobox]]:focus:ring-offset-0';
+const EDITOR_CONTENT_CLASS = 'p-0 [&_label]:text-[10px] [&_label]:font-semibold [&_label]:uppercase [&_label]:tracking-[0.05em] [&_label]:text-slate-700 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:h-8 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:rounded-none [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:border-slate-300 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:bg-white [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:px-2 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:text-xs [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:shadow-none [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:focus-visible:ring-1 [&_input:not([type=radio]):not([type=checkbox]):not([type=hidden])]:focus-visible:ring-[#c8102e]/20 [&_[data-slot=textarea]]:rounded-none [&_[data-slot=textarea]]:border-slate-300 [&_[data-slot=textarea]]:bg-white [&_[data-slot=textarea]]:px-2 [&_[data-slot=textarea]]:py-1.5 [&_[data-slot=textarea]]:text-xs [&_[data-slot=textarea]]:leading-4 [&_[data-slot=textarea]]:shadow-none [&_[data-slot=textarea]]:focus-visible:ring-1 [&_[data-slot=textarea]]:focus-visible:ring-[#c8102e]/20 [&_[role=combobox]]:h-8 [&_[role=combobox]]:rounded-none [&_[role=combobox]]:border-slate-300 [&_[role=combobox]]:bg-white [&_[role=combobox]]:px-2 [&_[role=combobox]]:pr-8 [&_[role=combobox]]:text-left [&_[role=combobox]]:text-xs [&_[role=combobox]]:shadow-none [&_[role=combobox]]:focus:ring-1 [&_[role=combobox]]:focus:ring-[#c8102e]/20 [&_[role=combobox]]:focus:ring-offset-0 [&_[role=combobox]>span]:truncate [&_[role=combobox]>svg]:ml-2 [&_[role=combobox]>svg]:h-4 [&_[role=combobox]>svg]:w-4 [&_[role=combobox]>svg]:shrink-0 [&_[role=combobox]>svg]:opacity-70';
 const EDITOR_GRID_TWO_CLASS = 'grid grid-cols-1 gap-px border-t border-border bg-border md:grid-cols-2 [&>div]:space-y-1 [&>div]:bg-white [&>div]:p-2.5';
 const EDITOR_GRID_THREE_CLASS = 'grid grid-cols-1 gap-px border-t border-border bg-border md:grid-cols-3 [&>div]:space-y-1 [&>div]:bg-white [&>div]:p-2.5';
 const EDITOR_PANEL_GRID_CLASS = 'grid grid-cols-1 gap-px border-t border-border bg-border md:grid-cols-3 xl:grid-cols-4 [&>div]:space-y-1 [&>div]:bg-white [&>div]:p-2.5';
@@ -134,6 +246,10 @@ const EDITOR_NATIVE_INPUT_CLASS = 'flex h-8 w-full rounded-none border border-sl
 const EDITOR_STACK_CLASS = 'space-y-px border-t border-border bg-border [&>div]:space-y-1 [&>div]:bg-white [&>div]:p-2.5';
 const EDITOR_FORM_SHEET_CLASS = 'w-full space-y-3 border border-slate-300 bg-[#f7f3ed] p-2 md:p-3';
 const EDITOR_SECTION_BODY_CLASS = 'space-y-3 p-3';
+const EXPECTED_VALUES_FADE_CLASS =
+  '[&_input]:transition-opacity [&_textarea]:transition-opacity [&_[role=combobox]]:transition-opacity [&_button]:transition-opacity';
+const EXPECTED_VALUES_LOCKED_CLASS =
+  '[&_input]:pointer-events-none [&_textarea]:pointer-events-none [&_[role=combobox]]:pointer-events-none [&_button]:pointer-events-none';
 
 type CertificateGroupColumns = 1 | 2 | 3 | 4;
 
@@ -185,37 +301,208 @@ type CircuitColumn = {
   cycling?: readonly string[];
 };
 
+type CircuitTemplate = {
+  id: string;
+  label: string;
+  values: Partial<CircuitRow>;
+};
+
+const CIRCUIT_TEMPLATES: readonly CircuitTemplate[] = [
+  {
+    id: 'lighting-6a',
+    label: 'Lights – 6A MCB',
+    values: {
+      designation: 'Lighting',
+      wiringType: 'A',
+      refMethod: 'C',
+      liveCsa: '1.5',
+      cpcCsa: '1.0',
+      maxDiscTime: '0.4',
+      bsen: 'BS EN 60898',
+      deviceType: 'B curve',
+      rating: '6',
+      capacity: '6',
+      rcdRating: '30',
+      testVoltage: '500',
+      polarity: '✓',
+      rcdTestButton: '✓',
+      afddTestButton: 'N/A',
+    },
+  },
+  {
+    id: 'socket-ring-32a',
+    label: 'Sockets ring – 32A RCBO/MCB',
+    values: {
+      designation: 'Socket ring final',
+      wiringType: 'A',
+      refMethod: 'C',
+      liveCsa: '2.5',
+      cpcCsa: '1.5',
+      maxDiscTime: '0.4',
+      bsen: 'BS EN 60898',
+      deviceType: 'B curve',
+      rating: '32',
+      capacity: '6',
+      rcdRating: '30',
+      testVoltage: '500',
+      polarity: '✓',
+      rcdTestButton: '✓',
+      afddTestButton: 'N/A',
+    },
+  },
+  {
+    id: 'socket-radial-20a',
+    label: 'Sockets radial – 20A',
+    values: {
+      designation: 'Socket radial',
+      wiringType: 'A',
+      refMethod: 'C',
+      liveCsa: '2.5',
+      cpcCsa: '1.5',
+      maxDiscTime: '0.4',
+      bsen: 'BS EN 60898',
+      deviceType: 'B curve',
+      rating: '20',
+      capacity: '6',
+      rcdRating: '30',
+      testVoltage: '500',
+      polarity: '✓',
+      rcdTestButton: '✓',
+      afddTestButton: 'N/A',
+    },
+  },
+  {
+    id: 'cooker-32a',
+    label: 'Cooker – 32A',
+    values: {
+      designation: 'Cooker',
+      wiringType: 'A',
+      refMethod: 'C',
+      liveCsa: '6.0',
+      cpcCsa: '2.5',
+      maxDiscTime: '0.4',
+      bsen: 'BS EN 60898',
+      deviceType: 'B curve',
+      rating: '32',
+      capacity: '6',
+      rcdRating: '30',
+      testVoltage: '500',
+      polarity: '✓',
+      rcdTestButton: '✓',
+      afddTestButton: 'N/A',
+    },
+  },
+  {
+    id: 'shower-40a',
+    label: 'Shower – 40A',
+    values: {
+      designation: 'Shower',
+      wiringType: 'A',
+      refMethod: 'C',
+      liveCsa: '10',
+      cpcCsa: '4.0',
+      maxDiscTime: '0.4',
+      bsen: 'BS EN 61009',
+      deviceType: 'B curve',
+      rating: '40',
+      capacity: '6',
+      rcdRating: '30',
+      testVoltage: '500',
+      polarity: '✓',
+      rcdTestButton: '✓',
+      afddTestButton: 'N/A',
+    },
+  },
+  {
+    id: 'radial-32a',
+    label: 'Radial – 32A',
+    values: {
+      designation: 'Power radial',
+      wiringType: 'A',
+      refMethod: 'C',
+      liveCsa: '4.0',
+      cpcCsa: '2.5',
+      maxDiscTime: '0.4',
+      bsen: 'BS EN 60898',
+      deviceType: 'B curve',
+      rating: '32',
+      capacity: '6',
+      rcdRating: '30',
+      testVoltage: '500',
+      polarity: '✓',
+      rcdTestButton: '✓',
+      afddTestButton: 'N/A',
+    },
+  },
+  {
+    id: 'immersion-16a',
+    label: 'Immersion / water heater – 16A',
+    values: {
+      designation: 'Immersion heater',
+      wiringType: 'A',
+      refMethod: 'C',
+      liveCsa: '2.5',
+      cpcCsa: '1.5',
+      maxDiscTime: '0.4',
+      bsen: 'BS EN 60898',
+      deviceType: 'B curve',
+      rating: '16',
+      capacity: '6',
+      rcdRating: '30',
+      testVoltage: '500',
+      polarity: '✓',
+      rcdTestButton: '✓',
+      afddTestButton: 'N/A',
+    },
+  },
+] as const;
+
 const CIRCUIT_COLUMNS: CircuitColumn[] = [
-  { key: 'circuitNumber', label: 'No.', title: 'Circuit number', widthClass: 'w-[3.2rem]' },
-  { key: 'designation', label: 'Designation', title: 'Circuit designation', widthClass: 'w-[7rem]' },
-  { key: 'wiringType', label: 'Wiring', title: 'Type of wiring code', widthClass: 'w-[4.2rem]' },
-  { key: 'refMethod', label: 'Ref.', title: 'Reference method', widthClass: 'w-[4rem]' },
-  { key: 'numPoints', label: 'Pts', title: 'Number of points', widthClass: 'w-[3rem]' },
-  { key: 'liveCsa', label: 'Live', title: 'Live conductor CSA (mm2)', widthClass: 'w-[3rem]', group: 'Conductors', groupTitle: 'Circuit conductors: CSA' },
-  { key: 'cpcCsa', label: 'cpc', title: 'cpc CSA (mm2)', widthClass: 'w-[3rem]', group: 'Conductors', groupTitle: 'Circuit conductors: CSA' },
-  { key: 'maxDiscTime', label: 'Max s', title: 'Maximum disconnection time (s)', widthClass: 'w-[3.2rem]' },
-  { key: 'bsen', label: 'BS(EN)', title: 'BS(EN)', widthClass: 'w-[7rem]', group: 'OCPD', groupTitle: 'Overcurrent protective devices' },
-  { key: 'deviceType', label: 'Type', title: 'Protective device type', widthClass: 'w-[5rem]', group: 'OCPD', groupTitle: 'Overcurrent protective devices' },
-  { key: 'rating', label: 'A', title: 'Rating (A)', widthClass: 'w-[4.3rem]', group: 'OCPD', groupTitle: 'Overcurrent protective devices' },
-  { key: 'capacity', label: 'kA', title: 'Capacity (kA)', widthClass: 'w-[4.3rem]', group: 'OCPD', groupTitle: 'Overcurrent protective devices' },
-  { key: 'rcdRating', label: 'IΔn', title: 'RCD IΔn (mA)', widthClass: 'w-[4.2rem]', group: 'RCD', groupTitle: 'Residual current devices' },
-  { key: 'maxZs', label: 'Max Zs', title: 'Maximum permitted Zs (Ω)', widthClass: 'w-[6.2rem]' },
-  { key: 'r1Line', label: 'r1', title: 'r1 (Line)', widthClass: 'w-[3rem]', group: 'Ring final', groupTitle: 'Ring final circuits only' },
-  { key: 'rnNeutral', label: 'rn', title: 'rn (Neutral)', widthClass: 'w-[3.2rem]', group: 'Ring final', groupTitle: 'Ring final circuits only' },
-  { key: 'r2Cpc', label: 'r2', title: 'r2 (cpc)', widthClass: 'w-[3rem]', group: 'Ring final', groupTitle: 'Ring final circuits only' },
-  { key: 'r1r2', label: 'R1+R2', title: 'R1+R2 (Ω)', widthClass: 'w-[3.4rem]', group: 'Impedance', groupTitle: 'Circuit impedances: all circuits' },
-  { key: 'r2', label: 'R2', title: 'R2 (Ω)', widthClass: 'w-[3rem]', group: 'Impedance', groupTitle: 'Circuit impedances: all circuits' },
-  { key: 'insResLL', label: 'L-L', title: 'Live-Live (MΩ)', widthClass: 'w-[3.3rem]', group: 'Insulation', groupTitle: 'Insulation resistance' },
-  { key: 'insResLE', label: 'L-E', title: 'Live-Earth (MΩ)', widthClass: 'w-[3.3rem]', group: 'Insulation', groupTitle: 'Insulation resistance' },
-  { key: 'testVoltage', label: 'V', title: 'Test voltage (V)', widthClass: 'w-[3.4rem]', group: 'Insulation', groupTitle: 'Insulation resistance', cycling: ['250', '500', '1000'] as const },
-  { key: 'polarity', label: 'Pol.', title: 'Polarity', widthClass: 'w-[4rem]', cycling: ['✓', '✗', 'N/A'] as const },
-  { key: 'measuredZs', label: 'Zs', title: 'Measured Zs (Ω)', widthClass: 'w-[3.3rem]' },
-  { key: 'discTime', label: 'ms', title: 'Disconnection time (ms)', widthClass: 'w-[3.2rem]', group: 'RCD', groupTitle: 'Residual current devices' },
-  { key: 'rcdTestButton', label: 'Btn', title: 'RCD test button', widthClass: 'w-[4rem]', group: 'RCD', groupTitle: 'Residual current devices', cycling: ['✓', '✗', 'N/A'] as const },
-  { key: 'afddTestButton', label: 'Btn', title: 'AFDD test button', widthClass: 'w-[4rem]', group: 'AFDD', groupTitle: 'Arc fault detection devices', cycling: ['✓', '✗', 'N/A'] as const },
+  { key: 'circuitNumber', label: 'Circuit details', title: 'Circuit details — Circuit number', widthClass: 'w-[3.2rem]' },
+  { key: 'ringFinal', label: 'Ring', title: 'Tick if this row is a ring final circuit', widthClass: 'w-[2.8rem]', cycling: ['✓', ''] as const },
+  { key: 'designation', label: 'Circuit designation', title: 'Circuit details — Circuit designation', widthClass: 'w-[12rem]' },
+  { key: 'wiringType', label: 'Type', title: 'Type of wiring', widthClass: 'w-[4.2rem]' },
+  { key: 'refMethod', label: 'Ref method', title: 'Reference method', widthClass: 'w-[4rem]' },
+  { key: 'numPoints', label: 'No. of points served', title: 'Number of points served', widthClass: 'w-[3rem]' },
+  { key: 'liveCsa', label: 'Line', title: 'Circuit conductor CSA (mm²) — Line', widthClass: 'w-[4.2rem]', group: 'Circuit conductor CSA (mm²)', groupTitle: 'Circuit conductor CSA (mm²)' },
+  { key: 'cpcCsa', label: 'cpc', title: 'Circuit conductor CSA (mm²) — cpc', widthClass: 'w-[3.6rem]', group: 'Circuit conductor CSA (mm²)', groupTitle: 'Circuit conductor CSA (mm²)' },
+  { key: 'maxDiscTime', label: 'Max disconnection time (s)', title: 'Maximum disconnection time (s)', widthClass: 'w-[3.2rem]' },
+  { key: 'bsen', label: 'BS(EN)', title: 'Overcurrent protective device — BS(EN)', widthClass: 'w-[7rem]', group: 'Overcurrent protective device', groupTitle: 'Overcurrent protective device' },
+  { key: 'deviceType', label: 'Type', title: 'Overcurrent protective device — Type', widthClass: 'w-[5rem]', group: 'Overcurrent protective device', groupTitle: 'Overcurrent protective device' },
+  { key: 'rating', label: 'Rating (A)', title: 'Overcurrent protective device — Rating (A)', widthClass: 'w-[4.3rem]', group: 'Overcurrent protective device', groupTitle: 'Overcurrent protective device' },
+  { key: 'capacity', label: 'Capacity (kA)', title: 'Overcurrent protective device — Capacity (kA)', widthClass: 'w-[4.3rem]', group: 'Overcurrent protective device', groupTitle: 'Overcurrent protective device' },
+  { key: 'rcdRating', label: 'IΔn (mA)', title: 'Residual current device — IΔn (mA)', widthClass: 'w-[4.2rem]', group: 'Residual current device', groupTitle: 'Residual current device' },
+  { key: 'maxZs', label: 'Max Zs (Ω)', title: 'Maximum permitted Zs (Ω)', widthClass: 'w-[4.6rem]' },
+  { key: 'r1Line', label: 'r1', title: 'Ring final circuit conductors — r1', widthClass: 'w-[3rem]', group: 'Ring final circuit conductors (Ω)', groupTitle: 'Ring final circuit conductors (Ω)' },
+  { key: 'rnNeutral', label: 'rn', title: 'Ring final circuit conductors — rn', widthClass: 'w-[3.2rem]', group: 'Ring final circuit conductors (Ω)', groupTitle: 'Ring final circuit conductors (Ω)' },
+  { key: 'r2Cpc', label: 'r2', title: 'Ring final circuit conductors — r2', widthClass: 'w-[3rem]', group: 'Ring final circuit conductors (Ω)', groupTitle: 'Ring final circuit conductors (Ω)' },
+  { key: 'r1r2', label: 'R1+R2', title: 'Circuit impedances (Ω) — R1+R2', widthClass: 'w-[3.4rem]', group: 'Circuit impedances (Ω)', groupTitle: 'Circuit impedances (Ω)' },
+  { key: 'r2', label: 'R2', title: 'Circuit impedances (Ω) — R2', widthClass: 'w-[3rem]', group: 'Circuit impedances (Ω)', groupTitle: 'Circuit impedances (Ω)' },
+  { key: 'insResLN', label: 'L-N', title: 'Insulation resistance (MΩ) — L-N', widthClass: 'w-[3.3rem]', group: 'Insulation resistance (MΩ)', groupTitle: 'Insulation resistance (MΩ)' },
+  { key: 'insResLL', label: 'L-L', title: 'Insulation resistance (MΩ) — L-L', widthClass: 'w-[3.3rem]', group: 'Insulation resistance (MΩ)', groupTitle: 'Insulation resistance (MΩ)' },
+  { key: 'insResLE', label: 'L-E', title: 'Insulation resistance (MΩ) — L-E', widthClass: 'w-[3.3rem]', group: 'Insulation resistance (MΩ)', groupTitle: 'Insulation resistance (MΩ)' },
+  { key: 'testVoltage', label: 'Test voltage (V)', title: 'Insulation resistance — Test voltage (V)', widthClass: 'w-[3.4rem]', group: 'Insulation resistance (MΩ)', groupTitle: 'Insulation resistance (MΩ)', cycling: ['250', '500', '1000'] as const },
+  { key: 'polarity', label: 'Polarity', title: 'Polarity', widthClass: 'w-[4rem]', cycling: ['✓', '✗', 'N/A'] as const },
+  { key: 'measuredZs', label: 'Measured Zs (Ω)', title: 'Measured Zs (Ω)', widthClass: 'w-[3.3rem]' },
+  { key: 'discTime', label: 'Operating time (ms)', title: 'Residual current device — Operating time (ms)', widthClass: 'w-[3.2rem]', group: 'Residual current device', groupTitle: 'Residual current device' },
+  { key: 'rcdTestButton', label: 'Test button', title: 'Residual current device — Test button', widthClass: 'w-[4rem]', group: 'Residual current device', groupTitle: 'Residual current device', cycling: ['✓', '✗', 'N/A'] as const },
+  { key: 'afddTestButton', label: 'Test button', title: 'AFDD — Test button', widthClass: 'w-[4rem]', group: 'AFDD', groupTitle: 'AFDD', cycling: ['✓', '✗', 'N/A'] as const },
 ];
 
-const CIRCUIT_HEADER_GROUPS = CIRCUIT_COLUMNS.reduce<Array<{ label: string; title: string; start: number; end: number }>>((acc, col, index) => {
+const STREAMLINED_HIDDEN_CIRCUIT_KEYS: Array<keyof CircuitRow> = [
+  'numPoints',
+  'r2',
+];
+
+const getVisibleCircuitColumns = (threePhase: boolean, streamlined = false) =>
+  CIRCUIT_COLUMNS.filter((col) => {
+    if (!threePhase && col.key === 'insResLL') return false;
+    if (streamlined && STREAMLINED_HIDDEN_CIRCUIT_KEYS.includes(col.key)) return false;
+    return true;
+  });
+
+const getCircuitHeaderGroups = (columns: CircuitColumn[]) =>
+  columns.reduce<Array<{ label: string; title: string; start: number; end: number }>>((acc, col, index) => {
   if (!col.group) return acc;
   const prev = acc[acc.length - 1];
   if (prev && prev.label === col.group && prev.end === index - 1) {
@@ -235,17 +522,29 @@ type CircuitSelectOption = {
 const asSimpleOptions = (values: readonly string[]): readonly CircuitSelectOption[] =>
   values.map((value) => ({ value, menuLabel: value }));
 
+const LIVE_CSA_TO_CPC_MAP: Record<string, string> = {
+  '1.0': '1.0',
+  '1.5': '1.0',
+  '2.5': '1.5',
+  '4.0': '2.5',
+  '6.0': '2.5',
+  '10': '4.0',
+  '16': '6.0',
+  '25': '10',
+};
+
 const CIRCUIT_SELECT_OPTIONS: Partial<Record<keyof CircuitRow, readonly CircuitSelectOption[]>> = {
+  liveCsa: asSimpleOptions(['1.0', '1.5', '2.5', '4.0', '6.0', '10', '16', '25', 'Other']),
   wiringType: [
-    { value: 'A', menuLabel: 'A', title: 'Thermoplastic insulated/sheathed cables' },
-    { value: 'B', menuLabel: 'B', title: 'Thermoplastic cables in metallic conduit' },
-    { value: 'C', menuLabel: 'C', title: 'Thermoplastic cables in nonmetallic conduit' },
-    { value: 'D', menuLabel: 'D', title: 'Thermoplastic cables in metallic trunking' },
-    { value: 'E', menuLabel: 'E', title: 'Thermoplastic cables in nonmetallic trunking' },
-    { value: 'F', menuLabel: 'F', title: 'Thermoplastic/SWA cables' },
-    { value: 'G', menuLabel: 'G', title: 'Thermosetting/SWA cables' },
-    { value: 'H', menuLabel: 'H', title: 'Mineral insulated cables' },
-    { value: 'O', menuLabel: 'O', title: 'Other' },
+    { value: 'A', menuLabel: 'A — Thermoplastic insulated/sheathed cables', title: 'Thermoplastic insulated/sheathed cables' },
+    { value: 'B', menuLabel: 'B — Thermoplastic cables in metallic conduit', title: 'Thermoplastic cables in metallic conduit' },
+    { value: 'C', menuLabel: 'C — Thermoplastic cables in nonmetallic conduit', title: 'Thermoplastic cables in nonmetallic conduit' },
+    { value: 'D', menuLabel: 'D — Thermoplastic cables in metallic trunking', title: 'Thermoplastic cables in metallic trunking' },
+    { value: 'E', menuLabel: 'E — Thermoplastic cables in nonmetallic trunking', title: 'Thermoplastic cables in nonmetallic trunking' },
+    { value: 'F', menuLabel: 'F — Thermoplastic/SWA cables', title: 'Thermoplastic/SWA cables' },
+    { value: 'G', menuLabel: 'G — Thermosetting/SWA cables', title: 'Thermosetting/SWA cables' },
+    { value: 'H', menuLabel: 'H — Mineral insulated cables', title: 'Mineral insulated cables' },
+    { value: 'O', menuLabel: 'O — Other', title: 'Other' },
   ],
   refMethod: [
     { value: 'A', menuLabel: 'A', title: 'Enclosed in thermal insulation' },
@@ -257,12 +556,11 @@ const CIRCUIT_SELECT_OPTIONS: Partial<Record<keyof CircuitRow, readonly CircuitS
     { value: '103', menuLabel: '103', title: 'Buried direct in ground' },
     { value: 'Other', menuLabel: 'Other' },
   ],
-  bsen: asSimpleOptions(['BS EN 60898', 'BS EN 61009', 'BS EN 60947-2', 'BS EN 88', 'BS 1361', 'Other']),
-  deviceType: asSimpleOptions(['B', 'C', 'D', 'Type 1', 'Type 2', 'Type 3', 'Other']),
+  bsen: asSimpleOptions(['BS EN 60898', 'BS EN 61009', 'BS EN 60947-2', 'BS 88-2', 'BS 1361 Type IIb', 'Other']),
+  deviceType: asSimpleOptions(['B curve', 'C curve', 'D curve', 'Type IIb', 'Type 1', 'Type 2', 'Type 3', 'Other']),
   rating: asSimpleOptions(['6', '10', '16', '20', '25', '32', '40', '50', '63', '80', '100', 'Other']),
   capacity: asSimpleOptions(['3', '4.5', '6', '10', '16', '25', '36', 'Other']),
   rcdRating: asSimpleOptions(['10', '30', '100', '300', '500', 'Other']),
-
 };
 
 const INSTALL_METHOD_DERATING_FACTORS: Record<string, number> = {
@@ -294,13 +592,19 @@ const WIRING_TYPE_DERATING_FACTORS: Record<string, number> = {
 
 function getZsDeviceTypeFromRow(row: Pick<CircuitRow, 'bsen' | 'deviceType' | 'rating'>): string | null {
   const standard = row.bsen.trim().toUpperCase();
-  if (!standard || !row.deviceType.trim() || !row.rating.trim()) {
+  const deviceType = row.deviceType.trim();
+  if (!standard || !deviceType || !row.rating.trim()) {
     return null;
   }
 
+  const normalizedDeviceType = deviceType.toUpperCase();
+
   // BS EN 60898 / 61009 / 60947-2 use B/C/D trip-curve device letters.
   if (standard.includes('60898') || standard.includes('61009') || standard.includes('60947-2')) {
-    return row.deviceType.trim();
+    if (normalizedDeviceType.includes('B')) return 'B';
+    if (normalizedDeviceType.includes('C')) return 'C';
+    if (normalizedDeviceType.includes('D')) return 'D';
+    return deviceType;
   }
 
   // BS EN 88 and BS 1361 map to the fuse curve in the shared lookup.
@@ -343,9 +647,351 @@ function zsExceedsMax(row: Pick<CircuitRow, 'measuredZs' | 'maxZs' | 'wiringType
   return measured > maxAllowed;
 }
 
+type ZsValidationMode = 'ring' | 'radial' | 'equal-r1-r2';
+type CircuitInconsistencyClass = 'bg-green-100 text-green-800 font-semibold' | 'bg-red-100 text-red-800 font-semibold' | '';
+
+const CIRCUIT_RESISTANCE_TEMPERATURE_CORRECTION_FACTOR = 1.2;
+
+function parseCircuitResistance(value: string): number | null {
+  const numeric = Number.parseFloat(value.replace(/[^0-9.]+/g, ''));
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function getTemperatureCorrectedCircuitResistance(resistance: number): number {
+  return resistance * CIRCUIT_RESISTANCE_TEMPERATURE_CORRECTION_FACTOR;
+}
+
+function areNearlyEqual(left: number, right: number, tolerancePercent: number): boolean {
+  const base = Math.max(Math.abs(left), Math.abs(right));
+  if (base === 0) {
+    return true;
+  }
+
+  return (Math.abs(left - right) / base) * 100 <= tolerancePercent;
+}
+
+function inferZsValidationMode(
+  row: Pick<CircuitRow, 'designation' | 'ringFinal' | 'r1Line' | 'rnNeutral' | 'r2Cpc' | 'r1r2'>,
+): ZsValidationMode | null {
+  const designation = row.designation.trim().toLowerCase();
+  const isRingFinal = row.ringFinal.trim() === '✓';
+  const r1 = parseCircuitResistance(row.r1Line);
+  const rn = parseCircuitResistance(row.rnNeutral);
+  const r2 = parseCircuitResistance(row.r2Cpc);
+  const r1r2 = parseCircuitResistance(row.r1r2);
+
+  const hasAllRingValues = r1 !== null && rn !== null && r2 !== null;
+  const mentionsRadial = /\bradial\b/.test(designation);
+  const mentionsRing = /\bring\b|\bring final\b/.test(designation);
+
+  if (mentionsRadial && !isRingFinal) {
+    return 'radial';
+  }
+
+  if (hasAllRingValues) {
+    const ringLikeLineNeutral = areNearlyEqual(r1, rn, 10);
+    const equalR1R2 = areNearlyEqual(r1, r2, 10);
+    const ringLikeR1R2 =
+      r1r2 !== null &&
+      (areNearlyEqual(r1r2, (r1 + r2) / 4, 15) || areNearlyEqual(r1r2, (rn + r2) / 4, 15));
+
+    if (equalR1R2 && (isRingFinal || mentionsRing || ringLikeLineNeutral || ringLikeR1R2)) {
+      return 'equal-r1-r2';
+    }
+
+    if (isRingFinal || mentionsRing || ringLikeLineNeutral || ringLikeR1R2) {
+      return 'ring';
+    }
+  }
+
+  if (isRingFinal || mentionsRing) {
+    return r1 !== null && r2 !== null && areNearlyEqual(r1, r2, 10) ? 'equal-r1-r2' : 'ring';
+  }
+
+  return 'radial';
+}
+
+function getMeasuredZsValidation(
+  row: Pick<CircuitRow, 'designation' | 'ringFinal' | 'r1r2' | 'measuredZs' | 'r1Line' | 'rnNeutral' | 'r2Cpc'>,
+  externalEarthFaultLoopImpedance: string,
+): {
+  expected: number;
+  expectedCircuitResistance: number;
+  correctedCircuitResistance: number;
+  ze: number;
+  measured: number;
+  delta: number;
+  percent: number;
+  withinTolerance: boolean;
+  mode: ZsValidationMode;
+  tolerance: number;
+} | null {
+  const r1r2 = parseCircuitResistance(row.r1r2);
+  const measured = parseCircuitResistance(row.measuredZs);
+  const ze = parseCircuitResistance(externalEarthFaultLoopImpedance);
+  const r1 = parseCircuitResistance(row.r1Line);
+  const rn = parseCircuitResistance(row.rnNeutral);
+  const r2 = parseCircuitResistance(row.r2Cpc);
+
+  if (r1r2 === null || measured === null || ze === null) {
+    return null;
+  }
+
+  const mode = inferZsValidationMode(row);
+  if (!mode) {
+    return null;
+  }
+
+  let expectedCircuitResistance: number;
+  let tolerance: number;
+
+  if (mode === 'radial') {
+    expectedCircuitResistance = r1r2;
+    tolerance = 15;
+  } else {
+    if (r1 === null || r2 === null) {
+      return null;
+    }
+
+    expectedCircuitResistance = (r1 + r2) / 4;
+
+    if (mode === 'equal-r1-r2') {
+      tolerance = 8;
+    } else {
+      if (rn === null) {
+        return null;
+      }
+
+      const rnBalancedWithR1 = areNearlyEqual(r1, rn, 10);
+      tolerance = rnBalancedWithR1 ? 12 : 10;
+    }
+  }
+
+  if (expectedCircuitResistance <= 0) {
+    return null;
+  }
+
+  const correctedCircuitResistance = getTemperatureCorrectedCircuitResistance(expectedCircuitResistance);
+  const expected = ze + correctedCircuitResistance;
+  const delta = measured - expected;
+  const percent = Math.abs(delta / expected) * 100;
+
+  return {
+    expected,
+    expectedCircuitResistance,
+    correctedCircuitResistance,
+    ze,
+    measured,
+    delta,
+    percent,
+    withinTolerance: percent <= tolerance,
+    mode,
+    tolerance,
+  };
+}
+
+function hasCircuitInconsistency(
+  row: Pick<CircuitRow, 'designation' | 'ringFinal' | 'r1r2' | 'measuredZs' | 'r1Line' | 'rnNeutral' | 'r2Cpc' | 'wiringType'>,
+  externalEarthFaultLoopImpedance: string,
+): boolean {
+  const zsValidation = getMeasuredZsValidation(row, externalEarthFaultLoopImpedance);
+  if (zsValidation && !zsValidation.withinTolerance) {
+    return true;
+  }
+
+  const r1r2Validation = getR1R2ValidationState(row);
+  if (r1r2Validation && !r1r2Validation.withinTolerance) {
+    return true;
+  }
+
+  const twinAndEarthValidation = getTwinAndEarthR2RatioAssessment(row);
+  if (twinAndEarthValidation && !twinAndEarthValidation.withinTolerance) {
+    return true;
+  }
+
+  return false;
+}
+
+function getMeasuredZsValidationTitle(
+  row: Pick<CircuitRow, 'designation' | 'ringFinal' | 'r1r2' | 'measuredZs' | 'r1Line' | 'rnNeutral' | 'r2Cpc'>,
+  externalEarthFaultLoopImpedance: string,
+): string | undefined {
+  const result = getMeasuredZsValidation(row, externalEarthFaultLoopImpedance);
+  if (!result) return undefined;
+
+  const direction = result.delta === 0 ? 'matches' : result.delta > 0 ? 'above' : 'below';
+  const offBy = Math.abs(result.delta).toFixed(2);
+  const percent = result.percent.toFixed(1);
+  const toleranceText = result.withinTolerance
+    ? `Within ${result.tolerance}% tolerance`
+    : `Outside ${result.tolerance}% tolerance`;
+
+  if (result.mode === 'ring') {
+    return `Ring circuit check: measured Zs is being compared against Ze + corrected ring-derived circuit resistance. Using Ze ${result.ze.toFixed(2)}Ω and corrected circuit resistance ${result.correctedCircuitResistance.toFixed(2)}Ω (from raw ring expected resistance ${result.expectedCircuitResistance.toFixed(2)}Ω, based on (r1 + r2) / 4), expected Zs is ${result.expected.toFixed(2)}Ω. The reading is ${offBy}Ω (${percent}%) ${direction} expected. ${toleranceText}.`;
+  }
+
+  if (result.mode === 'equal-r1-r2') {
+    return `Equal R1 and R2 ring check: measured Zs is being compared against Ze + corrected circuit resistance. Using Ze ${result.ze.toFixed(2)}Ω and corrected circuit resistance ${result.correctedCircuitResistance.toFixed(2)}Ω (from raw ${(result.expectedCircuitResistance).toFixed(2)}Ω), expected Zs is ${result.expected.toFixed(2)}Ω. Current reading is ${offBy}Ω (${percent}%) ${direction} expected. ${toleranceText}.`;
+  }
+
+  return `Radial circuit check: measured Zs is being compared against Ze + corrected R1+R2. Using Ze ${result.ze.toFixed(2)}Ω and corrected circuit resistance ${result.correctedCircuitResistance.toFixed(2)}Ω (from raw R1+R2 ${result.expectedCircuitResistance.toFixed(2)}Ω), expected Zs is ${result.expected.toFixed(2)}Ω. Current reading is ${offBy}Ω (${percent}%) ${direction} expected. ${toleranceText}.`;
+}
+
+function getTwinAndEarthR2RatioAssessment(
+  row: Pick<CircuitRow, 'designation' | 'ringFinal' | 'wiringType' | 'r1Line' | 'rnNeutral' | 'r2Cpc' | 'r1r2'>,
+): { expected: number; actual: number; delta: number; percent: number; withinTolerance: boolean } | null {
+  const normalizedWiringType = row.wiringType.trim().toUpperCase();
+  const r1 = parseCircuitResistance(row.r1Line);
+  const r2 = parseCircuitResistance(row.r2Cpc);
+
+  if (inferZsValidationMode(row) !== 'radial' || normalizedWiringType !== 'A' || r1 === null || r2 === null) {
+    return null;
+  }
+
+  const expected = r1 * 1.75;
+  const delta = r2 - expected;
+  const percent = expected === 0 ? 0 : Math.abs(delta / expected) * 100;
+
+  return {
+    expected,
+    actual: r2,
+    delta,
+    percent,
+    withinTolerance: percent <= 10,
+  };
+}
+
+function getTwinAndEarthR2RatioTitle(
+  row: Pick<CircuitRow, 'designation' | 'ringFinal' | 'wiringType' | 'r1Line' | 'rnNeutral' | 'r2Cpc' | 'r1r2'>,
+): string | undefined {
+  const result = getTwinAndEarthR2RatioAssessment(row);
+  const r1 = parseCircuitResistance(row.r1Line);
+
+  if (!result || r1 === null) return undefined;
+
+  const direction = result.delta === 0 ? 'matches' : result.delta > 0 ? 'above' : 'below';
+  const offBy = Math.abs(result.delta).toFixed(2);
+  const percent = result.percent.toFixed(1);
+  const toleranceText = result.withinTolerance ? 'Within 10% tolerance' : 'Outside 10% tolerance';
+
+  return `For a typical twin and earth circuit, R2 is expected to be approximately 1.75 × R1. Expected R2 is ${result.expected.toFixed(2)}Ω from R1 ${r1.toFixed(2)}Ω. Current R2 is ${result.actual.toFixed(2)}Ω, which is ${offBy}Ω (${percent}%) ${direction} expected. ${toleranceText}.`;
+}
+
+function getR1R2ValidationState(
+  row: Pick<CircuitRow, 'designation' | 'ringFinal' | 'r1r2' | 'r1Line' | 'rnNeutral' | 'r2Cpc' | 'wiringType'>,
+): { title: string; withinTolerance: boolean } | null {
+  const r1r2 = parseCircuitResistance(row.r1r2);
+  if (r1r2 === null) {
+    return null;
+  }
+
+  const mode = inferZsValidationMode(row);
+  const r1 = parseCircuitResistance(row.r1Line);
+  const rn = parseCircuitResistance(row.rnNeutral);
+  const r2 = parseCircuitResistance(row.r2Cpc);
+
+  if (mode === 'ring') {
+    if (r1 === null || rn === null || r2 === null) {
+      return null;
+    }
+
+    const expected = (r1 + r2) / 4;
+    const delta = r1r2 - expected;
+    const percent = expected === 0 ? 0 : Math.abs(delta / expected) * 100;
+    const direction = delta === 0 ? 'matches' : delta > 0 ? 'above' : 'below';
+    const tolerance = areNearlyEqual(r1, rn, 10) ? 12 : 10;
+    const toleranceText = percent <= tolerance ? `Within ${tolerance}% tolerance` : `Outside ${tolerance}% tolerance`;
+
+    return {
+      title: `Ring final circuit check: expected R1+R2 is approximately (r1 + r2) / 4 = ${expected.toFixed(2)}Ω. Current R1+R2 is ${r1r2.toFixed(2)}Ω, which is ${Math.abs(delta).toFixed(2)}Ω (${percent.toFixed(1)}%) ${direction} expected. rn is ${rn.toFixed(2)}Ω and is ${areNearlyEqual(r1, rn, 10) ? 'consistent with' : 'not closely aligned to'} r1 ${r1.toFixed(2)}Ω. ${toleranceText}.`,
+      withinTolerance: percent <= tolerance,
+    };
+  }
+
+  if (mode === 'equal-r1-r2') {
+    if (r1 === null || r2 === null) {
+      return null;
+    }
+
+    const expected = (r1 + r2) / 4;
+    const delta = r1r2 - expected;
+    const percent = expected === 0 ? 0 : Math.abs(delta / expected) * 100;
+    const direction = delta === 0 ? 'matches' : delta > 0 ? 'above' : 'below';
+    const tolerance = 8;
+    const toleranceText = percent <= tolerance ? `Within ${tolerance}% tolerance` : `Outside ${tolerance}% tolerance`;
+
+    return {
+      title: `Equal R1 and R2 ring check: expected R1+R2 is approximately (r1 + r2) / 4 = ${expected.toFixed(2)}Ω. Current R1+R2 is ${r1r2.toFixed(2)}Ω, which is ${Math.abs(delta).toFixed(2)}Ω (${percent.toFixed(1)}%) ${direction} expected. ${toleranceText}.`,
+      withinTolerance: percent <= tolerance,
+    };
+  }
+
+  if (mode === 'radial') {
+    const twinAndEarthCheck = getTwinAndEarthR2RatioAssessment(row);
+    if (twinAndEarthCheck) {
+      return {
+        title: `Radial circuit check: R1+R2 entered as ${r1r2.toFixed(2)}Ω. ${getTwinAndEarthR2RatioTitle(row) ?? ''}`.trim(),
+        withinTolerance: twinAndEarthCheck.withinTolerance,
+      };
+    }
+
+    if (r1 !== null && r2 !== null) {
+      const expected = r1 + r2;
+      const delta = r1r2 - expected;
+      const percent = expected === 0 ? 0 : Math.abs(delta / expected) * 100;
+      const direction = delta === 0 ? 'matches' : delta > 0 ? 'above' : 'below';
+      const tolerance = 15;
+      const toleranceText = percent <= tolerance ? `Within ${tolerance}% tolerance` : `Outside ${tolerance}% tolerance`;
+
+      return {
+        title: `Radial circuit check: expected R1+R2 is approximately r1 + r2 = ${expected.toFixed(2)}Ω. Current R1+R2 is ${r1r2.toFixed(2)}Ω, which is ${Math.abs(delta).toFixed(2)}Ω (${percent.toFixed(1)}%) ${direction} expected. ${toleranceText}.`,
+        withinTolerance: percent <= tolerance,
+      };
+    }
+  }
+
+  return null;
+}
+
+function getCircuitFieldInconsistencyClass(
+  row: Pick<CircuitRow, 'designation' | 'ringFinal' | 'r1r2' | 'measuredZs' | 'r1Line' | 'rnNeutral' | 'r2Cpc' | 'wiringType'>,
+  key: keyof CircuitRow,
+  externalEarthFaultLoopImpedance: string,
+): CircuitInconsistencyClass {
+  const zsValidation = getMeasuredZsValidation(row, externalEarthFaultLoopImpedance);
+  const r1r2Validation = getR1R2ValidationState(row);
+  const twinAndEarthValidation = getTwinAndEarthR2RatioAssessment(row);
+
+  if (key === 'measuredZs' && zsValidation) {
+    return zsValidation.withinTolerance ? 'bg-green-100 text-green-800 font-semibold' : 'bg-red-100 text-red-800 font-semibold';
+  }
+
+  if (key === 'r1r2' && r1r2Validation) {
+    return r1r2Validation.withinTolerance ? 'bg-green-100 text-green-800 font-semibold' : 'bg-red-100 text-red-800 font-semibold';
+  }
+
+  if (key === 'r2Cpc' && twinAndEarthValidation && inferZsValidationMode(row) === 'radial') {
+    return twinAndEarthValidation.withinTolerance
+      ? 'bg-green-100 text-green-800 font-semibold'
+      : 'bg-red-100 text-red-800 font-semibold';
+  }
+
+  if ((key === 'r1Line' || key === 'rnNeutral' || key === 'r2Cpc') && r1r2Validation) {
+    const mode = inferZsValidationMode(row);
+    if (mode === 'ring' || mode === 'equal-r1-r2') {
+      return r1r2Validation.withinTolerance
+        ? 'bg-green-100 text-green-800 font-semibold'
+        : 'bg-red-100 text-red-800 font-semibold';
+    }
+  }
+
+  return '';
+}
+
 function createEmptyCircuitRow(index: number): CircuitRow {
   return {
     circuitNumber: String(index + 1),
+    ringFinal: '',
     designation: '',
     wiringType: '',
     refMethod: '',
@@ -364,6 +1010,7 @@ function createEmptyCircuitRow(index: number): CircuitRow {
     r2Cpc: '',
     r1r2: '',
     r2: '',
+    insResLN: '',
     insResLL: '',
     insResLE: '',
     testVoltage: '',
@@ -462,7 +1109,154 @@ function buildObservationDescription(item: AnalyzeImageScheduleItem) {
     .join(' — ');
 }
 
-export default function EICRCertificatePage() {
+type ExpectedValueInfo = {
+  label: string;
+  average: string;
+  range: string;
+  note?: string;
+};
+
+const EXPECTED_VALUE_MAP = {
+  consumerUnitDesignation: {
+    label: 'Distribution board / consumer unit reference',
+    average: 'DB1',
+    range: 'Typical range: DB1 to DB4',
+    note: 'Uses the BS 7671 model form board reference wording.',
+  },
+  consumerUnitLocation: {
+    label: 'Location of distribution board / consumer unit',
+    average: 'Meter cupboard',
+    range: 'Typical range: meter cupboard, intake position, hallway cupboard',
+    note: 'Uses the BS 7671 model form location wording for the board / consumer unit.',
+  },
+  consumerUnitPfc: {
+    label: 'Prospective fault current (kA)',
+    average: '1.2',
+    range: 'Typical acceptable range: 0.8 to 3.0',
+    note: 'Uses the BS 7671 model form wording for prospective fault current at the board / consumer unit.',
+  },
+  r1Line: {
+    label: 'Ring final circuit conductors — r1 (Ω)',
+    average: '0.50',
+    range: 'Typical range: 0.20 to 1.50',
+    note: 'Expected for ring final line conductor continuity readings, depending on circuit length and conductor size.',
+  },
+  rnNeutral: {
+    label: 'Ring final circuit conductors — rn (Ω)',
+    average: '0.50',
+    range: 'Typical range: 0.20 to 1.50',
+    note: 'Neutral continuity should typically be close to the r1 reading on a balanced ring final circuit.',
+  },
+  r2Cpc: {
+    label: 'Ring final circuit conductors — r2 (Ω)',
+    average: '0.80',
+    range: 'Typical range: 0.30 to 2.50',
+    note: 'cpc resistance is normally higher than r1/rn because of smaller conductor CSA.',
+  },
+  r1r2: {
+    label: 'Circuit impedance — R1 + R2 (Ω)',
+    average: '0.70',
+    range: 'Typical range: 0.20 to 2.00',
+    note: 'Use as a guide only; expected R1+R2 varies materially with circuit length, CSA, and installation method.',
+  },
+  insResLN: {
+    label: 'Insulation resistance — L-N (MΩ)',
+    average: '>200',
+    range: 'Typical acceptable range: ≥1.0, commonly >200 on sound circuits',
+    note: 'BS 7671 minimum is generally 1 MΩ for LV circuits, though healthy installations are often much higher.',
+  },
+  insResLL: {
+    label: 'Insulation resistance — L-L (MΩ)',
+    average: '>200',
+    range: 'Typical acceptable range: ≥1.0, commonly >200 on sound circuits',
+    note: 'Shown for multi-phase testing where applicable.',
+  },
+  insResLE: {
+    label: 'Insulation resistance — L-E (MΩ)',
+    average: '>200',
+    range: 'Typical acceptable range: ≥1.0, commonly >200 on sound circuits',
+    note: 'BS 7671 minimum is generally 1 MΩ for LV circuits, though healthy installations are often much higher.',
+  },
+  measuredZs: {
+    label: 'Measured Zs (Ω)',
+    average: 'Varies by protective device and circuit',
+    range: 'Expected to be at or below the maximum permitted Zs',
+    note: 'Compare directly with the maximum/derated Zs for that circuit and protective device.',
+  },
+} satisfies Record<string, ExpectedValueInfo>;
+
+function ExpectedValuePopover({
+  fieldKey,
+  currentValue,
+  showExpectedValues,
+  children,
+}: {
+  fieldKey: keyof typeof EXPECTED_VALUE_MAP;
+  currentValue: string;
+  showExpectedValues: boolean;
+  children: ReactNode;
+}) {
+  const info = EXPECTED_VALUE_MAP[fieldKey];
+
+  return (
+    <div className="group/expected relative">
+      {children}
+      {showExpectedValues ? (
+        <div className="pointer-events-none absolute left-0 top-full z-50 w-[18rem] pt-2 opacity-0 transition-opacity duration-150 group-hover/expected:opacity-100">
+          <div className="rounded-md border border-amber-300 bg-white p-3 shadow-lg">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{info.label}</p>
+            <div className="mt-2 space-y-1.5 text-xs text-slate-700">
+              <p>
+                <span className="font-semibold text-slate-900">Current actual value:</span>{' '}
+                {currentValue?.trim() ? currentValue : 'Not entered'}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-900">Expected average:</span> {info.average}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-900">Acceptable range:</span> {info.range}
+              </p>
+              {info.note ? <p className="text-[11px] leading-4 text-slate-500">{info.note}</p> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ExpectedValueInput({
+  fieldKey,
+  showExpectedValues,
+  className,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & {
+  fieldKey: keyof typeof EXPECTED_VALUE_MAP;
+  showExpectedValues: boolean;
+}) {
+  const currentValue =
+    typeof props.value === 'string'
+      ? props.value
+      : typeof props.defaultValue === 'string'
+        ? props.defaultValue
+        : '';
+
+  const { readOnly, tabIndex } = props;
+
+  return (
+    <ExpectedValuePopover fieldKey={fieldKey} currentValue={currentValue} showExpectedValues={showExpectedValues}>
+      <Input
+        {...props}
+        readOnly={showExpectedValues || readOnly}
+        aria-readonly={showExpectedValues || readOnly}
+        tabIndex={showExpectedValues ? -1 : tabIndex}
+        className={cn(className, showExpectedValues ? 'cursor-help opacity-50 hover:opacity-60' : '')}
+      />
+    </ExpectedValuePopover>
+  );
+}
+
+export function EICRCertificatePage({ streamlined = false }: { streamlined?: boolean } = {}) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -482,6 +1276,7 @@ export default function EICRCertificatePage() {
   const [nextInspectionDate, setNextInspectionDate] = useState('');
   const [nextInspectionPeriod, setNextInspectionPeriod] = useState<(typeof REINSPECTION_PERIODS)[number]['label']>('3 Years');
   const [formError, setFormError] = useState('');
+  const [showExpectedValues, setShowExpectedValues] = useState(false);
   const [overallAssessment, setOverallAssessment] = useState('SATISFACTORY');
   const [earthingArrangement, setEarthingArrangement] = useState('TN-C-S');
   const [meansOfEarthing, setMeansOfEarthing] = useState("Distributor's facility");
@@ -489,6 +1284,7 @@ export default function EICRCertificatePage() {
   const [supplyConductorCSACustom, setSupplyConductorCSACustom] = useState('');
   const [observations, setObservations] = useState<Observation[]>([]);
   const [evidenceOfAdditions, setEvidenceOfAdditions] = useState('No');
+  const [premisesType, setPremisesType] = useState('Commercial');
   const [inspSchedule, setInspSchedule] = useState<InspScheduleValue>({
     codes: {},
     comments: {},
@@ -497,7 +1293,11 @@ export default function EICRCertificatePage() {
     Array.from({ length: DEFAULT_CIRCUIT_ROW_COUNT }, (_, index) => createEmptyCircuitRow(index)),
   );
   const [selectedCircuitRow, setSelectedCircuitRow] = useState<number>(0);
+  const [selectedCircuitTemplate, setSelectedCircuitTemplate] = useState('__template');
+  const [draggedCircuitRow, setDraggedCircuitRow] = useState<number | null>(null);
+  const [dragOverCircuitRow, setDragOverCircuitRow] = useState<number | null>(null);
   const [natureOfSupply, setNatureOfSupply] = useState('1-phase (2 wire) ac');
+  const [externalEarthFaultLoopImpedance, setExternalEarthFaultLoopImpedance] = useState('');
   const isThreePhase = natureOfSupply.startsWith('3-phase');
   const [extentQuickOption, setExtentQuickOption] = useState('__custom');
   const [limitationsQuickOption, setLimitationsQuickOption] = useState('__custom');
@@ -519,6 +1319,14 @@ export default function EICRCertificatePage() {
     error: '',
     summary: '',
   });
+  const earthElectrodeInspectionRef = '3.2';
+  const ttOnlyRcdFaultProtectionRef = '4.18';
+  const earthingArrangementRequiresEarthElectrode = earthingArrangement === 'TT' || earthingArrangement === 'IT';
+  const isTTEarthingArrangement = earthingArrangement === 'TT';
+  const disabledInspectionRefs = [
+    ...(earthingArrangementRequiresEarthElectrode ? [] : [earthElectrodeInspectionRef]),
+    ...(isTTEarthingArrangement ? [] : [ttOnlyRcdFaultProtectionRef]),
+  ];
 
   // When an inspection code changes to C1/C2, auto-add an observation and vice-versa
   const handleInspCodeChange = (
@@ -580,6 +1388,72 @@ export default function EICRCertificatePage() {
     );
   };
 
+  useEffect(() => {
+    const prevEarthElectrodeCode = inspSchedule.codes[earthElectrodeInspectionRef] ?? '';
+    const prevEarthElectrodeComment = inspSchedule.comments[earthElectrodeInspectionRef] ?? '';
+
+    if (earthingArrangementRequiresEarthElectrode) {
+      if (prevEarthElectrodeCode === 'N/A') {
+        handleInspCodeChange(
+          earthElectrodeInspectionRef,
+          'Presence and condition of earth electrode connection where applicable (542.1.2.3)',
+          '',
+          prevEarthElectrodeCode,
+        );
+      }
+
+      if (prevEarthElectrodeComment) {
+        handleInspCommentChange(earthElectrodeInspectionRef, '');
+      }
+    } else {
+      if (prevEarthElectrodeCode !== 'N/A') {
+        handleInspCodeChange(
+          earthElectrodeInspectionRef,
+          'Presence and condition of earth electrode connection where applicable (542.1.2.3)',
+          'N/A',
+          prevEarthElectrodeCode,
+        );
+      }
+
+      if (prevEarthElectrodeComment !== '') {
+        handleInspCommentChange(earthElectrodeInspectionRef, '');
+      }
+    }
+
+    const prevTTRcdFaultProtectionCode = inspSchedule.codes[ttOnlyRcdFaultProtectionRef] ?? '';
+    const prevTTRcdFaultProtectionComment = inspSchedule.comments[ttOnlyRcdFaultProtectionRef] ?? '';
+
+    if (isTTEarthingArrangement) {
+      if (prevTTRcdFaultProtectionCode === 'N/A') {
+        handleInspCodeChange(
+          ttOnlyRcdFaultProtectionRef,
+          'RCD(s) provided for fault protection – includes RCBOs (411.4.204; 411.5.2; 531.2)',
+          '',
+          prevTTRcdFaultProtectionCode,
+        );
+      }
+
+      if (prevTTRcdFaultProtectionComment) {
+        handleInspCommentChange(ttOnlyRcdFaultProtectionRef, '');
+      }
+
+      return;
+    }
+
+    if (prevTTRcdFaultProtectionCode !== 'N/A') {
+      handleInspCodeChange(
+        ttOnlyRcdFaultProtectionRef,
+        'RCD(s) provided for fault protection – includes RCBOs (411.4.204; 411.5.2; 531.2)',
+        'N/A',
+        prevTTRcdFaultProtectionCode,
+      );
+    }
+
+    if (prevTTRcdFaultProtectionComment !== '') {
+      handleInspCommentChange(ttOnlyRcdFaultProtectionRef, '');
+    }
+  }, [earthingArrangementRequiresEarthElectrode, inspSchedule.codes, inspSchedule.comments, isTTEarthingArrangement]);
+
   const generateCertificateNumber = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -604,11 +1478,117 @@ export default function EICRCertificatePage() {
   };
 
   const updateCircuitField = (rowIndex: number, key: keyof CircuitRow, value: string) => {
-    setCircuits((prev) => prev.map((row, idx) => {
-      if (idx !== rowIndex) return row;
-      const nextRow = { ...row, [key]: value };
+    let updatedRow: CircuitRow | null = null;
 
-      if (key === 'bsen' || key === 'deviceType' || key === 'rating') {
+    setCircuits((prev) =>
+      prev.map((row, idx) => {
+        if (idx !== rowIndex) return row;
+
+        const nextRow: CircuitRow = { ...row, [key]: value };
+
+        if (key === 'liveCsa') {
+          nextRow.cpcCsa = LIVE_CSA_TO_CPC_MAP[value] ?? '';
+        }
+
+        if (key === 'bsen' || key === 'deviceType' || key === 'rating') {
+          const zsDeviceType = getZsDeviceTypeFromRow(nextRow);
+          if (zsDeviceType) {
+            const maxZsComputed = calculateMaxZs(zsDeviceType, nextRow.rating).replace(/Ω$/u, '');
+            if (maxZsComputed !== 'N/A') {
+              nextRow.maxZs = maxZsComputed;
+            }
+          }
+        }
+
+        updatedRow = nextRow;
+        return nextRow;
+      }),
+    );
+
+    const ZS_AFFECTING_KEYS: Array<keyof CircuitRow> = [
+      'measuredZs',
+      'maxZs',
+      'wiringType',
+      'refMethod',
+      'bsen',
+      'deviceType',
+      'rating',
+      'designation',
+      'ringFinal',
+      'r1Line',
+      'rnNeutral',
+      'r2Cpc',
+      'r1r2',
+    ];
+
+    if (updatedRow && ZS_AFFECTING_KEYS.includes(key)) {
+      const currentRow: CircuitRow = updatedRow;
+      const circuitId = `auto-zs-${currentRow.circuitNumber}`;
+      const label = currentRow.designation
+        ? `Circuit ${currentRow.circuitNumber} (${currentRow.designation})`
+        : `Circuit ${currentRow.circuitNumber}`;
+      const exceeds = zsExceedsMax(currentRow);
+      const logicalValidation = getMeasuredZsValidation(currentRow, externalEarthFaultLoopImpedance);
+      const hasLogicalInconsistency = hasCircuitInconsistency(currentRow, externalEarthFaultLoopImpedance);
+
+      setObservations((obs) => {
+        const existing = obs.find((o) => o.fromCircuitZs === currentRow.circuitNumber);
+
+        let description = '';
+        if (exceeds) {
+          const maxStr = getDeratedMaxZsDisplay(currentRow) ?? currentRow.maxZs;
+          description = `${label}: Measured Zs (${currentRow.measuredZs}Ω) exceeds maximum permitted Zs (${maxStr}) – earth fault loop impedance too high`;
+        } else if (logicalValidation && hasLogicalInconsistency) {
+          const modeLabel =
+            logicalValidation.mode === 'equal-r1-r2'
+              ? 'equal R1/R2 ring logic'
+              : logicalValidation.mode === 'ring'
+                ? 'ring circuit logic'
+                : 'radial circuit logic';
+          description = `${label}: Measured Zs (${logicalValidation.measured.toFixed(2)}Ω) is inconsistent with the recorded continuity results for ${modeLabel}. Using Ze ${logicalValidation.ze.toFixed(2)}Ω plus corrected circuit resistance ${logicalValidation.correctedCircuitResistance.toFixed(2)}Ω, expected Zs is about ${logicalValidation.expected.toFixed(2)}Ω (tolerance ${logicalValidation.tolerance}%)`;
+        }
+
+        if (description && !existing) {
+          return [
+            ...obs,
+            {
+              id: circuitId,
+              description,
+              code: 'C2',
+              fromCircuitZs: currentRow.circuitNumber,
+            },
+          ];
+        }
+
+        if (description && existing) {
+          return obs.map((o) =>
+            o.fromCircuitZs === currentRow.circuitNumber
+              ? {
+                  ...o,
+                  description,
+                }
+              : o,
+          );
+        }
+
+        if (!description && existing) {
+          return obs.filter((o) => o.fromCircuitZs !== currentRow.circuitNumber);
+        }
+
+        return obs;
+      });
+    }
+  };
+
+  const applyCircuitTemplate = (rowIndex: number, templateId: string) => {
+    const template = CIRCUIT_TEMPLATES.find((item) => item.id === templateId);
+    if (!template) return;
+
+    setCircuits((prev) =>
+      prev.map((row, idx) => {
+        if (idx !== rowIndex) return row;
+        const nextRow: CircuitRow = { ...row, ...template.values };
+
         const zsDeviceType = getZsDeviceTypeFromRow(nextRow);
         if (zsDeviceType) {
           const maxZsComputed = calculateMaxZs(zsDeviceType, nextRow.rating).replace(/Ω$/u, '');
@@ -616,50 +1596,10 @@ export default function EICRCertificatePage() {
             nextRow.maxZs = maxZsComputed;
           }
         }
-      }
 
-      return nextRow;
-    }));
-
-    // When a Zs-affecting field changes, sync the auto-observation for that circuit
-    const ZS_AFFECTING_KEYS: Array<keyof CircuitRow> = ['measuredZs', 'maxZs', 'wiringType', 'refMethod', 'bsen', 'deviceType', 'rating'];
-    if (ZS_AFFECTING_KEYS.includes(key)) {
-      // Read the post-update circuit row (we need the full updated row for the comparison)
-      setCircuits((prev) => {
-        const row = prev[rowIndex];
-        if (!row) return prev;
-        const circuitId = `auto-zs-${row.circuitNumber}`;
-        const label = row.designation ? `Circuit ${row.circuitNumber} (${row.designation})` : `Circuit ${row.circuitNumber}`;
-        const exceeds = zsExceedsMax(row);
-        setObservations((obs) => {
-          const existing = obs.find((o) => o.fromCircuitZs === row.circuitNumber);
-          if (exceeds && !existing) {
-            const maxStr = getDeratedMaxZsDisplay(row) ?? row.maxZs;
-            return [
-              ...obs,
-              {
-                id: circuitId,
-                description: `${label}: Measured Zs (${row.measuredZs}Ω) exceeds maximum permitted Zs (${maxStr}) – earth fault loop impedance too high`,
-                code: 'C2',
-                fromCircuitZs: row.circuitNumber,
-              },
-            ];
-          } else if (exceeds && existing) {
-            // Update description in case values changed
-            const maxStr = getDeratedMaxZsDisplay(row) ?? row.maxZs;
-            return obs.map((o) =>
-              o.fromCircuitZs === row.circuitNumber
-                ? { ...o, description: `${label}: Measured Zs (${row.measuredZs}Ω) exceeds maximum permitted Zs (${maxStr}) – earth fault loop impedance too high` }
-                : o
-            );
-          } else if (!exceeds && existing) {
-            return obs.filter((o) => o.fromCircuitZs !== row.circuitNumber);
-          }
-          return obs;
-        });
-        return prev; // circuits state is unchanged by this second setState call
-      });
-    }
+        return nextRow;
+      }),
+    );
   };
 
   // Re-number circuits when supply type changes between single-phase and 3-phase
@@ -672,6 +1612,23 @@ export default function EICRCertificatePage() {
     }
   }, [isThreePhase]);
 
+  const moveCircuitRow = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+
+    setCircuits((prev) => {
+      if (fromIndex >= prev.length || toIndex >= prev.length) {
+        return prev;
+      }
+
+      const next = [...prev];
+      const [movedRow] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, movedRow);
+      return normalizeCircuitRows(next, isThreePhase);
+    });
+
+    setSelectedCircuitRow(toIndex);
+  };
+
   const addCircuitRow = () => {
     setCircuits((prev) => {
       setSelectedCircuitRow(prev.length);
@@ -682,9 +1639,9 @@ export default function EICRCertificatePage() {
   const insertCircuitRow = () => {
     setCircuits((prev) => {
       const insertIndex = Math.max(0, Math.min(selectedCircuitRow, prev.length));
-      const next = [...prev];
-      next.splice(insertIndex, 0, createEmptyCircuitRow(insertIndex));
-      return normalizeCircuitRows(next, isThreePhase);
+      const nextRows = [...prev];
+      nextRows.splice(insertIndex, 0, createEmptyCircuitRow(insertIndex));
+      return normalizeCircuitRows(nextRows, isThreePhase);
     });
   };
 
@@ -724,6 +1681,22 @@ export default function EICRCertificatePage() {
   const nextInspectionPeriodMonths = REINSPECTION_PERIODS.find(
     (period) => period.label === nextInspectionPeriod,
   )?.months;
+
+  const setRecommendedInspectionInterval = (presetKey: EicrIntervalPresetKey) => {
+    const preset = EICR_INTERVAL_PRESETS[presetKey];
+    setNextInspectionPeriod(preset.period as NextInspectionPeriodLabel);
+  };
+
+  const recommendedIntervalPresetKey: EicrIntervalPresetKey =
+    premisesType === 'Industrial'
+      ? 'Industrial'
+      : premisesType === 'Domestic'
+        ? 'Domestic'
+        : premisesType === 'Commercial'
+          ? 'Commercial'
+          : 'HighRisk';
+
+  const recommendedIntervalPreset = EICR_INTERVAL_PRESETS[recommendedIntervalPresetKey];
 
   const canUseSampleFill = isAdminRole(currentUser?.role);
 
@@ -815,12 +1788,13 @@ export default function EICRCertificatePage() {
         cpcCsa: '1.0',
         maxDiscTime: '0.4',
         bsen: 'BS EN 60898',
-        deviceType: 'B',
+        deviceType: 'B curve',
         rating: '6',
         capacity: '6',
         rcdRating: '30',
         maxZs: stripOhms(calculateMaxZs('B', '6')),
         r1r2: '1.12',
+        insResLN: '>200',
         insResLL: '>200',
         insResLE: '>200',
         testVoltage: '500',
@@ -840,12 +1814,13 @@ export default function EICRCertificatePage() {
         cpcCsa: '1.0',
         maxDiscTime: '0.4',
         bsen: 'BS EN 60898',
-        deviceType: 'B',
+        deviceType: 'B curve',
         rating: '6',
         capacity: '6',
         rcdRating: '30',
         maxZs: stripOhms(calculateMaxZs('B', '6')),
         r1r2: '1.05',
+        insResLN: '>200',
         insResLL: '>200',
         insResLE: '>200',
         testVoltage: '500',
@@ -857,6 +1832,7 @@ export default function EICRCertificatePage() {
       {
         ...createEmptyCircuitRow(2),
         circuitNumber: '3',
+        ringFinal: '✓',
         designation: 'Ring final sockets',
         wiringType: 'A',
         refMethod: 'C',
@@ -865,7 +1841,7 @@ export default function EICRCertificatePage() {
         cpcCsa: '1.5',
         maxDiscTime: '0.4',
         bsen: 'BS EN 60898',
-        deviceType: 'B',
+        deviceType: 'B curve',
         rating: '32',
         capacity: '6',
         rcdRating: '30',
@@ -874,6 +1850,7 @@ export default function EICRCertificatePage() {
         rnNeutral: '0.61',
         r2Cpc: '1.02',
         r1r2: '0.89',
+        insResLN: '>200',
         insResLL: '>200',
         insResLE: '>200',
         testVoltage: '500',
@@ -893,12 +1870,13 @@ export default function EICRCertificatePage() {
         cpcCsa: '1.5',
         maxDiscTime: '0.4',
         bsen: 'BS EN 61009',
-        deviceType: 'C',
+        deviceType: 'C curve',
         rating: '20',
         capacity: '6',
         rcdRating: '30',
         maxZs: stripOhms(calculateMaxZs('C', '20')),
         r1r2: '0.54',
+        insResLN: '>200',
         insResLL: '>200',
         insResLE: '>200',
         testVoltage: '500',
@@ -919,12 +1897,13 @@ export default function EICRCertificatePage() {
         cpcCsa: '1.5',
         maxDiscTime: '5.0',
         bsen: 'BS EN 61009',
-        deviceType: 'C',
+        deviceType: 'C curve',
         rating: '20',
         capacity: '6',
         rcdRating: '30',
         maxZs: stripOhms(calculateMaxZs('C', '20')),
         r1r2: '0.49',
+        insResLN: '>200',
         insResLL: '>200',
         insResLE: '>200',
         testVoltage: '500',
@@ -945,12 +1924,13 @@ export default function EICRCertificatePage() {
         cpcCsa: '1.0',
         maxDiscTime: '0.4',
         bsen: 'BS EN 60898',
-        deviceType: 'B',
+        deviceType: 'B curve',
         rating: '16',
         capacity: '6',
         rcdRating: '30',
         maxZs: stripOhms(calculateMaxZs('B', '16')),
         r1r2: '0.71',
+        insResLN: '>200',
         insResLL: '>200',
         insResLE: '>200',
         testVoltage: '500',
@@ -970,12 +1950,13 @@ export default function EICRCertificatePage() {
         cpcCsa: '2.5',
         maxDiscTime: '0.4',
         bsen: 'BS EN 61009',
-        deviceType: 'C',
+        deviceType: 'C curve',
         rating: '32',
         capacity: '6',
         rcdRating: '30',
         maxZs: stripOhms(calculateMaxZs('C', '32')),
         r1r2: '0.33',
+        insResLN: '>200',
         insResLL: '>200',
         insResLE: '>200',
         testVoltage: '500',
@@ -996,12 +1977,13 @@ export default function EICRCertificatePage() {
         cpcCsa: '2.5',
         maxDiscTime: '5.0',
         bsen: 'BS EN 60898',
-        deviceType: 'C',
+        deviceType: 'C curve',
         rating: '25',
         capacity: '10',
         rcdRating: '30',
         maxZs: stripOhms(calculateMaxZs('C', '25')),
         r1r2: '0.28',
+        insResLN: '>200',
         insResLL: '>200',
         insResLE: '>200',
         testVoltage: '500',
@@ -1048,6 +2030,7 @@ export default function EICRCertificatePage() {
     ]);
     setInspSchedule({ codes: sampleInspectionCodes, comments: sampleInspectionComments });
     setNatureOfSupply('3-phase (4 wire) ac');
+    setExternalEarthFaultLoopImpedance('0.18');
     setCircuits(sampleCircuits);
     setSelectedCircuitRow(0);
 
@@ -1069,12 +2052,12 @@ export default function EICRCertificatePage() {
       agreedLimitationsWith: 'R. Taylor, Site Manager',
       operationalLimitations: 'Warehouse remained in operation during the inspection, so some equipment was visually inspected only.',
       generalCondition: 'The installation was found to be in generally serviceable condition. Minor improvements to labelling and cable support are recommended.',
-      tradingTitle: 'Acme Electrical Services Ltd',
-      companyAddress: '12 Contractor Park, Manchester, M40 8AA',
-      companyTelephone: '0161 555 0101',
-      inspectorName: 'J. Smith',
+      tradingTitle: 'Example Contracting Business Ltd',
+      companyAddress: 'Business address',
+      companyTelephone: '01234 567890',
+      inspectorName: 'Inspector name',
       inspectorPosition: 'Qualified Supervisor',
-      registrationNumber: 'NICEIC 123456',
+      registrationNumber: 'Registration number',
       instrumentMultiFunction: 'Megger MFT-X1 SN MFT10452',
       instrumentInsulationResistance: 'Megger MFT-X1 SN MFT10452',
       instrumentContinuity: 'Megger MFT-X1 SN MFT10452',
@@ -1096,8 +2079,8 @@ export default function EICRCertificatePage() {
       mainSwitchVoltageRating: '400',
       mainSwitchFuseRating: '100',
       supplyPolarityConfirmed: 'Yes',
-      supplyProtectiveDeviceType: 'Fuse',
-      supplyProtectiveDeviceStandard: 'BS EN 1361',
+      supplyProtectiveDeviceType: 'BS 1361 Type IIb cartridge fuse',
+      supplyProtectiveDeviceStandard: 'BS 1361 Type IIb',
       supplyProtectiveDeviceRating: '100',
       earthElectrodeMeasurementMethod: 'N/A',
       earthElectrodeType: 'N/A',
@@ -1120,8 +2103,8 @@ export default function EICRCertificatePage() {
       bondingLightning: 'N/A',
       bondingSteel: 'N/A',
       consumerUnitDesignation: 'DB1',
-      consumerUnitLocation: 'Main intake room',
-      consumerUnitPfc: '2.4',
+      consumerUnitLocation: 'Meter cupboard',
+      consumerUnitPfc: '1.2',
       overallAssessment: 'SATISFACTORY',
       nextInspectionPeriod: '5 Years',
       earthingArrangements: 'TN-C-S',
@@ -1477,12 +2460,17 @@ export default function EICRCertificatePage() {
     }
   };
 
+  const visibleCircuitColumns = getVisibleCircuitColumns(isThreePhase, streamlined);
+  const circuitHeaderGroups = getCircuitHeaderGroups(visibleCircuitColumns);
+
   return (
     <div className="flex-1 bg-[#e8e1d6] p-4 pt-6 md:p-8">
       <div className="mx-auto max-w-[1500px] space-y-4">
       <div className="flex flex-col gap-3 border border-slate-300 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">EICR – Electrical Installation Condition Report</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {streamlined ? 'EICR Stremlined' : 'EICR – Electrical Installation Condition Report'}
+          </h2>
           <p className="text-sm text-muted-foreground">
             Requirements For Electrical Installations – BS 7671 IET Wiring Regulations
           </p>
@@ -1499,7 +2487,16 @@ export default function EICRCertificatePage() {
         </div>
       </div>
 
-      <form ref={formRef} onSubmit={handleSubmit} className={EDITOR_FORM_SHEET_CLASS}>
+      <form
+        ref={formRef}
+        onSubmit={handleSubmit}
+        className={cn(
+          EDITOR_FORM_SHEET_CLASS,
+          EXPECTED_VALUES_FADE_CLASS,
+          showExpectedValues &&
+            `${EXPECTED_VALUES_LOCKED_CLASS} [&_input]:opacity-55 [&_textarea]:opacity-55 [&_[role=combobox]]:opacity-55 [&_button]:opacity-55 [&_[data-expected-values-button=true]]:pointer-events-auto [&_[data-expected-values-button=true]]:opacity-100 [&_[data-expected-values-panel=true]]:opacity-100`,
+        )}
+      >
         <input type="hidden" name="certificateType" value="EICR" />
         {formError && (
           <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -1624,7 +2621,24 @@ export default function EICRCertificatePage() {
           <CardContent className={EDITOR_CONTENT_CLASS}>
             <div className={EDITOR_GRID_TWO_CLASS}>
               <div className="space-y-2">
-                <Label htmlFor="siteName">Client / Organisation *</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="siteName">Client / Organisation *</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-[10px]"
+                    onClick={() => {
+                      if (!selectedCustomerName) return;
+                      setSiteName(selectedCustomerName);
+                      setIsSiteNameAuto(true);
+                    }}
+                    disabled={!selectedCustomerName}
+                  >
+                    <Copy className="mr-1 h-3 w-3" />
+                    Copy from customer
+                  </Button>
+                </div>
                 <OrganisationAutocompleteField
                   id="siteName"
                   name="siteName"
@@ -1683,6 +2697,26 @@ export default function EICRCertificatePage() {
             <div className={EDITOR_GRID_TWO_CLASS}>
               <div className="space-y-2">
                 <Label htmlFor="reasonForReport">Reason for Report</Label>
+                <Select
+                  value="__custom"
+                  onValueChange={(value) => {
+                    if (value !== '__custom') {
+                      setFieldValue('reasonForReport', value);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Choose a preset reason (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__custom">Custom / manual entry</SelectItem>
+                    {REASON_FOR_REPORT_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Textarea
                   id="reasonForReport"
                   name="reasonForReport"
@@ -1692,20 +2726,23 @@ export default function EICRCertificatePage() {
                 />
               </div>
               <div className="space-y-2">
-                <DateDropdownField
-                  id="inspectionDate"
-                  name="inspectionDate"
-                  label="Date(s) of Inspection"
+                <NextVisitField
+                  visitDate={inspectionDate}
                   value={inspectionDate}
                   onChange={(newDate) => {
                     setInspectionDate(newDate);
                     setIsInspectionDateAuto(false);
                   }}
                   required
-                  isAutoPopulated={isInspectionDateAuto}
-                  autoTitle="Auto-populated with today's date. Edit if required."
-                  autoHelpText="Auto-populated with today's date. Hover the field for details."
+                  label="Date(s) of Inspection"
+                  showPeriodSelect={false}
                 />
+                <input type="hidden" name="inspectionDate" value={inspectionDate} />
+                {isInspectionDateAuto && (
+                  <p className="text-xs text-amber-700" title="This date was auto-filled with today's date.">
+                    Auto-populated with today's date. Hover the date field for details.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -1717,7 +2754,20 @@ export default function EICRCertificatePage() {
           <CardContent className={EDITOR_CONTENT_CLASS}>
             <div className={EDITOR_GRID_TWO_CLASS}>
               <div className="space-y-2">
-                <Label htmlFor="installationAddress">Installation Address</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="installationAddress">Installation Address</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-[10px]"
+                    onClick={() => setInstallationAddress(clientAddress)}
+                    disabled={!clientAddress}
+                  >
+                    <Copy className="mr-1 h-3 w-3" />
+                    Copy from client address
+                  </Button>
+                </div>
                 <AddressAutocompleteField
                   id="installationAddress"
                   name="installationAddress"
@@ -1729,7 +2779,7 @@ export default function EICRCertificatePage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="premisesType">Description of Premises</Label>
-                <Select name="premisesType" defaultValue="Commercial">
+                <Select name="premisesType" value={premisesType} onValueChange={setPremisesType}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -1737,7 +2787,7 @@ export default function EICRCertificatePage() {
                     <SelectItem value="Domestic">Domestic</SelectItem>
                     <SelectItem value="Commercial">Commercial</SelectItem>
                     <SelectItem value="Industrial">Industrial</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    <SelectItem value="Other">Other / special installation</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1752,7 +2802,7 @@ export default function EICRCertificatePage() {
                   value={evidenceOfAdditions}
                   onValueChange={setEvidenceOfAdditions}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="pr-8"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Yes">Yes</SelectItem>
                     <SelectItem value="No">No</SelectItem>
@@ -1916,20 +2966,37 @@ export default function EICRCertificatePage() {
             <div className={EDITOR_GRID_TWO_CLASS}>
               <div className="space-y-2">
                 <Label htmlFor="nextInspectionPeriod">Recommended Reinspection Period</Label>
-                <Select
-                  name="nextInspectionPeriod"
-                  value={nextInspectionPeriod}
-                  onValueChange={(value) => setNextInspectionPeriod(value as (typeof REINSPECTION_PERIODS)[number]['label'])}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1 Year">1 Year</SelectItem>
-                    <SelectItem value="2 Years">2 Years</SelectItem>
-                    <SelectItem value="3 Years">3 Years</SelectItem>
-                    <SelectItem value="5 Years">5 Years</SelectItem>
-                    <SelectItem value="10 Years">10 Years</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select
+                      name="nextInspectionPeriod"
+                      value={nextInspectionPeriod}
+                      onValueChange={(value) => setNextInspectionPeriod(value as (typeof REINSPECTION_PERIODS)[number]['label'])}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1 Year">1 Year</SelectItem>
+                        <SelectItem value="2 Years">2 Years</SelectItem>
+                        <SelectItem value="3 Years">3 Years</SelectItem>
+                        <SelectItem value="5 Years">5 Years</SelectItem>
+                        <SelectItem value="10 Years">10 Years</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2 text-[10px]"
+                      onClick={() => setRecommendedInspectionInterval(recommendedIntervalPresetKey)}
+                    >
+                      Use suggested interval
+                    </Button>
+                  </div>
+                  <div className="rounded border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] leading-4 text-amber-900">
+                    <span className="font-semibold">Suggested for {recommendedIntervalPreset.label}:</span>{' '}
+                    {recommendedIntervalPreset.period}. {recommendedIntervalPreset.note}
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Next Inspection Date</Label>
@@ -1960,6 +3027,17 @@ export default function EICRCertificatePage() {
             </div>
           </CardHeader>
           <CardContent className={EDITOR_CONTENT_CLASS}>
+            <div className="border-t border-border bg-white px-3 py-3">
+              <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                {OBSERVATION_CODE_GUIDANCE.map((item) => (
+                  <div key={item.code} className={`rounded border px-3 py-2 text-xs ${codeColors[item.code]}`}>
+                    <div className="font-semibold">{item.code} — {item.title}</div>
+                    <p className="mt-1 leading-4">{item.summary}</p>
+                    <p className="mt-1 text-[11px] leading-4 opacity-90">{item.examples}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
             {observations.length === 0 && (
               <p className="border-t border-border bg-white py-4 text-center text-sm text-muted-foreground">
                 No observations — the installation has no items adversely affecting electrical safety.
@@ -2041,6 +3119,26 @@ export default function EICRCertificatePage() {
                 <CertificateGroup title="Summary of the General Condition" columns={1}>
                   <div className="space-y-2">
                     <Label htmlFor="generalCondition">General Condition</Label>
+                    <Select
+                      value="__custom"
+                      onValueChange={(value) => {
+                        if (value !== '__custom') {
+                          setFieldValue('generalCondition', value);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Choose a preset general condition (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__custom">Custom / manual entry</SelectItem>
+                        {GENERAL_CONDITION_OPTIONS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Textarea
                       id="generalCondition"
                       name="generalCondition"
@@ -2060,29 +3158,29 @@ export default function EICRCertificatePage() {
                 <CertificateGroup title="Contracting Enterprise Responsible for the Report" columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="tradingTitle">Trading Title</Label>
-                    <Input id="tradingTitle" name="tradingTitle" placeholder="Cain Enabled Engineering Ltd" />
+                    <Input id="tradingTitle" name="tradingTitle" placeholder="Contracting business name" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="registrationNumber">Registration Number</Label>
-                    <Input id="registrationNumber" name="registrationNumber" placeholder="611716000" />
+                    <Input id="registrationNumber" name="registrationNumber" placeholder="Registration number" />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="companyAddress">Company Address</Label>
-                    <Input id="companyAddress" name="companyAddress" placeholder="Piccadilly Business Centre, Manchester, M12 6AE" />
+                    <Input id="companyAddress" name="companyAddress" placeholder="Business address" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="companyTelephone">Telephone Number</Label>
-                    <Input id="companyTelephone" name="companyTelephone" placeholder="01246 387 450" />
+                    <Input id="companyTelephone" name="companyTelephone" placeholder="Business telephone number" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="companyEmail">Company Email</Label>
-                    <Input id="companyEmail" name="companyEmail" type="email" placeholder="office@example.co.uk" />
+                    <Input id="companyEmail" name="companyEmail" type="email" placeholder="business@example.co.uk" />
                   </div>
                 </CertificateGroup>
                 <CertificateGroup title="Person Responsible for the Inspection and Testing" columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="inspectorName">Inspector Name *</Label>
-                    <Input id="inspectorName" name="inspectorName" required placeholder="Daniel Allport" />
+                    <Input id="inspectorName" name="inspectorName" required placeholder="Inspector name" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="inspectorPosition">Position / Role</Label>
@@ -2188,7 +3286,13 @@ export default function EICRCertificatePage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="externalEarthFaultLoopImpedance">External Earth Fault Loop Impedance, Ze (Ω)</Label>
-                    <Input id="externalEarthFaultLoopImpedance" name="externalEarthFaultLoopImpedance" placeholder="0.13" />
+                    <Input
+                      id="externalEarthFaultLoopImpedance"
+                      name="externalEarthFaultLoopImpedance"
+                      placeholder="0.13"
+                      value={externalEarthFaultLoopImpedance}
+                      onChange={(e) => setExternalEarthFaultLoopImpedance(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="shortCircuitCapacity">Short-Circuit Capacity (kA)</Label>
@@ -2198,7 +3302,7 @@ export default function EICRCertificatePage() {
                 <CertificateGroup title="Distributor's Protective Device" columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="supplyProtectiveDeviceType">Supply Protective Device Type (BS EN)</Label>
-                    <Select name="supplyProtectiveDeviceType" defaultValue="Fuse">
+                    <Select name="supplyProtectiveDeviceType" defaultValue="BS 1361 Type IIb cartridge fuse">
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {SUPPLY_PROTECTIVE_DEVICE_TYPE_OPTIONS.map((option) => (
@@ -2270,8 +3374,8 @@ export default function EICRCertificatePage() {
             <Card className={EDITOR_CARD_CLASS}>
               <CardHeader className={EDITOR_HEADER_CLASS}><CardTitle>Particulars of Installation Referred to in this Report (continued)</CardTitle></CardHeader>
               <CardContent className={cn(EDITOR_CONTENT_CLASS, EDITOR_SECTION_BODY_CLASS)}>
-                <div className="grid gap-3 xl:grid-cols-2">
-                  <CertificateGroup title="Origin Verification and Supply Conductors" columns={1}>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  <CertificateGroup title="Origin Verification and Supply Conductors" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="supplyPolarityConfirmed">Supply Polarity Confirmed</Label>
                       <Select name="supplyPolarityConfirmed" defaultValue="Yes">
@@ -2284,7 +3388,7 @@ export default function EICRCertificatePage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="supplyProtectiveDeviceStandard">Supply Protective Device Standard</Label>
-                      <Select name="supplyProtectiveDeviceStandard" defaultValue="BS 1361">
+                      <Select name="supplyProtectiveDeviceStandard" defaultValue="BS 1361 Type IIb">
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {SUPPLY_PROTECTIVE_DEVICE_STANDARDS.map((option) => (
@@ -2315,7 +3419,7 @@ export default function EICRCertificatePage() {
                       />
                     </div>
                   </CertificateGroup>
-                  <CertificateGroup title="Earth Electrode Details" columns={1}>
+                  <CertificateGroup title="Earth Electrode Details" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="earthElectrodeType">Earth Electrode Type</Label>
                       <Select name="earthElectrodeType" defaultValue="N/A">
@@ -2336,7 +3440,7 @@ export default function EICRCertificatePage() {
                       <Input id="earthElectrodeLocation" name="earthElectrodeLocation" placeholder="N/A" />
                     </div>
                   </CertificateGroup>
-                  <CertificateGroup title="Main Switch" columns={2}>
+                  <CertificateGroup title="Main Switch" columns={2} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="mainSwitchType">Main Switch Type / BS(EN)</Label>
                       <Select name="mainSwitchType" defaultValue="Isolator">
@@ -2372,7 +3476,7 @@ export default function EICRCertificatePage() {
                       <Input id="mainSwitchVoltageRating" name="mainSwitchVoltageRating" placeholder="240" />
                     </div>
                   </CertificateGroup>
-                  <CertificateGroup title="RCD Main Switch Details" columns={1}>
+                  <CertificateGroup title="RCD Main Switch Details" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="rcdRatedResidualCurrent">RCD Rated Residual Current IΔn (mA)</Label>
                       <Input id="rcdRatedResidualCurrent" name="rcdRatedResidualCurrent" placeholder="30" />
@@ -2386,7 +3490,7 @@ export default function EICRCertificatePage() {
                       <Input id="rcdMeasuredTime" name="rcdMeasuredTime" placeholder="N/A" />
                     </div>
                   </CertificateGroup>
-                  <CertificateGroup title="Earthing Conductor" columns={1}>
+                  <CertificateGroup title="Earthing Conductor" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="earthingConductorMaterial">Earthing Conductor Material</Label>
                       <Select name="earthingConductorMaterial" defaultValue="Copper">
@@ -2413,7 +3517,7 @@ export default function EICRCertificatePage() {
                       </Select>
                     </div>
                   </CertificateGroup>
-                  <CertificateGroup title="Main Protective Bonding Conductor" columns={1}>
+                  <CertificateGroup title="Main Protective Bonding Conductor" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="mainBondingMaterial">Main Bonding Material</Label>
                       <Select name="mainBondingMaterial" defaultValue="Copper">
@@ -2440,7 +3544,7 @@ export default function EICRCertificatePage() {
                       </Select>
                     </div>
                   </CertificateGroup>
-                  <CertificateGroup title="Bonding to Extraneous-Conductive-Parts" columns={3} className="xl:col-span-2">
+                  <CertificateGroup title="Bonding to Extraneous-Conductive-Parts" columns={3} className="h-fit md:col-span-2 xl:col-span-3">
                     <div className="space-y-2">
                       <Label htmlFor="bondingWater">Bonding: Water Pipes</Label>
                       <Select name="bondingWater" defaultValue="Yes">
@@ -2517,6 +3621,7 @@ export default function EICRCertificatePage() {
               value={inspSchedule}
               onCodeChange={handleInspCodeChange}
               onCommentChange={handleInspCommentChange}
+              disabledRefs={disabledInspectionRefs}
             />
           </CardContent>
         </Card>
@@ -2527,7 +3632,11 @@ export default function EICRCertificatePage() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <CardTitle>Schedule of Circuit Details and Test Results</CardTitle>
-                <CardDescription>Complete the distribution board and circuit result entries as they will appear on the certificate schedule.</CardDescription>
+                <CardDescription>
+                  {streamlined
+                    ? 'A streamlined circuit schedule with unnecessary continuity-detail columns removed for faster entry.'
+                    : 'Complete the distribution board and circuit result entries as they will appear on the certificate schedule.'}
+                </CardDescription>
               </div>
               <Button type="button" size="sm" onClick={addCircuitRow}>
                 <Plus className="h-4 w-4 mr-2" />Add Circuit Row
@@ -2535,23 +3644,78 @@ export default function EICRCertificatePage() {
             </div>
           </CardHeader>
           <CardContent className={cn(EDITOR_CONTENT_CLASS, EDITOR_SECTION_BODY_CLASS)}>
-            <CertificateGroup title="Distribution Board / Consumer Unit Details" columns={3}>
-              <div className="space-y-2">
-                <Label htmlFor="consumerUnitDesignation">Distribution board designation</Label>
-                <Input id="consumerUnitDesignation" name="consumerUnitDesignation" placeholder="D.B.1" />
+            <div
+              data-expected-values-panel="true"
+              className={cn(
+                'rounded-md border border-slate-300 bg-white p-3 transition-colors',
+                showExpectedValues ? 'border-amber-400 bg-amber-50/70' : '',
+              )}
+            >
+              <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h4 className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                    Distribution Board / Consumer Unit Details
+                  </h4>
+                  <p className="mt-0.5 text-[10px] leading-4 text-slate-500">
+                    Top fields now follow the BS 7671 model form wording used for the board schedule.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant={showExpectedValues ? 'default' : 'outline'}
+                  size="sm"
+                  data-expected-values-button="true"
+                  onClick={() => setShowExpectedValues((prev) => !prev)}
+                  className={cn('h-8 px-3 text-[11px]', showExpectedValues ? 'bg-amber-600 hover:bg-amber-700' : '')}
+                >
+                  {showExpectedValues ? 'Hide expected values' : 'Show expected values'}
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="consumerUnitLocation">Distribution board location</Label>
-                <Input id="consumerUnitLocation" name="consumerUnitLocation" placeholder="Meter Cupboard" />
+
+              {showExpectedValues ? (
+                <div className="mb-3 rounded border border-amber-300 bg-amber-100/70 px-3 py-2 text-[11px] text-amber-900">
+                  Expected-values mode is active. Form entry is temporarily locked and the form is faded to indicate review mode.
+                  Hover the relevant readings in the table below to compare the actual value with an expected average and an acceptable range.
+                </div>
+              ) : null}
+
+              <div className="grid gap-px bg-slate-300 md:grid-cols-3 [&>div]:space-y-1 [&>div]:bg-white [&>div]:p-2">
+                <div className="space-y-2">
+                  <Label htmlFor="consumerUnitDesignation">Distribution board / consumer unit reference</Label>
+                  <ExpectedValueInput
+                    fieldKey="consumerUnitDesignation"
+                    showExpectedValues={showExpectedValues}
+                    id="consumerUnitDesignation"
+                    name="consumerUnitDesignation"
+                    placeholder="DB1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="consumerUnitLocation">Location of distribution board / consumer unit</Label>
+                  <ExpectedValueInput
+                    fieldKey="consumerUnitLocation"
+                    showExpectedValues={showExpectedValues}
+                    id="consumerUnitLocation"
+                    name="consumerUnitLocation"
+                    defaultValue=""
+                    placeholder="Location"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="consumerUnitPfc">Prospective fault current (kA)</Label>
+                  <ExpectedValueInput
+                    fieldKey="consumerUnitPfc"
+                    showExpectedValues={showExpectedValues}
+                    id="consumerUnitPfc"
+                    name="consumerUnitPfc"
+                    placeholder="1.2"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="consumerUnitPfc">Prospective fault current (kA)</Label>
-                <Input id="consumerUnitPfc" name="consumerUnitPfc" placeholder="1.8" />
-              </div>
-            </CertificateGroup>
+            </div>
 
             <div className="overflow-x-auto border border-border">
-              <div className="flex items-center gap-1 border-b border-border bg-muted/20 px-1 py-1">
+              <div className="flex flex-wrap items-center gap-1 border-b border-border bg-muted/20 px-1 py-1">
                 <Button type="button" size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={insertCircuitRow}>
                   Insert Row
                 </Button>
@@ -2568,19 +3732,51 @@ export default function EICRCertificatePage() {
                 >
                   Delete Row
                 </Button>
+                <Select
+                  value={selectedCircuitTemplate}
+                  onValueChange={setSelectedCircuitTemplate}
+                >
+                  <SelectTrigger className="h-6 w-[13rem] rounded-none border-slate-300 bg-white px-2 text-[10px] shadow-none focus:ring-0 focus:ring-offset-0">
+                    <SelectValue placeholder="Choose circuit template…" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[100] max-h-64 min-w-[16rem] overflow-y-auto border-border bg-white text-slate-900 text-[10px]">
+                    <SelectItem className="text-[10px]" value="__template">Choose circuit template…</SelectItem>
+                    {CIRCUIT_TEMPLATES.map((template) => (
+                      <SelectItem className="text-[10px]" key={template.id} value={template.id}>
+                        {template.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-[10px]"
+                  onClick={() => {
+                    if (selectedCircuitTemplate !== '__template') {
+                      applyCircuitTemplate(selectedCircuitRow, selectedCircuitTemplate);
+                      setSelectedCircuitTemplate('__template');
+                    }
+                  }}
+                  disabled={selectedCircuitTemplate === '__template'}
+                >
+                  <ListPlus className="mr-1 h-3 w-3" />
+                  Apply Template
+                </Button>
                 <span className="ml-auto text-[10px] text-muted-foreground">Selected row: {selectedCircuitRow + 1}</span>
               </div>
               <table className="w-full border-collapse text-[10px]">
                 <thead className="bg-muted/30 text-[9px]">
                   <tr>
-                    {CIRCUIT_COLUMNS.map((col, index) => {
+                    {visibleCircuitColumns.map((col, index) => {
                       if (!col.group) {
                         return (
                           <th
                             key={`head-single-${col.key}`}
                             rowSpan={2}
                             title={col.title || col.label}
-                            className={`border border-border px-0.5 py-px text-center font-semibold leading-none whitespace-nowrap align-middle ${col.widthClass || 'w-12'}`}
+                            className={`border border-border px-0.5 py-px text-center font-semibold leading-tight whitespace-normal align-middle ${col.widthClass || 'w-12'}`}
                           >
                             {col.key === 'circuitNumber' ? (
                               <div className="flex flex-col items-center gap-0.5">
@@ -2604,7 +3800,7 @@ export default function EICRCertificatePage() {
                         );
                       }
 
-                      const group = CIRCUIT_HEADER_GROUPS.find((g) => g.start === index);
+                      const group = circuitHeaderGroups.find((g) => g.start === index);
                       if (!group) return null;
 
                       return (
@@ -2626,11 +3822,11 @@ export default function EICRCertificatePage() {
                     </th>
                   </tr>
                   <tr>
-                    {CIRCUIT_COLUMNS.filter((col) => Boolean(col.group)).map((col) => (
+                    {visibleCircuitColumns.filter((col) => Boolean(col.group)).map((col) => (
                       <th
                         key={`head-sub-${col.key}`}
                         title={col.title || col.label}
-                        className={`border border-border px-0.5 py-px text-center font-semibold leading-none whitespace-nowrap ${col.widthClass || 'w-12'}`}
+                        className={`border border-border px-0.5 py-px text-center font-semibold leading-tight whitespace-normal ${col.widthClass || 'w-12'}`}
                       >
                         {col.label}
                       </th>
@@ -2641,77 +3837,178 @@ export default function EICRCertificatePage() {
                   {circuits.map((row, rowIndex) => (
                     <tr
                       key={`circuit-row-${rowIndex}`}
-                      className={`border-t ${selectedCircuitRow === rowIndex ? 'bg-blue-50/60' : ''}`}
+                      draggable
+                      onDragStart={() => {
+                        setDraggedCircuitRow(rowIndex);
+                        setSelectedCircuitRow(rowIndex);
+                      }}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        if (dragOverCircuitRow !== rowIndex) {
+                          setDragOverCircuitRow(rowIndex);
+                        }
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (draggedCircuitRow !== null) {
+                          moveCircuitRow(draggedCircuitRow, rowIndex);
+                        }
+                        setDraggedCircuitRow(null);
+                        setDragOverCircuitRow(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedCircuitRow(null);
+                        setDragOverCircuitRow(null);
+                      }}
+                      className={`border-t ${
+                        selectedCircuitRow === rowIndex ? 'bg-blue-50/60' : ''
+                      } ${
+                        dragOverCircuitRow === rowIndex ? 'border-t-2 border-t-blue-500' : ''
+                      } ${
+                        draggedCircuitRow === rowIndex ? 'opacity-60' : ''
+                      }`}
                       onClick={() => setSelectedCircuitRow(rowIndex)}
                     >
-                      {CIRCUIT_COLUMNS.map((col) => {
+                      {visibleCircuitColumns.map((col) => {
                         const options = CIRCUIT_SELECT_OPTIONS[col.key];
 
                         return (
                           <td key={`${rowIndex}-${col.key}`} className="border border-border p-0 align-top">
-                            {options ? (
+                            {col.key === 'ringFinal' ? (
+                              <button
+                                type="button"
+                                title="Click to cycle ring final between tick and blank"
+                                onClick={() =>
+                                  updateCircuitField(rowIndex, col.key, row[col.key] === '✓' ? '' : '✓')
+                                }
+                                className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${col.widthClass || 'w-12'} ${
+                                  row[col.key] === '✓'
+                                    ? 'text-green-700 hover:bg-green-50'
+                                    : 'text-slate-300 hover:bg-slate-50'
+                                }`}
+                              >
+                                {row[col.key] || '☐'}
+                              </button>
+                            ) : options ? (
                               <Select
                                 value={row[col.key] || '__unset'}
-                                onValueChange={(value) => updateCircuitField(rowIndex, col.key, value === '__unset' ? '' : value)}
+                                onValueChange={(value) =>
+                                  updateCircuitField(rowIndex, col.key, value === '__unset' ? '' : value)
+                                }
                               >
-                                <SelectTrigger className={`h-6 rounded-none border-0 px-0.5 text-[9px] leading-none shadow-none gap-0.5 [&>svg]:h-3 [&>svg]:w-3 focus:ring-0 focus:ring-offset-0 ${col.widthClass || 'w-12'}`}>
-                                  <SelectValue placeholder="-" />
-                                </SelectTrigger>
-                                <SelectContent
-                                  position="item-aligned"
-                                  className="z-[100] max-h-64 min-w-[16rem] overflow-y-auto border-border bg-white text-slate-900 text-[10px]"
+                                <SelectTrigger
+                                  className={cn(
+                                    'relative h-6 rounded-none border-0 px-0 pr-[6px] text-[9px] leading-none shadow-none gap-0 justify-center text-center',
+                                    '[&>span]:block [&>span]:min-w-0 [&>span]:flex-none [&>span]:truncate [&>span]:text-center [&>span]:mx-auto [&>span]:pr-0',
+                                    '[&>svg]:absolute [&>svg]:right-[1px] [&>svg]:top-1/2 [&>svg]:h-[4px] [&>svg]:w-[4px] [&>svg]:-translate-y-1/2 [&>svg]:shrink-0',
+                                    col.widthClass || 'w-12',
+                                  )}
+                                  title={options.find((option) => option.value === row[col.key])?.title}
                                 >
-                                  <SelectItem className="text-[10px]" value="__unset">-</SelectItem>
+                                  <SelectValue placeholder="-">
+                                    {row[col.key] || '-'}
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent className="z-[100] max-h-64 min-w-[10rem] overflow-y-auto border-border bg-white text-slate-900 text-[10px]">
+                                  <SelectItem className="text-[10px]" value="__unset">
+                                    -
+                                  </SelectItem>
                                   {options.map((option) => (
                                     <SelectItem
                                       className="text-[10px]"
-                                      key={`${col.key}-${option.value}`}
+                                      key={option.value}
                                       value={option.value}
-                                      title={option.title || option.menuLabel}
+                                      title={option.title}
+                                      textValue={option.menuLabel}
                                     >
-                                      {option.menuLabel}
+                                      <span className="font-medium">{option.value}</span>
+                                      {option.title ? <span className="text-slate-500"> — {option.title}</span> : null}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
-                            ) : col.key === 'maxZs' ? (
-                              <div className={`flex h-6 items-center gap-0.5 px-0.5 ${col.widthClass || 'w-12'}`}>
-                                <Input
-                                  value={row[col.key]}
-                                  onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                  className="h-5 w-[2.8rem] rounded-none border-0 px-0.5 text-[9px] leading-none shadow-none focus-visible:ring-0"
-                                />
-                                {getDeratedMaxZsDisplay(row) && (
-                                  <span
-                                    className="whitespace-nowrap text-[9px] font-medium text-green-700"
-                                    title={`Derated by installation method and wiring type (factor ${getDeratingFactorForCircuit(row).toFixed(2)})`}
-                                  >
-                                    ({getDeratedMaxZsDisplay(row)})
-                                  </span>
-                                )}
-                              </div>
-                            ) : col.key === 'measuredZs' ? (
+                            ) : col.key === 'designation' ? (
                               <Input
                                 value={row[col.key]}
                                 onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                title={zsExceedsMax(row) ? `Exceeds maximum permitted Zs (${getDeratedMaxZsDisplay(row) ?? row.maxZs}) – C2 observation added to Section 7` : undefined}
-                                className={`h-6 rounded-none border-0 px-0.5 text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'} ${zsExceedsMax(row) ? 'bg-orange-100 text-orange-900 font-semibold' : ''}`}
+                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'}`}
+                              />
+                            ) : ['r1Line', 'rnNeutral', 'r2Cpc', 'r1r2', 'insResLN', 'insResLL', 'insResLE'].includes(col.key) ? (
+                              <ExpectedValueInput
+                                fieldKey={col.key as keyof typeof EXPECTED_VALUE_MAP}
+                                showExpectedValues={showExpectedValues}
+                                value={row[col.key]}
+                                onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
+                                title={
+                                  col.key === 'r2Cpc'
+                                      ? getTwinAndEarthR2RatioTitle(row)
+                                      : col.key === 'r1r2'
+                                        ? getR1R2ValidationState(row)?.title
+                                        : undefined
+                                }
+                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'} ${getCircuitFieldInconsistencyClass(row, col.key, externalEarthFaultLoopImpedance)}`}
+                              />
+                            ) : col.key === 'maxZs' ? (
+                              <div className={`grid h-10 grid-cols-2 divide-x divide-border ${col.widthClass || 'w-12'}`}>
+                                <Input
+                                  value={row[col.key]}
+                                  onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
+                                  className="h-10 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0"
+                                  title="Maximum permitted Zs"
+                                />
+                                <div
+                                  className="flex items-center justify-center px-0 text-center text-[8px] font-medium leading-none text-green-700"
+                                  title={`Derated by installation method and wiring type (factor ${getDeratingFactorForCircuit(row).toFixed(2)})`}
+                                >
+                                  {getDeratedMaxZsDisplay(row) || '-'}
+                                </div>
+                              </div>
+                            ) : col.key === 'measuredZs' ? (
+                              <ExpectedValueInput
+                                fieldKey="measuredZs"
+                                showExpectedValues={showExpectedValues}
+                                value={row[col.key]}
+                                onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
+                                title={
+                                  getMeasuredZsValidationTitle(row, externalEarthFaultLoopImpedance) ??
+                                  (zsExceedsMax(row)
+                                    ? `Exceeds maximum permitted Zs (${getDeratedMaxZsDisplay(row) ?? row.maxZs}) – C2 observation added to Section 7`
+                                    : undefined)
+                                }
+                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'} ${
+                                  getMeasuredZsValidation(row, externalEarthFaultLoopImpedance)
+                                    ? getCircuitFieldInconsistencyClass(row, 'measuredZs', externalEarthFaultLoopImpedance)
+                                    : zsExceedsMax(row) || hasCircuitInconsistency(row, externalEarthFaultLoopImpedance)
+                                      ? 'bg-orange-100 text-orange-900 font-semibold'
+                                      : row.measuredZs.trim() && row.r1r2.trim()
+                                        ? 'bg-amber-100 text-amber-900 font-semibold'
+                                        : ''
+                                }`}
                               />
                             ) : col.cycling ? (
                               <button
                                 type="button"
-                                title={`Click to cycle: ${col.cycling.join(' → ')}`}
+                                title={`Click to cycle: ${(col.cycling ?? []).join(' → ')}`}
                                 onClick={() => {
+                                  const cyclingOptions = col.cycling ?? [];
                                   const val = row[col.key] as string;
-                                  const idx = col.cycling!.indexOf(val);
-                                  updateCircuitField(rowIndex, col.key, col.cycling![(idx + 1) % col.cycling!.length]);
+                                  const idx = cyclingOptions.indexOf(val);
+                                  updateCircuitField(
+                                    rowIndex,
+                                    col.key,
+                                    cyclingOptions[(idx + 1) % cyclingOptions.length] ?? cyclingOptions[0] ?? '',
+                                  );
                                 }}
                                 className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${col.widthClass || 'w-12'} ${
-                                  (row[col.key] as string) === '\u2713' ? 'text-green-700 hover:bg-green-50' :
-                                  (row[col.key] as string) === '\u2717' ? 'text-red-600 hover:bg-red-50' :
-                                  (row[col.key] as string) === 'N/A' ? 'text-slate-400 hover:bg-slate-50' :
-                                  (row[col.key] as string) ? 'text-slate-700 hover:bg-slate-50' :
-                                  'text-slate-300 hover:bg-slate-50'
+                                  (row[col.key] as string) === '✓'
+                                    ? 'text-green-700 hover:bg-green-50'
+                                    : (row[col.key] as string) === '✗'
+                                      ? 'text-red-600 hover:bg-red-50'
+                                      : (row[col.key] as string) === 'N/A'
+                                        ? 'text-slate-400 hover:bg-slate-50'
+                                        : (row[col.key] as string)
+                                          ? 'text-slate-700 hover:bg-slate-50'
+                                          : 'text-slate-300 hover:bg-slate-50'
                                 }`}
                               >
                                 {(row[col.key] as string) || '-'}
@@ -2720,23 +4017,42 @@ export default function EICRCertificatePage() {
                               <Input
                                 value={row[col.key]}
                                 onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                className={`h-6 rounded-none border-0 px-0.5 text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'}`}
+                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'}`}
                               />
                             )}
                           </td>
                         );
                       })}
                       <td className="border border-border p-0.5 align-top">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0 text-red-600"
-                          onClick={() => removeCircuitRow(rowIndex)}
-                          disabled={circuits.length <= 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <button
+                            type="button"
+                            draggable
+                            onDragStart={(event) => {
+                              event.stopPropagation();
+                              setDraggedCircuitRow(rowIndex);
+                              setSelectedCircuitRow(rowIndex);
+                            }}
+                            onDragEnd={() => {
+                              setDraggedCircuitRow(null);
+                              setDragOverCircuitRow(null);
+                            }}
+                            className="flex h-7 w-7 items-center justify-center rounded-sm text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                            title="Drag to reorder row"
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 text-red-600"
+                            onClick={() => removeCircuitRow(rowIndex)}
+                            disabled={circuits.length <= 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -2808,4 +4124,8 @@ export default function EICRCertificatePage() {
       </div>
     </div>
   );
+}
+
+export default function Page() {
+  return <EICRCertificatePage />;
 }

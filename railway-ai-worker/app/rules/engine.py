@@ -137,6 +137,137 @@ def _build_result(rule: dict[str, Any], context: dict[str, Any]) -> dict[str, An
     }
 
 
+def _parse_resistance_value(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+        return numeric if numeric > 0 else None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    cleaned = "".join(character for character in text if character.isdigit() or character in {".", "-"})
+    if not cleaned:
+        return None
+
+    try:
+        numeric = float(cleaned)
+    except ValueError:
+        return None
+
+    return numeric if numeric > 0 else None
+
+
+def _infer_circuit_zs_mode(row: dict[str, Any]) -> str:
+    designation = str(row.get("designation") or "").strip().lower()
+    is_ring_final = str(row.get("ringFinal") or "").strip() == "✓"
+    r1 = _parse_resistance_value(row.get("r1Line"))
+    rn = _parse_resistance_value(row.get("rnNeutral"))
+    r2 = _parse_resistance_value(row.get("r2Cpc"))
+
+    has_all_ring_values = r1 is not None and rn is not None and r2 is not None
+    mentions_radial = "radial" in designation
+    mentions_ring = "ring" in designation
+
+    if mentions_radial and not is_ring_final:
+        return "radial"
+
+    if has_all_ring_values:
+        equal_r1_r2 = r1 is not None and r2 is not None and abs(r1 - r2) / max(r1, r2) <= 0.1
+        if is_ring_final or mentions_ring:
+            return "equal-r1-r2" if equal_r1_r2 else "ring"
+        if equal_r1_r2:
+            return "equal-r1-r2"
+        return "ring"
+
+    if is_ring_final or mentions_ring:
+        return "ring"
+
+    return "radial"
+
+
+def _build_circuit_zs_validation(row: dict[str, Any]) -> dict[str, Any] | None:
+    measured = _parse_resistance_value(row.get("measuredZs"))
+    r1r2 = _parse_resistance_value(row.get("r1r2"))
+
+    if measured is None or r1r2 is None:
+        return None
+
+    mode = _infer_circuit_zs_mode(row)
+    r1 = _parse_resistance_value(row.get("r1Line"))
+    rn = _parse_resistance_value(row.get("rnNeutral"))
+    r2 = _parse_resistance_value(row.get("r2Cpc"))
+
+    expected: float | None = None
+    tolerance = 15.0
+
+    if mode == "radial":
+        expected = r1r2
+        tolerance = 15.0
+    elif mode == "equal-r1-r2":
+        expected = r1r2 / 4.0
+        tolerance = 8.0
+    else:
+        if r1 is None or rn is None or r2 is None:
+            return None
+        ring_expected_from_continuity = (r1 + rn + r2) / 8.0
+        expected = (r1r2 + ring_expected_from_continuity) / 2.0
+        tolerance = 12.0
+
+    if expected is None or expected <= 0:
+        return None
+
+    delta = measured - expected
+    percent = abs(delta / expected) * 100.0 if expected else 0.0
+
+    return {
+        "mode": mode,
+        "expected": round(expected, 4),
+        "measured": round(measured, 4),
+        "delta": round(delta, 4),
+        "percent": round(percent, 2),
+        "tolerance": tolerance,
+        "withinTolerance": percent <= tolerance,
+    }
+
+
+def _derive_circuit_flags(certificate_context: dict[str, Any]) -> dict[str, Any]:
+    circuits = dict(certificate_context.get("circuits") or {})
+    rows = circuits.get("rows") or []
+    if not isinstance(rows, list):
+        return {"zsValidationRows": [], "zsValidationSummary": {"invalidCount": 0, "hasInvalid": False}}
+
+    validation_rows: list[dict[str, Any]] = []
+
+    for index, raw_row in enumerate(rows):
+        if not isinstance(raw_row, dict):
+            continue
+
+        validation = _build_circuit_zs_validation(raw_row)
+        if validation is None:
+            continue
+
+        validation_rows.append(
+            {
+                "index": index,
+                "circuitNumber": raw_row.get("circuitNumber"),
+                "designation": raw_row.get("designation"),
+                **validation,
+            }
+        )
+
+    invalid_count = sum(1 for row in validation_rows if not row.get("withinTolerance"))
+    return {
+        "zsValidationRows": validation_rows,
+        "zsValidationSummary": {
+            "invalidCount": invalid_count,
+            "hasInvalid": invalid_count > 0,
+        },
+    }
+
+
 def _derive_measurement_flags(certificate_context: dict[str, Any]) -> dict[str, Any]:
     measurements = dict(certificate_context.get("measurements") or {})
 
@@ -237,6 +368,7 @@ def _build_context(
     normalized_certificate_context["bonding"] = certificate_bonding
     normalized_certificate_context["circuits"] = certificate_circuits
     normalized_certificate_context["measurementFlags"] = _derive_measurement_flags(normalized_certificate_context)
+    normalized_certificate_context["circuitFlags"] = _derive_circuit_flags(normalized_certificate_context)
 
     return {
         "ocr": {

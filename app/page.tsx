@@ -191,15 +191,15 @@ export default function LandingPage() {
               },
               {
                 icon: Shield,
-                title: 'Dynamic Data Mapping',
-                desc: 'Insert {{handlebars}} tokens and map fields to live job, client, and company data from ServiceM8 for consistent, error-free document generation.',
+                title: 'Health & Safety',
+                desc: 'Site-ready RAMS in minutes.',
                 color: 'text-indigo-500',
                 bg: 'bg-indigo-50 dark:bg-indigo-900/20'
               },
               {
                 icon: Lock,
-                title: 'Secure Cloud Storage',
-                desc: 'Keep templates, generated reports, and business data protected in secure cloud storage with controlled access and reliable availability.',
+                title: 'Risk assessments for any job type',
+                desc: 'Method statements with sequences. Site-specific hazard identification. PDF export ready for site induction.',
                 color: 'text-emerald-500',
                 bg: 'bg-emerald-50 dark:bg-emerald-900/20'
               }

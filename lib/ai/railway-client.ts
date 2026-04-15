@@ -1,3 +1,22 @@
+export interface AnalyzeImageCertificateEarthElectrodeContext {
+  present?: boolean | null;
+  accessible?: boolean | null;
+  resistance?: number | null;
+  location?: string | null;
+  type?: string | null;
+}
+
+export interface AnalyzeImageCertificateEarthingContext {
+  earthingArrangement?: string | null;
+  meansOfEarthing?: string | null;
+  earthElectrode?: AnalyzeImageCertificateEarthElectrodeContext | null;
+}
+
+export interface AnalyzeImageCertificateContext {
+  earthing?: AnalyzeImageCertificateEarthingContext | null;
+  [key: string]: unknown;
+}
+
 export interface AnalyzeImageRequest {
   imageUrl?: string;
   imageBase64?: string;
@@ -5,6 +24,7 @@ export interface AnalyzeImageRequest {
   inspectionType?: string;
   requestedSections?: string[];
   metadata?: Record<string, unknown>;
+  certificateContext?: AnalyzeImageCertificateContext;
 }
 
 export interface AnalyzeImageAccessoryFinding {
