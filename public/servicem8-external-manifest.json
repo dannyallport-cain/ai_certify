@@ -1,0 +1,10 @@
+{
+  "name": "AI Certify",
+  "version": "1.0",
+  "iconURL": "https://ai-certificates.app/icon-512.png",
+  "supportURL": "https://ai-certificates.app/contact",
+  "supportEmail": "support@ai-certificates.app",
+  "oauth": {
+    "scope": "read_jobs read_customers"
+  }
+}

@@ -156,7 +156,7 @@ export default function ServiceM8Page() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">ServiceM8 Integration</h2>
           <p className="text-muted-foreground">
-            Connect your ServiceM8 account to sync jobs, clients, and certificates.
+            Connect your ServiceM8 account to sync jobs, customers, and certificates.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -196,7 +196,7 @@ export default function ServiceM8Page() {
               Connect ServiceM8
             </CardTitle>
             <CardDescription>
-              Link your ServiceM8 account to automatically sync jobs, clients, and attach
+              Link your ServiceM8 account to automatically sync jobs, customers, and attach
               completed certificates to jobs.
             </CardDescription>
           </CardHeader>
@@ -216,7 +216,7 @@ export default function ServiceM8Page() {
                 <div>
                   <h4 className="font-medium">Client Import</h4>
                   <p className="text-sm text-muted-foreground">
-                    Import clients from ServiceM8 as customers.
+                    Import customers from ServiceM8 into your customer list.
                   </p>
                 </div>
               </div>

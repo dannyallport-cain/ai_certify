@@ -1,10 +1,8 @@
 /**
- * ServiceM8 Addon Activation Endpoint
- * 
- * This is the URL ServiceM8 redirects to when a user clicks "Activate" 
- * on the addon in the ServiceM8 store. It initiates the OAuth flow.
- * 
- * Flow: ServiceM8 Store -> This endpoint -> ServiceM8 OAuth -> /api/servicem8/callback
+ * ServiceM8 external integration activation endpoint.
+ *
+ * ServiceM8 sends the user here when they click Connect from the add-on listing.
+ * This route starts the OAuth flow for the standalone AI Certify web app.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

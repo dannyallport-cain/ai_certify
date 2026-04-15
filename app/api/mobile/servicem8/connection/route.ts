@@ -13,21 +13,26 @@ export async function GET(request: NextRequest) {
       return result.error;
     }
 
-    const companyInfo = await result.serviceM8Client.getCompanyInfo();
+    let companyInfo: Awaited<ReturnType<typeof result.serviceM8Client.getCompanyInfo>> | null = null;
+    try {
+      companyInfo = await result.serviceM8Client.getCompanyInfo();
+    } catch (error) {
+      console.warn('ServiceM8 company info unavailable for mobile connection status:', error);
+    }
 
     const payload: ServiceM8ConnectionStatus = {
       connected: true,
       connection: {
         teamId: result.teamId,
-        companyName: companyInfo.name ?? null,
-        email: companyInfo.email ?? null,
-        phone: companyInfo.phone ?? null,
+        companyName: companyInfo?.name ?? null,
+        email: companyInfo?.email ?? null,
+        phone: companyInfo?.phone ?? null,
         address: buildServiceM8Address({
-          address: companyInfo.address,
-          city: companyInfo.city,
-          state: companyInfo.state,
-          postcode: companyInfo.postcode,
-          country: companyInfo.country,
+          address: companyInfo?.address ?? null,
+          city: companyInfo?.city ?? null,
+          state: companyInfo?.state ?? null,
+          postcode: companyInfo?.postcode ?? null,
+          country: companyInfo?.country ?? null,
         }),
       },
     };

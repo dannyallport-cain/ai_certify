@@ -1,0 +1,22 @@
+{
+  "url": "https://developer.servicem8.com/addons/<YOUR_ADDON_ID>/edit",
+  "addonActivationUrl": "https://ai-certificates.app/api/servicem8/activate",
+  "addonManifestFilePath": "public/servicem8-external-manifest.json",
+  "supportEmail": "support@ai-certificates.app",
+  "supportPhone": "",
+  "supportWebsite": "https://ai-certificates.app/contact",
+  "privacyPolicy": "https://ai-certificates.app/privacy",
+  "longDescription": "AI Certify (ai-certificates.app) helps electrical and compliance teams generate professional certificates and reports faster—directly alongside your ServiceM8 workflow.\n\nWhat it does\n- Create and manage electrical certificates and compliance reports with consistent formatting\n- AI-assisted extraction from uploaded documents/images (optional) to reduce manual typing\n- Generate PDFs ready to share with customers, insurers, or auditors\n- Keep customer/site details consistent across reports\n\nHow it works\n- Connect the add-on to your ServiceM8 account\n- Use job/customer details to populate report workflows\n- Generate your certificate/report PDF and store it with the job documentation\n\nData & privacy\n- Only processes the data needed to provide certificate/report generation and (if enabled) AI-assisted analysis.\n- See the full privacy policy for details.",
+  "youtubeVideoId": "",
+  "tags": "certificates, electrical, compliance, reports, PDF, fire alarm, emergency lighting, ServiceM8, AI",
+  "description": "AI-assisted certificate and compliance report generation for ServiceM8 jobs—create professional PDFs faster with optional document/image extraction.",
+  "supportedRegions": [
+    "Australia",
+    "Canada",
+    "New Zealand",
+    "Other",
+    "United Kingdom",
+    "United States"
+  ],
+  "saveButtonText": "Save"
+}
