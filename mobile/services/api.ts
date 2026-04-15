@@ -8,6 +8,7 @@ import type {
   FireAlarmDiagnosticAssistantFeedback,
   FireAlarmDiagnosticAssistantRequest,
 } from '@/modules/fire-alarm-diagnostics/types';
+import type { ImportedServiceM8Image } from '@/components/JobStateContext';
 
 const TOKEN_KEY = 'mobile_auth_token';
 
@@ -354,6 +355,178 @@ export async function getFireAlarmDiagnosticsFeedback(
         )
       : [],
   };
+}
+
+export interface ServiceM8ConnectionStatus {
+  connected: boolean;
+  connection?: {
+    teamId: number;
+    companyName: string | null;
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+  };
+}
+
+export interface ServiceM8ClientRecord {
+  uuid: string;
+  name: string;
+  companyName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  postcode: string | null;
+}
+
+export interface ServiceM8JobRecord {
+  uuid: string;
+  generatedJobId: string | null;
+  status: string | null;
+  address: string | null;
+  description: string | null;
+  workDoneDescription: string | null;
+  date: string | null;
+  completionDate: string | null;
+  companyUuid: string | null;
+  categoryUuid: string | null;
+  badge: string | null;
+  firstName: string | null;
+  lastName: string | null;
+}
+
+export interface ServiceM8JobDetail extends ServiceM8JobRecord {
+  customer: ServiceM8ClientRecord | null;
+}
+
+export interface ServiceM8AttachmentRecord {
+  uuid: string;
+  jobUuid: string | null;
+  relatedObjectUuid: string | null;
+  fileName: string | null;
+  mimeType: string | null;
+  url: string | null;
+  editDate: string | null;
+  active: number | null;
+  isImage: boolean;
+  thumbnailUrl: string | null;
+}
+
+export interface DraftCertificateServiceM8ImportedImage {
+  source: 'servicem8';
+  url: string;
+  importedAt: string;
+  attachmentUuid: string;
+  jobUuid: string | null;
+  relatedObjectUuid: string | null;
+  fileName: string | null;
+  mimeType: string | null;
+  thumbnailUrl: string | null;
+  editDate: string | null;
+  active: number | null;
+  isImage: boolean;
+  evidenceCategory: 'consumer_unit_image' | 'audit_evidence';
+}
+
+export interface DraftCertificateServiceM8Payload {
+  job: ServiceM8JobRecord;
+  jobDetail: ServiceM8JobDetail | null;
+  importedImages: DraftCertificateServiceM8ImportedImage[];
+  evidenceSummary: {
+    importedImageCount: number;
+    importedImageCountForConsumerUnit: number;
+    importedImageCountForAuditEvidence: number;
+    attachmentUuids: string[];
+  };
+}
+
+export function mapImportedServiceM8ImagesToDraftPayload(
+  images: ImportedServiceM8Image[],
+): DraftCertificateServiceM8ImportedImage[] {
+  return images.map((image) => ({
+    source: 'servicem8',
+    url: image.url,
+    importedAt: image.importedAt,
+    attachmentUuid: image.attachment.uuid,
+    jobUuid: image.attachment.jobUuid,
+    relatedObjectUuid: image.attachment.relatedObjectUuid,
+    fileName: image.attachment.fileName,
+    mimeType: image.attachment.mimeType,
+    thumbnailUrl: image.attachment.thumbnailUrl,
+    editDate: image.attachment.editDate,
+    active: image.attachment.active,
+    isImage: image.attachment.isImage,
+    evidenceCategory: 'consumer_unit_image',
+  }));
+}
+
+export async function getServiceM8ConnectionStatus(): Promise<ServiceM8ConnectionStatus> {
+  const res = await authFetch('/api/mobile/servicem8/connection');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to fetch ServiceM8 connection');
+  }
+  return res.json();
+}
+
+export async function listServiceM8Jobs(params?: {
+  search?: string;
+  status?: string;
+  limit?: number;
+}): Promise<ServiceM8JobRecord[]> {
+  const query = new URLSearchParams();
+  if (params?.search) query.set('search', params.search);
+  if (params?.status) query.set('status', params.status);
+  if (typeof params?.limit === 'number') query.set('limit', String(params.limit));
+
+  const path =
+    query.size > 0 ? `/api/mobile/servicem8/jobs?${query.toString()}` : '/api/mobile/servicem8/jobs';
+  const res = await authFetch(path);
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to fetch ServiceM8 jobs');
+  }
+
+  const data = await res.json();
+  return Array.isArray(data?.jobs) ? data.jobs : [];
+}
+
+export async function getServiceM8Job(jobUuid: string): Promise<ServiceM8JobDetail> {
+  const res = await authFetch(`/api/mobile/servicem8/jobs/${jobUuid}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to fetch ServiceM8 job');
+  }
+
+  const data = await res.json();
+  return data.job;
+}
+
+export async function listServiceM8Clients(search?: string): Promise<ServiceM8ClientRecord[]> {
+  const query = search ? `?search=${encodeURIComponent(search)}` : '';
+  const res = await authFetch(`/api/mobile/servicem8/clients${query}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to fetch ServiceM8 clients');
+  }
+
+  const data = await res.json();
+  return Array.isArray(data?.clients) ? data.clients : [];
+}
+
+export async function listServiceM8JobAttachments(
+  jobUuid: string,
+): Promise<ServiceM8AttachmentRecord[]> {
+  const res = await authFetch(`/api/mobile/servicem8/jobs/${jobUuid}/attachments`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to fetch ServiceM8 attachments');
+  }
+
+  const data = await res.json();
+  return Array.isArray(data?.images) ? data.images : Array.isArray(data?.attachments) ? data.attachments : [];
 }
 
 // ── Uploads ───────────────────────────────────────────────────────────────────

@@ -38,13 +38,19 @@ function getSubscriptionBadgeVariant(status?: string | null): 'default' | 'secon
     case 'unpaid':
     case 'incomplete_expired':
       return 'destructive';
+    case 'loading':
+      return 'secondary';
     default:
       return 'outline';
   }
 }
 
-function getSubscriptionSummary(teamData?: TeamDataWithMembers) {
-  switch (teamData?.subscriptionStatus) {
+function getSubscriptionSummary(teamData?: TeamDataWithMembers | null) {
+  const effectiveStatus =
+    teamData?.subscriptionStatus ||
+    (teamData?.subscriptionBypass ? 'active' : null);
+
+  switch (effectiveStatus) {
     case 'active':
       return 'Your subscription is active and billed through Stripe.';
     case 'trialing':
@@ -59,11 +65,30 @@ function getSubscriptionSummary(teamData?: TeamDataWithMembers) {
   }
 }
 
-export function ManageSubscription() {
-  const { data: teamData, isLoading } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+export function ManageSubscription({
+  initialTeamData,
+}: {
+  initialTeamData?: TeamDataWithMembers | null;
+}) {
+  const { data: teamData, isLoading } = useSWR<TeamDataWithMembers | null>(
+    '/api/team',
+    fetcher,
+    {
+      fallbackData: initialTeamData,
+      revalidateOnMount: !initialTeamData,
+    }
+  );
 
-  const planName = teamData?.planName || 'Free';
-  const status = teamData?.subscriptionStatus || 'inactive';
+  const isPending = typeof teamData === 'undefined' && isLoading;
+  const effectiveStatus =
+    teamData?.subscriptionStatus ||
+    (teamData?.subscriptionBypass ? 'active' : null);
+  const effectivePlanName =
+    teamData?.planName ||
+    (teamData?.subscriptionBypass ? 'Starter' : null);
+
+  const planName = isPending ? 'Loading…' : effectivePlanName || 'Free';
+  const status = isPending ? 'loading' : effectiveStatus || 'inactive';
   const formattedTrialEnd = formatDate(teamData?.trialEndDate);
 
   return (
@@ -75,12 +100,12 @@ export function ManageSubscription() {
             View your current subscription status and open the Stripe customer portal.
           </CardDescription>
         </div>
-        <Badge variant={getSubscriptionBadgeVariant(teamData?.subscriptionStatus)} className="w-fit capitalize">
+        <Badge variant={getSubscriptionBadgeVariant(status)} className="w-fit capitalize">
           {status.replace('_', ' ')}
         </Badge>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {isPending ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading subscription details...

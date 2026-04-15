@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Table } from '@/components/ui/table';
-import { getTeamBillingHistory, getUser } from '@/lib/db/queries';
+import { getTeamBillingHistory, getTeamForUser, getUser } from '@/lib/db/queries';
 import { checkoutAction, oneTimeCheckoutAction } from '@/lib/payments/actions';
 import {
   getAdminStripeSubscriptionPlans,
@@ -114,11 +114,12 @@ export default async function BillingPage() {
     redirect('/sign-in');
   }
 
-  const [prices, products, billingHistory, subscriptionPlans] = await Promise.all([
+  const [prices, products, billingHistory, subscriptionPlans, teamData] = await Promise.all([
     getStripePrices(),
     getStripeProducts(),
     getTeamBillingHistory(),
     getAdminStripeSubscriptionPlans(),
+    getTeamForUser(),
   ]);
 
   const teamBillingHistory: BillingHistoryItem[] = (billingHistory || []).map(
@@ -166,7 +167,7 @@ export default async function BillingPage() {
         </Button>
       </div>
 
-      <ManageSubscription />
+      <ManageSubscription initialTeamData={teamData} />
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>

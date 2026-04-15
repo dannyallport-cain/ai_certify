@@ -35,16 +35,14 @@ export const SERVICEM8_CONFIG = {
     return process.env.SERVICEM8_ACTIVATION_URL || `${getBaseUrl()}/api/servicem8/activate`;
   },
   
-  // OAuth scopes needed for integration
+  // OAuth scopes needed for integration.
+  // Keep this minimal because ServiceM8 rejects unsupported scopes with `invalid_scope`.
+  // Additional write/manage scopes can be reintroduced later once confirmed against the
+  // exact app/addon permissions enabled in the ServiceM8 developer configuration.
   scopes: [
     'read_jobs',
-    'manage_jobs',
     'read_clients',
-    'manage_clients',
     'read_staff',
-    'read_job_materials',
-    'manage_job_materials',
-    'read_job_categories',
     'read_company',
   ],
 } as const;

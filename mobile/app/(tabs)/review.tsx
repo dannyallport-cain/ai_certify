@@ -2,8 +2,12 @@ import { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useJob, type WizardPhotoType } from '@/components/JobStateContext';
-import { createDraftCertificate, uploadMobileImage } from '@/services/api';
+import { useJob, type ImportedServiceM8Image, type WizardPhotoType } from '@/components/JobStateContext';
+import {
+  createDraftCertificate,
+  mapImportedServiceM8ImagesToDraftPayload,
+  uploadMobileImage,
+} from '@/services/api';
 
 const guidedPhotoSummary: { type: WizardPhotoType; label: string }[] = [
   { type: 'consumer_unit_external', label: 'Consumer unit' },
@@ -21,10 +25,23 @@ function buildMobileCaptureFolderHint() {
   return `mobile-${Date.now()}`;
 }
 
+function getImportedServiceM8ImageDisplayName(image: ImportedServiceM8Image) {
+  return image.attachment.fileName || `Attachment ${image.attachment.uuid.slice(0, 8)}`;
+}
+
 export default function ReviewScreen() {
   const { state, dispatch } = useJob();
   const [submitting, setSubmitting] = useState(false);
-  const { selectedCustomer, gpsAddress, capturedImages, analysisResult, wizard } = state;
+  const {
+    selectedCustomer,
+    gpsAddress,
+    capturedImages,
+    analysisResult,
+    wizard,
+    selectedServiceM8Job,
+    selectedServiceM8JobDetail,
+    importedServiceM8Images,
+  } = state;
 
   const getImageFor = (type: WizardPhotoType, slotIndex?: number) =>
     capturedImages.find(
@@ -175,6 +192,25 @@ export default function ReviewScreen() {
     [wizard.inspectionDate],
   );
 
+  const mappedImportedServiceM8Images = useMemo(
+    () => mapImportedServiceM8ImagesToDraftPayload(importedServiceM8Images),
+    [importedServiceM8Images],
+  );
+
+  const importedServiceM8EvidenceSummary = useMemo(
+    () => ({
+      importedImageCount: mappedImportedServiceM8Images.length,
+      importedImageCountForConsumerUnit: mappedImportedServiceM8Images.filter(
+        (image) => image.evidenceCategory === 'consumer_unit_image',
+      ).length,
+      importedImageCountForAuditEvidence: mappedImportedServiceM8Images.filter(
+        (image) => image.evidenceCategory === 'audit_evidence',
+      ).length,
+      attachmentUuids: mappedImportedServiceM8Images.map((image) => image.attachmentUuid),
+    }),
+    [mappedImportedServiceM8Images],
+  );
+
   async function handleSubmit() {
     if (!ready || !selectedCustomer || !gpsAddress) return;
     setSubmitting(true);
@@ -220,6 +256,24 @@ export default function ReviewScreen() {
         hasSolidFuelAppliance: wizard.hasSolidFuelAppliance,
         coDetectorTested: wizard.coDetectorTested,
         mobileCapturedImages: uploadedCapturedImages,
+        serviceM8: selectedServiceM8Job
+          ? {
+              job: selectedServiceM8Job,
+              jobDetail: selectedServiceM8JobDetail,
+              importedImages: mappedImportedServiceM8Images,
+              evidenceSummary: importedServiceM8EvidenceSummary,
+            }
+          : null,
+        consumerUnitImages: [
+          ...uploadedCapturedImages.filter(
+            (image) =>
+              image.type === 'consumer_unit_external' || image.type === 'consumer_unit_internal',
+          ),
+          ...mappedImportedServiceM8Images.filter(
+            (image) => image.evidenceCategory === 'consumer_unit_image',
+          ),
+        ],
+        auditEvidenceImages: [...uploadedCapturedImages, ...mappedImportedServiceM8Images],
         wizardEvidenceSummary: {
           landlordGuidance: {
             smokeAlarmGuidance: LANDLORD_GUIDANCE_SMOKE,
@@ -260,6 +314,7 @@ export default function ReviewScreen() {
             };
           }),
           coDetectorPhotoCaptured: coDetectorPhotoComplete,
+          serviceM8ImportedImages: importedServiceM8EvidenceSummary,
         },
       };
 
@@ -307,6 +362,22 @@ export default function ReviewScreen() {
         <Text className="mb-6 text-gray-500">
           Check the captured evidence and wizard answers before creating the draft EICR.
         </Text>
+
+        {selectedServiceM8Job ? (
+          <Section title="ServiceM8 Job" icon="briefcase-outline" done={true} onEdit={() => router.push('/(tabs)/customer')}>
+            <Text className="font-semibold text-gray-800">
+              {selectedServiceM8Job.generatedJobId
+                ? `Job ${selectedServiceM8Job.generatedJobId}`
+                : 'ServiceM8 job selected'}
+            </Text>
+            {selectedServiceM8Job.status ? (
+              <Text className="text-sm text-gray-500">Status: {selectedServiceM8Job.status}</Text>
+            ) : null}
+            {selectedServiceM8Job.address ? (
+              <Text className="text-sm text-gray-500">{selectedServiceM8Job.address}</Text>
+            ) : null}
+          </Section>
+        ) : null}
 
         <Section
           title="Customer"
@@ -375,7 +446,7 @@ export default function ReviewScreen() {
                 const image = getImageFor(item.type);
                 const accepted = !!image?.qualityAssessment?.isSufficient;
                 return (
-                  <Text key={item.type} className={`text-sm ${accepted ? 'text-green-700' : image ? 'text-red-500' : 'text-red-500'}`}>
+                  <Text key={item.type} className={`text-sm ${accepted ? 'text-green-700' : 'text-red-500'}`}>
                     {accepted ? '✓' : '✗'} {item.label}
                     {accepted
                       ? (image?.qualityAssessment?.score ? ` (score ${image.qualityAssessment.score})` : '')
@@ -393,9 +464,7 @@ export default function ReviewScreen() {
                         ? 'text-gray-600'
                         : item.accepted
                           ? 'text-green-700'
-                          : item.image
-                            ? 'text-red-500'
-                            : 'text-red-500'
+                          : 'text-red-500'
                   }`}
                 >
                   {item.present === null
@@ -531,6 +600,41 @@ export default function ReviewScreen() {
             </>
           ) : null}
         </Section>
+
+        {selectedServiceM8Job ? (
+          <Section title="Imported ServiceM8 Images" icon="cloud-download-outline" done={true} onEdit={() => router.push('/(tabs)/customer')}>
+            <Text className="text-sm text-gray-600">
+              {importedServiceM8Images.length} ServiceM8 image(s) marked for inclusion
+            </Text>
+            <Text className="mt-1 text-xs text-gray-500">
+              Imported job photos are attached in the draft payload for consumer unit evidence and audit history.
+            </Text>
+            {importedServiceM8Images.length > 0 ? (
+              <View className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3">
+                <Text className="mb-2 text-sm font-medium text-blue-900">Included in draft payload</Text>
+                <Text className="text-xs text-blue-800">
+                  Consumer unit evidence: {importedServiceM8EvidenceSummary.importedImageCountForConsumerUnit}
+                </Text>
+                <Text className="text-xs text-blue-800">
+                  Audit evidence only: {importedServiceM8EvidenceSummary.importedImageCountForAuditEvidence}
+                </Text>
+                <View className="mt-2">
+                  {importedServiceM8Images.map((image) => (
+                    <View key={image.attachment.uuid} className="mb-2 rounded-lg bg-white px-3 py-2">
+                      <Text className="text-sm font-medium text-gray-800">
+                        {getImportedServiceM8ImageDisplayName(image)}
+                      </Text>
+                      <Text className="text-xs text-gray-500">Attachment: {image.attachment.uuid}</Text>
+                      {image.attachment.mimeType ? (
+                        <Text className="text-xs text-gray-500">Type: {image.attachment.mimeType}</Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </Section>
+        ) : null}
 
         <Section
           title="All Captured Photos"
