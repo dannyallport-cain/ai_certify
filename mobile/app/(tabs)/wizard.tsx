@@ -107,6 +107,9 @@ function StepCard({ title, detail, done, locked, actionLabel, onPress }: StepIte
 export default function WizardScreen() {
   const { state, dispatch } = useJob();
 
+  const currentEntryMode = state.wizard.dataEntryMode;
+  const isManualEntryRoute = currentEntryMode === 'manual_only';
+
   const displayDate = useMemo(
     () => new Date(state.wizard.inspectionDate).toLocaleDateString('en-GB'),
     [state.wizard.inspectionDate],
@@ -462,10 +465,33 @@ export default function WizardScreen() {
   return (
     <ScrollView className="flex-1 bg-gray-50 px-4 pt-6">
       <View className="mb-5 rounded-3xl bg-brand px-5 py-5">
-        <Text className="mb-2 text-2xl font-bold text-white">Guided Wizard</Text>
+        <Text className="mb-2 text-2xl font-bold text-white">
+          {isManualEntryRoute ? 'New certificate — manual entry' : 'New certificate — AI / guided'}
+        </Text>
         <Text className="text-white/90">
-          Start by defining the report purpose and installation type so the app only
-          asks relevant questions and can pre-fill more of the certificate.
+          {isManualEntryRoute
+            ? 'This certificate route is focused on manual data entry, with certificate steps managed inside this workflow instead of from the top-level menu.'
+            : 'This certificate route is focused on guided capture and AI-assisted workflow steps, all managed inside this workflow instead of from the top-level menu.'}
+        </Text>
+
+        <TouchableOpacity
+          className="mt-4 self-start rounded-full bg-white/15 px-4 py-2"
+          onPress={() => router.push('/(tabs)')}
+          activeOpacity={0.85}
+        >
+          <View className="flex-row items-center">
+            <Ionicons name="arrow-back" size={16} color="#ffffff" />
+            <Text className="ml-2 font-semibold text-white">Back to task selection</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
+        <Text className="mb-2 font-semibold text-gray-900">Certificate workflow</Text>
+        <Text className="text-sm text-gray-500">
+          {isManualEntryRoute
+            ? 'Follow the ordered steps below to build a certificate draft through manual entry. Customer, address, capture, and review are part of this workflow rather than top-level menu items.'
+            : 'Follow the ordered steps below to build a certificate draft through the guided route. Customer, address, capture, and review are part of this workflow rather than top-level menu items.'}
         </Text>
       </View>
 
