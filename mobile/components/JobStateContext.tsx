@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useReducer } from 'react';
-import type { AnalysisResult, Customer } from '@/services/api';
+import type {
+  AnalysisResult,
+  Customer,
+  ServiceM8AttachmentRecord,
+  ServiceM8ClientRecord,
+  ServiceM8JobDetail,
+  ServiceM8JobRecord,
+} from '@/services/api';
 
 export type CaptureMode = 'consumer_unit' | 'circuit_label';
 
@@ -23,7 +30,7 @@ export interface PhotoQualityAssessment {
     hasUsefulTextDetection: boolean;
     needsHumanReview: boolean;
   };
-};
+}
 
 export interface CapturedImage {
   uri: string;
@@ -76,6 +83,13 @@ export interface WizardState {
   activeCaptureSlotIndex: number | null;
 }
 
+export interface ImportedServiceM8Image {
+  url: string;
+  source: 'servicem8';
+  attachment: ServiceM8AttachmentRecord;
+  importedAt: string;
+}
+
 export interface JobState {
   selectedCustomer: Customer | null;
   gpsAddress: string;
@@ -83,6 +97,10 @@ export interface JobState {
   capturedImages: CapturedImage[];
   analysisResult: AnalysisResult | null;
   createdCertificate: { id: number; certificateNumber: string } | null;
+  selectedServiceM8Job: ServiceM8JobRecord | null;
+  selectedServiceM8JobDetail: ServiceM8JobDetail | null;
+  selectedServiceM8Client: ServiceM8ClientRecord | null;
+  importedServiceM8Images: ImportedServiceM8Image[];
   wizard: WizardState;
 }
 
@@ -94,6 +112,12 @@ type JobAction =
   | { type: 'REMOVE_IMAGE_BY_TARGET'; payload: { type: WizardPhotoType; slotIndex?: number | null } }
   | { type: 'SET_ANALYSIS'; payload: AnalysisResult | null }
   | { type: 'SET_CERTIFICATE'; payload: { id: number; certificateNumber: string } | null }
+  | { type: 'SET_SERVICEM8_JOB'; payload: ServiceM8JobRecord | null }
+  | { type: 'SET_SERVICEM8_JOB_DETAIL'; payload: ServiceM8JobDetail | null }
+  | { type: 'SET_SERVICEM8_CLIENT'; payload: ServiceM8ClientRecord | null }
+  | { type: 'ADD_SERVICEM8_IMAGE'; payload: ImportedServiceM8Image }
+  | { type: 'REMOVE_SERVICEM8_IMAGE'; payload: string }
+  | { type: 'CLEAR_SERVICEM8_IMAGES' }
   | { type: 'SET_WIZARD_FIELD'; payload: { key: keyof WizardState; value: WizardState[keyof WizardState] } }
   | {
       type: 'SET_ACTIVE_CAPTURE';
@@ -117,6 +141,10 @@ const initialState: JobState = {
   capturedImages: [],
   analysisResult: null,
   createdCertificate: null,
+  selectedServiceM8Job: null,
+  selectedServiceM8JobDetail: null,
+  selectedServiceM8Client: null,
+  importedServiceM8Images: [],
   wizard: {
     inspectionDate: getTodayIsoDate(),
     dataEntryMode: 'guided_photo',
@@ -179,6 +207,52 @@ function reducer(state: JobState, action: JobAction): JobState {
       return { ...state, analysisResult: action.payload };
     case 'SET_CERTIFICATE':
       return { ...state, createdCertificate: action.payload };
+    case 'SET_SERVICEM8_JOB':
+      return {
+        ...state,
+        selectedServiceM8Job: action.payload,
+        selectedServiceM8JobDetail:
+          action.payload && state.selectedServiceM8JobDetail?.uuid === action.payload.uuid
+            ? state.selectedServiceM8JobDetail
+            : null,
+        importedServiceM8Images:
+          action.payload && state.selectedServiceM8Job?.uuid === action.payload.uuid
+            ? state.importedServiceM8Images
+            : [],
+      };
+    case 'SET_SERVICEM8_JOB_DETAIL':
+      return {
+        ...state,
+        selectedServiceM8JobDetail: action.payload,
+        selectedServiceM8Client: action.payload?.customer ?? state.selectedServiceM8Client,
+      };
+    case 'SET_SERVICEM8_CLIENT':
+      return {
+        ...state,
+        selectedServiceM8Client: action.payload,
+      };
+    case 'ADD_SERVICEM8_IMAGE': {
+      const nextImages = state.importedServiceM8Images.filter(
+        (image) => image.attachment.uuid !== action.payload.attachment.uuid,
+      );
+
+      return {
+        ...state,
+        importedServiceM8Images: [...nextImages, action.payload],
+      };
+    }
+    case 'REMOVE_SERVICEM8_IMAGE':
+      return {
+        ...state,
+        importedServiceM8Images: state.importedServiceM8Images.filter(
+          (image) => image.attachment.uuid !== action.payload,
+        ),
+      };
+    case 'CLEAR_SERVICEM8_IMAGES':
+      return {
+        ...state,
+        importedServiceM8Images: [],
+      };
     case 'SET_WIZARD_FIELD': {
       const nextWizard = {
         ...state.wizard,
@@ -211,9 +285,7 @@ function reducer(state: JobState, action: JobAction): JobState {
           ...state,
           wizard: nextWizard,
           capturedImages: state.capturedImages.filter(
-            (image) =>
-              image.type !== 'smoke_detector' ||
-              (image.slotIndex ?? 0) < nextCount,
+            (image) => image.type !== 'smoke_detector' || (image.slotIndex ?? 0) < nextCount,
           ),
         };
       }

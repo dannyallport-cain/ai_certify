@@ -1,6 +1,6 @@
 /**
  * ServiceM8 API Client
- * 
+ *
  * Handles authenticated requests to the ServiceM8 REST API.
  * Supports automatic token refresh when access tokens expire.
  */
@@ -21,41 +21,41 @@ export interface ServiceM8TokenResponse {
 
 export interface ServiceM8Job {
   uuid: string;
-  status: string;
-  job_address: string;
-  job_description: string;
-  work_done_description: string;
-  generated_job_id: string;
-  date: string;
-  completion_date: string;
-  category_uuid: string;
-  company_uuid: string;
+  status: string | null;
+  job_address: string | null;
+  job_description: string | null;
+  work_done_description: string | null;
+  generated_job_id: string | null;
+  date: string | null;
+  completion_date: string | null;
+  category_uuid: string | null;
+  company_uuid: string | null;
   active: number;
-  badge: string;
-  total_invoice_amount: number;
-  total_paid_amount: number;
-  edit_date: string;
-  first_name: string;
-  last_name: string;
-  job_is_scheduled: number;
+  badge: string | null;
+  total_invoice_amount: number | null;
+  total_paid_amount: number | null;
+  edit_date: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  job_is_scheduled: number | null;
 }
 
 export interface ServiceM8Client {
   uuid: string;
-  company_name: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-  mobile: string;
-  billing_address: string;
-  billing_address2: string;
-  billing_city: string;
-  billing_state: string;
-  billing_postcode: string;
-  billing_country: string;
+  company_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  mobile: string | null;
+  billing_address: string | null;
+  billing_address2: string | null;
+  billing_city: string | null;
+  billing_state: string | null;
+  billing_postcode: string | null;
+  billing_country: string | null;
   active: number;
-  edit_date: string;
+  edit_date: string | null;
 }
 
 export interface ServiceM8Staff {
@@ -69,14 +69,14 @@ export interface ServiceM8Staff {
 
 export interface ServiceM8Company {
   uuid: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  postcode: string;
-  country: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  postcode: string | null;
+  country: string | null;
 }
 
 export interface ServiceM8JobCategory {
@@ -93,6 +93,30 @@ export interface ServiceM8JobMaterial {
   unit_cost: number;
   total_cost: number;
   active: number;
+}
+
+export interface ServiceM8JobAttachment {
+  uuid: string;
+  job_uuid: string | null;
+  file_type: string | null;
+  file_name: string | null;
+  attachment_name: string | null;
+  related_object_uuid: string | null;
+  active: number | null;
+  edit_date: string | null;
+  timestamp: string | null;
+}
+
+export interface ServiceM8RequestOptions {
+  query?: Record<string, string | number | boolean | null | undefined>;
+  raw?: boolean;
+}
+
+export interface ServiceM8AttachmentDownloadInfo {
+  url: string;
+  mimeType: string | null;
+  contentLength: number | null;
+  fileName: string | null;
 }
 
 // ─── Client Class ────────────────────────────────────────────────────────────
@@ -121,25 +145,17 @@ export class ServiceM8Client_API {
     if (connections.length === 0) return null;
 
     const conn = connections[0];
-    
+
     // Check if token is expired
     if (conn.tokenExpiresAt && new Date(conn.tokenExpiresAt) < new Date()) {
       // Token expired, try to refresh
-      const client = new ServiceM8Client_API(
-        conn.accessToken,
-        conn.refreshToken,
-        teamId
-      );
+      const client = new ServiceM8Client_API(conn.accessToken, conn.refreshToken, teamId);
       const refreshed = await client.refreshAccessToken();
       if (!refreshed) return null;
       return client;
     }
 
-    return new ServiceM8Client_API(
-      conn.accessToken,
-      conn.refreshToken,
-      teamId
-    );
+    return new ServiceM8Client_API(conn.accessToken, conn.refreshToken, teamId);
   }
 
   /**
@@ -214,47 +230,69 @@ export class ServiceM8Client_API {
     }
   }
 
+  private buildEndpoint(endpoint: string, query?: Record<string, string | number | boolean | null | undefined>) {
+    if (!query) {
+      return endpoint;
+    }
+
+    const searchParams = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(query)) {
+      if (value === null || value === undefined || value === '') {
+        continue;
+      }
+
+      searchParams.set(key, String(value));
+    }
+
+    const queryString = searchParams.toString();
+    if (!queryString) {
+      return endpoint;
+    }
+
+    return `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryString}`;
+  }
+
   /**
    * Make an authenticated request to the ServiceM8 API
    */
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    requestOptions: ServiceM8RequestOptions = {},
   ): Promise<T> {
-    const url = `${SERVICEM8_CONFIG.apiBaseUrl}${endpoint}`;
-    
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+    const finalEndpoint = this.buildEndpoint(endpoint, requestOptions.query);
+    const url = `${SERVICEM8_CONFIG.apiBaseUrl}${finalEndpoint}`;
+
+    const executeFetch = async () =>
+      fetch(url, {
+        ...options,
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      });
+
+    let response = await executeFetch();
 
     // If unauthorized, try refreshing token
     if (response.status === 401) {
       const refreshed = await this.refreshAccessToken();
-      if (refreshed) {
-        const retryResponse = await fetch(url, {
-          ...options,
-          headers: {
-            Authorization: `Bearer ${this.accessToken}`,
-            'Content-Type': 'application/json',
-            ...options.headers,
-          },
-        });
-        if (!retryResponse.ok) {
-          throw new Error(`ServiceM8 API error: ${retryResponse.status}`);
-        }
-        return retryResponse.json();
+      if (!refreshed) {
+        throw new Error('ServiceM8 authentication failed - token refresh unsuccessful');
       }
-      throw new Error('ServiceM8 authentication failed - token refresh unsuccessful');
+
+      response = await executeFetch();
     }
 
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`ServiceM8 API error: ${response.status} ${errorText}`);
+    }
+
+    if (requestOptions.raw) {
+      return response as T;
     }
 
     return response.json();
@@ -263,8 +301,7 @@ export class ServiceM8Client_API {
   // ─── Jobs ────────────────────────────────────────────────────────────────
 
   async getJobs(filter?: string): Promise<ServiceM8Job[]> {
-    const query = filter ? `?$filter=${encodeURIComponent(filter)}` : '';
-    return this.request<ServiceM8Job[]>(`/job.json${query}`);
+    return this.request<ServiceM8Job[]>('/job.json', {}, filter ? { query: { $filter: filter } } : {});
   }
 
   async getJob(uuid: string): Promise<ServiceM8Job> {
@@ -288,8 +325,11 @@ export class ServiceM8Client_API {
   // ─── Clients ─────────────────────────────────────────────────────────────
 
   async getClients(filter?: string): Promise<ServiceM8Client[]> {
-    const query = filter ? `?$filter=${encodeURIComponent(filter)}` : '';
-    return this.request<ServiceM8Client[]>(`/company.json${query}`);
+    return this.request<ServiceM8Client[]>(
+      '/company.json',
+      {},
+      filter ? { query: { $filter: filter } } : {},
+    );
   }
 
   async getClient(uuid: string): Promise<ServiceM8Client> {
@@ -331,27 +371,65 @@ export class ServiceM8Client_API {
   // ─── Job Materials ───────────────────────────────────────────────────────
 
   async getJobMaterials(jobUuid: string): Promise<ServiceM8JobMaterial[]> {
-    return this.request<ServiceM8JobMaterial[]>(
-      `/jobmaterial.json?$filter=job_uuid eq '${jobUuid}'`
-    );
+    return this.request<ServiceM8JobMaterial[]>('/jobmaterial.json', {
+    }, {
+      query: {
+        $filter: `job_uuid eq '${jobUuid}'`,
+      },
+    });
   }
 
   // ─── Attachments ─────────────────────────────────────────────────────────
 
-  async getJobAttachments(jobUuid: string): Promise<any[]> {
-    return this.request<any[]>(
-      `/jobattachment.json?$filter=job_uuid eq '${jobUuid}'`
+  async getJobAttachments(jobUuid: string): Promise<ServiceM8JobAttachment[]> {
+    return this.request<ServiceM8JobAttachment[]>('/jobattachment.json', {}, {
+      query: {
+        $filter: `job_uuid eq '${jobUuid}'`,
+      },
+    });
+  }
+
+  async getJobAttachmentDownloadInfo(uuid: string): Promise<ServiceM8AttachmentDownloadInfo> {
+    const response = await this.request<Response>(
+      `/jobattachment/${uuid}.file`,
+      {},
+      { raw: true },
     );
+
+    return {
+      url: response.url,
+      mimeType: response.headers.get('content-type'),
+      contentLength: Number(response.headers.get('content-length') ?? '') || null,
+      fileName: this.extractFileNameFromHeaders(response.headers.get('content-disposition')),
+    };
+  }
+
+  private extractFileNameFromHeaders(contentDisposition: string | null): string | null {
+    if (!contentDisposition) {
+      return null;
+    }
+
+    const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      try {
+        return decodeURIComponent(utf8Match[1]);
+      } catch {
+        return utf8Match[1];
+      }
+    }
+
+    const basicMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+    return basicMatch?.[1] ?? null;
   }
 
   async uploadJobAttachment(
     jobUuid: string,
     file: Buffer,
     fileName: string,
-    mimeType: string
+    mimeType: string,
   ): Promise<{ uuid: string }> {
     const url = `${SERVICEM8_CONFIG.apiBaseUrl}/jobattachment.json`;
-    
+
     const formData = new FormData();
     formData.append('job_uuid', jobUuid);
     formData.append('file', new Blob([new Uint8Array(file)], { type: mimeType }), fileName);
