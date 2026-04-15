@@ -1,0 +1,216 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-certify.local/ml/datasets/schemas/scan-feedback.schema.json",
+  "title": "Fire Alarm Scan Feedback Record",
+  "description": "User review feedback captured from the RoomPlan workflow. These records link model predictions to user corrections and can be promoted into higher-value training data after review and approval.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "feedback_id",
+    "session_id",
+    "device_id",
+    "predicted_type",
+    "corrected_type",
+    "predicted_manufacturer",
+    "corrected_manufacturer",
+    "reviewed_by_user",
+    "captured_at"
+  ],
+  "properties": {
+    "feedback_id": {
+      "type": "string",
+      "description": "Unique identifier for the feedback event or consolidated correction record.",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "RoomPlan session identifier from the mobile workflow.",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+    },
+    "device_id": {
+      "type": "string",
+      "description": "Device identifier within the exported or in-review session.",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+    },
+    "predicted_type": {
+      "type": "string",
+      "description": "Model-predicted coarse public device type before user correction.",
+      "enum": [
+        "panel",
+        "sounder",
+        "detector",
+        "interface",
+        "io_unit",
+        "vad",
+        "unknown"
+      ]
+    },
+    "corrected_type": {
+      "type": "string",
+      "description": "User-corrected or confirmed coarse public device type.",
+      "enum": [
+        "panel",
+        "sounder",
+        "detector",
+        "interface",
+        "io_unit",
+        "vad",
+        "unknown"
+      ]
+    },
+    "predicted_subtype": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional model-predicted richer internal subtype."
+    },
+    "corrected_subtype": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional user-corrected richer internal subtype."
+    },
+    "predicted_manufacturer": {
+      "type": "string",
+      "description": "Model-predicted manufacturer before user correction.",
+      "enum": [
+        "Apollo",
+        "Advanced",
+        "C-TEC",
+        "Eaton",
+        "Gent",
+        "Hochiki",
+        "Hyfire",
+        "Kentec",
+        "Morley",
+        "Notifier",
+        "Siemens",
+        "System Sensor",
+        "Unknown"
+      ]
+    },
+    "corrected_manufacturer": {
+      "type": "string",
+      "description": "User-corrected or confirmed manufacturer.",
+      "enum": [
+        "Apollo",
+        "Advanced",
+        "C-TEC",
+        "Eaton",
+        "Gent",
+        "Hochiki",
+        "Hyfire",
+        "Kentec",
+        "Morley",
+        "Notifier",
+        "Siemens",
+        "System Sensor",
+        "Unknown"
+      ]
+    },
+    "predicted_confidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Original model confidence for the device prediction when available.",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "manufacturer_confidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "description": "Original model confidence for the manufacturer prediction when available.",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "reviewed_by_user": {
+      "type": "boolean",
+      "description": "True when the record represents an explicit user review action."
+    },
+    "review_action": {
+      "type": "string",
+      "description": "Primary user action taken during review.",
+      "enum": [
+        "confirmed",
+        "edited",
+        "deleted",
+        "added",
+        "marked_uncertain"
+      ],
+      "default": "edited"
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional user or reviewer notes about the correction."
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the feedback was captured."
+    },
+    "evidence_frames": {
+      "type": "array",
+      "description": "Referenced evidence frame identifiers associated with the reviewed device.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "default": []
+    },
+    "location_hint": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Optional 3D location hint from the session export when available.",
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "z"
+      ],
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "X coordinate in room units, typically meters."
+        },
+        "y": {
+          "type": "number",
+          "description": "Y coordinate in room units, typically meters."
+        },
+        "z": {
+          "type": "number",
+          "description": "Z coordinate in room units, typically meters."
+        }
+      }
+    },
+    "room_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional room identifier from the exported session."
+    },
+    "wall_segment_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional wall segment identifier for wall-mounted devices."
+    },
+    "approved_for_training": {
+      "type": "boolean",
+      "description": "Training promotion flag after downstream review. User feedback alone does not automatically imply training approval.",
+      "default": false
+    }
+  }
+}

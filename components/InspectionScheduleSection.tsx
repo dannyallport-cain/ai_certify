@@ -244,15 +244,19 @@ interface Props {
   value: InspScheduleValue;
   onCodeChange: (ref: string, desc: string, newCode: InspCode, prevCode: InspCode) => void;
   onCommentChange: (ref: string, comment: string) => void;
+  disabledRefs?: string[];
 }
 
-export function InspectionScheduleSection({ value, onCodeChange, onCommentChange }: Props) {
+export function InspectionScheduleSection({ value, onCodeChange, onCommentChange, disabledRefs = [] }: Props) {
   const autoSizeCommentBox = (element: HTMLTextAreaElement) => {
     element.style.height = 'auto';
     element.style.height = `${Math.max(element.scrollHeight, 28)}px`;
   };
 
+  const disabledRefSet = new Set(disabledRefs);
+
   const cycleCode = (ref: string, desc: string) => {
+    if (disabledRefSet.has(ref)) return;
     const prev = value.codes[ref] ?? '';
     const idx = INSP_CODE_CYCLE.indexOf(prev);
     const next = INSP_CODE_CYCLE[(idx + 1) % INSP_CODE_CYCLE.length];
@@ -269,6 +273,9 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
     }
 
     for (const item of group.items) {
+      if (disabledRefSet.has(item.ref)) {
+        continue;
+      }
       const prev = value.codes[item.ref] ?? '';
       if (prev !== nextCode) {
         onCodeChange(item.ref, item.desc, nextCode, prev);
@@ -321,14 +328,15 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
           {group.items.map((item, idx) => {
             const code = value.codes[item.ref] ?? '';
             const comment = value.comments[item.ref] ?? '';
-            const isHighlighted = code === 'C1' || code === 'C2';
+            const isDisabled = disabledRefSet.has(item.ref);
+            const isHighlighted = !isDisabled && (code === 'C1' || code === 'C2');
             return (
               <div
                 key={item.ref}
                 className={`
                   grid grid-cols-[3rem_1fr_8rem_5rem] gap-x-2 items-center
                   px-2 py-1 text-xs border-b border-gray-100 last:border-b-0
-                  ${isHighlighted ? 'bg-red-50' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                  ${isDisabled ? 'bg-slate-100 opacity-60' : isHighlighted ? 'bg-red-50' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
                 `}
               >
                 {/* Ref */}
@@ -341,13 +349,14 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
                   </span>
                 </div>
 
-                {/* Comments column: dedicated plain-text area */}
+                {/* Comments column */}
                 <div className="flex justify-center">
                   <textarea
                     rows={1}
-                    className="w-full h-7 text-xs border border-gray-300 rounded p-1 resize-y"
-                    placeholder="Add plain-text comment"
+                    className="w-full h-7 text-xs border border-gray-300 rounded p-1 resize-y disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                    placeholder="Comment"
                     value={comment}
+                    disabled={isDisabled}
                     onChange={(e) => {
                       onCommentChange(item.ref, e.target.value);
                       autoSizeCommentBox(e.currentTarget);
@@ -362,6 +371,11 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
                     code={code}
                     onCycle={() => cycleCode(item.ref, item.desc)}
                   />
+                  {isDisabled ? (
+                    <span className="ml-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500" title="Automatically marked not applicable for this earthing arrangement">
+                      Locked
+                    </span>
+                  ) : null}
                 </div>
               </div>
             );

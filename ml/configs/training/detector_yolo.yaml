@@ -1,0 +1,71 @@
+version: 1
+name: detector_yolo_baseline
+task: coarse_device_detection
+description: >
+  Baseline detector training configuration placeholder for a YOLO-style model.
+  This file describes expected inputs, outputs, and operating constraints only.
+
+dataset:
+  config_path: ml/configs/datasets/detection_v1.yaml
+  train_split: train
+  val_split: val
+  test_split: test
+
+model:
+  family: yolo
+  variant: small
+  pretrained: false
+  export_targets:
+    - coreml
+  class_names:
+    - panel
+    - sounder
+    - detector
+    - interface
+    - io_unit
+    - vad
+
+training:
+  image_size: 960
+  batch_size: 16
+  epochs: 100
+  optimizer: adamw
+  learning_rate: 0.0005
+  weight_decay: 0.0001
+  early_stopping_patience: 15
+  mixed_precision: true
+  seed: 42
+
+augmentation:
+  horizontal_flip: 0.5
+  scale_jitter: 0.2
+  hsv_jitter: 0.1
+  mosaic: false
+  notes:
+    - Keep augmentation conservative for wall-mounted and ceiling-mounted device geometry.
+    - Revisit stronger augmentation only after baseline error analysis.
+
+evaluation:
+  primary_metric: map_50
+  report_metrics:
+    - map_50
+    - map_50_95
+    - recall
+    - precision
+    - false_positives_per_room
+    - class_confusion
+
+deployment_constraints:
+  target_platform: ios_coreml
+  prioritize:
+    - recall
+    - mobile_latency
+    - export_stability
+  notes:
+    - Final on-device validation must happen on supported LiDAR iPhones.
+    - Training completion alone is not deployment approval.
+
+governance:
+  require_dataset_review: true
+  block_unclear_license_assets: true
+  allow_bootstrap_scraped_assets_only_if_reviewed: true

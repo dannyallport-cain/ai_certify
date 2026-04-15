@@ -1,0 +1,86 @@
+version: 1
+description: >
+  Approved public coarse device classes and optional internal subtype mapping for
+  the Fire Alarm RoomPlan ML workspace.
+
+public_classes:
+  - id: panel
+    display_name: Panel
+    description: Fire alarm control panels, repeaters, and similar control faces.
+    trainable_in_v1: true
+
+  - id: sounder
+    display_name: Sounder
+    description: Audible notification devices without primary visible alarm identity.
+    trainable_in_v1: true
+
+  - id: detector
+    display_name: Detector
+    description: Fire detectors including smoke, heat, and multisensor device forms.
+    trainable_in_v1: true
+
+  - id: interface
+    display_name: Interface
+    description: Relay, monitored, or input interface modules.
+    trainable_in_v1: true
+
+  - id: io_unit
+    display_name: I/O Unit
+    description: Control modules, zone monitors, and broader I/O controller units.
+    trainable_in_v1: true
+
+  - id: vad
+    display_name: VAD
+    description: Visual alarm devices, beacons, and combined sounder-beacon units.
+    trainable_in_v1: true
+
+  - id: unknown
+    display_name: Unknown
+    description: In-scope but ambiguous device where supported class is unclear.
+    trainable_in_v1: false
+
+internal_subtypes:
+  detector:
+    - smoke
+    - heat
+    - multi-sensor
+    - beam
+    - aspirating
+
+  sounder:
+    - wall sounder
+    - base sounder
+    - horn
+    - sounder-beacon
+
+  vad:
+    - wall vad
+    - ceiling vad
+    - beacon only
+    - sounder-beacon
+
+  interface:
+    - relay interface
+    - monitored interface
+    - input module
+
+  io_unit:
+    - control module
+    - zone monitor
+    - I/O controller
+
+public_mapping_examples:
+  smoke detector: detector
+  heat detector: detector
+  multi-sensor detector: detector
+  wall sounder: sounder
+  base sounder: sounder
+  beacon only: vad
+  sounder beacon: vad
+  relay interface: interface
+  input module: interface
+  control io module: io_unit
+
+notes:
+  - Public class IDs should remain stable because mobile-side integrations depend on them.
+  - Internal subtype labels are optional annotation metadata, not replacements for public classes.

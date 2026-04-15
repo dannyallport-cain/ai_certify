@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ai-certify.local/ml/datasets/schemas/classification.schema.json",
+  "title": "Fire Alarm Manufacturer Classification Record",
+  "description": "Classification record for a cropped fire alarm device image used in manufacturer, subtype, or model-family recognition tasks. This schema is intended for reviewed crops derived from approved or reviewable assets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "crop_id",
+    "parent_image_id",
+    "manufacturer",
+    "device_type",
+    "reviewed"
+  ],
+  "properties": {
+    "crop_id": {
+      "type": "string",
+      "description": "Unique identifier for the crop record.",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+    },
+    "parent_image_id": {
+      "type": "string",
+      "description": "Identifier of the parent scene image or rendered asset image.",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+    },
+    "asset_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional identifier of the original source asset."
+    },
+    "annotation_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional source annotation identifier when the crop was derived from a detection annotation."
+    },
+    "manufacturer": {
+      "type": "string",
+      "description": "Reviewed manufacturer label. Unknown is allowed where branding is unreadable or unsupported.",
+      "enum": [
+        "Apollo",
+        "Advanced",
+        "C-TEC",
+        "Eaton",
+        "Gent",
+        "Hochiki",
+        "Hyfire",
+        "Kentec",
+        "Morley",
+        "Notifier",
+        "Siemens",
+        "System Sensor",
+        "Unknown"
+      ]
+    },
+    "device_type": {
+      "type": "string",
+      "description": "Coarse public device type for the crop.",
+      "enum": [
+        "panel",
+        "sounder",
+        "detector",
+        "interface",
+        "io_unit",
+        "vad",
+        "unknown"
+      ]
+    },
+    "subtype": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional richer internal subtype label such as smoke, heat, wall sounder, sounder-beacon, relay interface, or control module."
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional product or model family label when available from approved material or verified review."
+    },
+    "crop_path": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Relative workspace path to the cropped image."
+    },
+    "bbox": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "Source bounding box in the parent image as [x, y, width, height].",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "source_domain": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Convenience provenance field for audit and split generation."
+    },
+    "split": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Dataset split assignment for the crop dataset.",
+      "enum": [
+        "train",
+        "validation",
+        "test",
+        "holdout",
+        null
+      ]
+    },
+    "ocr_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "OCR text detected inside or near the crop. Useful for OCR/logo fusion experiments."
+    },
+    "logo_visible": {
+      "type": "boolean",
+      "description": "True when branding or a manufacturer logo is visibly present in the crop.",
+      "default": false
+    },
+    "reviewed": {
+      "type": "boolean",
+      "description": "True when the crop label has been human-reviewed."
+    },
+    "review_notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Optional notes about ambiguity, unreadable branding, or class rationale."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional extra metadata kept open for future tooling.",
+      "default": {}
+    }
+  }
+}

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-certify-fire-alarm-ml"
+version = "0.1.0"
+description = "Initial ML workspace scaffolding for Fire Alarm RoomPlan datasets, configs, and training workflows."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "AI Certify" }
+]
+dependencies = [
+  "PyYAML>=6.0,<7.0",
+  "jsonschema>=4.22,<5.0",
+  "pydantic>=2.7,<3.0",
+  "Pillow>=10.3,<11.0",
+  "numpy>=1.26,<3.0",
+  "requests>=2.31,<3.0",
+  "beautifulsoup4>=4.12,<5.0",
+  "lxml>=5.2,<6.0",
+  "pypdf>=4.2,<5.0",
+  "tqdm>=4.66,<5.0",
+  "typer>=0.12,<1.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2,<9.0",
+  "ruff>=0.5,<1.0"
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["collector*", "training*", "evaluation*", "tools*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = []

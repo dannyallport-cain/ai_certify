@@ -42,7 +42,7 @@ export default function NewCustomerPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Add New Customer</h2>
           <p className="text-muted-foreground">
-            Create a new customer record for fire safety certificates
+            Create a new customer record for certifications
           </p>
         </div>
         <Button variant="outline" asChild>

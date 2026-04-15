@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
@@ -9,6 +9,12 @@ export default function LocationScreen() {
   const [loading, setLoading] = useState(false);
   const [manualAddress, setManualAddress] = useState('');
   const { state, dispatch } = useJob();
+
+  useEffect(() => {
+    if (state.gpsAddress && !manualAddress.trim()) {
+      setManualAddress(state.gpsAddress);
+    }
+  }, [state.gpsAddress]);
 
   async function detectLocation() {
     setLoading(true);
@@ -35,7 +41,8 @@ export default function LocationScreen() {
         type: 'SET_GPS',
         payload: { address, coords: { latitude: loc.coords.latitude, longitude: loc.coords.longitude } },
       });
-    } catch {
+    } catch (error) {
+      console.warn('Location detection failed', error);
       Alert.alert('Location Error', 'Could not determine location. Please enter manually.');
     } finally {
       setLoading(false);
@@ -43,15 +50,18 @@ export default function LocationScreen() {
   }
 
   function saveManual() {
-    if (!manualAddress.trim()) {
+    const address = manualAddress.trim() || state.gpsAddress?.trim() || '';
+
+    if (!address) {
       Alert.alert('Required', 'Please enter a site address.');
       return;
     }
+
     dispatch({
       type: 'SET_GPS',
-      payload: { address: manualAddress.trim(), coords: state.gpsCoords ?? { latitude: 0, longitude: 0 } },
+      payload: { address, coords: state.gpsCoords ?? { latitude: 0, longitude: 0 } },
     });
-    setManualAddress('');
+    setManualAddress(address);
   }
 
   return (

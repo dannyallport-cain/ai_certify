@@ -14,6 +14,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withFireAlarmRoomPlan",
       [
         "expo-camera",
         {
@@ -45,7 +46,8 @@
       "bundleIdentifier": "com.aicertify.field",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "AI Certify uses your location to automatically fill in the installation address.",
-        "NSCameraUsageDescription": "AI Certify needs camera access to photograph consumer units and circuit labels."
+        "NSCameraUsageDescription": "AI Certify needs camera access to photograph consumer units, circuit labels, and RoomPlan fire alarm scans.",
+        "NSRoomPlanUsageDescription": "AI Certify uses Apple RoomPlan to capture room geometry and scaffold fire alarm device layout identification."
       }
     },
     "android": {

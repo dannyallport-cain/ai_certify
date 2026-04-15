@@ -1,0 +1,80 @@
+version: 1
+name: detection_v1
+task: coarse_device_detection
+description: >
+  Initial coarse detection dataset configuration for Fire Alarm RoomPlan.
+  The first objective is useful recall on coarse public device classes before
+  chasing subtype precision.
+
+schema:
+  detection_annotation: ml/datasets/schemas/detection.schema.json
+  asset: ml/datasets/schemas/asset.schema.json
+
+source_policy:
+  approved_sources_config: ml/configs/sources/approved_sources.yaml
+  blocked_sources_config: ml/configs/sources/blocked_sources.yaml
+  require_reviewed_assets: true
+  allowed_license_statuses:
+    - allowed_training
+  reject_if_license_unclear: true
+
+classes:
+  include:
+    - panel
+    - sounder
+    - detector
+    - interface
+    - io_unit
+    - vad
+  reserve_but_do_not_train_as_primary_target:
+    - unknown
+
+annotation_rules:
+  label_rules_path: ml/annotation/label_rules.md
+  classes_path: ml/annotation/classes.yaml
+  require_reviewed_annotations: true
+  require_bbox: true
+  allowed_visibility:
+    - clear
+    - partial
+    - difficult
+
+split_strategy:
+  intent: prevent_near_duplicate_leakage
+  group_by:
+    - capture_session
+    - site
+    - source_domain
+    - model_family
+  target_ratios:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+  notes:
+    - Do not randomly split near-duplicates across train, validation, and test.
+    - Keep same-session captures and same-brochure-page assets grouped together where possible.
+
+filtering:
+  min_bbox_pixels: 24
+  drop_unreviewed: true
+  drop_blocked_sources: true
+  allow_weak_labels_only_for_queueing: true
+  require_image_dimensions: true
+
+exports:
+  reviewed_manifest_dir: ml/datasets/reviewed/detection_v1
+  split_manifest_dir: ml/datasets/exports/detection_v1
+  crop_cache_dir: ml/datasets/exports/detection_v1/crops
+
+metrics:
+  primary:
+    - map_50
+    - recall
+  secondary:
+    - map_50_95
+    - false_positives_per_room
+    - class_confusion
+
+notes:
+  - This is a dataset definition scaffold, not a statement of production readiness.
+  - Unknown remains valid for annotation and review, but should not be a primary detector class in v1.

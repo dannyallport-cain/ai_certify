@@ -1,0 +1,92 @@
+version: 1
+name: manufacturer_v1
+task: manufacturer_classification
+description: >
+  Initial manufacturer crop-classification dataset configuration for Fire Alarm RoomPlan.
+  Intended for detector crops or reviewed device crops after coarse detection.
+
+schema:
+  classification_annotation: ml/datasets/schemas/classification.schema.json
+  asset: ml/datasets/schemas/asset.schema.json
+
+source_policy:
+  approved_sources_config: ml/configs/sources/approved_sources.yaml
+  blocked_sources_config: ml/configs/sources/blocked_sources.yaml
+  require_reviewed_assets: true
+  allowed_license_statuses:
+    - allowed_training
+  reject_if_license_unclear: true
+
+label_space:
+  manufacturers_path: ml/annotation/manufacturers.yaml
+  classes_path: ml/annotation/classes.yaml
+  include_manufacturers:
+    - Apollo
+    - Hochiki
+    - Gent
+    - Advanced
+    - Morley
+    - Notifier
+    - Kentec
+    - C-Tec
+    - Siemens
+    - Eaton
+    - Hyfire
+    - System Sensor
+    - Unknown
+  supported_device_types:
+    - panel
+    - sounder
+    - detector
+    - interface
+    - io_unit
+    - vad
+    - unknown
+
+crop_rules:
+  require_reviewed: true
+  min_crop_width: 48
+  min_crop_height: 48
+  allow_parent_detection_visibility:
+    - clear
+    - partial
+  allow_unknown_manufacturer_label: true
+  notes:
+    - Unknown is a valid fallback label when branding is unreadable or unsupported.
+    - Do not infer a manufacturer from context alone if the crop lacks usable evidence.
+
+split_strategy:
+  intent: reduce leakage from same-product-family and same-session captures
+  group_by:
+    - manufacturer
+    - model
+    - parent_image_id
+    - source_domain
+    - capture_session
+  target_ratios:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+
+filtering:
+  drop_unreviewed: true
+  drop_blocked_sources: true
+  require_parent_asset_metadata: true
+  allow_weak_labels_only_for_prefill: true
+
+exports:
+  reviewed_manifest_dir: ml/datasets/reviewed/manufacturer_v1
+  split_manifest_dir: ml/datasets/exports/manufacturer_v1
+
+metrics:
+  primary:
+    - top1_accuracy
+    - top3_accuracy
+  secondary:
+    - calibration_error
+    - confusion_matrix
+    - unknown_precision
+
+notes:
+  - Manufacturer prediction is secondary evidence and may be absent for many devices.
+  - Where evidence is insufficient, use Unknown rather than forcing a shortlist label.

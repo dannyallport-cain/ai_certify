@@ -254,6 +254,11 @@ def _merge_certificate_context_prefill(
     report_sections: dict[str, object],
     certificate_context: dict[str, object],
 ) -> None:
+    supply_section = report_sections.setdefault("supplyCharacteristicsAndEarthingArrangements", {})
+    if not isinstance(supply_section, dict):
+        supply_section = {}
+        report_sections["supplyCharacteristicsAndEarthingArrangements"] = supply_section
+
     consumer_unit = certificate_context.get("consumerUnit")
     if isinstance(consumer_unit, dict):
         identification_section = report_sections.setdefault("consumerUnitIdentification", {})
@@ -306,11 +311,6 @@ def _merge_certificate_context_prefill(
 
     bonding = certificate_context.get("bonding")
     if isinstance(bonding, dict) and bonding:
-        supply_section = report_sections.setdefault("supplyCharacteristicsAndEarthingArrangements", {})
-        if not isinstance(supply_section, dict):
-            supply_section = {}
-            report_sections["supplyCharacteristicsAndEarthingArrangements"] = supply_section
-
         main_bonding = supply_section.setdefault("mainProtectiveBonding", {})
         if not isinstance(main_bonding, dict):
             main_bonding = {}
@@ -322,6 +322,27 @@ def _merge_certificate_context_prefill(
                 main_bonding[bond_key] = dict(bond_value)
 
         report_sections["bonding"] = dict(bonding)
+
+    earthing = certificate_context.get("earthing")
+    if isinstance(earthing, dict) and earthing:
+        earthing_section = supply_section.setdefault("earthing", {})
+        if not isinstance(earthing_section, dict):
+            earthing_section = {}
+            supply_section["earthing"] = earthing_section
+
+        for field_key in ("earthingArrangement", "meansOfEarthing"):
+            if earthing.get(field_key) is not None:
+                earthing_section[field_key] = earthing.get(field_key)
+
+        earth_electrode = earthing.get("earthElectrode")
+        if isinstance(earth_electrode, dict) and earth_electrode:
+            earthing_section["earthElectrode"] = dict(earth_electrode)
+
+        report_sections["earthing"] = {
+            "earthingArrangement": earthing.get("earthingArrangement"),
+            "meansOfEarthing": earthing.get("meansOfEarthing"),
+            "earthElectrode": dict(earth_electrode) if isinstance(earth_electrode, dict) else None,
+        }
 
 
 def analyze_image(payload: AnalyzeImageRequest) -> AnalyzeImageResponse:

@@ -1,0 +1,107 @@
+version: 1
+description: >
+  Blocked or discouraged source patterns for the Fire Alarm RoomPlan ML workspace.
+  This file exists to make conservative collection decisions explicit.
+
+blocked_statuses:
+  - blocked
+  - discouraged_manual_review_only
+
+sources:
+  - id: generic-image-search
+    name: Generic image search result pages
+    match_type: category
+    status: blocked
+    reason: >
+      Search results aggregate third-party content with mixed rights, weak provenance, and unstable
+      labeling. They should not be used as a training source of record.
+
+  - id: unreviewed-social-media
+    name: Unreviewed social media scraping
+    match_type: category
+    status: blocked
+    reason: >
+      Rights, consent, repost chains, and provenance are often unclear. Do not crawl or train on
+      these sources by default.
+
+  - id: forum-reposts
+    name: Forums and repost sites with unclear ownership
+    match_type: category
+    status: blocked
+    reason: >
+      Product images are often re-uploaded without clear ownership or permission.
+
+  - id: copyrighted-pdf-no-permission
+    name: Copyrighted PDFs without explicit reuse approval
+    match_type: category
+    status: blocked
+    reason: >
+      Publicly accessible brochures or manuals are not automatically approved for ML training or
+      redistribution.
+
+  - id: marketplace-user-listings
+    name: User-uploaded marketplace listings
+    match_type: category
+    status: discouraged_manual_review_only
+    reason: >
+      Provenance and labeling are inconsistent. At most, these may help discover model names for
+      later validation, but they should not feed training datasets without exceptional review.
+
+  - id: pinterest
+    name: Pinterest
+    match_type: domain
+    domain: pinterest.com
+    status: blocked
+    reason: >
+      Aggregated repost content with unclear licensing and poor provenance tracking.
+
+  - id: instagram
+    name: Instagram
+    match_type: domain
+    domain: instagram.com
+    status: blocked
+    reason: >
+      Do not scrape public social media images for training in this project without a separate,
+      documented approval policy.
+
+  - id: facebook
+    name: Facebook
+    match_type: domain
+    domain: facebook.com
+    status: blocked
+    reason: >
+      Rights and provenance are unsuitable for default ML collection workflows.
+
+  - id: x-twitter
+    name: X / Twitter
+    match_type: domain
+    domain: x.com
+    status: blocked
+    reason: >
+      Short-form reposted imagery is high risk for provenance and rights ambiguity.
+
+  - id: ebay
+    name: eBay
+    match_type: domain
+    domain: ebay.co.uk
+    status: discouraged_manual_review_only
+    reason: >
+      Listing imagery is user-uploaded and weakly labeled. Do not treat as training-approved.
+
+  - id: amazon-marketplace
+    name: Amazon marketplace listings
+    match_type: domain
+    domain: amazon.co.uk
+    status: discouraged_manual_review_only
+    reason: >
+      Marketplace imagery may be reused or syndicated without clear training permission.
+
+rules:
+  if_license_unclear: blocked
+  if_provenance_unclear: blocked
+  if_terms_forbid_automation: blocked
+  if_asset_is_rehosted_without_source: blocked
+
+notes:
+  - A blocked source can still inform manual research, but it must not be added to training exports.
+  - If a source later becomes approved, document the specific approval rationale in approved_sources.yaml.

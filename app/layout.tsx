@@ -5,8 +5,8 @@ import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
-  title: 'AI-Certificates - Fire Safety Certificate Management',
-  description: 'Comprehensive fire safety certificate management system for BS5839-1, BS5839-6, BS5266, fire extinguisher, and dry riser inspections.'
+  title: 'AI-Certificates - Certification Management',
+  description: 'Comprehensive certification management system for BS5839-1, BS5839-6, BS5266, fire extinguisher, dry riser, gas safety, and electrical inspections.'
 };
 
 export const viewport: Viewport = {

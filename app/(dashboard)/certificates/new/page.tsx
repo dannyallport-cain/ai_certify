@@ -64,6 +64,13 @@ const certificateTypes = [
     description: 'Electrical installation condition report in accordance with BS 7671 IET Wiring Regulations',
     icon: '⚡',
     color: 'bg-blue-50 border-blue-200 hover:bg-blue-100'
+  },
+  {
+    type: 'EICR_STREAMLINED',
+    title: 'EICR - Streamlined',
+    description: 'Streamlined EICR entry with the same validation logic and inconsistency highlighting as the full version',
+    icon: '⚡',
+    color: 'bg-cyan-50 border-cyan-200 hover:bg-cyan-100'
   }
 ];
 
@@ -75,6 +82,7 @@ const certificateTypePaths: Record<string, string> = {
   DRY_RISER: 'dry-riser',
   CP12: 'cp12',
   EICR: 'eicr',
+  EICR_STREAMLINED: 'eicr/streamlined',
   'BS5839-1': 'bs5839-1',
   'BS5839-6': 'bs5839-6',
 };
@@ -87,6 +95,7 @@ const certificateTypeLabels: Record<string, string> = {
   DRY_RISER: 'Dry Riser',
   CP12: 'CP12 Gas Safety',
   EICR: 'EICR',
+  EICR_STREAMLINED: 'EICR - Streamlined',
   'BS5839-1': 'BS5839-1',
   'BS5839-6': 'BS5839-6',
 };
@@ -128,7 +137,7 @@ export default async function NewCertificatePage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Create New Certificate</h2>
           <p className="text-muted-foreground">
-            Select the type of fire safety certificate you want to create
+            Select the type of certificate you want to create
           </p>
         </div>
         <Button variant="outline" asChild>
@@ -223,6 +232,8 @@ export default async function NewCertificatePage() {
               <div><strong>Fire Extinguisher:</strong> Portable fire extinguisher maintenance</div>
               <div><strong>Dry Riser:</strong> Dry riser system testing and maintenance</div>
               <div><strong>CP12:</strong> Landlord gas safety checks and appliance records</div>
+              <div><strong>EICR:</strong> Full electrical installation condition report</div>
+              <div><strong>EICR - Streamlined:</strong> Faster EICR entry with the same circuit validation rules</div>
             </div>
           </CardContent>
         </Card>

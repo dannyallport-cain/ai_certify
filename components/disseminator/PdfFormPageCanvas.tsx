@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
 import { DEFAULT_STATE_OPTIONS, isNumericLikeFieldType, type DisseminatorFieldType, type InspectionPeriodConfig, computeNextInspectionDate, calculateMaxZs, DEVICE_TYPE_OPTIONS, getValidRatingsForType } from '@/lib/report-disseminator/field-analysis';
-import { buildCanvasFallbackRedactions, buildFieldLabelRedactions, buildPdfValueRedactions } from '@/components/disseminator/pdfRedaction';
-import { configurePdfJsWorker } from '@/lib/pdf/pdfjs-worker';
+import { useOverlayFieldCss } from '@/components/disseminator/pdfPageSurface';
+import { DEFAULT_PDF_PAGE_REDACTION_OPTIONS, usePdfPageRaster } from '@/components/disseminator/usePdfPageRaster';
 
 type FieldType = DisseminatorFieldType;
 
@@ -56,143 +55,24 @@ export function PdfFormPageCanvas({
   pageNumber = 1,
   fields = [],
   values,
-  redactionOptions = { fieldBounds: true, labelMatch: true, genericText: false, pixelFallback: false },
+  redactionOptions = DEFAULT_PDF_PAGE_REDACTION_OPTIONS,
   onValueChange,
   selectedId,
   onSelectField,
 }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 1131 });
-  const [scale, setScale] = useState(1);
-  const [viewportHeight, setViewportHeight] = useState(1131);
-  const overlayClassName = `pdf-form-overlay-page-${pageNumber}`;
-  const overlayCss = useMemo(() => {
-    const sanitize = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '-');
-    const rules = [
-      `.${overlayClassName}{width:${canvasSize.width}px;height:${canvasSize.height}px;}`,
-    ];
-
-    for (const field of fields) {
-      if (!field.boundingBox) continue;
-
-      const { x, y, width, height } = field.boundingBox;
-      const left = x * scale;
-      const top = viewportHeight - (y + height) * scale;
-      const overlayWidth = Math.max(width * scale, 12);
-      const overlayHeight = Math.max(height * scale, 12);
-      rules.push(
-        `.pdf-form-field-${sanitize(field.id)}{left:${left}px;top:${top}px;width:${overlayWidth}px;height:${overlayHeight}px;}`,
-      );
-    }
-
-    return rules.join('\n');
-  }, [canvasSize.height, canvasSize.width, fields, overlayClassName, scale, viewportHeight]);
-
-  useEffect(() => {
-    if (!pdfBase64 || !canvasRef.current) return;
-
-    let cancelled = false;
-    let loadingTask: { destroy: () => void; promise: Promise<any> } | null = null;
-
-    (async () => {
-      try {
-        const pdfjsLib = configurePdfJsWorker();
-
-        const dataUrl = pdfBase64.startsWith('data:')
-          ? pdfBase64
-          : `data:application/pdf;base64,${pdfBase64}`;
-
-        const base64Data = dataUrl.replace(/^data:[^;]+;base64,/, '');
-        const binaryString = atob(base64Data);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        loadingTask = pdfjsLib.getDocument({ data: bytes });
-        const pdf = await loadingTask.promise;
-        if (cancelled) return;
-
-        const page = await pdf.getPage(pageNumber);
-        if (cancelled) return;
-
-        const desiredWidth = 800;
-        const unscaledViewport = page.getViewport({ scale: 1 });
-        const pageScale = desiredWidth / unscaledViewport.width;
-        const viewport = page.getViewport({ scale: pageScale });
-
-        if (cancelled) return;
-        setScale(pageScale);
-        setViewportHeight(viewport.height);
-        setCanvasSize({ width: viewport.width, height: viewport.height });
-
-        const canvas = canvasRef.current!;
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d')!;
-
-        await page.render({ canvas: canvas as HTMLCanvasElement, canvasContext: ctx, viewport }).promise;
-
-        if (!cancelled) {
-          const fieldLabels = fields.map((f) => f.label).filter(Boolean);
-          const hasLabels = fieldLabels.length > 0;
-          let textRedactions: Array<{ left: number; top: number; width: number; height: number }> = [];
-
-          if (redactionOptions.fieldBounds) {
-            textRedactions = fields
-              .filter((f): f is FormField & { boundingBox: { x: number; y: number; width: number; height: number } } => Boolean(f.boundingBox))
-              .map((f) => {
-                const { x, y, width, height } = f.boundingBox;
-                const left = x * pageScale;
-                const top = viewport.height - (y + height) * pageScale;
-                return {
-                  left: Math.max(left + 1, 0),
-                  top: Math.max(top + 1, 0),
-                  width: Math.max(width * pageScale - 2, 0),
-                  height: Math.max(height * pageScale - 2, 0),
-                };
-              })
-              .filter((r) => r.width >= 2 && r.height >= 2);
-          }
-
-          if (!textRedactions.length && redactionOptions.labelMatch && hasLabels) {
-            textRedactions = await buildFieldLabelRedactions(page, viewport, fieldLabels);
-          }
-
-          if (!textRedactions.length && redactionOptions.genericText) {
-            textRedactions = await buildPdfValueRedactions(page, viewport);
-          }
-
-          const rects = textRedactions.length > 0
-            ? textRedactions
-            : redactionOptions.pixelFallback
-              ? buildCanvasFallbackRedactions(canvas)
-              : [];
-
-          ctx.fillStyle = '#ffffff';
-          for (const r of rects) {
-            ctx.fillRect(r.left, r.top, r.width, r.height);
-          }
-        }
-      } catch (error) {
-        if (!cancelled) console.error('[PdfFormPageCanvas] render error', error);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      loadingTask?.destroy();
-    };
-  }, [
+  const { canvasSize, scale, viewportHeight, renderKey } = usePdfPageRaster({
     pdfBase64,
     pageNumber,
-    redactionOptions.fieldBounds,
-    redactionOptions.labelMatch,
-    redactionOptions.genericText,
-    redactionOptions.pixelFallback,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    fields.map((f) => `${f.id}:${f.boundingBox ? '1' : '0'}`).join(','),
-  ]);
+    fields,
+    redactionOptions,
+  });
+  const overlayClassName = `pdf-form-overlay-page-${pageNumber}`;
+  const overlayCss = useOverlayFieldCss(overlayClassName, fields, {
+    width: canvasSize.width,
+    height: canvasSize.height,
+    scale,
+    viewportHeight,
+  });
 
   const renderFieldControl = (field: FormField) => {
     const commonClassName =
@@ -400,7 +280,14 @@ if (field.fieldType === 'sentence_builder') {
   return (
     <div className="relative max-w-full overflow-auto rounded border bg-slate-100">
       <style>{overlayCss}</style>
-      <canvas ref={canvasRef} className="block" />
+      <div
+        className="block bg-white bg-contain bg-no-repeat"
+        style={{
+          width: canvasSize.width,
+          height: canvasSize.height,
+        }}
+        data-render-key={renderKey}
+      />
 
       <div className={`absolute inset-0 ${overlayClassName}`}>
         {fields.map((field) => {

@@ -4,6 +4,10 @@ import type {
   MobileCertificateEditorRecord,
   UpdateMobileCertificateInput,
 } from '@/components/certificate-editor';
+import type {
+  FireAlarmDiagnosticAssistantFeedback,
+  FireAlarmDiagnosticAssistantRequest,
+} from '@/modules/fire-alarm-diagnostics/types';
 
 const TOKEN_KEY = 'mobile_auth_token';
 
@@ -262,6 +266,94 @@ export async function analyseImage(
 
   const data = await res.json();
   return buildAnalysisResult(data);
+}
+
+export async function getFireAlarmDiagnosticsFeedback(
+  request: FireAlarmDiagnosticAssistantRequest,
+): Promise<FireAlarmDiagnosticAssistantFeedback> {
+  const token = await getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${AI_WORKER_URL}/fire-alarm-diagnostics`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      observations: request.observations,
+      notes: request.notes,
+      faultIds: request.faultIds ?? [],
+      metadata: {
+        source: 'expo-mobile-app',
+        feature: 'fire-alarm-diagnostics',
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? body.message ?? 'Failed to get diagnostics feedback');
+  }
+
+  const data = await res.json();
+
+  return {
+    summary:
+      typeof data?.summary === 'string'
+        ? data.summary
+        : 'AI worker returned diagnostics guidance.',
+    probableCause:
+      typeof data?.probableCause === 'string'
+        ? data.probableCause
+        : 'Review the suggested next steps and matching fault types.',
+    nextSteps: Array.isArray(data?.nextSteps)
+      ? data.nextSteps.filter(
+          (step: unknown): step is string => typeof step === 'string' && step.length > 0,
+        )
+      : [],
+    suggestions: Array.isArray(data?.suggestions)
+      ? data.suggestions
+          .map((item: any) => ({
+            faultId: typeof item?.faultId === 'string' ? item.faultId : 'unknown',
+            reason:
+              typeof item?.reason === 'string' ? item.reason : 'AI worker suggested this match.',
+            nextAction:
+              typeof item?.nextAction === 'string'
+                ? item.nextAction
+                : 'Review the linked fault workflow.',
+            score: typeof item?.score === 'number' ? item.score : undefined,
+            categoryId: typeof item?.categoryId === 'string' ? item.categoryId : undefined,
+          }))
+          .filter(
+            (item: {
+              faultId: string;
+              reason: string;
+              nextAction: string;
+              score?: number;
+              categoryId?: string;
+            }) => item.faultId.length > 0,
+          )
+      : [],
+    source: 'ai-worker',
+    priority:
+      data?.priority === 'high' || data?.priority === 'medium' || data?.priority === 'low'
+        ? data.priority
+        : undefined,
+    followUpQuestions: Array.isArray(data?.followUpQuestions)
+      ? data.followUpQuestions.filter(
+          (item: unknown): item is string => typeof item === 'string' && item.length > 0,
+        )
+      : [],
+    highlightedMeasurements: Array.isArray(data?.highlightedMeasurements)
+      ? data.highlightedMeasurements.filter(
+          (item: unknown): item is string => typeof item === 'string' && item.length > 0,
+        )
+      : [],
+  };
 }
 
 // ── Uploads ───────────────────────────────────────────────────────────────────

@@ -50,6 +50,13 @@
       "when": 1775601180000,
       "tag": "0008_email_verification_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776214800000,
+      "tag": "0009_add_payment_tables",
+      "breakpoints": true
     }
   ]
 }
