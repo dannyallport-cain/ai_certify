@@ -4,7 +4,38 @@ This document defines the guided field workflow for the mobile app so it can be 
 
 ## Goal
 
-Provide a single guided wizard that walks an engineer through a consistent capture flow for a domestic inspection / EICR draft.
+Provide a mobile workflow with a clear top-level task chooser, while keeping certificate-specific steps inside a single guided wizard for domestic inspection / EICR draft creation.
+
+## App-level workflow structure
+
+The mobile app should separate top-level actions from lower-level certificate steps.
+
+### Top-level task selection
+The initial mobile screen should ask what the engineer needs to do.
+
+Primary options:
+1. `Create certificate — AI / guided`
+2. `Create certificate — manual data entry`
+3. `Fire alarm plan capture`
+4. `Fire alarm diagnostics`
+
+If a certificate draft is already in progress, the home screen may instead show:
+- `Continue current certificate`
+
+### Certificate workflow boundary
+After the engineer chooses a certificate creation route, the app should move into the certificate workflow with the correct entry mode selected.
+
+- `Create certificate — AI / guided` should open the guided route
+- `Create certificate — manual data entry` should open the manual route
+
+Lower-level screens such as customer, address, capture, and review belong to that workflow and should not be presented as peer-level top navigation choices.
+
+### Navigation intent
+- Home screen = task chooser
+- Fire alarm plan capture = standalone top-level workflow using room plan
+- Fire alarm diagnostics = standalone top-level workflow
+- Certificate wizard = ordered sub-steps for certificate creation
+- Certificate creation supports separate guided and manual entry routes
 
 ## Current Wizard Intent
 
@@ -224,12 +255,15 @@ The wizard should:
 ## Near-term implementation plan
 
 ### Phase 1
-- add a `Start Guided Wizard` button on the mobile home screen
-- add a wizard screen with:
-  - checklist
-  - today's date
-  - required prompts
-  - navigation links into existing screens
+- replace the mixed mobile home screen with a task chooser
+- show:
+  - `Create certificate — AI / guided`
+  - `Create certificate — manual data entry`
+  - `Fire alarm plan capture`
+  - `Fire alarm diagnostics`
+  - `Continue current certificate` when a draft exists
+- keep certificate step navigation inside the wizard screen
+- hide lower-level workflow screens from the visible tab bar
 
 ### Phase 2
 - persist wizard-specific answers in shared job state
