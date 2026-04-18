@@ -110,10 +110,13 @@ export const createCertificate = validatedActionWithUser(
 
     // Collect all form fields into formData object
     const collectedFormData: Record<string, any> = {};
+    const skipFields = ['customerId', 'customerName', 'certificateType', 'certificateNumber', 'siteName', 'siteAddress', 'inspectionDate', 'nextInspectionDate', 'inspectorName'];
+    
     if (formData) {
       for (const [key, value] of formData.entries()) {
         // Skip the main certificate fields that are stored separately
-        if (!['customerId', 'customerName', 'certificateType', 'certificateNumber', 'siteName', 'siteAddress', 'inspectionDate', 'nextInspectionDate', 'inspectorName'].includes(key)) {
+        if (!skipFields.includes(key)) {
+          // Store all other fields as-is (inspectionSchedule, circuits, items should be JSON strings)
           collectedFormData[key] = value;
         }
       }

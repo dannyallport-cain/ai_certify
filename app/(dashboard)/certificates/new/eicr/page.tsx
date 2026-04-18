@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createCertificate } from '../../../actions';
 import { useState, useEffect, useRef, type ChangeEvent, type ReactNode, type InputHTMLAttributes } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import useSWR, { useSWRConfig } from 'swr';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
@@ -1530,6 +1530,7 @@ function ExpectedValueInput({
 
 export function EICRCertificatePage({ streamlined = false }: { streamlined?: boolean } = {}) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { mutate } = useSWRConfig();
   const formRef = useRef<HTMLFormElement>(null);
   const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -1806,6 +1807,116 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     lastSavedDraftKeyRef.current = draftStorageKey;
     hasHydratedDraftRef.current = true;
   }, [currentUser]);
+
+  // Load certificate from database if editId is provided
+  useEffect(() => {
+    const loadCertificateForEditing = async () => {
+      const editId = searchParams.get('editId');
+      
+      if (!editId || hasHydratedDraftRef.current) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/certificates/${editId}`);
+        if (!response.ok) {
+          console.error('Failed to load certificate:', response.statusText);
+          return;
+        }
+
+        const certificateData = await response.json();
+        const formData = certificateData.formData || {};
+
+        // Apply form values from the certificate
+        requestAnimationFrame(() => {
+          applyEicrFormValues(formRef.current, formData as Record<string, string>);
+        });
+
+        // Set state from certificate data
+        if (certificateData.certificateNumber) setCertificateNumber(certificateData.certificateNumber);
+        if (certificateData.siteName) setSiteName(certificateData.siteName);
+        if (certificateData.siteAddress) setClientAddress(certificateData.siteAddress);
+        if (certificateData.inspectionDate) setInspectionDate(certificateData.inspectionDate);
+        if (certificateData.nextInspectionDate) setNextInspectionDate(certificateData.nextInspectionDate);
+        if (certificateData.inspectorName) setInspectorName(certificateData.inspectorName);
+
+        // Load inspection schedule if present
+        if (formData.inspectionSchedule) {
+          try {
+            const scheduleData = typeof formData.inspectionSchedule === 'string'
+              ? JSON.parse(formData.inspectionSchedule)
+              : formData.inspectionSchedule;
+            
+            const scheduleValue: InspScheduleValue = {
+              codes: {},
+              comments: {},
+            };
+            
+            for (const [ref, item] of Object.entries(scheduleData)) {
+              if (item && typeof item === 'object') {
+                const itemData = item as any;
+                // Check if outcome property exists (even if it's an empty string)
+                if (itemData.hasOwnProperty('outcome')) {
+                  scheduleValue.codes[ref] = itemData.outcome;
+                }
+                // Check if comment property exists and has content (comments can be empty strings)
+                if (itemData.hasOwnProperty('comment')) {
+                  scheduleValue.comments[ref] = itemData.comment;
+                }
+              }
+            }
+            
+            setInspSchedule(scheduleValue);
+          } catch (e) {
+            console.error('Failed to parse inspection schedule:', e);
+          }
+        }
+
+        // Load circuits if present
+        if (formData.circuits) {
+          try {
+            const circuitsData = typeof formData.circuits === 'string'
+              ? JSON.parse(formData.circuits)
+              : formData.circuits;
+            
+            if (Array.isArray(circuitsData) && circuitsData.length > 0) {
+              setCircuits(circuitsData);
+            }
+          } catch (e) {
+            console.error('Failed to parse circuits:', e);
+          }
+        }
+
+        // Load observations if present
+        if (formData.items) {
+          try {
+            const itemsData = typeof formData.items === 'string'
+              ? JSON.parse(formData.items)
+              : formData.items;
+            
+            if (Array.isArray(itemsData)) {
+              const obs = itemsData
+                .filter((item: any) => item.itemType === 'observation')
+                .map((item: any) => ({
+                  id: item.id || Date.now().toString(),
+                  description: item.description || '',
+                  code: (item.defects || 'C3') as any,
+                }));
+              if (obs.length > 0) setObservations(obs);
+            }
+          } catch (e) {
+            console.error('Failed to parse observations:', e);
+          }
+        }
+
+        hasHydratedDraftRef.current = true;
+      } catch (error) {
+        console.error('Error loading certificate for editing:', error);
+      }
+    };
+
+    loadCertificateForEditing();
+  }, [searchParams]);
 
   useEffect(() => {
     if (!hasHydratedDraftRef.current || typeof window === 'undefined') {
@@ -3002,15 +3113,29 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       const formData = new FormData(form);
       formData.set('certificateType', 'EICR');
 
-      const scheduleForPdf = Object.fromEntries(
-        Array.from(new Set([...Object.keys(inspSchedule.codes), ...Object.keys(inspSchedule.comments)])).map((ref) => [
-          ref,
-          {
-            outcome: inspSchedule.codes[ref] || '',
-            comment: inspSchedule.comments[ref] || '',
-          },
-        ]),
-      );
+      // Build inspection schedule from state - ensure all codes and comments are included
+      const scheduleForPdf: Record<string, { outcome: string; comment: string }> = {};
+      
+      // Only include refs that have explicit codes or comments
+      for (const ref of Object.keys(inspSchedule.codes)) {
+        const code = inspSchedule.codes[ref];
+        const comment = inspSchedule.comments[ref] ?? '';
+        // Only add if code is set (even empty string from 'N/A' should be included if explicitly set)
+        scheduleForPdf[ref] = {
+          outcome: code,
+          comment: comment,
+        };
+      }
+      
+      // Also include any refs that only have comments (no explicit code)
+      for (const ref of Object.keys(inspSchedule.comments)) {
+        if (!scheduleForPdf[ref] && inspSchedule.comments[ref]) {
+          scheduleForPdf[ref] = {
+            outcome: '',
+            comment: inspSchedule.comments[ref],
+          };
+        }
+      }
 
       const obsJson = JSON.stringify(
         observations.map((o) => ({
@@ -3027,6 +3152,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         })),
       );
 
+      // Ensure all form fields are properly set
       formData.set('items', obsJson);
       formData.set('inspectionSchedule', JSON.stringify(scheduleForPdf));
       formData.set('circuits', JSON.stringify(circuits));

@@ -39,6 +39,23 @@ export default async function CertificatePage({ params }: any) {
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Certificate {certificate.certificateNumber}</h1>
         <div className="flex gap-2">
+          {(() => {
+            const typeMap: Record<string, string> = {
+              'BS5839-1': 'bs5839-1',
+              'BS5839-6': 'bs5839-6',
+              'BS5266': 'bs5266',
+              'FIRE_EXTINGUISHER': 'fire-extinguisher',
+              'DRY_RISER': 'dry-riser',
+              'CP12': 'cp12',
+              'EICR': 'eicr',
+            };
+            const editPath = `/certificates/new/${typeMap[certificate.certificateType] || certificate.certificateType.toLowerCase().replace(/_/g, '-')}?editId=${certificate.id}`;
+            return (
+              <Link href={editPath}>
+                <Button variant="outline">Back to Edit Report</Button>
+              </Link>
+            );
+          })()}
           <DownloadPDFButton certificateId={certificate.id} certificateNumber={certificate.certificateNumber} />
           <Link href="/certificates">
             <Button variant="outline">Back to List</Button>
