@@ -21,6 +21,22 @@ interface DateDropdownFieldProps {
   autoHelpText?: string;
 }
 
+function parseLocalDate(value: string): Date | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+
+  const [, year, month, day] = match;
+  const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 export function DateDropdownField({
   id,
   name,
@@ -32,14 +48,7 @@ export function DateDropdownField({
   autoTitle,
   autoHelpText,
 }: DateDropdownFieldProps) {
-  const selectedDate = useMemo(() => {
-    if (!value) {
-      return undefined;
-    }
-
-    const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-  }, [value]);
+  const selectedDate = useMemo(() => parseLocalDate(value), [value]);
 
   const handleSelect = (date: Date | undefined) => {
     if (!date) {
@@ -73,7 +82,7 @@ export function DateDropdownField({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar mode="single" selected={selectedDate} onSelect={handleSelect} />
+          <Calendar mode="single" selected={selectedDate} onSelect={handleSelect} initialFocus />
         </PopoverContent>
       </Popover>
 

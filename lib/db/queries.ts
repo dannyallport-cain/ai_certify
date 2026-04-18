@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, or } from 'drizzle-orm';
+import { asc, count, desc, and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from './drizzle';
 import {
   activityLogs,
@@ -204,6 +204,107 @@ export async function getCertificatesForTeam() {
     .leftJoin(customers, eq(certificates.customerId, customers.id))
     .where(eq(certificates.teamId, team.id))
     .orderBy(desc(certificates.createdAt));
+}
+
+export async function getCertificatesForTeamPage({
+  search,
+  certificateType,
+  status,
+  startDate,
+  endDate,
+  sortKey = 'createdAt',
+  sortDir = 'desc',
+  limit = 20,
+  offset = 0,
+}: {
+  search?: string;
+  certificateType?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  sortKey?: 'createdAt' | 'inspectionDate' | 'certificateNumber' | 'certificateType';
+  sortDir?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+}) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const team = await getTeamForUser();
+  if (!team) {
+    throw new Error('User not part of a team');
+  }
+
+  const conditions = [eq(certificates.teamId, team.id)] as Array<unknown>;
+
+  if (certificateType) {
+    conditions.push(eq(certificates.certificateType, certificateType));
+  }
+
+  if (status) {
+    conditions.push(eq(certificates.status, status));
+  }
+
+  if (startDate) {
+    const start = new Date(startDate);
+    if (!Number.isNaN(start.getTime())) {
+      conditions.push(sql`${certificates.inspectionDate} >= ${start}`);
+    }
+  }
+
+  if (endDate) {
+    const end = new Date(endDate);
+    if (!Number.isNaN(end.getTime())) {
+      conditions.push(sql`${certificates.inspectionDate} <= ${end}`);
+    }
+  }
+
+  if (search?.trim()) {
+    const normalized = `%${search.trim().toLowerCase()}%`;
+    conditions.push(
+      or(
+        sql`LOWER(${certificates.certificateNumber}) LIKE ${normalized}`,
+        sql`LOWER(${certificates.siteName}) LIKE ${normalized}`,
+        sql`LOWER(${customers.name}) LIKE ${normalized}`
+      )
+    );
+  }
+
+  const sortColumns: Record<string, any> = {
+    createdAt: certificates.createdAt,
+    inspectionDate: certificates.inspectionDate,
+    certificateNumber: certificates.certificateNumber,
+    certificateType: certificates.certificateType,
+  };
+
+  const orderColumn = sortColumns[sortKey] || certificates.createdAt;
+  const order = sortDir === 'asc' ? asc(orderColumn) : desc(orderColumn);
+  const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
+
+  const [countResult] = await db
+    .select({ count: count() })
+    .from(certificates)
+    .leftJoin(customers, eq(certificates.customerId, customers.id))
+    .where(whereClause);
+
+  const items = await db
+    .select({
+      certificate: certificates,
+      customer: customers,
+    })
+    .from(certificates)
+    .leftJoin(customers, eq(certificates.customerId, customers.id))
+    .where(whereClause)
+    .orderBy(order)
+    .limit(limit)
+    .offset(offset);
+
+  return {
+    items,
+    total: Number(countResult?.count ?? 0),
+  };
 }
 
 export async function getCertificateById(certificateId: number) {

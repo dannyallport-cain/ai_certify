@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 import httpx
 
@@ -36,6 +36,14 @@ class LocalLLMProbeResult:
     detail: str | None = None
 
 
+@dataclass(frozen=True)
+class HostedInferenceResult:
+    summary: str | None
+    observations: list[str]
+    recommended_codes: list[str]
+    raw: dict[str, Any]
+
+
 def _clean_env(value: str | None) -> str | None:
     if value is None:
         return None
@@ -63,6 +71,24 @@ def _normalize_base_url(value: str | None) -> str | None:
     if cleaned is None:
         return None
     return cleaned.rstrip("/")
+
+
+def _get_openai_compatible_api_key() -> str | None:
+    return _clean_env(os.getenv("OPENAI_API_KEY")) or _clean_env(os.getenv("OPENROUTER_API_KEY"))
+
+
+def _build_openai_compatible_headers() -> dict[str, str]:
+    api_key = _get_openai_compatible_api_key()
+    headers: dict[str, str] = {}
+
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    if "openrouter.ai" in (os.getenv("LOCAL_LLM_BASE_URL") or "") or "openrouter.ai" in (os.getenv("LM_STUDIO_BASE_URL") or ""):
+        headers.setdefault("HTTP-Referer", "https://railway.app")
+        headers.setdefault("X-Title", "ai-certify-worker")
+
+    return headers
 
 
 def resolve_local_llm_provider_config() -> LocalLLMProviderConfig:
@@ -187,7 +213,10 @@ async def probe_local_llm_provider(timeout: float = 2.5) -> LocalLLMProbeResult:
                     if isinstance(item, dict) and item.get("name")
                 ]
             else:
-                response = await client.get(f"{config.base_url}/models")
+                response = await client.get(
+                    f"{config.base_url}/models",
+                    headers=_build_openai_compatible_headers(),
+                )
                 response.raise_for_status()
                 payload = response.json()
                 models = [
@@ -234,4 +263,82 @@ async def probe_local_llm_provider(timeout: float = 2.5) -> LocalLLMProbeResult:
         selected_model_available=selected_model_available,
         status="ok",
         detail=detail,
+    )
+
+
+async def run_hosted_inference(
+    *,
+    prompt: str,
+    model: str | None = None,
+    timeout: float = 25.0,
+) -> HostedInferenceResult | None:
+    config = resolve_local_llm_provider_config()
+    if not config.enabled or config.api_style != "openai-compatible" or not config.base_url:
+        return None
+
+    api_key = _get_openai_compatible_api_key()
+    if not api_key:
+        return None
+
+    selected_model = model or config.model
+    if not selected_model:
+        return None
+
+    body = {
+        "model": selected_model,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are assisting with electrical inspection image review. "
+                    "Return strict JSON with keys: summary, observations, recommendedCodes. "
+                    "observations must be an array of concise strings. "
+                    "recommendedCodes must be an array containing only C1, C2, C3, FI, LIM, or NA."
+                ),
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ],
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"},
+    }
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.post(
+            f"{config.base_url}/chat/completions",
+            headers={
+                "Content-Type": "application/json",
+                **_build_openai_compatible_headers(),
+            },
+            json=body,
+        )
+        response.raise_for_status()
+        payload = response.json()
+
+    content = (
+        payload.get("choices", [{}])[0]
+        .get("message", {})
+        .get("content")
+    )
+    if not isinstance(content, str) or not content.strip():
+        return HostedInferenceResult(
+            summary=None,
+            observations=[],
+            recommended_codes=[],
+            raw=payload,
+        )
+
+    import json
+
+    parsed = json.loads(content)
+    observations = parsed.get("observations")
+    recommended_codes = parsed.get("recommendedCodes")
+
+    return HostedInferenceResult(
+        summary=parsed.get("summary") if isinstance(parsed.get("summary"), str) else None,
+        observations=[str(item) for item in observations] if isinstance(observations, list) else [],
+        recommended_codes=[str(item) for item in recommended_codes] if isinstance(recommended_codes, list) else [],
+        raw=payload,
     )

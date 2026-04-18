@@ -67,6 +67,13 @@ export default function HomeScreen() {
   const hasWorkflowProgress =
     !!state.selectedCustomer || !!state.gpsAddress || state.capturedImages.length > 0;
 
+  function startCertificateRoute(mode: 'guided_photo' | 'manual_only') {
+    router.push({
+      pathname: '/(tabs)/wizard',
+      params: { entryMode: mode },
+    });
+  }
+
   return (
     <ScrollView
       className="flex-1 bg-[#f8f5f1]"
@@ -116,7 +123,7 @@ export default function HomeScreen() {
           <View className="rounded-[22px] bg-[#f6f1eb] px-4 py-4">
             <Text className="text-sm font-semibold text-[#5e5148]">Choose a starting point</Text>
             <Text className="mt-2 text-sm leading-5 text-[#7b7280]">
-              Select one of the task cards below. Certificate creation is split into AI/guided and manual entry routes, and fire alarm tools are split into plan capture and diagnostics.
+              Select one of the task cards below. Certificate creation now starts in either a guided or manual route, while fire alarm tools remain separate top-level workflows.
             </Text>
           </View>
         )}
@@ -149,19 +156,19 @@ export default function HomeScreen() {
           <StepCard
             icon="sparkles-outline"
             title="Create certificate — AI / guided"
-            subtitle="Use the guided workflow with customer, site, photos, AI-assisted capture, and review."
+            subtitle="Start the guided certificate route with customer, site, evidence capture, AI-assisted steps, and review."
             done={false}
             stepNumber={1}
-            onPress={() => router.push('/(tabs)/wizard' as never)}
+            onPress={() => startCertificateRoute('guided_photo')}
           />
 
           <StepCard
             icon="create-outline"
             title="Create certificate — manual data entry"
-            subtitle="Start a certificate using manual entry instead of the guided AI/photo workflow."
+            subtitle="Start the manual certificate route with manual-first answers and direct data entry instead of guided photo capture."
             done={false}
             stepNumber={2}
-            onPress={() => router.push('/(tabs)/wizard' as never)}
+            onPress={() => startCertificateRoute('manual_only')}
           />
         </>
       )}
@@ -194,7 +201,7 @@ export default function HomeScreen() {
             <View className="mr-4 flex-1">
               <Text className="mb-1 text-lg font-semibold text-[#1f2937]">Resume certificate workflow</Text>
               <Text className="text-sm leading-5 text-[#6b7280]">
-                Continue the lower-level certificate steps from inside the guided wizard.
+                Continue the in-progress certificate from inside the certificate workflow.
               </Text>
             </View>
             <View className="h-11 w-11 items-center justify-center rounded-full bg-[#f3ece5]">

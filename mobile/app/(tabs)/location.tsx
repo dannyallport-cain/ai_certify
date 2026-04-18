@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
@@ -10,11 +10,15 @@ export default function LocationScreen() {
   const [manualAddress, setManualAddress] = useState('');
   const { state, dispatch } = useJob();
 
-  useEffect(() => {
+  const syncManualAddressFromGps = useCallback(() => {
     if (state.gpsAddress && !manualAddress.trim()) {
       setManualAddress(state.gpsAddress);
     }
-  }, [state.gpsAddress]);
+  }, [manualAddress, state.gpsAddress]);
+
+  useEffect(() => {
+    syncManualAddressFromGps();
+  }, [syncManualAddressFromGps]);
 
   async function detectLocation() {
     setLoading(true);

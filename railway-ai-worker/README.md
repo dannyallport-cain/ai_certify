@@ -300,6 +300,40 @@ Provider selection prefers `LOCAL_LLM_PROVIDER` when explicitly set. If it is un
 - `LM_STUDIO_BASE_URL` — base URL for the LM Studio server, for example `http://192.168.1.60:1234`
 - `LM_STUDIO_MODEL` — model identifier to use/report for LM Studio
 
+#### OpenAI-compatible API key variables
+
+- `OPENROUTER_API_KEY` — preferred variable for OpenRouter
+- `OPENAI_API_KEY` — also accepted by the worker for OpenAI-compatible providers
+
+### Example: OpenRouter hosted inference
+
+For OpenRouter, use the OpenAI-compatible provider mode and set the API key in Railway service variables:
+
+```bash
+LOCAL_LLM_PROVIDER=openai
+LOCAL_LLM_BASE_URL=https://openrouter.ai/api/v1
+LOCAL_LLM_MODEL=google/gemma-3-4b-it
+OPENROUTER_API_KEY=your-openrouter-api-key
+```
+
+Notes:
+
+- keep `OPENROUTER_API_KEY` only in Railway environment variables or another secret manager
+- do not commit the real key to `.env` example files or source control
+- the worker builds the `Authorization: Bearer ...` header automatically
+- for OpenRouter requests, the worker also adds `HTTP-Referer` and `X-Title` headers automatically when the configured base URL contains `openrouter.ai`
+
+You can verify configuration after deploy with:
+
+```bash
+curl "https://your-railway-app.up.railway.app/health?probeProvider=true"
+```
+
+Expected result:
+
+- `localLlm.provider` will report `lmstudio` because OpenRouter is handled as an OpenAI-compatible provider in the current abstraction
+- `localLlm.status` should be `ok` when the key, base URL, and model are valid
+
 ### Example: Ollama running on another machine
 
 If Ollama is running on a reachable host:

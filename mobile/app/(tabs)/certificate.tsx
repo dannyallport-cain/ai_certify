@@ -871,7 +871,7 @@ function PillRow({
   value,
   onChange,
 }: {
-  options: Array<{ label: string; value: string }>;
+  options: { label: string; value: string }[];
   value: string;
   onChange: (value: string) => void;
 }) {

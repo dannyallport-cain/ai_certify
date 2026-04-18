@@ -111,6 +111,7 @@ const REINSPECTION_PERIODS = [
 ] as const;
 
 const REASON_FOR_REPORT_OPTIONS = [
+  'Safety assessment requested by client. To assess compliance with BS 7671.',
   'Periodic inspection and testing.',
   'Change of occupancy / tenancy.',
   'Landlord safety compliance.',
@@ -128,38 +129,69 @@ const GENERAL_CONDITION_OPTIONS = [
   'The installation was found to be in generally good condition with no immediate danger observed at the time of inspection.',
 ] as const;
 
-const EICR_INTERVAL_PRESETS = {
-  Domestic: {
-    label: 'Domestic (owner-occupied)',
-    period: '10 Years',
-    note: 'Typical recommendation: every 10 years or on change of occupancy.',
-  },
-  DomesticRented: {
-    label: 'Domestic (rented accommodation)',
-    period: '5 Years',
-    note: 'Typical recommendation: every 5 years or at change of tenancy.',
-  },
-  HMO: {
-    label: 'HMO / communal landlord areas',
-    period: '5 Years',
-    note: 'Typical landlord/HMO recommendation: every 5 years unless risk assessment or licensing conditions require earlier.',
-  },
-  Commercial: {
-    label: 'Commercial premises',
-    period: '5 Years',
-    note: 'Typical recommendation: every 5 years, subject to use and risk profile.',
-  },
-  Industrial: {
-    label: 'Industrial installation',
-    period: '3 Years',
-    note: 'Typical recommendation: every 3 years, subject to environment and maintenance regime.',
-  },
-  HighRisk: {
-    label: 'High-risk or special installation',
-    period: '1 Year',
-    note: 'Typical recommendation: every 1 year where the environment or duty of care warrants a shorter interval.',
-  },
-} as const;
+ const EICR_INTERVAL_PRESETS = {
+   Domestic: {
+     label: 'Domestic',
+     period: '5 Years',
+     note: 'Typical recommendation: every 5 years, or earlier where occupancy/risk factors warrant it.',
+   },
+   DomesticRented: {
+     label: 'Domestic (rented accommodation)',
+     period: '5 Years',
+     note: 'Typical recommendation: every 5 years or at change of tenancy.',
+   },
+   HMO: {
+     label: 'HMO / communal landlord areas',
+     period: '5 Years',
+     note: 'Typical landlord/HMO recommendation: every 5 years unless risk assessment or licensing conditions require earlier.',
+   },
+   Commercial: {
+     label: 'Commercial premises',
+     period: '5 Years',
+     note: 'Typical recommendation: every 5 years, subject to use and risk profile.',
+   },
+   Industrial: {
+     label: 'Industrial installation',
+     period: '2 Years',
+     note: 'Typical recommendation: every 2 years, subject to environment and maintenance regime.',
+   },
+   HighRisk: {
+     label: 'High-risk or special installation',
+     period: '1 Year',
+     note: 'Typical recommendation: every 1 year where the environment or duty of care warrants a shorter interval.',
+   },
+ } as const;
+ 
+ const DECLARED_SUPPLY_PARAMETER_PRESETS = {
+   Domestic: {
+     natureOfSupply: '1-phase (2 wire) ac',
+     nominalVoltageUo: '230',
+     nominalVoltageU: '230',
+     nominalFrequency: '50',
+     numberOfSupplies: '1',
+   },
+   Commercial: {
+     natureOfSupply: '3-phase (4 wire) ac',
+     nominalVoltageUo: '230',
+     nominalVoltageU: '400',
+     nominalFrequency: '50',
+     numberOfSupplies: '1',
+   },
+   Industrial: {
+     natureOfSupply: '3-phase (4 wire) ac',
+     nominalVoltageUo: '230',
+     nominalVoltageU: '400',
+     nominalFrequency: '50',
+     numberOfSupplies: '1',
+   },
+   Other: {
+     natureOfSupply: '1-phase (2 wire) ac',
+     nominalVoltageUo: '230',
+     nominalVoltageU: '230',
+     nominalFrequency: '50',
+     numberOfSupplies: '1',
+   },
+ } as const;
 
 type EicrIntervalPresetKey = keyof typeof EICR_INTERVAL_PRESETS;
 type NextInspectionPeriodLabel = (typeof REINSPECTION_PERIODS)[number]['label'];
@@ -518,6 +550,91 @@ type CircuitSelectOption = {
   menuLabel: string;
   title?: string;
 };
+
+type EicrDraftUser = {
+  id?: string | number;
+  email?: string;
+  name?: string;
+  role?: string;
+};
+
+type EicrDraftState = {
+  selectedCustomer: string;
+  selectedCustomerName: string;
+  siteName: string;
+  clientAddress: string;
+  installationAddress: string;
+  isSiteNameAuto: boolean;
+  isClientAddressAuto: boolean;
+  certificateNumber: string;
+  inspectionDate: string;
+  isInspectionDateAuto: boolean;
+  nextInspectionDate: string;
+  nextInspectionPeriod: NextInspectionPeriodLabel;
+  overallAssessment: string;
+  instrumentMultiFunction: string;
+  earthingArrangement: string;
+  meansOfEarthing: string;
+  supplyConductorCSA: string;
+  supplyConductorCSACustom: string;
+  observations: Observation[];
+  evidenceOfAdditions: string;
+  premisesType: string;
+  inspSchedule: InspScheduleValue;
+  circuits: CircuitRow[];
+  selectedCircuitRow: number;
+  selectedCircuitTemplate: string;
+  natureOfSupply: string;
+  externalEarthFaultLoopImpedance: string;
+  extentQuickOption: string;
+  limitationsQuickOption: string;
+  operationalQuickOption: string;
+};
+
+const EICR_DRAFT_STORAGE_PREFIX = 'eicr-form-draft';
+
+function buildEicrDraftUserKey(user?: EicrDraftUser | null): string {
+  if (user?.id !== undefined && user?.id !== null) {
+    return `user-${String(user.id)}`;
+  }
+
+  if (user?.email) {
+    return `email-${user.email.trim().toLowerCase()}`;
+  }
+
+  if (user?.name) {
+    return `name-${user.name.trim().toLowerCase()}`;
+  }
+
+  return 'anonymous';
+}
+
+function buildEicrDraftStorageKey(user: EicrDraftUser | null | undefined, certificateNumber: string, inspectionDate: string) {
+  return [
+    EICR_DRAFT_STORAGE_PREFIX,
+    buildEicrDraftUserKey(user),
+    certificateNumber.trim() || 'no-certificate-number',
+    inspectionDate || 'no-date',
+  ].join(':');
+}
+
+function readEicrDraftState(storageKey: string): EicrDraftState | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(storageKey);
+    if (!rawValue) {
+      return null;
+    }
+
+    return JSON.parse(rawValue) as EicrDraftState;
+  } catch (error) {
+    console.error('Unable to read EICR draft from local storage:', error);
+    return null;
+  }
+}
 
 const asSimpleOptions = (values: readonly string[]): readonly CircuitSelectOption[] =>
   values.map((value) => ({ value, menuLabel: value }));
@@ -1278,6 +1395,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const [formError, setFormError] = useState('');
   const [showExpectedValues, setShowExpectedValues] = useState(false);
   const [overallAssessment, setOverallAssessment] = useState('SATISFACTORY');
+  const [instrumentMultiFunction, setInstrumentMultiFunction] = useState('');
   const [earthingArrangement, setEarthingArrangement] = useState('TN-C-S');
   const [meansOfEarthing, setMeansOfEarthing] = useState("Distributor's facility");
   const [supplyConductorCSA, setSupplyConductorCSA] = useState('25');
@@ -1302,7 +1420,9 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const [extentQuickOption, setExtentQuickOption] = useState('__custom');
   const [limitationsQuickOption, setLimitationsQuickOption] = useState('__custom');
   const [operationalQuickOption, setOperationalQuickOption] = useState('__custom');
-  const { data: currentUser } = useSWR<{ role?: string }>('/api/user', fetcher);
+  const { data: currentUser } = useSWR<EicrDraftUser>('/api/user', fetcher);
+  const hasHydratedDraftRef = useRef(false);
+  const lastSavedDraftKeyRef = useRef<string | null>(null);
 
   type VerifyResult = { type: 'error' | 'warning' | 'pass'; message: string };
   const [verifyResults, setVerifyResults] = useState<VerifyResult[] | null>(null);
@@ -1464,6 +1584,147 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   useEffect(() => {
     setCertificateNumber(generateCertificateNumber());
   }, []);
+
+  useEffect(() => {
+    if (hasHydratedDraftRef.current) {
+      return;
+    }
+
+    if (!certificateNumber || !inspectionDate) {
+      return;
+    }
+
+    const draftStorageKey = buildEicrDraftStorageKey(currentUser, certificateNumber, inspectionDate);
+    const savedDraft = readEicrDraftState(draftStorageKey);
+
+    if (savedDraft) {
+      setSelectedCustomer(savedDraft.selectedCustomer ?? '');
+      setSelectedCustomerName(savedDraft.selectedCustomerName ?? '');
+      setSiteName(savedDraft.siteName ?? '');
+      setClientAddress(savedDraft.clientAddress ?? '');
+      setInstallationAddress(savedDraft.installationAddress ?? '');
+      setIsSiteNameAuto(savedDraft.isSiteNameAuto ?? false);
+      setIsClientAddressAuto(savedDraft.isClientAddressAuto ?? false);
+      setCertificateNumber(savedDraft.certificateNumber ?? certificateNumber);
+      setInspectionDate(savedDraft.inspectionDate ?? inspectionDate);
+      setIsInspectionDateAuto(savedDraft.isInspectionDateAuto ?? false);
+      setNextInspectionDate(savedDraft.nextInspectionDate ?? '');
+      setNextInspectionPeriod(savedDraft.nextInspectionPeriod ?? '3 Years');
+      setOverallAssessment(savedDraft.overallAssessment ?? 'SATISFACTORY');
+      setInstrumentMultiFunction(savedDraft.instrumentMultiFunction ?? '');
+      setEarthingArrangement(savedDraft.earthingArrangement ?? 'TN-C-S');
+      setMeansOfEarthing(savedDraft.meansOfEarthing ?? "Distributor's facility");
+      setSupplyConductorCSA(savedDraft.supplyConductorCSA ?? '25');
+      setSupplyConductorCSACustom(savedDraft.supplyConductorCSACustom ?? '');
+      setObservations(savedDraft.observations ?? []);
+      setEvidenceOfAdditions(savedDraft.evidenceOfAdditions ?? 'No');
+      setPremisesType(savedDraft.premisesType ?? 'Commercial');
+      setInspSchedule(
+        savedDraft.inspSchedule ?? {
+          codes: {},
+          comments: {},
+        },
+      );
+      setCircuits(
+        Array.isArray(savedDraft.circuits) && savedDraft.circuits.length > 0
+          ? savedDraft.circuits
+          : Array.from({ length: DEFAULT_CIRCUIT_ROW_COUNT }, (_, index) => createEmptyCircuitRow(index)),
+      );
+      setSelectedCircuitRow(savedDraft.selectedCircuitRow ?? 0);
+      setSelectedCircuitTemplate(savedDraft.selectedCircuitTemplate ?? '__template');
+      setNatureOfSupply(savedDraft.natureOfSupply ?? '1-phase (2 wire) ac');
+      setExternalEarthFaultLoopImpedance(savedDraft.externalEarthFaultLoopImpedance ?? '');
+      setExtentQuickOption(savedDraft.extentQuickOption ?? '__custom');
+      setLimitationsQuickOption(savedDraft.limitationsQuickOption ?? '__custom');
+      setOperationalQuickOption(savedDraft.operationalQuickOption ?? '__custom');
+    }
+
+    lastSavedDraftKeyRef.current = draftStorageKey;
+    hasHydratedDraftRef.current = true;
+  }, [currentUser, certificateNumber, inspectionDate]);
+
+  useEffect(() => {
+    if (!hasHydratedDraftRef.current || !certificateNumber || !inspectionDate || typeof window === 'undefined') {
+      return;
+    }
+
+    const draftStorageKey = buildEicrDraftStorageKey(currentUser, certificateNumber, inspectionDate);
+    const draftState: EicrDraftState = {
+      selectedCustomer,
+      selectedCustomerName,
+      siteName,
+      clientAddress,
+      installationAddress,
+      isSiteNameAuto,
+      isClientAddressAuto,
+      certificateNumber,
+      inspectionDate,
+      isInspectionDateAuto,
+      nextInspectionDate,
+      nextInspectionPeriod,
+      overallAssessment,
+      instrumentMultiFunction,
+      earthingArrangement,
+      meansOfEarthing,
+      supplyConductorCSA,
+      supplyConductorCSACustom,
+      observations,
+      evidenceOfAdditions,
+      premisesType,
+      inspSchedule,
+      circuits,
+      selectedCircuitRow,
+      selectedCircuitTemplate,
+      natureOfSupply,
+      externalEarthFaultLoopImpedance,
+      extentQuickOption,
+      limitationsQuickOption,
+      operationalQuickOption,
+    };
+
+    try {
+      if (lastSavedDraftKeyRef.current && lastSavedDraftKeyRef.current !== draftStorageKey) {
+        window.localStorage.removeItem(lastSavedDraftKeyRef.current);
+      }
+
+      window.localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
+      lastSavedDraftKeyRef.current = draftStorageKey;
+    } catch (error) {
+      console.error('Unable to save EICR draft to local storage:', error);
+    }
+  }, [
+    currentUser,
+    selectedCustomer,
+    selectedCustomerName,
+    siteName,
+    clientAddress,
+    installationAddress,
+    isSiteNameAuto,
+    isClientAddressAuto,
+    certificateNumber,
+    inspectionDate,
+    isInspectionDateAuto,
+    nextInspectionDate,
+    nextInspectionPeriod,
+    overallAssessment,
+    instrumentMultiFunction,
+    earthingArrangement,
+    meansOfEarthing,
+    supplyConductorCSA,
+    supplyConductorCSACustom,
+    observations,
+    evidenceOfAdditions,
+    premisesType,
+    inspSchedule,
+    circuits,
+    selectedCircuitRow,
+    selectedCircuitTemplate,
+    natureOfSupply,
+    externalEarthFaultLoopImpedance,
+    extentQuickOption,
+    limitationsQuickOption,
+    operationalQuickOption,
+  ]);
 
   const addObservation = () => {
     setObservations(prev => [...prev, { id: Date.now().toString(), description: '', code: 'C3' }]);
@@ -1697,8 +1958,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
           : 'HighRisk';
 
   const recommendedIntervalPreset = EICR_INTERVAL_PRESETS[recommendedIntervalPresetKey];
-
+  const declaredSupplyPreset =
+    DECLARED_SUPPLY_PARAMETER_PRESETS[premisesType as keyof typeof DECLARED_SUPPLY_PARAMETER_PRESETS] ??
+    DECLARED_SUPPLY_PARAMETER_PRESETS.Other;
   const canUseSampleFill = isAdminRole(currentUser?.role);
+  const hasMultiFunctionInstrument = instrumentMultiFunction.trim().length > 0;
 
   const setFieldValue = (name: string, value: string) => {
     const form = formRef.current;
@@ -1737,6 +2001,15 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     const spacer = /[.!?]$/.test(current) ? ' ' : '. ';
     setFieldValue(name, `${current}${spacer}${normalizedSentence}`);
   };
+
+  useEffect(() => {
+    setNextInspectionPeriod(EICR_INTERVAL_PRESETS[recommendedIntervalPresetKey].period as NextInspectionPeriodLabel);
+    setNatureOfSupply(declaredSupplyPreset.natureOfSupply);
+    setFieldValue('nominalVoltageUo', declaredSupplyPreset.nominalVoltageUo);
+    setFieldValue('nominalVoltageU', declaredSupplyPreset.nominalVoltageU);
+    setFieldValue('nominalFrequency', declaredSupplyPreset.nominalFrequency);
+    setFieldValue('numberOfSupplies', declaredSupplyPreset.numberOfSupplies);
+  }, [recommendedIntervalPresetKey, declaredSupplyPreset]);
 
   const fillFormWithSampleData = () => {
     const today = new Date();
@@ -2041,7 +2314,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       installationAddress: 'Unit 4, Riverside Industrial Estate, Manchester, M11 2AB',
       inspectionDate: inspectionDateValue,
       nextInspectionDate: nextInspectionDateValue,
-      reasonForReport: 'Periodic inspection and testing in accordance with BS 7671 requirements for landlord and insurer compliance.',
+      reasonForReport: 'Safety assessment requested by client. To assess compliance with BS 7671.',
       premisesType: 'Commercial',
       estimatedAgeOfWiring: '15',
       estimatedAgeOfAdditions: '5',
@@ -2701,7 +2974,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   value="__custom"
                   onValueChange={(value) => {
                     if (value !== '__custom') {
-                      setFieldValue('reasonForReport', value);
+                      appendSentenceToField('reasonForReport', value);
                     }
                   }}
                 >
@@ -2726,23 +2999,20 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                 />
               </div>
               <div className="space-y-2">
-                <NextVisitField
-                  visitDate={inspectionDate}
+                <DateDropdownField
+                  id="inspectionDate"
+                  name="inspectionDate"
+                  label="Date(s) of Inspection"
                   value={inspectionDate}
                   onChange={(newDate) => {
                     setInspectionDate(newDate);
                     setIsInspectionDateAuto(false);
                   }}
                   required
-                  label="Date(s) of Inspection"
-                  showPeriodSelect={false}
+                  isAutoPopulated={isInspectionDateAuto}
+                  autoTitle="Auto-populated with today's date. Edit if required."
+                  autoHelpText="Auto-populated with today's date. Hover the field for details."
                 />
-                <input type="hidden" name="inspectionDate" value={inspectionDate} />
-                {isInspectionDateAuto && (
-                  <p className="text-xs text-amber-700" title="This date was auto-filled with today's date.">
-                    Auto-populated with today's date. Hover the date field for details.
-                  </p>
-                )}
               </div>
             </div>
           </CardContent>
@@ -2887,9 +3157,18 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                 <SelectContent>
                   <SelectItem value="__custom">Custom / manual entry</SelectItem>
                   <SelectItem value="No access above fixed ceilings, within floor voids, or within roof spaces due to building constraints.">No access to concealed spaces</SelectItem>
+                  <SelectItem value="No access was available to locked rooms, risers, cupboards, or landlord-only areas at the time of inspection.">No access to locked/restricted areas</SelectItem>
+                  <SelectItem value="Furniture, fixtures, stored goods, or fixed equipment prevented access to parts of the installation.">Obstructed by furniture or stored goods</SelectItem>
                   <SelectItem value="No disconnection of essential services or IT systems during occupied operational hours.">No disconnection of essential services</SelectItem>
+                  <SelectItem value="Certain circuits could not be isolated without unacceptable disruption to occupants, tenants, or business operations.">Some circuits could not be isolated</SelectItem>
                   <SelectItem value="Inspection excludes specialist control wiring and extra-low-voltage systems outside scope of this report.">Excludes specialist control/ELV systems</SelectItem>
+                  <SelectItem value="Portable appliances, luminaires requiring specialist access equipment, and removable equipment were excluded from this report.">Excludes portable appliances and removable equipment</SelectItem>
                   <SelectItem value="No intrusive inspection works undertaken and no dismantling of fixed equipment agreed.">No intrusive inspection or dismantling</SelectItem>
+                  <SelectItem value="Underground cables, concealed wiring routes, and circuits buried in the fabric of the building were not exposed for inspection.">No exposure of concealed/underground wiring</SelectItem>
+                  <SelectItem value="No inspection was carried out within hazardous areas, roof plant, or external locations requiring specialist access arrangements.">No access to roof plant / hazardous / external specialist areas</SelectItem>
+                  <SelectItem value="Outbuildings, detached structures, or external supplies were excluded unless specifically identified within the agreed scope.">Excludes outbuildings or external supplies</SelectItem>
+                  <SelectItem value="The inspection was limited to a sample of accessible circuits and accessories in accordance with the agreed scope.">Sample inspection only</SelectItem>
+                  <SelectItem value="No verification of equipment belonging to the distributor, meter operator, or telecommunications provider was undertaken.">Excludes DNO / metering / telecoms equipment</SelectItem>
                 </SelectContent>
               </Select>
               <Textarea
@@ -3199,19 +3478,40 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                 <CertificateGroup title="Instruments Used for this Report" columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="instrumentMultiFunction">Multi-functional</Label>
-                    <Input id="instrumentMultiFunction" name="instrumentMultiFunction" placeholder="Serial/asset" />
+                    <Input
+                      id="instrumentMultiFunction"
+                      name="instrumentMultiFunction"
+                      placeholder="Serial/asset"
+                      value={instrumentMultiFunction}
+                      onChange={(e) => setInstrumentMultiFunction(e.target.value)}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="instrumentInsulationResistance">Insulation Resistance Instrument</Label>
-                    <Input id="instrumentInsulationResistance" name="instrumentInsulationResistance" placeholder="Serial/asset" />
+                    <Input
+                      id="instrumentInsulationResistance"
+                      name="instrumentInsulationResistance"
+                      placeholder="Serial/asset"
+                      disabled={hasMultiFunctionInstrument}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="instrumentEarthLoop">Earth Fault Loop Impedance Instrument</Label>
-                    <Input id="instrumentEarthLoop" name="instrumentEarthLoop" placeholder="Serial/asset" />
+                    <Input
+                      id="instrumentEarthLoop"
+                      name="instrumentEarthLoop"
+                      placeholder="Serial/asset"
+                      disabled={hasMultiFunctionInstrument}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="instrumentContinuity">Continuity Instrument</Label>
-                    <Input id="instrumentContinuity" name="instrumentContinuity" placeholder="Serial/asset" />
+                    <Input
+                      id="instrumentContinuity"
+                      name="instrumentContinuity"
+                      placeholder="Serial/asset"
+                      disabled={hasMultiFunctionInstrument}
+                    />
                   </div>
                 </CertificateGroup>
                 <CertificateGroup title="Additional Instruments" columns={2}>
@@ -3221,7 +3521,12 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="instrumentRCD">RCD Instrument</Label>
-                    <Input id="instrumentRCD" name="instrumentRCD" placeholder="Serial/asset" />
+                    <Input
+                      id="instrumentRCD"
+                      name="instrumentRCD"
+                      placeholder="Serial/asset"
+                      disabled={hasMultiFunctionInstrument}
+                    />
                   </div>
                 </CertificateGroup>
               </CardContent>
@@ -3267,38 +3572,53 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     <Input id="numberOfSupplies" name="numberOfSupplies" placeholder="1" />
                   </div>
                 </CertificateGroup>
-                <CertificateGroup title="Declared Supply Parameters" columns={3}>
-                  <div className="space-y-2">
-                    <Label htmlFor="nominalVoltageU">Nominal Voltage U (V)</Label>
-                    <Input id="nominalVoltageU" name="nominalVoltageU" placeholder="400" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="nominalVoltageUo">Nominal Voltage Uo (V)</Label>
-                    <Input id="nominalVoltageUo" name="nominalVoltageUo" placeholder="230" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="nominalFrequency">Nominal Frequency (Hz)</Label>
-                    <Input id="nominalFrequency" name="nominalFrequency" placeholder="50" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="prospectiveFaultCurrent">Prospective Fault Current, Ipf (kA)</Label>
-                    <Input id="prospectiveFaultCurrent" name="prospectiveFaultCurrent" placeholder="1.8" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="externalEarthFaultLoopImpedance">External Earth Fault Loop Impedance, Ze (Ω)</Label>
-                    <Input
-                      id="externalEarthFaultLoopImpedance"
-                      name="externalEarthFaultLoopImpedance"
-                      placeholder="0.13"
-                      value={externalEarthFaultLoopImpedance}
-                      onChange={(e) => setExternalEarthFaultLoopImpedance(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="shortCircuitCapacity">Short-Circuit Capacity (kA)</Label>
-                    <Input id="shortCircuitCapacity" name="shortCircuitCapacity" placeholder="33" />
-                  </div>
-                </CertificateGroup>
+                 <CertificateGroup title="Declared Supply Parameters" columns={3}>
+                   <div className="space-y-2">
+                     <Label htmlFor="nominalVoltageU">Nominal Voltage U (V)</Label>
+                     <Input
+                       id="nominalVoltageU"
+                       name="nominalVoltageU"
+                       defaultValue={DECLARED_SUPPLY_PARAMETER_PRESETS[premisesType as keyof typeof DECLARED_SUPPLY_PARAMETER_PRESETS]?.nominalVoltageU ?? DECLARED_SUPPLY_PARAMETER_PRESETS.Other.nominalVoltageU}
+                       placeholder="400"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="nominalVoltageUo">Nominal Voltage Uo (V)</Label>
+                     <Input
+                       id="nominalVoltageUo"
+                       name="nominalVoltageUo"
+                       defaultValue={DECLARED_SUPPLY_PARAMETER_PRESETS[premisesType as keyof typeof DECLARED_SUPPLY_PARAMETER_PRESETS]?.nominalVoltageUo ?? DECLARED_SUPPLY_PARAMETER_PRESETS.Other.nominalVoltageUo}
+                       placeholder="230"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="nominalFrequency">Nominal Frequency (Hz)</Label>
+                     <Input
+                       id="nominalFrequency"
+                       name="nominalFrequency"
+                       defaultValue={DECLARED_SUPPLY_PARAMETER_PRESETS[premisesType as keyof typeof DECLARED_SUPPLY_PARAMETER_PRESETS]?.nominalFrequency ?? DECLARED_SUPPLY_PARAMETER_PRESETS.Other.nominalFrequency}
+                       placeholder="50"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="prospectiveFaultCurrent">Prospective Fault Current, Ipf (kA)</Label>
+                     <Input id="prospectiveFaultCurrent" name="prospectiveFaultCurrent" placeholder="1.8" />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="externalEarthFaultLoopImpedance">External Earth Fault Loop Impedance, Ze (Ω)</Label>
+                     <Input
+                       id="externalEarthFaultLoopImpedance"
+                       name="externalEarthFaultLoopImpedance"
+                       placeholder="0.13"
+                       value={externalEarthFaultLoopImpedance}
+                       onChange={(e) => setExternalEarthFaultLoopImpedance(e.target.value)}
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="shortCircuitCapacity">Short-Circuit Capacity (kA)</Label>
+                     <Input id="shortCircuitCapacity" name="shortCircuitCapacity" placeholder="33" />
+                   </div>
+                 </CertificateGroup>
                 <CertificateGroup title="Distributor's Protective Device" columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="supplyProtectiveDeviceType">Supply Protective Device Type (BS EN)</Label>

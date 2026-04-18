@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { HeaderBackButton, HeaderForwardButton, useTrackCurrentRoute } from '@/components/navigation/StackHeaderNav';
 
 type TabBarIconProps = {
   color: string;
@@ -7,9 +8,11 @@ type TabBarIconProps = {
 };
 
 export default function TabsLayout() {
+  useTrackCurrentRoute();
+
   return (
     <Tabs
-      screenOptions={{
+      screenOptions={({ navigation, route }) => ({
         headerStyle: {
           backgroundColor: '#f6f1eb',
         },
@@ -19,6 +22,26 @@ export default function TabsLayout() {
           fontSize: 18,
           fontWeight: '700',
           color: '#1f2937',
+        },
+        headerLeft: () => <HeaderBackButton navigation={navigation} />,
+        headerRight: () => {
+          if (route.name === 'index') {
+            return <HeaderForwardButton fallbackHref="/(tabs)/wizard" />;
+          }
+
+          if (route.name === 'location') {
+            return <HeaderForwardButton fallbackHref="/(tabs)/customer" />;
+          }
+
+          if (route.name === 'customer') {
+            return <HeaderForwardButton fallbackHref="/(tabs)/review" />;
+          }
+
+          if (route.name === 'review') {
+            return <HeaderForwardButton fallbackHref="/(tabs)/success" />;
+          }
+
+          return null;
         },
         sceneStyle: {
           backgroundColor: '#f8f5f1',
@@ -50,7 +73,7 @@ export default function TabsLayout() {
         tabBarItemStyle: {
           paddingVertical: 4,
         },
-      }}
+      })}
     >
       <Tabs.Screen
         name="index"
@@ -74,42 +97,49 @@ export default function TabsLayout() {
         name="capture"
         options={{
           href: null,
+          title: 'Capture Evidence',
         }}
       />
       <Tabs.Screen
         name="room-plan"
         options={{
           href: null,
+          title: 'Fire Alarm Plan',
         }}
       />
       <Tabs.Screen
         name="location"
         options={{
           href: null,
+          title: 'Confirm Address',
         }}
       />
       <Tabs.Screen
         name="customer"
         options={{
           href: null,
+          title: 'Customer',
         }}
       />
       <Tabs.Screen
         name="review"
         options={{
           href: null,
+          title: 'Review',
         }}
       />
       <Tabs.Screen
         name="wizard"
         options={{
           href: null,
+          title: 'Certificate Wizard',
         }}
       />
       <Tabs.Screen
         name="success"
         options={{
           href: null, // hidden from tab bar — navigated to programmatically
+          title: 'Completed',
         }}
       />
     </Tabs>
