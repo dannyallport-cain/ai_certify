@@ -2936,9 +2936,10 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
           return;
         }
         setFormError(result.error);
-      } else {
-        await saveInspectorHistoryToUser(inspectorName, inspectorPosition);
+        return;
       }
+
+      await saveInspectorHistoryToUser(inspectorName, inspectorPosition);
     } catch (error) {
       console.error('Error creating certificate:', error);
       setFormError('Unable to create certificate. Please try again.');

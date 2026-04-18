@@ -332,11 +332,27 @@ export default function MobileCaptureClient({ token, kind }: MobileCaptureClient
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(payload.error || 'Failed to save your update.');
+        throw new Error(
+          payload?.error ||
+            payload?.debug?.message ||
+            `Failed to save your update. (HTTP ${response.status})`
+        );
       }
 
-      setSuccess(kind === 'signature' ? 'Signature saved. You can close this page.' : 'Avatar saved. You can close this page.');
+      setSuccess(
+        kind === 'signature'
+          ? 'Signature saved. You can close this page.'
+          : 'Avatar saved. You can close this page.'
+      );
+
+      if (typeof window !== 'undefined' && window.opener && !window.opener.closed) {
+        window.close();
+      }
     } catch (nextError) {
+      if (nextError instanceof Error) {
+        console.error('Mobile capture save failed:', nextError);
+      }
+
       setError(nextError instanceof Error ? nextError.message : 'Failed to save your update.');
     } finally {
       setIsSubmitting(false);

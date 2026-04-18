@@ -35,11 +35,20 @@ export async function POST(request: NextRequest) {
     const captureUrl = new URL('/mobile-capture', getReachableBaseUrl(request));
     captureUrl.searchParams.set('token', token);
 
+    const debug = {
+      requestOrigin: request.nextUrl.origin,
+      reachableBaseUrl: getReachableBaseUrl(request),
+      captureUrl: captureUrl.toString(),
+    };
+
+    console.error('Mobile capture session created:', debug);
+
     return NextResponse.json({
       captureUrl: captureUrl.toString(),
       expiresAt: new Date(
         Date.now() + MOBILE_CAPTURE_TOKEN_TTL_MINUTES * 60 * 1000
       ).toISOString(),
+      debug,
     });
   } catch (error) {
     console.error('Error creating mobile capture session:', error);
