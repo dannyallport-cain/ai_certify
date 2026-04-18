@@ -19,6 +19,15 @@ const requestSchema = z.object({
 const SIGNATURE_MAX_LENGTH = 2_000_000;
 const AVATAR_MAX_LENGTH = 20_000_000;
 
+function isR2Configured() {
+  return Boolean(
+    process.env.R2_ACCOUNT_ID &&
+      process.env.R2_ACCESS_KEY_ID &&
+      process.env.R2_SECRET_ACCESS_KEY &&
+      process.env.R2_BUCKET
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null);
@@ -66,6 +75,16 @@ export async function POST(request: NextRequest) {
       normalizedContentType,
       normalizedPrefix: normalizedDataUrl.slice(0, 40),
     });
+
+    if (!isR2Configured()) {
+      return NextResponse.json(
+        {
+          error:
+            'Mobile capture uploads are not available because R2 storage is not configured on the server.',
+        },
+        { status: 503 }
+      );
+    }
 
     const upload = await uploadDataUrlToR2({
       key: buildUserAssetKey(userId, kind, normalizedContentType),

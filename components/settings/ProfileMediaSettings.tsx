@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import * as React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { mutate } from 'swr';
 import QRCode from 'qrcode';
 import useSWR from 'swr';
@@ -56,9 +57,8 @@ export default function ProfileMediaSettings() {
   const [isOpening, setIsOpening] = useState<UserAssetKind | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const openedCaptureWindowRef = useRef<Window | null>(null);
-  const captureCompletedRef = useRef(false);
-  const capturePollCountRef = useRef(0);
+  const captureCompletedRef = React.useRef(false);
+  const capturePollCountRef = React.useRef(0);
   const { data: user } = useSWR<User>('/api/user', fetcher, {
     refreshInterval: activeCapture ? 2500 : 0,
   });
@@ -124,10 +124,6 @@ export default function ProfileMediaSettings() {
       (currentValueChanged || currentUpdatedAtChanged || timedOutWaitingForRefresh)
     ) {
       captureCompletedRef.current = true;
-      if (openedCaptureWindowRef.current && !openedCaptureWindowRef.current.closed) {
-        openedCaptureWindowRef.current.close();
-      }
-      openedCaptureWindowRef.current = null;
       setActiveCapture(null);
       setQrCodeDataUrl('');
       setError(null);
@@ -168,19 +164,8 @@ export default function ProfileMediaSettings() {
         throw new Error('Mobile capture session response was incomplete.');
       }
 
-      const captureWindow = window.open(
-        payload.captureUrl,
-        `mobile-capture-${kind}`,
-        'popup=yes,width=480,height=860,resizable=yes,scrollbars=yes'
-      );
-
       captureCompletedRef.current = false;
       capturePollCountRef.current = 0;
-      if (captureWindow) {
-        openedCaptureWindowRef.current = captureWindow;
-      } else {
-        openedCaptureWindowRef.current = null;
-      }
 
       setActiveCapture({
         kind,
@@ -325,10 +310,6 @@ export default function ProfileMediaSettings() {
                 onClick={() => {
                   captureCompletedRef.current = false;
                   capturePollCountRef.current = 0;
-                  if (openedCaptureWindowRef.current && !openedCaptureWindowRef.current.closed) {
-                    openedCaptureWindowRef.current.close();
-                  }
-                  openedCaptureWindowRef.current = null;
                   setQrCodeDataUrl('');
                   setActiveCapture(null);
                 }}
