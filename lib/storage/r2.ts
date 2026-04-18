@@ -156,7 +156,7 @@ function getExtensionForContentType(contentType: AllowedContentType): string {
   }
 }
 
-function buildPublicUrl(key: string): string {
+export function buildPublicUrl(key: string): string {
   if (key.includes('/signature/')) {
     return `/api/user/asset/signature?key=${encodeURIComponent(key)}`;
   }
