@@ -67,8 +67,8 @@ export async function performOCR(imageBase64: string): Promise<OCRResult> {
             const fullText = data.responses[0].textAnnotations[0].description || '';
             const textLines = fullText
               .split('\n')
-              .map(line => line.trim())
-              .filter(line => line.length > 0);
+              .map((line: string) => line.trim())
+              .filter((line: string) => line.length > 0);
 
             // Get image dimensions if available
             const boundingBox = data.responses[0].textAnnotations[0].boundingPoly;
@@ -116,8 +116,8 @@ export async function performOCR(imageBase64: string): Promise<OCRResult> {
         const fullText = result.textAnnotations[0].description || '';
         const textLines = fullText
           .split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0);
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0);
 
         const width = result.fullTextAnnotation?.pages?.[0]?.width || 0;
         const height = result.fullTextAnnotation?.pages?.[0]?.height || 0;
