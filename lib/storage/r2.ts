@@ -29,6 +29,15 @@ type UploadDataUrlInput = {
 
 let r2Client: S3Client | null = null;
 
+type R2Config = {
+  accountId: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucket: string;
+  endpoint: string;
+  publicBaseUrl: string;
+};
+
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
 
@@ -39,11 +48,45 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
-function getR2Config() {
+function getOptionalEnv(name: string): string | null {
+  const value = process.env[name];
+
+  if (!value || value.trim() === '') {
+    return null;
+  }
+
+  return value.trim();
+}
+
+function getR2Config(): R2Config {
   const accountId = getRequiredEnv('R2_ACCOUNT_ID');
   const accessKeyId = getRequiredEnv('R2_ACCESS_KEY_ID');
   const secretAccessKey = getRequiredEnv('R2_SECRET_ACCESS_KEY');
   const bucket = getRequiredEnv('R2_BUCKET');
+  const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
+  const configuredPublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, '');
+  const derivedPublicBaseUrl = `https://${bucket}.${accountId}.r2.cloudflarestorage.com`;
+
+  return {
+    accountId,
+    accessKeyId,
+    secretAccessKey,
+    bucket,
+    endpoint,
+    publicBaseUrl: configuredPublicBaseUrl || derivedPublicBaseUrl,
+  };
+}
+
+function getOptionalR2Config(): R2Config | null {
+  const accountId = getOptionalEnv('R2_ACCOUNT_ID');
+  const accessKeyId = getOptionalEnv('R2_ACCESS_KEY_ID');
+  const secretAccessKey = getOptionalEnv('R2_SECRET_ACCESS_KEY');
+  const bucket = getOptionalEnv('R2_BUCKET');
+
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
+    return null;
+  }
+
   const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
   const configuredPublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, '');
   const derivedPublicBaseUrl = `https://${bucket}.${accountId}.r2.cloudflarestorage.com`;
@@ -114,12 +157,6 @@ function getExtensionForContentType(contentType: AllowedContentType): string {
 }
 
 function buildPublicUrl(key: string): string {
-  const { accountId, publicBaseUrl } = getR2Config();
-
-  if (publicBaseUrl) {
-    return `${publicBaseUrl}/${key}`;
-  }
-
   if (key.includes('/signature/')) {
     return `/api/user/asset/signature?key=${encodeURIComponent(key)}`;
   }
@@ -128,7 +165,17 @@ function buildPublicUrl(key: string): string {
     return `/api/user/asset/avatar?key=${encodeURIComponent(key)}`;
   }
 
-  return `https://pub-${accountId}.r2.dev/${key}`;
+  const config = getOptionalR2Config();
+
+  if (config?.publicBaseUrl) {
+    return `${config.publicBaseUrl}/${key}`;
+  }
+
+  if (config?.accountId) {
+    return `https://pub-${config.accountId}.r2.dev/${key}`;
+  }
+
+  return key;
 }
 
 function toBuffer(body: Buffer | Uint8Array | ArrayBuffer): Buffer {
