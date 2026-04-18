@@ -75,7 +75,18 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   const userWithTeam = await db
     .select({
-      user: users,
+      user: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        passwordHash: users.passwordHash,
+        role: users.role,
+        status: users.status,
+        activatedAt: users.activatedAt,
+        deletedAt: users.deletedAt,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      },
       team: teams
     })
     .from(users)
@@ -344,7 +355,11 @@ export const resendVerificationEmail = validatedAction(
     const normalizedEmail = data.email.trim().toLowerCase();
 
     const [user] = await db
-      .select()
+      .select({
+        id: users.id,
+        email: users.email,
+        status: users.status,
+      })
       .from(users)
       .where(eq(users.email, normalizedEmail))
       .limit(1);

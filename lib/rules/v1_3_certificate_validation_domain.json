@@ -1,0 +1,297 @@
+{
+  "version": "1.3",
+  "name": "certificate-validation-domain-v1.3",
+  "description": "Curated deterministic certificate, OCR hint, and measured-value consistency checks for EICR-oriented review workflows.",
+  "rules": [
+    {
+      "id": "cert-rcd-type-ac-mismatch-with-ocr-type-a",
+      "issueType": "certificate_consistency",
+      "severity": "high",
+      "message": "Certificate records Type AC RCD protection while OCR text indicates Type A, so the recorded protective device type should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Recorded RCD type conflicts with OCR wording for the consumer unit.",
+      "reportTargets": [
+        {
+          "sectionKey": "protectiveDevices",
+          "fieldPath": "rcdType",
+          "highlight": true,
+          "reason": "Recorded RCD type should be checked against visible device markings."
+        }
+      ],
+      "observation": {
+        "title": "Protective device type should be checked against visible markings",
+        "comment": "Certificate records Type AC while OCR wording indicates Type A at the consumer unit.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.consumerUnit.rcdType",
+            "op": "exists"
+          },
+          {
+            "path": "certificate.consumerUnit.rcdType",
+            "op": "eq",
+            "value": "Type AC"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "type a"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "type ac"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-rcd-type-a-mismatch-with-ocr-type-ac",
+      "issueType": "certificate_consistency",
+      "severity": "high",
+      "message": "Certificate records Type A RCD protection while OCR text indicates Type AC, so the recorded protective device type should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Recorded RCD type conflicts with OCR wording for the consumer unit.",
+      "reportTargets": [
+        {
+          "sectionKey": "protectiveDevices",
+          "fieldPath": "rcdType",
+          "highlight": true,
+          "reason": "Recorded RCD type should be checked against visible device markings."
+        }
+      ],
+      "observation": {
+        "title": "Protective device type should be checked against visible markings",
+        "comment": "Certificate records Type A while OCR wording indicates Type AC at the consumer unit.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.consumerUnit.rcdType",
+            "op": "exists"
+          },
+          {
+            "path": "certificate.consumerUnit.rcdType",
+            "op": "eq",
+            "value": "Type A"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "type ac"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-spd-marked-absent-but-ocr-shows-spd",
+      "issueType": "certificate_consistency",
+      "severity": "medium",
+      "message": "Certificate indicates no SPD is present, but OCR text includes SPD wording, so surge protection details should be checked.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.93,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "SPD presence on the certificate conflicts with visible SPD wording.",
+      "reportTargets": [
+        {
+          "sectionKey": "protectiveDevices",
+          "fieldPath": "hasSPD",
+          "highlight": true,
+          "expectedValue": true,
+          "reason": "SPD presence should be reviewed against visible markings."
+        }
+      ],
+      "observation": {
+        "title": "SPD presence should be verified",
+        "comment": "Certificate records SPD absent, but OCR text suggests SPD wording is present.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.consumerUnit.hasSPD",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "any": [
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "spd"
+              },
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "surge protection"
+              },
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "surge device"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-rcbo-marked-absent-but-ocr-shows-rcbo",
+      "issueType": "certificate_consistency",
+      "severity": "medium",
+      "message": "Certificate indicates no RCBO protection is present, but OCR text includes RCBO wording, so protective device details should be checked.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.92,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "RCBO presence on the certificate conflicts with visible RCBO wording.",
+      "reportTargets": [
+        {
+          "sectionKey": "protectiveDevices",
+          "fieldPath": "hasRCBO",
+          "highlight": true,
+          "expectedValue": true,
+          "reason": "RCBO presence should be reviewed against visible markings."
+        }
+      ],
+      "observation": {
+        "title": "RCBO presence should be verified",
+        "comment": "Certificate records RCBO absent, but OCR text suggests RCBO wording is present.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.consumerUnit.hasRCBO",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "rcbo"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-rcd-marked-absent-but-ocr-shows-rcd",
+      "issueType": "certificate_consistency",
+      "severity": "medium",
+      "message": "Certificate indicates no RCD protection is present, but OCR text includes RCD wording, so protective device details should be checked.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.9,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "RCD presence on the certificate conflicts with visible RCD wording.",
+      "reportTargets": [
+        {
+          "sectionKey": "protectiveDevices",
+          "fieldPath": "hasRCD",
+          "highlight": true,
+          "expectedValue": true,
+          "reason": "RCD presence should be reviewed against visible markings."
+        }
+      ],
+      "observation": {
+        "title": "RCD presence should be verified",
+        "comment": "Certificate records RCD absent, but OCR text suggests RCD wording is present.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.consumerUnit.hasRCD",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "rcd"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "not_contains",
+            "value": "rcbo"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-main-switch-marked-absent-but-ocr-shows-main-switch",
+      "issueType": "certificate_consistency",
+      "severity": "warning",
+      "message": "Certificate indicates no main switch is present, but OCR text includes main switch wording, so the board arrangement should be checked.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.87,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Main switch presence on the certificate conflicts with visible wording.",
+      "reportTargets": [
+        {
+          "sectionKey": "consumerUnit",
+          "fieldPath": "hasMainSwitch",
+          "highlight": true,
+          "expectedValue": true,
+          "reason": "Main switch presence should be reviewed against visible markings."
+        }
+      ],
+      "observation": {
+        "title": "Main switch presence should be verified",
+        "comment": "Certificate records main switch absent, but OCR text suggests a main switch is present.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.consumerUnit.hasMainSwitch",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "any": [
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "main switch"
+              },
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "main isolator"
+              },
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "isolator"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

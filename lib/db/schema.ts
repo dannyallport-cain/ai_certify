@@ -15,6 +15,19 @@ import {
 import { relations } from 'drizzle-orm';
 import { USER_ROLES } from '@/lib/auth/roles';
 
+export type EicrProfileDefaults = {
+  tradingTitle?: string;
+  companyAddress?: string;
+  registrationNumber?: string;
+  companyTelephone?: string;
+  companyEmail?: string;
+};
+
+export type EicrInspectorHistoryEntry = {
+  name: string;
+  position: string;
+};
+
 export const userRoleEnum = pgEnum('UserRole', USER_ROLES);
 export const userStatusEnum = pgEnum('UserStatus', ['pending', 'active', 'inactive', 'suspended']);
 

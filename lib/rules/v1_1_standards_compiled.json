@@ -1,0 +1,208 @@
+{
+  "version": "1.1",
+  "name": "standards-compiled-v1.1",
+  "description": "Compiled deterministic rules generated from local standards knowledge candidates.",
+  "generatedAt": "2026-04-11T17:51:45.362Z",
+  "sourceCandidatesPath": "railway-ai-worker/app/standards/rule_candidates.json",
+  "ruleCount": 4,
+  "rules": [
+    {
+      "id": "inspection-labeling-review-18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+      "issueType": "labeling",
+      "severity": "medium",
+      "message": "Labelling or identification guidance was found in the standards source set.",
+      "source": "standards_compiler",
+      "confidence": 0.8,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "18th edition IET wiring regulations. Electric wiring for domestic installers ( PDFDrive )"
+        }
+      ],
+      "metadata": {
+        "sourceDocumentId": "18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+        "compiledFromCandidateId": "inspection-labeling-review:18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+        "triggerTokens": [
+          "labelling",
+          "label",
+          "identification"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "labelling"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "label"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "identification"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        },
+        {
+          "label": "sourceDocumentId",
+          "path": "metadata.sourceDocumentId"
+        }
+      ]
+    },
+    {
+      "id": "inspection-earthing-review-18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "Earthing/bonding guidance was found in the standards source set.",
+      "source": "standards_compiler",
+      "confidence": 0.8,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "18th edition IET wiring regulations. Electric wiring for domestic installers ( PDFDrive )"
+        }
+      ],
+      "metadata": {
+        "sourceDocumentId": "18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+        "compiledFromCandidateId": "inspection-earthing-review:18th-edition-iet-wiring-regulations-electric-wiring-for-domestic-installers-pdfdrive",
+        "triggerTokens": [
+          "earthing",
+          "bonding"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "earthing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "bonding"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        },
+        {
+          "label": "sourceDocumentId",
+          "path": "metadata.sourceDocumentId"
+        }
+      ]
+    },
+    {
+      "id": "consumer-unit-type-ac-review-bs-7671-2018-pdfdrive",
+      "issueType": "protective_device",
+      "severity": "medium",
+      "message": "Type AC wording appears in the source standards and should be reviewed for suitability.",
+      "source": "standards_compiler",
+      "confidence": 0.8,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "BS 7671 2018 ( PDFDrive )"
+        }
+      ],
+      "metadata": {
+        "sourceDocumentId": "bs-7671-2018-pdfdrive",
+        "compiledFromCandidateId": "consumer-unit-type-ac-review:bs-7671-2018-pdfdrive",
+        "triggerTokens": [
+          "type ac"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "type ac"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        },
+        {
+          "label": "sourceDocumentId",
+          "path": "metadata.sourceDocumentId"
+        }
+      ]
+    },
+    {
+      "id": "consumer-unit-spd-review-bs-7671-2018-pdfdrive",
+      "issueType": "protective_device",
+      "severity": "info",
+      "message": "SPD-related guidance was found in the standards source set.",
+      "source": "standards_compiler",
+      "confidence": 0.8,
+      "needsHumanReview": true,
+      "suggestedCodes": [],
+      "authority": [
+        {
+          "standard": "BS 7671",
+          "title": "BS 7671 2018 ( PDFDrive )"
+        }
+      ],
+      "metadata": {
+        "sourceDocumentId": "bs-7671-2018-pdfdrive",
+        "compiledFromCandidateId": "consumer-unit-spd-review:bs-7671-2018-pdfdrive",
+        "triggerTokens": [
+          "surge protection",
+          "spd"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "surge protection"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "spd"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        },
+        {
+          "label": "sourceDocumentId",
+          "path": "metadata.sourceDocumentId"
+        }
+      ]
+    }
+  ]
+}

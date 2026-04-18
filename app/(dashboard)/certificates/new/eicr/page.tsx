@@ -10,7 +10,7 @@ import { createCertificate } from '../../../actions';
 import { useState, useEffect, useRef, type ChangeEvent, type ReactNode, type InputHTMLAttributes } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
 import { DateDropdownField } from '@/components/DateDropdownField';
 import { NextVisitField } from '@/components/NextVisitField';
@@ -328,6 +328,7 @@ type CircuitColumn = {
   label: string;
   title?: string;
   widthClass?: string;
+  cellClass?: string;
   group?: string;
   groupTitle?: string;
   cycling?: readonly string[];
@@ -338,6 +339,42 @@ type CircuitTemplate = {
   label: string;
   values: Partial<CircuitRow>;
 };
+
+const STICKY_CIRCUIT_COLUMN_KEYS: Array<keyof CircuitRow> = ['circuitNumber', 'ringFinal', 'designation'];
+
+function getCircuitColumnCellClass(column: CircuitColumn): string {
+  return column.cellClass || column.widthClass || '';
+}
+
+function getStickyCircuitColumnClass(key: keyof CircuitRow): string {
+  if (key === 'circuitNumber') {
+    return 'sticky left-0 z-30';
+  }
+
+  if (key === 'ringFinal') {
+    return 'sticky left-[calc(3.2rem-1px)] z-30';
+  }
+
+  if (key === 'designation') {
+    return 'sticky left-[calc(6rem-2px)] z-30';
+  }
+
+  return '';
+}
+
+function getStickyCircuitColumnBackgroundClass(isSelectedRow: boolean, isEvenRow: boolean): string {
+  if (isSelectedRow) {
+    return 'bg-blue-50 border-r border-slate-200 opacity-100 bg-clip-padding shadow-[1px_0_0_0_rgb(226,232,240)]';
+  }
+
+  return isEvenRow
+    ? 'bg-white border-r border-slate-200 opacity-100 bg-clip-padding shadow-[1px_0_0_0_rgb(226,232,240)]'
+    : 'bg-slate-50 border-r border-slate-200 opacity-100 bg-clip-padding shadow-[1px_0_0_0_rgb(226,232,240)]';
+}
+
+function getStickyCircuitHeaderBackgroundClass(): string {
+  return 'bg-slate-100/95 border-r border-slate-300 opacity-100 bg-clip-padding shadow-none backdrop-blur-0';
+}
 
 const CIRCUIT_TEMPLATES: readonly CircuitTemplate[] = [
   {
@@ -490,9 +527,28 @@ const CIRCUIT_TEMPLATES: readonly CircuitTemplate[] = [
 ] as const;
 
 const CIRCUIT_COLUMNS: CircuitColumn[] = [
-  { key: 'circuitNumber', label: 'Circuit details', title: 'Circuit details — Circuit number', widthClass: 'w-[3.2rem]' },
-  { key: 'ringFinal', label: 'Ring', title: 'Tick if this row is a ring final circuit', widthClass: 'w-[2.8rem]', cycling: ['✓', ''] as const },
-  { key: 'designation', label: 'Circuit designation', title: 'Circuit details — Circuit designation', widthClass: 'w-[12rem]' },
+  {
+    key: 'circuitNumber',
+    label: 'Circuit details',
+    title: 'Circuit details — Circuit number',
+    widthClass: 'w-[3.2rem]',
+    cellClass: 'w-[3.2rem] min-w-[3.2rem] max-w-[3.2rem]',
+  },
+  {
+    key: 'designation',
+    label: 'Circuit designation',
+    title: 'Circuit details — Circuit designation',
+    widthClass: 'w-[12rem]',
+    cellClass: 'w-[12rem] min-w-[12rem] max-w-[12rem]',
+  },
+  {
+    key: 'ringFinal',
+    label: 'Ring',
+    title: 'Tick if this row is a ring final circuit',
+    widthClass: 'w-[2.8rem]',
+    cellClass: 'w-[2.8rem] min-w-[2.8rem] max-w-[2.8rem]',
+    cycling: ['✓', ''] as const,
+  },
   { key: 'wiringType', label: 'Type', title: 'Type of wiring', widthClass: 'w-[4.2rem]' },
   { key: 'refMethod', label: 'Ref method', title: 'Reference method', widthClass: 'w-[4rem]' },
   { key: 'numPoints', label: 'No. of points served', title: 'Number of points served', widthClass: 'w-[3rem]' },
@@ -551,11 +607,26 @@ type CircuitSelectOption = {
   title?: string;
 };
 
+type EicrProfileDefaults = {
+  tradingTitle?: string;
+  companyAddress?: string;
+  registrationNumber?: string;
+  companyTelephone?: string;
+  companyEmail?: string;
+};
+
+type EicrInspectorHistoryItem = {
+  name: string;
+  position: string;
+};
+
 type EicrDraftUser = {
   id?: string | number;
   email?: string;
   name?: string;
   role?: string;
+  eicrProfileDefaults?: EicrProfileDefaults | null;
+  eicrInspectorHistory?: EicrInspectorHistoryItem[] | null;
 };
 
 type EicrDraftState = {
@@ -592,6 +663,13 @@ type EicrDraftState = {
 };
 
 const EICR_DRAFT_STORAGE_PREFIX = 'eicr-form-draft';
+const EICR_PROFILE_DEFAULT_FIELDS = [
+  'tradingTitle',
+  'companyAddress',
+  'registrationNumber',
+  'companyTelephone',
+  'companyEmail',
+] as const;
 
 function buildEicrDraftUserKey(user?: EicrDraftUser | null): string {
   if (user?.id !== undefined && user?.id !== null) {
@@ -1375,6 +1453,7 @@ function ExpectedValueInput({
 
 export function EICRCertificatePage({ streamlined = false }: { streamlined?: boolean } = {}) {
   const router = useRouter();
+  const { mutate } = useSWRConfig();
   const formRef = useRef<HTMLFormElement>(null);
   const getTodayDate = () => new Date().toISOString().split('T')[0];
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1402,7 +1481,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const [supplyConductorCSACustom, setSupplyConductorCSACustom] = useState('');
   const [observations, setObservations] = useState<Observation[]>([]);
   const [evidenceOfAdditions, setEvidenceOfAdditions] = useState('No');
-  const [premisesType, setPremisesType] = useState('Commercial');
+  const [premisesType, setPremisesType] = useState('Domestic');
   const [inspSchedule, setInspSchedule] = useState<InspScheduleValue>({
     codes: {},
     comments: {},
@@ -1423,6 +1502,12 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const { data: currentUser } = useSWR<EicrDraftUser>('/api/user', fetcher);
   const hasHydratedDraftRef = useRef(false);
   const lastSavedDraftKeyRef = useRef<string | null>(null);
+  const [profilePrefillApplied, setProfilePrefillApplied] = useState(false);
+  const [showSaveProfilePrompt, setShowSaveProfilePrompt] = useState(false);
+  const [isSavingProfileDefaults, setIsSavingProfileDefaults] = useState(false);
+  const [profileDefaultsSaveMessage, setProfileDefaultsSaveMessage] = useState('');
+  const [inspectorName, setInspectorName] = useState('');
+  const [inspectorPosition, setInspectorPosition] = useState('');
 
   type VerifyResult = { type: 'error' | 'warning' | 'pass'; message: string };
   const [verifyResults, setVerifyResults] = useState<VerifyResult[] | null>(null);
@@ -1618,7 +1703,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       setSupplyConductorCSACustom(savedDraft.supplyConductorCSACustom ?? '');
       setObservations(savedDraft.observations ?? []);
       setEvidenceOfAdditions(savedDraft.evidenceOfAdditions ?? 'No');
-      setPremisesType(savedDraft.premisesType ?? 'Commercial');
+      setPremisesType(savedDraft.premisesType ?? 'Domestic');
       setInspSchedule(
         savedDraft.inspSchedule ?? {
           codes: {},
@@ -1976,6 +2061,99 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     });
   };
 
+  const getProfileDefaultValuesFromState = (): EicrProfileDefaults => ({
+    tradingTitle: formRef.current?.querySelector<HTMLInputElement>('[name="tradingTitle"]')?.value ?? '',
+    companyAddress: formRef.current?.querySelector<HTMLInputElement>('[name="companyAddress"]')?.value ?? '',
+    registrationNumber: formRef.current?.querySelector<HTMLInputElement>('[name="registrationNumber"]')?.value ?? '',
+    companyTelephone: formRef.current?.querySelector<HTMLInputElement>('[name="companyTelephone"]')?.value ?? '',
+    companyEmail: formRef.current?.querySelector<HTMLInputElement>('[name="companyEmail"]')?.value ?? '',
+  });
+
+  const hasAnyProfileDefaultValue = (values: EicrProfileDefaults) =>
+    EICR_PROFILE_DEFAULT_FIELDS.some((field) => Boolean(values[field]?.trim()));
+
+  const hasExistingProfileDefaults = hasAnyProfileDefaultValue(currentUser?.eicrProfileDefaults ?? {});
+
+  const saveProfileDefaultsToUser = async () => {
+    const defaults = getProfileDefaultValuesFromState();
+
+    if (!hasAnyProfileDefaultValue(defaults)) {
+      setProfileDefaultsSaveMessage('Add at least one business detail before saving to your profile.');
+      return;
+    }
+
+    setIsSavingProfileDefaults(true);
+    setProfileDefaultsSaveMessage('');
+
+    try {
+      const response = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eicrProfileDefaults: defaults,
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to save profile defaults.');
+      }
+
+      await mutate('/api/user', payload, false);
+      setShowSaveProfilePrompt(false);
+      setProfileDefaultsSaveMessage('Business details saved to your profile for next time.');
+    } catch (error) {
+      setProfileDefaultsSaveMessage(error instanceof Error ? error.message : 'Unable to save profile defaults.');
+    } finally {
+      setIsSavingProfileDefaults(false);
+    }
+  };
+
+  const saveInspectorHistoryToUser = async (name: string, position: string) => {
+    const trimmedName = name.trim();
+    const trimmedPosition = position.trim();
+
+    if (!trimmedName || !trimmedPosition) {
+      return;
+    }
+
+    const existingHistory = currentUser?.eicrInspectorHistory ?? [];
+    const alreadyExists = existingHistory.some(
+      (item) =>
+        item.name.trim().toLowerCase() === trimmedName.toLowerCase() &&
+        item.position.trim().toLowerCase() === trimmedPosition.toLowerCase(),
+    );
+
+    if (alreadyExists) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eicrInspectorHistory: [{ name: trimmedName, position: trimmedPosition }],
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to save inspector history.');
+      }
+
+      await mutate('/api/user', payload, false);
+    } catch (error) {
+      console.error('Unable to save EICR inspector history:', error);
+    }
+  };
+
   const appendSentenceToField = (name: string, sentence: string) => {
     const form = formRef.current;
     if (!form) return;
@@ -2010,6 +2188,40 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     setFieldValue('nominalFrequency', declaredSupplyPreset.nominalFrequency);
     setFieldValue('numberOfSupplies', declaredSupplyPreset.numberOfSupplies);
   }, [recommendedIntervalPresetKey, declaredSupplyPreset]);
+
+  useEffect(() => {
+    if (profilePrefillApplied || !currentUser?.eicrProfileDefaults) {
+      return;
+    }
+
+    const defaults = currentUser.eicrProfileDefaults;
+    const fieldsWithValues = EICR_PROFILE_DEFAULT_FIELDS.filter((field) => defaults[field]?.trim());
+
+    if (fieldsWithValues.length === 0) {
+      return;
+    }
+
+    fieldsWithValues.forEach((field) => {
+      const input = formRef.current?.querySelector<HTMLInputElement>(`[name="${field}"]`);
+      if (!input || input.value.trim()) {
+        return;
+      }
+
+      setFieldValue(field, defaults[field] ?? '');
+    });
+
+    setProfilePrefillApplied(true);
+  }, [currentUser, profilePrefillApplied]);
+
+  useEffect(() => {
+    if (hasExistingProfileDefaults) {
+      setShowSaveProfilePrompt(false);
+      return;
+    }
+
+    const currentValues = getProfileDefaultValuesFromState();
+    setShowSaveProfilePrompt(hasAnyProfileDefaultValue(currentValues));
+  }, [hasExistingProfileDefaults, profilePrefillApplied]);
 
   const fillFormWithSampleData = () => {
     const today = new Date();
@@ -2522,7 +2734,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       pushObservation(description, code);
     });
 
-    (reportSections?.observationsAndRecommendations ?? []).forEach((item) => {
+    (reportSections?.observationsAndRecommendations?.items ?? []).forEach((item) => {
       const description = [item.observation, item.recommendation]
         .map((value) => (typeof value === 'string' ? value.trim() : ''))
         .filter(Boolean)
@@ -2536,7 +2748,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       pushObservation(description, code);
     });
 
-    (reportSections?.observationSchedule ?? []).forEach((item) => {
+    (reportSections?.observationSchedule?.items ?? []).forEach((item) => {
       const description = buildObservationDescription(item);
       const normalizedCode = typeof item.code === 'string' ? item.code.trim().toUpperCase() : '';
       const code: Observation['code'] =
@@ -2566,7 +2778,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       });
     }
 
-    const inspectionUpdates = (reportSections?.inspectionSchedule ?? []).reduce<{
+    const inspectionUpdates = (reportSections?.inspectionSchedule?.items ?? []).reduce<{
       codes: Record<string, InspCode>;
       comments: Record<string, string>;
     }>(
@@ -2724,6 +2936,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
           return;
         }
         setFormError(result.error);
+      } else {
+        await saveInspectorHistoryToUser(inspectorName, inspectorPosition);
       }
     } catch (error) {
       console.error('Error creating certificate:', error);
@@ -3437,33 +3651,155 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                 <CertificateGroup title="Contracting Enterprise Responsible for the Report" columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="tradingTitle">Trading Title</Label>
-                    <Input id="tradingTitle" name="tradingTitle" placeholder="Contracting business name" />
+                    <Input
+                      id="tradingTitle"
+                      name="tradingTitle"
+                      placeholder="Contracting business name"
+                      onChange={() => {
+                        if (!hasExistingProfileDefaults) {
+                          setShowSaveProfilePrompt(true);
+                          setProfileDefaultsSaveMessage('');
+                        }
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="registrationNumber">Registration Number</Label>
-                    <Input id="registrationNumber" name="registrationNumber" placeholder="Registration number" />
+                    <Input
+                      id="registrationNumber"
+                      name="registrationNumber"
+                      placeholder="Registration number"
+                      onChange={() => {
+                        if (!hasExistingProfileDefaults) {
+                          setShowSaveProfilePrompt(true);
+                          setProfileDefaultsSaveMessage('');
+                        }
+                      }}
+                    />
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="companyAddress">Company Address</Label>
-                    <Input id="companyAddress" name="companyAddress" placeholder="Business address" />
+                    <Input
+                      id="companyAddress"
+                      name="companyAddress"
+                      placeholder="Business address"
+                      onChange={() => {
+                        if (!hasExistingProfileDefaults) {
+                          setShowSaveProfilePrompt(true);
+                          setProfileDefaultsSaveMessage('');
+                        }
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="companyTelephone">Telephone Number</Label>
-                    <Input id="companyTelephone" name="companyTelephone" placeholder="Business telephone number" />
+                    <Input
+                      id="companyTelephone"
+                      name="companyTelephone"
+                      placeholder="Business telephone number"
+                      onChange={() => {
+                        if (!hasExistingProfileDefaults) {
+                          setShowSaveProfilePrompt(true);
+                          setProfileDefaultsSaveMessage('');
+                        }
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="companyEmail">Company Email</Label>
-                    <Input id="companyEmail" name="companyEmail" type="email" placeholder="business@example.co.uk" />
+                    <Input
+                      id="companyEmail"
+                      name="companyEmail"
+                      type="email"
+                      placeholder="business@example.co.uk"
+                      onChange={() => {
+                        if (!hasExistingProfileDefaults) {
+                          setShowSaveProfilePrompt(true);
+                          setProfileDefaultsSaveMessage('');
+                        }
+                      }}
+                    />
                   </div>
+                  {!hasExistingProfileDefaults && showSaveProfilePrompt ? (
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="rounded border border-amber-200 bg-amber-50 px-3 py-2">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                          <p className="text-xs text-amber-900">
+                            Save these business details to your profile so Section 9 is prefilled next time.
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 border-amber-300 bg-white text-[11px] text-amber-900 hover:bg-amber-100"
+                            onClick={saveProfileDefaultsToUser}
+                            disabled={isSavingProfileDefaults}
+                          >
+                            {isSavingProfileDefaults ? 'Saving…' : 'Save to profile'}
+                          </Button>
+                        </div>
+                        {profileDefaultsSaveMessage ? (
+                          <p className="mt-2 text-[11px] text-amber-800">{profileDefaultsSaveMessage}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : profileDefaultsSaveMessage ? (
+                    <div className="space-y-2 md:col-span-2">
+                      <p className="text-[11px] text-emerald-700">{profileDefaultsSaveMessage}</p>
+                    </div>
+                  ) : null}
                 </CertificateGroup>
                 <CertificateGroup title="Person Responsible for the Inspection and Testing" columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="inspectorName">Inspector Name *</Label>
-                    <Input id="inspectorName" name="inspectorName" required placeholder="Inspector name" />
+                    <Input
+                      id="inspectorName"
+                      name="inspectorName"
+                      required
+                      placeholder="Inspector name"
+                      list="eicr-inspector-name-history"
+                      value={inspectorName}
+                      onChange={(e) => setInspectorName(e.target.value)}
+                    />
+                    <datalist id="eicr-inspector-name-history">
+                      {(currentUser?.eicrInspectorHistory ?? []).map((item, index) => (
+                        <option key={`inspector-name-${index}`} value={item.name} />
+                      ))}
+                    </datalist>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="inspectorPosition">Position / Role</Label>
-                    <Input id="inspectorPosition" name="inspectorPosition" placeholder="Qualified Supervisor" />
+                    <Input
+                      id="inspectorPosition"
+                      name="inspectorPosition"
+                      placeholder="Qualified Supervisor"
+                      list="eicr-inspector-position-history"
+                      value={inspectorPosition}
+                      onChange={(e) => setInspectorPosition(e.target.value)}
+                    />
+                    <datalist id="eicr-inspector-position-history">
+                      {(currentUser?.eicrInspectorHistory ?? []).map((item, index) => (
+                        <option key={`inspector-position-${index}`} value={item.position} />
+                      ))}
+                    </datalist>
+                    {(currentUser?.eicrInspectorHistory?.length ?? 0) > 0 ? (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {(currentUser?.eicrInspectorHistory ?? []).map((item, index) => (
+                          <button
+                            key={`inspector-history-chip-${index}`}
+                            type="button"
+                            className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-700 hover:bg-slate-100"
+                            onClick={() => {
+                              setInspectorName(item.name);
+                              setInspectorPosition(item.position);
+                            }}
+                            title="Reuse previous inspector details"
+                          >
+                            {item.name} — {item.position}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 </CertificateGroup>
               </CardContent>
@@ -4090,13 +4426,20 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                 <thead className="bg-muted/30 text-[9px]">
                   <tr>
                     {visibleCircuitColumns.map((col, index) => {
+                      const stickyColumnClass = getStickyCircuitColumnClass(col.key);
+
                       if (!col.group) {
                         return (
                           <th
                             key={`head-single-${col.key}`}
                             rowSpan={2}
                             title={col.title || col.label}
-                            className={`border border-border px-0.5 py-px text-center font-semibold leading-tight whitespace-normal align-middle ${col.widthClass || 'w-12'}`}
+                            className={cn(
+                              'border border-border px-0.5 py-px text-center font-semibold leading-tight whitespace-normal align-middle',
+                              getCircuitColumnCellClass(col) || 'w-12',
+                              stickyColumnClass,
+                              stickyColumnClass && getStickyCircuitHeaderBackgroundClass(),
+                            )}
                           >
                             {col.key === 'circuitNumber' ? (
                               <div className="flex flex-col items-center gap-0.5">
@@ -4128,7 +4471,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                           key={`head-group-${group.label}-${group.start}`}
                           colSpan={group.end - group.start + 1}
                           title={group.title}
-                          className="border border-border px-0.5 py-px text-center font-semibold leading-none"
+                          className={cn(
+                            'border border-border px-0.5 py-px text-center font-semibold leading-none',
+                            STICKY_CIRCUIT_COLUMN_KEYS.includes(col.key) && getStickyCircuitColumnClass(col.key),
+                            STICKY_CIRCUIT_COLUMN_KEYS.includes(col.key) && getStickyCircuitHeaderBackgroundClass(),
+                          )}
                         >
                           {group.label}
                         </th>
@@ -4146,7 +4493,12 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       <th
                         key={`head-sub-${col.key}`}
                         title={col.title || col.label}
-                        className={`border border-border px-0.5 py-px text-center font-semibold leading-tight whitespace-normal ${col.widthClass || 'w-12'}`}
+                        className={cn(
+                          'border border-border px-0.5 py-px text-center font-semibold leading-tight whitespace-normal',
+                          getCircuitColumnCellClass(col) || 'w-12',
+                          getStickyCircuitColumnClass(col.key),
+                          STICKY_CIRCUIT_COLUMN_KEYS.includes(col.key) && getStickyCircuitHeaderBackgroundClass(),
+                        )}
                       >
                         {col.label}
                       </th>
@@ -4191,9 +4543,18 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     >
                       {visibleCircuitColumns.map((col) => {
                         const options = CIRCUIT_SELECT_OPTIONS[col.key];
+                        const stickyColumnClass = getStickyCircuitColumnClass(col.key);
 
                         return (
-                          <td key={`${rowIndex}-${col.key}`} className="border border-border p-0 align-top">
+                          <td
+                            key={`${rowIndex}-${col.key}`}
+                            className={cn(
+                              'border border-border p-0 align-top',
+                              getCircuitColumnCellClass(col),
+                              stickyColumnClass,
+                              stickyColumnClass && getStickyCircuitColumnBackgroundClass(selectedCircuitRow === rowIndex, rowIndex % 2 === 0),
+                            )}
+                          >
                             {col.key === 'ringFinal' ? (
                               <button
                                 type="button"
@@ -4201,7 +4562,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                                 onClick={() =>
                                   updateCircuitField(rowIndex, col.key, row[col.key] === '✓' ? '' : '✓')
                                 }
-                                className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${col.widthClass || 'w-12'} ${
+                                className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${getCircuitColumnCellClass(col) || 'w-12'} ${
                                   row[col.key] === '✓'
                                     ? 'text-green-700 hover:bg-green-50'
                                     : 'text-slate-300 hover:bg-slate-50'
@@ -4221,7 +4582,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                                     'relative h-6 rounded-none border-0 px-0 pr-[6px] text-[9px] leading-none shadow-none gap-0 justify-center text-center',
                                     '[&>span]:block [&>span]:min-w-0 [&>span]:flex-none [&>span]:truncate [&>span]:text-center [&>span]:mx-auto [&>span]:pr-0',
                                     '[&>svg]:absolute [&>svg]:right-[1px] [&>svg]:top-1/2 [&>svg]:h-[4px] [&>svg]:w-[4px] [&>svg]:-translate-y-1/2 [&>svg]:shrink-0',
-                                    col.widthClass || 'w-12',
+                                    getCircuitColumnCellClass(col) || 'w-12',
                                   )}
                                   title={options.find((option) => option.value === row[col.key])?.title}
                                 >
@@ -4251,7 +4612,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                               <Input
                                 value={row[col.key]}
                                 onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'}`}
+                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'}`}
                               />
                             ) : ['r1Line', 'rnNeutral', 'r2Cpc', 'r1r2', 'insResLN', 'insResLL', 'insResLE'].includes(col.key) ? (
                               <ExpectedValueInput
@@ -4266,10 +4627,10 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                                         ? getR1R2ValidationState(row)?.title
                                         : undefined
                                 }
-                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'} ${getCircuitFieldInconsistencyClass(row, col.key, externalEarthFaultLoopImpedance)}`}
+                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'} ${getCircuitFieldInconsistencyClass(row, col.key, externalEarthFaultLoopImpedance)}`}
                               />
                             ) : col.key === 'maxZs' ? (
-                              <div className={`grid h-10 grid-cols-2 divide-x divide-border ${col.widthClass || 'w-12'}`}>
+                              <div className={`grid h-10 grid-cols-2 divide-x divide-border ${getCircuitColumnCellClass(col) || 'w-12'}`}>
                                 <Input
                                   value={row[col.key]}
                                   onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
@@ -4295,7 +4656,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                                     ? `Exceeds maximum permitted Zs (${getDeratedMaxZsDisplay(row) ?? row.maxZs}) – C2 observation added to Section 7`
                                     : undefined)
                                 }
-                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'} ${
+                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'} ${
                                   getMeasuredZsValidation(row, externalEarthFaultLoopImpedance)
                                     ? getCircuitFieldInconsistencyClass(row, 'measuredZs', externalEarthFaultLoopImpedance)
                                     : zsExceedsMax(row) || hasCircuitInconsistency(row, externalEarthFaultLoopImpedance)
@@ -4319,7 +4680,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                                     cyclingOptions[(idx + 1) % cyclingOptions.length] ?? cyclingOptions[0] ?? '',
                                   );
                                 }}
-                                className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${col.widthClass || 'w-12'} ${
+                                className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${getCircuitColumnCellClass(col) || 'w-12'} ${
                                   (row[col.key] as string) === '✓'
                                     ? 'text-green-700 hover:bg-green-50'
                                     : (row[col.key] as string) === '✗'
@@ -4337,7 +4698,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                               <Input
                                 value={row[col.key]}
                                 onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${col.widthClass || 'w-12'}`}
+                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'}`}
                               />
                             )}
                           </td>

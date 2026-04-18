@@ -320,7 +320,8 @@ export default function MobileCaptureClient({ token, kind }: MobileCaptureClient
       setError(null);
       setSuccess(null);
 
-      const response = await fetch('/api/user/mobile-capture', {
+      const submitUrl = new URL('/api/user/mobile-capture', window.location.origin);
+      const response = await fetch(submitUrl.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,0 +1,418 @@
+{
+  "version": "1.2",
+  "name": "gn3-domain-v1.2",
+  "description": "Curated Guidance Note 3 review rules for inspection and testing context using conservative OCR text signals.",
+  "rules": [
+    {
+      "id": "gn3-missing-circuit-identification-review",
+      "issueType": "labeling",
+      "severity": "medium",
+      "message": "OCR wording suggests circuit identification may be absent or unclear; review inspection findings against Guidance Note 3 expectations for clear identification.",
+      "source": "gn3.curated",
+      "confidence": 0.9,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Guidance Note 3",
+          "title": "Inspection and Testing"
+        }
+      ],
+      "metadata": {
+        "domain": "inspection_testing",
+        "focus": "circuit_identification",
+        "curation": "high_precision_text_review"
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "circuit identification missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "circuit identification unclear"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "circuits not identified"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unidentified circuit"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "way identification missing"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "gn3-missing-label-review",
+      "issueType": "labeling",
+      "severity": "medium",
+      "message": "OCR wording suggests required labels may be missing or not evident; review whether inspection and testing records should note labelling deficiencies.",
+      "source": "gn3.curated",
+      "confidence": 0.91,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Guidance Note 3",
+          "title": "Inspection and Testing"
+        }
+      ],
+      "metadata": {
+        "domain": "inspection_testing",
+        "focus": "labels",
+        "curation": "high_precision_text_review"
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "label missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "labels missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "warning label missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "notice missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unlabelled"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unlabeled"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "gn3-test-label-absence-review",
+      "issueType": "inspection_testing",
+      "severity": "medium",
+      "message": "No clear test label evidence is indicated by the OCR wording; review whether inspection/testing dates or test notices are present and legible.",
+      "source": "gn3.curated",
+      "confidence": 0.87,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Guidance Note 3",
+          "title": "Inspection and Testing"
+        }
+      ],
+      "metadata": {
+        "domain": "inspection_testing",
+        "focus": "test_label_evidence",
+        "curation": "high_precision_text_review"
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "test label missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "inspection label missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "next inspection label missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no test label"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no inspection label"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "gn3-earthing-verification-review",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "OCR wording suggests earthing verification may need follow-up; review inspection/test records to confirm earthing arrangement and verification details.",
+      "source": "gn3.curated",
+      "confidence": 0.88,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Guidance Note 3",
+          "title": "Inspection and Testing"
+        }
+      ],
+      "metadata": {
+        "domain": "inspection_testing",
+        "focus": "earthing_verification",
+        "curation": "high_precision_text_review"
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "earthing not verified"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "earth not verified"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "earthing unclear"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "main earthing missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "earthing conductor not identified"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "gn3-bonding-verification-review",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "OCR wording suggests bonding verification may require manual review; check whether main protective bonding has been identified and verified during inspection/testing.",
+      "source": "gn3.curated",
+      "confidence": 0.88,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Guidance Note 3",
+          "title": "Inspection and Testing"
+        }
+      ],
+      "metadata": {
+        "domain": "inspection_testing",
+        "focus": "bonding_verification",
+        "curation": "high_precision_text_review"
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "bonding not verified"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "main bonding missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "bonding missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "bonding unclear"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "protective bonding not identified"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "gn3-periodic-inspection-context-review",
+      "issueType": "inspection_testing",
+      "severity": "info",
+      "message": "Periodic inspection/testing wording was detected; review the image and records in context rather than treating OCR text alone as conclusive.",
+      "source": "gn3.curated",
+      "confidence": 0.86,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Guidance Note 3",
+          "title": "Inspection and Testing"
+        }
+      ],
+      "metadata": {
+        "domain": "inspection_testing",
+        "focus": "periodic_context",
+        "curation": "high_precision_text_review"
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "periodic inspection"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "periodic test"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "inspection and testing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "eicr"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "next inspection"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "gn3-test-due-date-review",
+      "issueType": "inspection_testing",
+      "severity": "medium",
+      "message": "OCR wording suggests inspection or test due date information may be absent or unclear; review whether reinspection details are adequately evidenced.",
+      "source": "gn3.curated",
+      "confidence": 0.85,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "Guidance Note 3",
+          "title": "Inspection and Testing"
+        }
+      ],
+      "metadata": {
+        "domain": "inspection_testing",
+        "focus": "reinspection_due_date",
+        "curation": "high_precision_text_review"
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "inspection due missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "next inspection due missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "reinspection date missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "test date missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "date illegible"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    }
+  ]
+}

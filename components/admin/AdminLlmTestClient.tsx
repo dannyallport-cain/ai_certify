@@ -141,10 +141,10 @@ export function AdminLlmTestClient() {
   const reportSections = state.result?.prefill?.reportSections ?? null;
   const identifiedDefects = reportSections?.identifiedDefects ?? [];
   const highlightedSections = reportSections?.highlightedSections ?? [];
-  const observationSchedule = reportSections?.observationSchedule ?? [];
-  const inspectionSchedule = reportSections?.inspectionSchedule ?? [];
-  const observationsAndRecommendations = reportSections?.observationsAndRecommendations ?? [];
-  const summaryComments = reportSections?.summaryComments ?? [];
+  const observationSchedule = reportSections?.observationSchedule?.items ?? [];
+  const inspectionSchedule = reportSections?.inspectionSchedule?.items ?? [];
+  const observationsAndRecommendations = reportSections?.observationsAndRecommendations?.items ?? [];
+  const summaryComments = reportSections?.summaryOfCondition?.comments ?? [];
   const reportSummary = reportSections?.reportSummary;
   const gasBondingPresent =
     reportSections?.supplyCharacteristicsAndEarthingArrangements?.mainProtectiveBonding?.gas?.present;
