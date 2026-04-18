@@ -57,6 +57,8 @@ export default function ProfileMediaSettings() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const openedCaptureWindowRef = useRef<Window | null>(null);
+  const captureCompletedRef = useRef(false);
+  const capturePollCountRef = useRef(0);
   const { data: user } = useSWR<User>('/api/user', fetcher, {
     refreshInterval: activeCapture ? 2500 : 0,
   });
@@ -96,28 +98,45 @@ export default function ProfileMediaSettings() {
   }, [activeCapture]);
 
   useEffect(() => {
-    if (!activeCapture || !user) {
+    if (!activeCapture) {
+      capturePollCountRef.current = 0;
       return;
     }
 
+    if (!user) {
+      return;
+    }
+
+    capturePollCountRef.current += 1;
+
     const currentValue = getAssetValue(user, activeCapture.kind);
     const currentUpdatedAt = getAssetUpdatedAt(user, activeCapture.kind);
+    const currentValueChanged =
+      currentValue !== activeCapture.initialValue &&
+      (!!currentValue || !!activeCapture.initialValue);
+    const currentUpdatedAtChanged =
+      currentUpdatedAt !== activeCapture.initialUpdatedAt &&
+      (!!currentUpdatedAt || !!activeCapture.initialUpdatedAt);
+    const timedOutWaitingForRefresh = capturePollCountRef.current >= 4;
 
     if (
-      (currentUpdatedAt && currentUpdatedAt !== activeCapture.initialUpdatedAt) ||
-      (currentValue && currentValue !== activeCapture.initialValue)
+      !captureCompletedRef.current &&
+      (currentValueChanged || currentUpdatedAtChanged || timedOutWaitingForRefresh)
     ) {
-      void mutate('/api/user');
+      captureCompletedRef.current = true;
       if (openedCaptureWindowRef.current && !openedCaptureWindowRef.current.closed) {
         openedCaptureWindowRef.current.close();
       }
       openedCaptureWindowRef.current = null;
       setActiveCapture(null);
+      setQrCodeDataUrl('');
+      setError(null);
       setSuccess(
         activeCapture.kind === 'avatar'
           ? 'Avatar updated successfully.'
           : 'Signature updated successfully.'
       );
+      void mutate('/api/user', undefined, { revalidate: true });
     }
   }, [activeCapture, user]);
 
@@ -155,8 +174,12 @@ export default function ProfileMediaSettings() {
         'popup=yes,width=480,height=860,resizable=yes,scrollbars=yes'
       );
 
+      captureCompletedRef.current = false;
+      capturePollCountRef.current = 0;
       if (captureWindow) {
         openedCaptureWindowRef.current = captureWindow;
+      } else {
+        openedCaptureWindowRef.current = null;
       }
 
       setActiveCapture({
@@ -300,10 +323,13 @@ export default function ProfileMediaSettings() {
               <button
                 type="button"
                 onClick={() => {
+                  captureCompletedRef.current = false;
+                  capturePollCountRef.current = 0;
                   if (openedCaptureWindowRef.current && !openedCaptureWindowRef.current.closed) {
                     openedCaptureWindowRef.current.close();
                   }
                   openedCaptureWindowRef.current = null;
+                  setQrCodeDataUrl('');
                   setActiveCapture(null);
                 }}
                 className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
