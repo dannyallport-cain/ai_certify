@@ -660,6 +660,9 @@ type EicrDraftState = {
   extentQuickOption: string;
   limitationsQuickOption: string;
   operationalQuickOption: string;
+  inspectorName: string;
+  inspectorPosition: string;
+  formValues: Record<string, string>;
 };
 
 const EICR_DRAFT_STORAGE_PREFIX = 'eicr-form-draft';
@@ -687,13 +690,8 @@ function buildEicrDraftUserKey(user?: EicrDraftUser | null): string {
   return 'anonymous';
 }
 
-function buildEicrDraftStorageKey(user: EicrDraftUser | null | undefined, certificateNumber: string, inspectionDate: string) {
-  return [
-    EICR_DRAFT_STORAGE_PREFIX,
-    buildEicrDraftUserKey(user),
-    certificateNumber.trim() || 'no-certificate-number',
-    inspectionDate || 'no-date',
-  ].join(':');
+function buildEicrDraftStorageKey(user: EicrDraftUser | null | undefined) {
+  return [EICR_DRAFT_STORAGE_PREFIX, buildEicrDraftUserKey(user), 'new-eicr'].join(':');
 }
 
 function readEicrDraftState(storageKey: string): EicrDraftState | null {
@@ -712,6 +710,85 @@ function readEicrDraftState(storageKey: string): EicrDraftState | null {
     console.error('Unable to read EICR draft from local storage:', error);
     return null;
   }
+}
+
+function collectEicrFormValues(form: HTMLFormElement | null): Record<string, string> {
+  if (!form) {
+    return {};
+  }
+
+  const values: Record<string, string> = {};
+
+  const fields = form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+    'input[name], textarea[name], select[name]',
+  );
+
+  fields.forEach((field) => {
+    const name = field.name?.trim();
+    if (!name) {
+      return;
+    }
+
+    if (field instanceof HTMLInputElement) {
+      const type = field.type?.toLowerCase();
+
+      if (type === 'radio') {
+        if (field.checked) {
+          values[name] = field.value;
+        }
+        return;
+      }
+
+      if (type === 'checkbox') {
+        values[name] = field.checked ? field.value || 'on' : '';
+        return;
+      }
+
+      if (type === 'file') {
+        return;
+      }
+    }
+
+    values[name] = field.value ?? '';
+  });
+
+  return values;
+}
+
+function applyEicrFormValues(form: HTMLFormElement | null, values: Record<string, string> | undefined) {
+  if (!form || !values) {
+    return;
+  }
+
+  Object.entries(values).forEach(([name, value]) => {
+    const fields = form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+      `[name="${name}"]`,
+    );
+
+    fields.forEach((field) => {
+      if (field instanceof HTMLInputElement) {
+        const type = field.type?.toLowerCase();
+
+        if (type === 'radio') {
+          field.checked = field.value === value;
+          return;
+        }
+
+        if (type === 'checkbox') {
+          field.checked = value === field.value || value === 'on' || value === 'true';
+          return;
+        }
+
+        if (type === 'file') {
+          return;
+        }
+      }
+
+      field.value = value;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
 }
 
 const asSimpleOptions = (values: readonly string[]): readonly CircuitSelectOption[] =>
@@ -1675,11 +1752,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       return;
     }
 
-    if (!certificateNumber || !inspectionDate) {
-      return;
-    }
-
-    const draftStorageKey = buildEicrDraftStorageKey(currentUser, certificateNumber, inspectionDate);
+    const draftStorageKey = buildEicrDraftStorageKey(currentUser);
     const savedDraft = readEicrDraftState(draftStorageKey);
 
     if (savedDraft) {
@@ -1722,18 +1795,24 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       setExtentQuickOption(savedDraft.extentQuickOption ?? '__custom');
       setLimitationsQuickOption(savedDraft.limitationsQuickOption ?? '__custom');
       setOperationalQuickOption(savedDraft.operationalQuickOption ?? '__custom');
+      setInspectorName(savedDraft.inspectorName ?? '');
+      setInspectorPosition(savedDraft.inspectorPosition ?? '');
+
+      requestAnimationFrame(() => {
+        applyEicrFormValues(formRef.current, savedDraft.formValues);
+      });
     }
 
     lastSavedDraftKeyRef.current = draftStorageKey;
     hasHydratedDraftRef.current = true;
-  }, [currentUser, certificateNumber, inspectionDate]);
+  }, [currentUser]);
 
   useEffect(() => {
-    if (!hasHydratedDraftRef.current || !certificateNumber || !inspectionDate || typeof window === 'undefined') {
+    if (!hasHydratedDraftRef.current || typeof window === 'undefined') {
       return;
     }
 
-    const draftStorageKey = buildEicrDraftStorageKey(currentUser, certificateNumber, inspectionDate);
+    const draftStorageKey = buildEicrDraftStorageKey(currentUser);
     const draftState: EicrDraftState = {
       selectedCustomer,
       selectedCustomerName,
@@ -1765,13 +1844,12 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       extentQuickOption,
       limitationsQuickOption,
       operationalQuickOption,
+      inspectorName,
+      inspectorPosition,
+      formValues: collectEicrFormValues(formRef.current),
     };
 
     try {
-      if (lastSavedDraftKeyRef.current && lastSavedDraftKeyRef.current !== draftStorageKey) {
-        window.localStorage.removeItem(lastSavedDraftKeyRef.current);
-      }
-
       window.localStorage.setItem(draftStorageKey, JSON.stringify(draftState));
       lastSavedDraftKeyRef.current = draftStorageKey;
     } catch (error) {
@@ -1809,6 +1887,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     extentQuickOption,
     limitationsQuickOption,
     operationalQuickOption,
+    inspectorName,
+    inspectorPosition,
   ]);
 
   const addObservation = () => {
@@ -2102,7 +2182,13 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         throw new Error(payload?.error || 'Unable to save profile defaults.');
       }
 
-      await mutate('/api/user', payload, false);
+      const mergedUser = {
+        ...(currentUser ?? {}),
+        ...payload,
+        eicrProfileDefaults: defaults,
+      };
+
+      await mutate('/api/user', mergedUser, false);
       setShowSaveProfilePrompt(false);
       setProfileDefaultsSaveMessage('Business details saved to your profile for next time.');
     } catch (error) {
@@ -2148,7 +2234,18 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         throw new Error(payload?.error || 'Unable to save inspector history.');
       }
 
-      await mutate('/api/user', payload, false);
+      const mergedHistory = [
+        ...(currentUser?.eicrInspectorHistory ?? []),
+        { name: trimmedName, position: trimmedPosition },
+      ];
+
+      const mergedUser = {
+        ...(currentUser ?? {}),
+        ...payload,
+        eicrInspectorHistory: mergedHistory,
+      };
+
+      await mutate('/api/user', mergedUser, false);
     } catch (error) {
       console.error('Unable to save EICR inspector history:', error);
     }
@@ -2899,16 +2996,14 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     e.preventDefault();
     setIsSubmitting(true);
     setFormError('');
+
     try {
       const form = e.currentTarget;
       const formData = new FormData(form);
       formData.set('certificateType', 'EICR');
 
       const scheduleForPdf = Object.fromEntries(
-        Array.from(new Set([
-          ...Object.keys(inspSchedule.codes),
-          ...Object.keys(inspSchedule.comments),
-        ])).map((ref) => [
+        Array.from(new Set([...Object.keys(inspSchedule.codes), ...Object.keys(inspSchedule.comments)])).map((ref) => [
           ref,
           {
             outcome: inspSchedule.codes[ref] || '',
@@ -2917,29 +3012,44 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         ]),
       );
 
-      // Serialize observations as certificate items JSON
-      const obsJson = JSON.stringify(observations.map(o => ({
-        itemType: 'observation',
-        description: o.description,
-        status: o.code === 'C1' || o.code === 'C2' ? 'unsatisfactory' : o.code === 'FI' ? 'not_tested' : 'satisfactory',
-        defects: o.code,
-        recommendations: codeLabels[o.code],
-      })));
+      const obsJson = JSON.stringify(
+        observations.map((o) => ({
+          itemType: 'observation',
+          description: o.description,
+          status:
+            o.code === 'C1' || o.code === 'C2'
+              ? 'unsatisfactory'
+              : o.code === 'FI'
+                ? 'not_tested'
+                : 'satisfactory',
+          defects: o.code,
+          recommendations: codeLabels[o.code],
+        })),
+      );
+
       formData.set('items', obsJson);
       formData.set('inspectionSchedule', JSON.stringify(scheduleForPdf));
       formData.set('circuits', JSON.stringify(circuits));
 
       const result = await createCertificate({}, formData);
+
       if (result?.error) {
         if (isSessionExpiredError(result.error)) {
           router.push(getSignInRedirectPath('/certificates/new/eicr'));
           return;
         }
+
         setFormError(result.error);
         return;
       }
 
       await saveInspectorHistoryToUser(inspectorName, inspectorPosition);
+
+      const draftStorageKey = buildEicrDraftStorageKey(currentUser);
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(draftStorageKey);
+      }
+      lastSavedDraftKeyRef.current = null;
     } catch (error) {
       console.error('Error creating certificate:', error);
       setFormError('Unable to create certificate. Please try again.');
@@ -2954,37 +3064,37 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   return (
     <div className="flex-1 bg-[#e8e1d6] p-4 pt-6 md:p-8">
       <div className="mx-auto max-w-[1500px] space-y-4">
-      <div className="flex flex-col gap-3 border border-slate-300 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">
-            {streamlined ? 'EICR Stremlined' : 'EICR – Electrical Installation Condition Report'}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Requirements For Electrical Installations – BS 7671 IET Wiring Regulations
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {canUseSampleFill && (
-            <Button type="button" variant="secondary" onClick={fillFormWithSampleData}>
-              Fill Form With Sample Data
+        <div className="flex flex-col gap-3 border border-slate-300 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">
+              {streamlined ? 'EICR Stremlined' : 'EICR – Electrical Installation Condition Report'}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Requirements For Electrical Installations – BS 7671 IET Wiring Regulations
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {canUseSampleFill && (
+              <Button type="button" variant="secondary" onClick={fillFormWithSampleData}>
+                Fill Form With Sample Data
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <Link href="/certificates/new">← Back to Certificate Types</Link>
             </Button>
-          )}
-          <Button variant="outline" asChild>
-            <Link href="/certificates/new">← Back to Certificate Types</Link>
-          </Button>
+          </div>
         </div>
-      </div>
 
-      <form
-        ref={formRef}
-        onSubmit={handleSubmit}
-        className={cn(
-          EDITOR_FORM_SHEET_CLASS,
-          EXPECTED_VALUES_FADE_CLASS,
-          showExpectedValues &&
-            `${EXPECTED_VALUES_LOCKED_CLASS} [&_input]:opacity-55 [&_textarea]:opacity-55 [&_[role=combobox]]:opacity-55 [&_button]:opacity-55 [&_[data-expected-values-button=true]]:pointer-events-auto [&_[data-expected-values-button=true]]:opacity-100 [&_[data-expected-values-panel=true]]:opacity-100`,
-        )}
-      >
+        <form
+          ref={formRef}
+          onSubmit={handleSubmit}
+          className={cn(
+            EDITOR_FORM_SHEET_CLASS,
+            EXPECTED_VALUES_FADE_CLASS,
+            showExpectedValues &&
+              `${EXPECTED_VALUES_LOCKED_CLASS} [&_input]:opacity-55 [&_textarea]:opacity-55 [&_[role=combobox]]:opacity-55 [&_button]:opacity-55 [&_[data-expected-values-button=true]]:pointer-events-auto [&_[data-expected-values-button=true]]:opacity-100 [&_[data-expected-values-panel=true]]:opacity-100`,
+          )}
+        >
         <input type="hidden" name="certificateType" value="EICR" />
         {formError && (
           <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
@@ -4657,15 +4767,17 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                                     ? `Exceeds maximum permitted Zs (${getDeratedMaxZsDisplay(row) ?? row.maxZs}) – C2 observation added to Section 7`
                                     : undefined)
                                 }
-                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'} ${
+                                className={cn(
+                                  'h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0',
+                                  getCircuitColumnCellClass(col) || 'w-12',
                                   getMeasuredZsValidation(row, externalEarthFaultLoopImpedance)
                                     ? getCircuitFieldInconsistencyClass(row, 'measuredZs', externalEarthFaultLoopImpedance)
                                     : zsExceedsMax(row) || hasCircuitInconsistency(row, externalEarthFaultLoopImpedance)
                                       ? 'bg-orange-100 text-orange-900 font-semibold'
                                       : row.measuredZs.trim() && row.r1r2.trim()
                                         ? 'bg-amber-100 text-amber-900 font-semibold'
-                                        : ''
-                                }`}
+                                        : '',
+                                )}
                               />
                             ) : col.cycling ? (
                               <button
@@ -4803,8 +4915,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
           </Button>
         </div>
       </form>
-      </div>
     </div>
+  </div>
   );
 }
 
