@@ -1,0 +1,560 @@
+{
+  "version": "1.2",
+  "name": "eicr-coding-domain-v1.2",
+  "description": "Curated conservative EICR coding-oriented OCR review rules for consumer unit observations.",
+  "rules": [
+    {
+      "id": "eicr-thermal-damage-fi-review",
+      "issueType": "damage",
+      "severity": "high",
+      "message": "Thermal damage wording was detected and should be reviewed for potential further investigation coding.",
+      "source": "eicr.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI",
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "EICR-Guidance",
+          "title": "Curated EICR coding review guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "eicr_coding",
+        "rationale": "Thermal damage language may indicate deterioration or overheating, but OCR text alone should not assign a definitive code without human assessment.",
+        "triggerTokens": [
+          "burn",
+          "burnt",
+          "burned",
+          "scorch",
+          "scorched",
+          "overheat",
+          "overheated",
+          "heat damage",
+          "thermal damage",
+          "signs of heat"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "burn"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "burnt"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "burned"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "scorch"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "scorched"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "overheat"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "overheated"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "heat damage"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "thermal damage"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "signs of heat"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "eicr-exposed-live-parts-c1-review",
+      "issueType": "shock_risk",
+      "severity": "high",
+      "message": "Wording suggesting exposed live parts or live conductors was detected and should be escalated for immediate danger review.",
+      "source": "eicr.curated",
+      "confidence": 0.97,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "C1",
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "EICR-Guidance",
+          "title": "Curated EICR coding review guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "eicr_coding",
+        "rationale": "Text indicating exposed live parts is strongly associated with immediate danger, but image/OCR output still requires human confirmation.",
+        "triggerTokens": [
+          "exposed live parts",
+          "live parts exposed",
+          "live conductor exposed",
+          "exposed live",
+          "exposed conductor",
+          "accessible live parts",
+          "live terminals exposed"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "exposed live parts"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "live parts exposed"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "live conductor exposed"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "exposed live"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "exposed conductor"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "accessible live parts"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "live terminals exposed"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "eicr-openings-missing-blanks-c2-review",
+      "issueType": "enclosure_integrity",
+      "severity": "high",
+      "message": "Wording suggesting open ways, gaps, or missing blanking pieces was detected and should be reviewed for potential C2 coding.",
+      "source": "eicr.curated",
+      "confidence": 0.93,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "C2",
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "EICR-Guidance",
+          "title": "Curated EICR coding review guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "eicr_coding",
+        "rationale": "Openings or missing blanks may impair enclosure integrity and access protection, but coding should remain review-led from OCR evidence.",
+        "triggerTokens": [
+          "missing blank",
+          "missing blanks",
+          "blank missing",
+          "open slot",
+          "open way",
+          "open ways",
+          "gap in cover",
+          "opening in cover",
+          "unused way open",
+          "missing blanking plate"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "missing blank"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "missing blanks"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "blank missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "open slot"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "open way"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "open ways"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "gap in cover"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "opening in cover"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unused way open"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "missing blanking plate"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "eicr-label-identification-c3-review",
+      "issueType": "labeling",
+      "severity": "medium",
+      "message": "Wording suggesting missing or unclear labels or circuit identification was detected and should be reviewed for potential improvement coding.",
+      "source": "eicr.curated",
+      "confidence": 0.9,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "C3",
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "EICR-Guidance",
+          "title": "Curated EICR coding review guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "eicr_coding",
+        "rationale": "Absent or unclear labeling commonly supports improvement recommendations, but exact coding remains inspector-led.",
+        "triggerTokens": [
+          "label missing",
+          "labels missing",
+          "no labels",
+          "unlabelled",
+          "unlabeled",
+          "no circuit identification",
+          "circuit identification missing",
+          "identification missing",
+          "schedule missing"
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "label missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "labels missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no labels"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unlabelled"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "unlabeled"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no circuit identification"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "circuit identification missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "identification missing"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "schedule missing"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "eicr-no-rcd-protection-fi-review",
+      "issueType": "protective_device",
+      "severity": "high",
+      "message": "Wording suggesting absence of RCD protection was detected and should be reviewed for potential further investigation or coding context.",
+      "source": "eicr.curated",
+      "confidence": 0.91,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "FI",
+        "manual-review"
+      ],
+      "authority": [
+        {
+          "standard": "EICR-Guidance",
+          "title": "Curated EICR coding review guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "eicr_coding",
+        "rationale": "Absence of RCD wording may be significant depending on circuit/application, so the rule is intentionally conservative and review-oriented.",
+        "triggerTokens": [
+          "no rcd",
+          "no rcd protection",
+          "rcd not provided",
+          "without rcd",
+          "no residual current device"
+        ]
+      },
+      "conditions": {
+        "all": [
+          {
+            "any": [
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "no rcd"
+              },
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "no rcd protection"
+              },
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "rcd not provided"
+              },
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "without rcd"
+              },
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "no residual current device"
+              }
+            ]
+          },
+          {
+            "any": [
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "rcd"
+              },
+              {
+                "path": "text.joinedLower",
+                "op": "contains",
+                "value": "residual current device"
+              }
+            ]
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    },
+    {
+      "id": "eicr-main-bonding-gas-not-present-c2-review",
+      "issueType": "earthing_bonding",
+      "severity": "high",
+      "title": "Main protective bonding to gas service not present",
+      "message": "Text indicates main protective bonding to the gas service is not present and should be reviewed for C2 coding.",
+      "source": "eicr.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "C2",
+        "manual-review"
+      ],
+      "summaryComment": "Main protective bonding to gas service appears not present.",
+      "authority": [
+        {
+          "standard": "EICR-Guidance",
+          "title": "Curated EICR coding review guidance"
+        }
+      ],
+      "metadata": {
+        "domain": "eicr_coding",
+        "rationale": "Missing main protective bonding to a gas service is typically escalated for potentially dangerous review and should drive report-section highlighting and observation prefill.",
+        "triggerTokens": [
+          "main bonding gas not present",
+          "main protective bonding to gas not present",
+          "main protective bonding to gas: no",
+          "no main protective bonding conductor to gas",
+          "gas bonding not present",
+          "bonding to gas not present"
+        ]
+      },
+      "reportTargets": [
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "mainProtectiveBonding.gas.present",
+          "highlight": true,
+          "expectedValue": false,
+          "reason": "Gas bonding status should be reviewed and marked absent if confirmed."
+        },
+        {
+          "sectionKey": "inspectionSchedule",
+          "fieldPath": "items",
+          "highlight": true,
+          "reason": "Inspection schedule should contain a coded entry."
+        },
+        {
+          "sectionKey": "observationsAndRecommendations",
+          "fieldPath": "items",
+          "highlight": true,
+          "reason": "Observation and recommendation should be added."
+        },
+        {
+          "sectionKey": "summaryOfCondition",
+          "fieldPath": "comments",
+          "highlight": true,
+          "reason": "Summary should mention the defect."
+        }
+      ],
+      "observation": {
+        "code": "C2",
+        "title": "Main protective bonding to gas service not present",
+        "comment": "Main protective bonding to gas service not present.",
+        "classification": "potentially-dangerous",
+        "scheduleItems": [
+          {
+            "sectionKey": "inspectionSchedule",
+            "itemKey": "mainProtectiveBondingGas",
+            "code": "C2",
+            "comment": "Main protective bonding to gas service not present."
+          }
+        ]
+      },
+      "conditions": {
+        "any": [
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "main bonding gas not present"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "main protective bonding to gas not present"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "main protective bonding to gas: no"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "no main protective bonding conductor to gas"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "gas bonding not present"
+          },
+          {
+            "path": "text.joinedLower",
+            "op": "contains",
+            "value": "bonding to gas not present"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "label": "matchedText",
+          "path": "text.lines"
+        }
+      ]
+    }
+  ]
+}

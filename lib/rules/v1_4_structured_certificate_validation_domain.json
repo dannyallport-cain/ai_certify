@@ -1,0 +1,957 @@
+{
+  "version": "1.4",
+  "name": "structured-certificate-validation-domain-v1.4",
+  "description": "Curated deterministic structured certificate validation prompts for rating, bonding, SPD typing, and measurement-derived review workflows. Threshold-driven checks rely on pipeline-derived categorical flags so the rule engine remains operator-compatible.",
+  "rules": [
+    {
+      "id": "cert-main-switch-rating-mismatch-with-incomer",
+      "issueType": "certificate_consistency",
+      "severity": "medium",
+      "message": "The recorded main switch rating does not match the recorded incomer rating, so the supply arrangement or data entry should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Main switch rating conflicts with the recorded incomer rating.",
+      "reportTargets": [
+        {
+          "sectionKey": "consumerUnit",
+          "fieldPath": "mainSwitchRating",
+          "highlight": true,
+          "reason": "Main switch rating should be reviewed alongside the incomer rating."
+        },
+        {
+          "sectionKey": "consumerUnit",
+          "fieldPath": "incomerRating",
+          "highlight": true,
+          "reason": "Incomer rating should be reviewed alongside the main switch rating."
+        }
+      ],
+      "observation": {
+        "title": "Main switch and incomer ratings should be checked together",
+        "comment": "Structured certificate data records different ratings for the main switch and incomer.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.consumerUnit.mainSwitchRating",
+            "op": "exists"
+          },
+          {
+            "path": "certificate.consumerUnit.incomerRating",
+            "op": "exists"
+          },
+          {
+            "path": "certificate.consumerUnit.mainSwitchRating",
+            "op": "neq",
+            "valueFrom": "certificate.consumerUnit.incomerRating"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-spd-type-recorded-without-spd-present",
+      "issueType": "certificate_consistency",
+      "severity": "medium",
+      "message": "An SPD type is recorded but the certificate does not indicate SPD presence, so surge protection details should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.9,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Recorded SPD type conflicts with SPD presence being marked absent.",
+      "reportTargets": [
+        {
+          "sectionKey": "protectiveDevices",
+          "fieldPath": "hasSPD",
+          "highlight": true,
+          "expectedValue": true,
+          "reason": "SPD presence should normally align with a recorded SPD type."
+        },
+        {
+          "sectionKey": "protectiveDevices",
+          "fieldPath": "spdType",
+          "highlight": true,
+          "reason": "SPD type should be checked against the recorded presence."
+        }
+      ],
+      "observation": {
+        "title": "SPD presence and SPD type should be aligned",
+        "comment": "Structured certificate data records an SPD type while SPD presence is marked absent.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.consumerUnit.hasSPD",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "path": "certificate.consumerUnit.spdType",
+            "op": "in",
+            "value": [
+              "Type 1",
+              "Type 2",
+              "Type 3",
+              "Type 1+2",
+              "Type 2+3"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-spd-present-but-type-not-recorded",
+      "issueType": "certificate_consistency",
+      "severity": "warning",
+      "message": "The certificate indicates SPD is present but no recognised SPD type is recorded, so the surge protection entry should be checked.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.82,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "SPD is marked present without a recognised SPD type entry.",
+      "reportTargets": [
+        {
+          "sectionKey": "protectiveDevices",
+          "fieldPath": "hasSPD",
+          "highlight": true,
+          "reason": "SPD presence should be reviewed with the SPD type entry."
+        },
+        {
+          "sectionKey": "protectiveDevices",
+          "fieldPath": "spdType",
+          "highlight": true,
+          "reason": "SPD type should be recorded when SPD is marked present."
+        }
+      ],
+      "observation": {
+        "title": "SPD type should be recorded when SPD is present",
+        "comment": "Structured certificate data indicates SPD presence without a recognised SPD type value.",
+        "classification": "data-completeness-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.consumerUnit.hasSPD",
+            "op": "eq",
+            "value": true
+          },
+          {
+            "path": "certificate.consumerUnit.spdType",
+            "op": "not_contains",
+            "value": "type"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-gas-bonding-missing-from-structured-data",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "Structured certificate data indicates gas bonding is not present, so main protective bonding to gas should be reviewed in context.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.92,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Gas bonding is marked absent in the structured certificate data.",
+      "reportTargets": [
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "gas.present",
+          "highlight": true,
+          "expectedValue": true,
+          "reason": "Gas bonding entry should be reviewed against site conditions and certificate notes."
+        },
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "gas.conductorSize",
+          "highlight": true,
+          "reason": "If bonding exists, the conductor size should also be confirmed."
+        }
+      ],
+      "observation": {
+        "title": "Gas bonding provision should be reviewed",
+        "comment": "Structured certificate data marks gas bonding as not present.",
+        "classification": "inspection-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.bonding.gas.present",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-water-bonding-missing-from-structured-data",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "Structured certificate data indicates water bonding is not present, so main protective bonding to water should be reviewed in context.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.92,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Water bonding is marked absent in the structured certificate data.",
+      "reportTargets": [
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "water.present",
+          "highlight": true,
+          "expectedValue": true,
+          "reason": "Water bonding entry should be reviewed against site conditions and certificate notes."
+        },
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "water.conductorSize",
+          "highlight": true,
+          "reason": "If bonding exists, the conductor size should also be confirmed."
+        }
+      ],
+      "observation": {
+        "title": "Water bonding provision should be reviewed",
+        "comment": "Structured certificate data marks water bonding as not present.",
+        "classification": "inspection-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.bonding.water.present",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-no-extraneous-conductive-parts-bonding-items-na",
+      "issueType": "earthing_bonding_applicability",
+      "severity": "info",
+      "message": "No main protective bonding to extraneous-conductive-parts is recorded, so bonding-specific inspection schedule items should be marked not applicable.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.96,
+      "needsHumanReview": false,
+      "suggestedCodes": [
+        "NA"
+      ],
+      "summaryComment": "Main protective bonding items have been marked not applicable because no bonded extraneous-conductive-parts are recorded.",
+      "reportTargets": [
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "gas.present",
+          "highlight": true,
+          "expectedValue": false,
+          "reason": "Gas bonding is recorded absent."
+        },
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "water.present",
+          "highlight": true,
+          "expectedValue": false,
+          "reason": "Water bonding is recorded absent."
+        },
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "oil.present",
+          "highlight": true,
+          "expectedValue": false,
+          "reason": "Oil bonding is recorded absent."
+        },
+        {
+          "sectionKey": "bonding",
+          "fieldPath": "structuralSteel.present",
+          "highlight": true,
+          "expectedValue": false,
+          "reason": "Structural steel bonding is recorded absent."
+        },
+        {
+          "sectionKey": "inspectionSchedule",
+          "fieldPath": "3.3",
+          "highlight": true,
+          "expectedValue": "N/A",
+          "reason": "Bonding labels for extraneous-conductive-parts are not applicable where no such bonding is present."
+        },
+        {
+          "sectionKey": "inspectionSchedule",
+          "fieldPath": "3.6",
+          "highlight": true,
+          "expectedValue": "N/A",
+          "reason": "Main protective bonding conductor size confirmation is not applicable where no bonding conductors are present."
+        },
+        {
+          "sectionKey": "inspectionSchedule",
+          "fieldPath": "3.7",
+          "highlight": true,
+          "expectedValue": "N/A",
+          "reason": "Main protective bonding conductor connection checks are not applicable where no bonding conductors are present."
+        }
+      ],
+      "observation": {
+        "code": "NA",
+        "title": "Main protective bonding inspection items not applicable",
+        "comment": "No main protective bonding to extraneous-conductive-parts is recorded, so inspection items 3.3, 3.6 and 3.7 should be marked N/A.",
+        "classification": "not-applicable",
+        "scheduleItems": [
+          {
+            "sectionKey": "inspectionSchedule",
+            "itemKey": "3.3",
+            "code": "NA",
+            "comment": "No main protective bonding to extraneous-conductive-parts is recorded."
+          },
+          {
+            "sectionKey": "inspectionSchedule",
+            "itemKey": "3.6",
+            "code": "NA",
+            "comment": "No main protective bonding to extraneous-conductive-parts is recorded."
+          },
+          {
+            "sectionKey": "inspectionSchedule",
+            "itemKey": "3.7",
+            "code": "NA",
+            "comment": "No main protective bonding to extraneous-conductive-parts is recorded."
+          }
+        ]
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.bonding.gas.present",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "path": "certificate.bonding.water.present",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "path": "certificate.bonding.oil.present",
+            "op": "eq",
+            "value": false
+          },
+          {
+            "path": "certificate.bonding.structuralSteel.present",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-ze-flagged-impossible-or-suspicious",
+      "issueType": "inspection_testing",
+      "severity": "high",
+      "message": "The measured Ze value has been categorised by the pipeline as impossible or suspicious, so the external earth fault loop impedance result should be checked.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Measured Ze has been flagged as impossible or suspicious by structured validation.",
+      "reportTargets": [
+        {
+          "sectionKey": "measurements",
+          "fieldPath": "ze",
+          "highlight": true,
+          "reason": "Ze should be reviewed against the earthing arrangement and original test record."
+        }
+      ],
+      "observation": {
+        "title": "Ze measurement should be verified",
+        "comment": "A pipeline-derived validation flag marks the structured Ze value as impossible or suspicious.",
+        "classification": "measurement-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.measurementFlags.zeStatus",
+            "op": "in",
+            "value": [
+              "impossible",
+              "suspicious"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-zs-flagged-impossible-or-suspicious",
+      "issueType": "inspection_testing",
+      "severity": "high",
+      "message": "The measured Zs value has been categorised by the pipeline as impossible or suspicious, so the circuit earth fault loop impedance result should be checked.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Measured Zs has been flagged as impossible or suspicious by structured validation.",
+      "reportTargets": [
+        {
+          "sectionKey": "measurements",
+          "fieldPath": "zs",
+          "highlight": true,
+          "reason": "Zs should be reviewed against the circuit protective device and original test record."
+        }
+      ],
+      "observation": {
+        "title": "Zs measurement should be verified",
+        "comment": "A pipeline-derived validation flag marks the structured Zs value as impossible or suspicious.",
+        "classification": "measurement-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.measurementFlags.zsStatus",
+            "op": "in",
+            "value": [
+              "impossible",
+              "suspicious"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-pfc-flagged-impossible-or-suspicious",
+      "issueType": "inspection_testing",
+      "severity": "high",
+      "message": "The measured PFC value has been categorised by the pipeline as impossible or suspicious, so the prospective fault current result should be checked.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Measured PFC has been flagged as impossible or suspicious by structured validation.",
+      "reportTargets": [
+        {
+          "sectionKey": "measurements",
+          "fieldPath": "pfc",
+          "highlight": true,
+          "reason": "PFC should be reviewed against the original test reading and device ratings."
+        }
+      ],
+      "observation": {
+        "title": "PFC measurement should be verified",
+        "comment": "A pipeline-derived validation flag marks the structured PFC value as impossible or suspicious.",
+        "classification": "measurement-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.measurementFlags.pfcStatus",
+            "op": "in",
+            "value": [
+              "impossible",
+              "suspicious"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-pscc-flagged-impossible-or-suspicious",
+      "issueType": "inspection_testing",
+      "severity": "high",
+      "message": "The measured PSCC value has been categorised by the pipeline as impossible or suspicious, so the prospective short-circuit current result should be checked.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Measured PSCC has been flagged as impossible or suspicious by structured validation.",
+      "reportTargets": [
+        {
+          "sectionKey": "measurements",
+          "fieldPath": "pscc",
+          "highlight": true,
+          "reason": "PSCC should be reviewed against the original test reading and device ratings."
+        }
+      ],
+      "observation": {
+        "title": "PSCC measurement should be verified",
+        "comment": "A pipeline-derived validation flag marks the structured PSCC value as impossible or suspicious.",
+        "classification": "measurement-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.measurementFlags.psccStatus",
+            "op": "in",
+            "value": [
+              "impossible",
+              "suspicious"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-ze-safe-threshold-review",
+      "issueType": "inspection_testing",
+      "severity": "medium",
+      "message": "The measured Ze value has been categorised as outside a safe heuristic threshold for the recorded context, so the reading should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.88,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Measured Ze exceeds a pipeline-derived safe heuristic threshold.",
+      "reportTargets": [
+        {
+          "sectionKey": "measurements",
+          "fieldPath": "ze",
+          "highlight": true,
+          "reason": "Ze should be checked where the pipeline has flagged it above a safe heuristic threshold."
+        }
+      ],
+      "observation": {
+        "title": "Ze safe-threshold heuristic exceeded",
+        "comment": "A pipeline-derived threshold flag indicates the structured Ze value should be reviewed.",
+        "classification": "measurement-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.measurementFlags.zeThresholdBand",
+            "op": "in",
+            "value": [
+              "high",
+              "unsafe"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-zs-safe-threshold-review",
+      "issueType": "inspection_testing",
+      "severity": "medium",
+      "message": "The measured Zs value has been categorised as outside a safe heuristic threshold for the recorded context, so the reading should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.88,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Measured Zs exceeds a pipeline-derived safe heuristic threshold.",
+      "reportTargets": [
+        {
+          "sectionKey": "measurements",
+          "fieldPath": "zs",
+          "highlight": true,
+          "reason": "Zs should be checked where the pipeline has flagged it above a safe heuristic threshold."
+        }
+      ],
+      "observation": {
+        "title": "Zs safe-threshold heuristic exceeded",
+        "comment": "A pipeline-derived threshold flag indicates the structured Zs value should be reviewed.",
+        "classification": "measurement-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.measurementFlags.zsThresholdBand",
+            "op": "in",
+            "value": [
+              "high",
+              "unsafe"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-pfc-safe-threshold-review",
+      "issueType": "inspection_testing",
+      "severity": "warning",
+      "message": "The measured PFC value has been categorised as outside a safe heuristic threshold for the recorded context, so the reading should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.86,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Measured PFC falls outside a pipeline-derived safe heuristic threshold.",
+      "reportTargets": [
+        {
+          "sectionKey": "measurements",
+          "fieldPath": "pfc",
+          "highlight": true,
+          "reason": "PFC should be checked where the pipeline has flagged it outside a safe heuristic range."
+        }
+      ],
+      "observation": {
+        "title": "PFC safe-threshold heuristic exceeded",
+        "comment": "A pipeline-derived threshold flag indicates the structured PFC value should be reviewed.",
+        "classification": "measurement-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.measurementFlags.pfcThresholdBand",
+            "op": "in",
+            "value": [
+              "low",
+              "high",
+              "unsafe"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-pscc-safe-threshold-review",
+      "issueType": "inspection_testing",
+      "severity": "warning",
+      "message": "The measured PSCC value has been categorised as outside a safe heuristic threshold for the recorded context, so the reading should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.86,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Measured PSCC falls outside a pipeline-derived safe heuristic threshold.",
+      "reportTargets": [
+        {
+          "sectionKey": "measurements",
+          "fieldPath": "pscc",
+          "highlight": true,
+          "reason": "PSCC should be checked where the pipeline has flagged it outside a safe heuristic range."
+        }
+      ],
+      "observation": {
+        "title": "PSCC safe-threshold heuristic exceeded",
+        "comment": "A pipeline-derived threshold flag indicates the structured PSCC value should be reviewed.",
+        "classification": "measurement-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.measurementFlags.psccThresholdBand",
+            "op": "in",
+            "value": [
+              "low",
+              "high",
+              "unsafe"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-earth-electrode-recorded-when-not-applicable-by-earthing-arrangement",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "Earth electrode details are recorded even though the earthing arrangement is not TT or IT, so the electrode entries should be reviewed and blanked if not applicable.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Earth electrode details are populated for a non-TT/non-IT arrangement and should be reviewed for applicability.",
+      "reportTargets": [
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthingArrangement",
+          "highlight": true,
+          "reason": "Earthing arrangement determines whether installation earth electrode details are applicable."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode",
+          "highlight": true,
+          "reason": "Earth electrode details should normally be blank where the earthing arrangement is not TT or IT."
+        }
+      ],
+      "observation": {
+        "title": "Earth electrode details may be not applicable",
+        "comment": "Structured certificate data records earth electrode details even though the earthing arrangement is not TT or IT.",
+        "classification": "data-applicability-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.earthing.earthingArrangement",
+            "op": "exists"
+          },
+          {
+            "path": "certificate.earthing.earthingArrangement",
+            "op": "not_contains",
+            "value": "tt"
+          },
+          {
+            "path": "certificate.earthing.earthingArrangement",
+            "op": "not_contains",
+            "value": "it"
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.present",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.resistance",
+                "op": "exists"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-earth-electrode-recorded-when-distributor-facility-selected",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "Earth electrode details are recorded while the means of earthing is marked as distributor's facility, so the electrode entries should be reviewed and blanked if not applicable.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.95,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Earth electrode details conflict with means of earthing being recorded as distributor's facility.",
+      "reportTargets": [
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.meansOfEarthing",
+          "highlight": true,
+          "reason": "Means of earthing should align with whether installation earth electrode details are applicable."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode",
+          "highlight": true,
+          "reason": "Earth electrode details should normally be blank when distributor's facility is recorded as the means of earthing."
+        }
+      ],
+      "observation": {
+        "title": "Earth electrode details conflict with means of earthing",
+        "comment": "Structured certificate data records earth electrode details while means of earthing is marked as distributor's facility.",
+        "classification": "data-consistency-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.earthing.meansOfEarthing",
+            "op": "contains",
+            "value": "distributor"
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.present",
+                "op": "eq",
+                "value": true
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.resistance",
+                "op": "exists"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-earth-electrode-missing-for-tt-arrangement",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "The earthing arrangement is recorded as TT, so installation earth electrode details should be applicable and the missing entries should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.93,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "TT earthing arrangement is recorded without complete installation earth electrode details.",
+      "reportTargets": [
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthingArrangement",
+          "highlight": true,
+          "reason": "TT arrangements normally require installation earth electrode details to be recorded."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.type",
+          "highlight": true,
+          "reason": "Earth electrode type should be recorded where TT earthing applies."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.location",
+          "highlight": true,
+          "reason": "Earth electrode location should be recorded where TT earthing applies."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.resistance",
+          "highlight": true,
+          "reason": "Earth electrode resistance should be recorded where TT earthing applies."
+        }
+      ],
+      "observation": {
+        "title": "TT earthing should include earth electrode details",
+        "comment": "Structured certificate data marks the earthing arrangement as TT without complete earth electrode entries.",
+        "classification": "data-completeness-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.earthing.earthingArrangement",
+            "op": "contains",
+            "value": "tt"
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "exists"
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.resistance",
+                "op": "exists"
+              }
+            ]
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.present",
+                "op": "eq",
+                "value": false
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "not_contains",
+                "value": ""
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "not_contains",
+                "value": ""
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "cert-earth-electrode-missing-when-installation-electrode-selected",
+      "issueType": "earthing_bonding",
+      "severity": "medium",
+      "message": "The means of earthing is recorded as installation earth electrode, so the earth electrode details should be applicable and missing entries should be reviewed.",
+      "source": "certificate_validation.curated",
+      "confidence": 0.94,
+      "needsHumanReview": true,
+      "suggestedCodes": [
+        "manual-review"
+      ],
+      "summaryComment": "Means of earthing indicates installation earth electrode without complete electrode details.",
+      "reportTargets": [
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.meansOfEarthing",
+          "highlight": true,
+          "reason": "Installation earth electrode selection means electrode details should normally be completed."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.type",
+          "highlight": true,
+          "reason": "Earth electrode type should be recorded when installation earth electrode is selected."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.location",
+          "highlight": true,
+          "reason": "Earth electrode location should be recorded when installation earth electrode is selected."
+        },
+        {
+          "sectionKey": "supplyCharacteristicsAndEarthingArrangements",
+          "fieldPath": "earthing.earthElectrode.resistance",
+          "highlight": true,
+          "reason": "Earth electrode resistance should be recorded when installation earth electrode is selected."
+        }
+      ],
+      "observation": {
+        "title": "Installation earth electrode selection should include details",
+        "comment": "Structured certificate data marks means of earthing as installation earth electrode without complete earth electrode entries.",
+        "classification": "data-completeness-review"
+      },
+      "conditions": {
+        "all": [
+          {
+            "path": "certificate.earthing.meansOfEarthing",
+            "op": "contains",
+            "value": "installation earth electrode"
+          },
+          {
+            "any": [
+              {
+                "path": "certificate.earthing.earthElectrode.present",
+                "op": "eq",
+                "value": false
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.type",
+                "op": "not_contains",
+                "value": ""
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.location",
+                "op": "not_contains",
+                "value": ""
+              },
+              {
+                "path": "certificate.earthing.earthElectrode.resistance",
+                "op": "not_contains",
+                "value": ""
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

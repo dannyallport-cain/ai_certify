@@ -45,6 +45,8 @@ function getR2Config() {
   const secretAccessKey = getRequiredEnv('R2_SECRET_ACCESS_KEY');
   const bucket = getRequiredEnv('R2_BUCKET');
   const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
+  const configuredPublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, '');
+  const derivedPublicBaseUrl = `https://${bucket}.${accountId}.r2.cloudflarestorage.com`;
 
   return {
     accountId,
@@ -52,11 +54,15 @@ function getR2Config() {
     secretAccessKey,
     bucket,
     endpoint,
-    publicBaseUrl: process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, '') ?? '',
+    publicBaseUrl: configuredPublicBaseUrl || derivedPublicBaseUrl,
   };
 }
 
-function getR2Client() {
+export function getR2BucketName(): string {
+  return getR2Config().bucket;
+}
+
+export function getR2Client() {
   if (r2Client) {
     return r2Client;
   }

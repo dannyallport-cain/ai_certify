@@ -18,23 +18,37 @@ import {
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 import { type UserRole } from '@/lib/auth/roles';
+import type { InferSelectModel } from 'drizzle-orm';
+
+type UserRecord = InferSelectModel<typeof users>;
 
 export async function getUser() {
-  const sessionCookie = (await cookies()).get('session');
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('session');
   if (!sessionCookie || !sessionCookie.value) {
     return null;
   }
 
-  const sessionData = await verifyToken(sessionCookie.value);
+  let sessionData: Awaited<ReturnType<typeof verifyToken>>;
+  try {
+    sessionData = await verifyToken(sessionCookie.value);
+  } catch {
+    cookieStore.delete('session');
+    return null;
+  }
+
   if (
     !sessionData ||
     !sessionData.user ||
     typeof sessionData.user.id !== 'number'
   ) {
+    cookieStore.delete('session');
     return null;
   }
 
-  if (new Date(sessionData.expires) < new Date()) {
+  const expiresAt = new Date(sessionData.expires).getTime();
+  if (!sessionData.expires || Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+    cookieStore.delete('session');
     return null;
   }
 
@@ -237,7 +251,7 @@ export async function getCertificatesForTeamPage({
     throw new Error('User not part of a team');
   }
 
-  const conditions = [eq(certificates.teamId, team.id)] as Array<unknown>;
+  const conditions = [eq(certificates.teamId, team.id)];
 
   if (certificateType) {
     conditions.push(eq(certificates.certificateType, certificateType));
@@ -263,13 +277,15 @@ export async function getCertificatesForTeamPage({
 
   if (search?.trim()) {
     const normalized = `%${search.trim().toLowerCase()}%`;
-    conditions.push(
-      or(
-        sql`LOWER(${certificates.certificateNumber}) LIKE ${normalized}`,
-        sql`LOWER(${certificates.siteName}) LIKE ${normalized}`,
-        sql`LOWER(${customers.name}) LIKE ${normalized}`
-      )
+    const searchCondition = or(
+      sql`LOWER(${certificates.certificateNumber}) LIKE ${normalized}`,
+      sql`LOWER(${certificates.siteName}) LIKE ${normalized}`,
+      sql`LOWER(${customers.name}) LIKE ${normalized}`
     );
+
+    if (searchCondition) {
+      conditions.push(searchCondition);
+    }
   }
 
   const sortColumns: Record<string, any> = {
@@ -281,7 +297,7 @@ export async function getCertificatesForTeamPage({
 
   const orderColumn = sortColumns[sortKey] || certificates.createdAt;
   const order = sortDir === 'asc' ? asc(orderColumn) : desc(orderColumn);
-  const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
+  const whereClause = and(...conditions);
 
   const [countResult] = await db
     .select({ count: count() })

@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { mutate } from 'swr';
 import QRCode from 'qrcode';
 import useSWR from 'swr';
 import { Camera, PenLine, QrCode, X } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { User } from '@/lib/db/schema';
@@ -106,6 +107,7 @@ export default function ProfileMediaSettings() {
       (currentValue !== activeCapture.initialValue ||
         currentUpdatedAt !== activeCapture.initialUpdatedAt)
     ) {
+      void mutate('/api/user');
       setActiveCapture(null);
       setSuccess(
         activeCapture.kind === 'avatar'
@@ -167,8 +169,19 @@ export default function ProfileMediaSettings() {
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <div className="mb-4 flex items-center gap-4">
-                <Avatar className="size-20 ring-1 ring-slate-200">
-                  <AvatarImage src={user?.avatarUrl || undefined} alt={user?.name || user?.email || 'User avatar'} />
+                <Avatar className="size-20 ring-1 ring-slate-200 overflow-hidden">
+                  {user?.avatarUrl ? (
+                    <img
+                      key={user.avatarUpdatedAt?.toString() || user.avatarUrl}
+                      src={user.avatarUrl}
+                      alt={user?.name || user?.email || 'User avatar'}
+                      className="h-full w-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={() => {
+                        setError('Avatar image URL saved, but the browser could not load the image preview.');
+                      }}
+                    />
+                  ) : null}
                   <AvatarFallback>{previewInitials}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -200,7 +213,16 @@ export default function ProfileMediaSettings() {
                 </div>
                 <div className="flex min-h-24 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-3">
                   {user?.signatureUrl ? (
-                    <img src={user.signatureUrl} alt="Signature preview" className="max-h-20 w-full object-contain" />
+                    <img
+                      key={user.signatureUpdatedAt?.toString() || user.signatureUrl}
+                      src={user.signatureUrl}
+                      alt="Signature preview"
+                      className="max-h-20 w-full object-contain"
+                      referrerPolicy="no-referrer"
+                      onError={() => {
+                        setError('Signature image URL saved, but the browser could not load the image preview.');
+                      }}
+                    />
                   ) : (
                     <p className="text-sm text-slate-500">No signature saved yet</p>
                   )}
@@ -220,6 +242,20 @@ export default function ProfileMediaSettings() {
 
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           {success ? <p className="text-sm text-emerald-600">{success}</p> : null}
+
+          {user?.avatarUrl ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="mb-2 text-xs font-medium text-slate-500">Avatar URL</p>
+              <a
+                href={user.avatarUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all text-sm text-blue-600 hover:text-blue-700"
+              >
+                {user.avatarUrl}
+              </a>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 

@@ -117,10 +117,10 @@ export interface AnalyzeImageSupplyCharacteristicsAndEarthingArrangements {
 export interface AnalyzeImageReportSections {
   identifiedDefects?: AnalyzeImageIdentifiedDefect[];
   highlightedSections?: AnalyzeImageHighlightedSection[];
-  observationSchedule?: AnalyzeImageScheduleItem[];
-  inspectionSchedule?: AnalyzeImageScheduleItem[];
-  observationsAndRecommendations?: AnalyzeImageObservationRecommendation[];
-  summaryComments?: Array<string | AnalyzeImageSummaryComment>;
+  observationSchedule?: { items: AnalyzeImageScheduleItem[] };
+  inspectionSchedule?: { items: AnalyzeImageScheduleItem[] };
+  observationsAndRecommendations?: { items: AnalyzeImageObservationRecommendation[] };
+  summaryOfCondition?: { comments: Array<string | AnalyzeImageSummaryComment> };
   reportSummary?: string | Record<string, unknown>;
   supplyCharacteristicsAndEarthingArrangements?: AnalyzeImageSupplyCharacteristicsAndEarthingArrangements;
   [key: string]: unknown;

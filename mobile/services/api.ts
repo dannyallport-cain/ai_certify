@@ -25,7 +25,7 @@ const BASE_URL = configuredBaseUrl.replace(/\/+$/, '');
 const configuredAiWorkerUrl =
   Constants.expoConfig?.extra?.aiWorkerUrl ??
   process.env.EXPO_PUBLIC_AI_WORKER_URL ??
-  'https://ai-worker-production-b025.up.railway.app';
+  'https://ai-certificates.app/api/ai/analyze-image';
 
 const AI_WORKER_URL = configuredAiWorkerUrl.replace(/\/+$/, '');
 
