@@ -139,10 +139,26 @@ export interface AnalysisPrefill {
   reportSections?: Record<string, unknown>;
 }
 
+export interface AnalysisLocalLlmInfo {
+  provider?: 'disabled' | 'ollama' | 'lmstudio' | null;
+  enabled?: boolean;
+  baseUrl?: string | null;
+  model?: string | null;
+  apiStyle?: 'none' | 'ollama' | 'openai-compatible' | null;
+  source?: string | null;
+  status?: string | null;
+  reachable?: boolean | null;
+  healthy?: boolean | null;
+  selectedModelAvailable?: boolean | null;
+  availableModels?: string[];
+  detail?: string | null;
+}
+
 export interface AnalysisModelInfo {
   detector?: string | null;
   ocr?: string | null;
   extractor?: string | null;
+  localLlm?: AnalysisLocalLlmInfo | null;
 }
 
 export interface AnalysisResult {
@@ -213,7 +229,42 @@ function buildAnalysisResult(data: any): AnalysisResult {
     textDetections,
     observations,
     prefill: data?.prefill ?? null,
-    modelInfo: data?.modelInfo ?? null,
+    modelInfo: data?.modelInfo
+      ? {
+          detector: data.modelInfo.detector ?? null,
+          ocr: data.modelInfo.ocr ?? null,
+          extractor: data.modelInfo.extractor ?? null,
+          localLlm: data.modelInfo.localLlm
+            ? {
+                provider: data.modelInfo.localLlm.provider ?? null,
+                enabled: Boolean(data.modelInfo.localLlm.enabled),
+                baseUrl: data.modelInfo.localLlm.baseUrl ?? null,
+                model: data.modelInfo.localLlm.model ?? null,
+                apiStyle: data.modelInfo.localLlm.apiStyle ?? null,
+                source: data.modelInfo.localLlm.source ?? null,
+                status: data.modelInfo.localLlm.status ?? null,
+                reachable:
+                  typeof data.modelInfo.localLlm.reachable === 'boolean'
+                    ? data.modelInfo.localLlm.reachable
+                    : null,
+                healthy:
+                  typeof data.modelInfo.localLlm.healthy === 'boolean'
+                    ? data.modelInfo.localLlm.healthy
+                    : null,
+                selectedModelAvailable:
+                  typeof data.modelInfo.localLlm.selectedModelAvailable === 'boolean'
+                    ? data.modelInfo.localLlm.selectedModelAvailable
+                    : null,
+                availableModels: Array.isArray(data.modelInfo.localLlm.availableModels)
+                  ? data.modelInfo.localLlm.availableModels.filter(
+                      (item: unknown): item is string => typeof item === 'string' && item.length > 0,
+                    )
+                  : [],
+                detail: data.modelInfo.localLlm.detail ?? null,
+              }
+            : null,
+        }
+      : null,
     needsHumanReview: Boolean(data?.needsHumanReview),
     rawText,
     circuits: [],

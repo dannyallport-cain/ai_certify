@@ -94,15 +94,30 @@ function getObservationCount(result: AnalysisResult | null | undefined) {
 }
 
 function buildAnalysisMessage(result: AnalysisResult) {
+  const localLlm = result.modelInfo?.localLlm;
+  const providerLabel =
+    localLlm?.provider === 'ollama'
+      ? 'Ollama'
+      : localLlm?.provider === 'lmstudio'
+        ? 'LM Studio'
+        : localLlm?.provider === 'disabled'
+          ? 'Disabled'
+          : null;
+
   const lines = [
-    result.summary || "Analysis completed successfully.",
+    result.summary || 'Analysis completed successfully.',
     getBrandModel(result) ? `Consumer unit: ${getBrandModel(result)}` : null,
     `Extracted text items: ${getTextDetectionCount(result)}`,
     `Observations: ${getObservationCount(result)}`,
-    `Needs human review: ${result.needsHumanReview ? "Yes" : "No"}`,
+    `Needs human review: ${result.needsHumanReview ? 'Yes' : 'No'}`,
+    providerLabel ? `Local AI provider: ${providerLabel}` : null,
+    localLlm?.model ? `Configured model: ${localLlm.model}` : null,
+    localLlm?.status ? `Provider status: ${localLlm.status}` : null,
+    localLlm?.healthy === false ? 'Provider health check: unavailable' : null,
+    localLlm?.healthy === true ? 'Provider health check: healthy' : null,
   ];
 
-  return lines.filter(Boolean).join("\n");
+  return lines.filter(Boolean).join('\n');
 }
 
 function getImageDimensions(uri: string) {
@@ -194,11 +209,16 @@ export default function CaptureScreen() {
     if (!state.analysisResult) return null;
 
     return {
-      summary: state.analysisResult.summary || "No summary returned.",
+      summary: state.analysisResult.summary || 'No summary returned.',
       brandModel: getBrandModel(state.analysisResult),
       textCount: getTextDetectionCount(state.analysisResult),
       observationCount: getObservationCount(state.analysisResult),
       needsHumanReview: !!state.analysisResult.needsHumanReview,
+      localLlmProvider: state.analysisResult.modelInfo?.localLlm?.provider ?? null,
+      localLlmModel: state.analysisResult.modelInfo?.localLlm?.model ?? null,
+      localLlmStatus: state.analysisResult.modelInfo?.localLlm?.status ?? null,
+      localLlmHealthy: state.analysisResult.modelInfo?.localLlm?.healthy ?? null,
+      localLlmDetail: state.analysisResult.modelInfo?.localLlm?.detail ?? null,
     };
   }, [state.analysisResult]);
 
@@ -404,6 +424,31 @@ export default function CaptureScreen() {
               ) : null}
               <Text className="mt-2 text-sm text-white/75">Text detected: {analysisSummary.textCount}</Text>
               <Text className="mt-1 text-sm text-white/75">Observations: {analysisSummary.observationCount}</Text>
+              {analysisSummary.localLlmProvider ? (
+                <Text className="mt-1 text-sm text-white/75">
+                  Local AI provider: {analysisSummary.localLlmProvider}
+                </Text>
+              ) : null}
+              {analysisSummary.localLlmModel ? (
+                <Text className="mt-1 text-sm text-white/75">
+                  Configured model: {analysisSummary.localLlmModel}
+                </Text>
+              ) : null}
+              {analysisSummary.localLlmStatus ? (
+                <Text className="mt-1 text-sm text-white/75">
+                  Provider status: {analysisSummary.localLlmStatus}
+                  {analysisSummary.localLlmHealthy === true
+                    ? ' (healthy)'
+                    : analysisSummary.localLlmHealthy === false
+                      ? ' (unavailable)'
+                      : ''}
+                </Text>
+              ) : null}
+              {analysisSummary.localLlmDetail ? (
+                <Text className="mt-2 text-xs leading-5 text-white/60">
+                  {analysisSummary.localLlmDetail}
+                </Text>
+              ) : null}
             </View>
           ) : null}
 

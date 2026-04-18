@@ -18,6 +18,8 @@ def _clear_provider_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "OLLAMA_MODEL",
         "LM_STUDIO_BASE_URL",
         "LM_STUDIO_MODEL",
+        "OPENAI_API_KEY",
+        "OPENROUTER_API_KEY",
     ]:
         monkeypatch.delenv(key, raising=False)
 
@@ -206,6 +208,71 @@ def test_lmstudio_probe_uses_models_endpoint_and_reports_model_presence(monkeypa
     assert probe.model == "qwen-local"
     assert probe.selected_model_available is True
     assert probe.available_models == ["qwen-local", "other-model"]
+
+
+def test_openai_compatible_probe_sends_auth_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_provider_env(monkeypatch)
+    monkeypatch.setenv("LOCAL_LLM_PROVIDER", "openai")
+    monkeypatch.setenv("LOCAL_LLM_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("LOCAL_LLM_MODEL", "google/gemma-3-4b-it")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    provider_module = _reload_provider_module()
+    captured_headers: list[dict[str, str]] = []
+
+    def handler(method: str, url: str, *args, **kwargs):
+        captured_headers.append(kwargs.get("headers", {}))
+        return _MockResponse({"data": [{"id": "google/gemma-3-4b-it"}]})
+
+    monkeypatch.setattr(provider_module.httpx, "AsyncClient", lambda *args, **kwargs: _MockAsyncClient(handler))
+
+    probe = asyncio.run(provider_module.probe_local_llm_provider())
+
+    assert probe.status == "ok"
+    assert captured_headers[0]["Authorization"] == "Bearer test-key"
+
+
+def test_run_hosted_inference_returns_structured_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    _clear_provider_env(monkeypatch)
+    monkeypatch.setenv("LOCAL_LLM_PROVIDER", "openai")
+    monkeypatch.setenv("LOCAL_LLM_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("LOCAL_LLM_MODEL", "google/gemma-3-4b-it")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    provider_module = _reload_provider_module()
+    captured: list[tuple[str, str, dict[str, Any], dict[str, str]]] = []
+
+    class _MockInferenceClient:
+        async def __aenter__(self) -> "_MockInferenceClient":
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        async def post(self, url: str, *args, **kwargs):
+            captured.append(("POST", url, kwargs.get("json", {}), kwargs.get("headers", {})))
+            return _MockResponse(
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '{"summary":"board looks serviceable","observations":["SPD marking detected"],"recommendedCodes":["C3"]}'
+                            }
+                        }
+                    ]
+                }
+            )
+
+    monkeypatch.setattr(provider_module.httpx, "AsyncClient", lambda *args, **kwargs: _MockInferenceClient())
+
+    result = asyncio.run(provider_module.run_hosted_inference(prompt="test prompt"))
+
+    assert result is not None
+    assert result.summary == "board looks serviceable"
+    assert result.observations == ["SPD marking detected"]
+    assert result.recommended_codes == ["C3"]
+    assert captured[0][1] == "https://openrouter.ai/api/v1/chat/completions"
+    assert captured[0][3]["Authorization"] == "Bearer test-key"
 
 
 def test_health_endpoint_preserves_required_fields_when_provider_metadata_present(

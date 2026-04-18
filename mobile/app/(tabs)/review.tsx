@@ -168,6 +168,17 @@ export default function ReviewScreen() {
 
   const outstandingRequiredPhotos = requiredPhotoChecklist.filter((item) => !item.complete);
 
+  const infrastructureQuestionsComplete =
+    wizard.distributionBoardCount >= 1 &&
+    wizard.hasRcdProtection !== null &&
+    wizard.hasRcboProtection !== null &&
+    wizard.hasSurgeProtectionDevice !== null &&
+    wizard.hasEvCharger !== null &&
+    wizard.hasSolarPv !== null &&
+    wizard.hasAfddProtection !== null &&
+    wizard.hasCommunalOrLandlordSupplies !== null &&
+    (wizard.hasSolarPv !== true || wizard.hasBatteryStorage !== null);
+
   const wizardAnswersComplete =
     !!wizard.reportPurpose &&
     !!wizard.installationType &&
@@ -175,6 +186,7 @@ export default function ReviewScreen() {
     !!wizard.supplyPhase &&
     wizard.hasOutbuildingsOrAncillarySupplies !== null &&
     (!isDomesticStyleInstallation || wizard.consumerUnitMaterial !== null) &&
+    infrastructureQuestionsComplete &&
     (!requiresSmokeAndCoFlow || wizard.hasSolidFuelAppliance !== null);
 
   const ready =
@@ -251,6 +263,15 @@ export default function ReviewScreen() {
         supplyPhase: wizard.supplyPhase,
         hasOutbuildingsOrAncillarySupplies: wizard.hasOutbuildingsOrAncillarySupplies,
         consumerUnitMaterial: wizard.consumerUnitMaterial,
+        distributionBoardCount: wizard.distributionBoardCount,
+        hasRcdProtection: wizard.hasRcdProtection,
+        hasRcboProtection: wizard.hasRcboProtection,
+        hasSurgeProtectionDevice: wizard.hasSurgeProtectionDevice,
+        hasEvCharger: wizard.hasEvCharger,
+        hasSolarPv: wizard.hasSolarPv,
+        hasBatteryStorage: wizard.hasBatteryStorage,
+        hasAfddProtection: wizard.hasAfddProtection,
+        hasCommunalOrLandlordSupplies: wizard.hasCommunalOrLandlordSupplies,
         storeyCount: wizard.storeyCount,
         smokeDetectorCount: wizard.smokeDetectorCount,
         hasSolidFuelAppliance: wizard.hasSolidFuelAppliance,
@@ -358,9 +379,9 @@ export default function ReviewScreen() {
           <Text className="ml-2 font-medium text-gray-900">Back</Text>
         </TouchableOpacity>
 
-        <Text className="mb-1 text-2xl font-bold text-gray-900">Review Job</Text>
+        <Text className="mb-1 text-2xl font-bold text-gray-900">Review Certificate Draft</Text>
         <Text className="mb-6 text-gray-500">
-          Check the captured evidence and wizard answers before creating the draft EICR.
+          Check the certificate route, captured evidence, and wizard answers before creating the draft EICR.
         </Text>
 
         {selectedServiceM8Job ? (
@@ -497,7 +518,7 @@ export default function ReviewScreen() {
           onEdit={() => router.push('/(tabs)/wizard')}
         >
           <Text className="text-sm text-gray-600">
-            Data entry mode:{' '}
+            Certificate route:{' '}
             <Text className="font-medium text-gray-800">
               {wizard.dataEntryMode.replaceAll('_', ' ')}
             </Text>
@@ -540,6 +561,72 @@ export default function ReviewScreen() {
             Consumer unit material:{' '}
             <Text className="font-medium text-gray-800">
               {wizard.consumerUnitMaterial ? wizard.consumerUnitMaterial.replaceAll('_', ' ') : 'Not set / skipped'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            Distribution boards / consumer units:{' '}
+            <Text className="font-medium text-gray-800">{wizard.distributionBoardCount}</Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            RCD protection present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasRcdProtection === null ? 'Not answered' : wizard.hasRcdProtection ? 'Yes' : 'No'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            RCBO protection present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasRcboProtection === null ? 'Not answered' : wizard.hasRcboProtection ? 'Yes' : 'No'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            Surge protection device present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasSurgeProtectionDevice === null
+                ? 'Not answered'
+                : wizard.hasSurgeProtectionDevice
+                  ? 'Yes'
+                  : 'No'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            EV charger present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasEvCharger === null ? 'Not answered' : wizard.hasEvCharger ? 'Yes' : 'No'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            Solar PV present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasSolarPv === null ? 'Not answered' : wizard.hasSolarPv ? 'Yes' : 'No'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            Battery storage present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasSolarPv !== true
+                ? 'Skipped'
+                : wizard.hasBatteryStorage === null
+                  ? 'Not answered'
+                  : wizard.hasBatteryStorage
+                    ? 'Yes'
+                    : 'No'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            AFDD protection present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasAfddProtection === null ? 'Not answered' : wizard.hasAfddProtection ? 'Yes' : 'No'}
+            </Text>
+          </Text>
+          <Text className="text-sm text-gray-600">
+            Communal / landlord supplies present:{' '}
+            <Text className="font-medium text-gray-800">
+              {wizard.hasCommunalOrLandlordSupplies === null
+                ? 'Not answered'
+                : wizard.hasCommunalOrLandlordSupplies
+                  ? 'Yes'
+                  : 'No'}
             </Text>
           </Text>
           <Text className="text-sm text-gray-600">

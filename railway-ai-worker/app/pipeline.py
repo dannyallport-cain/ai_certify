@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import asyncio
+import json
+
 from app.extractors import (
     build_image_quality_summary,
     build_report_sections,
     build_text_detections,
     extract_consumer_unit_hints,
 )
-from app.llm_provider import resolve_local_llm_provider_config
+from app.llm_provider import resolve_local_llm_provider_config, run_hosted_inference
 from app.ocr import ocr_from_inputs
 from app.rules import evaluate_rules
 from app.schemas import (
@@ -347,6 +350,27 @@ def _merge_certificate_context_prefill(
         }
 
 
+def _build_llm_prompt(
+    *,
+    report_type: str | None,
+    inspection_type: str | None,
+    text_lines: list[str],
+    image_quality: dict[str, object],
+    hints: dict[str, object],
+    certificate_context: dict[str, object] | None,
+) -> str:
+    prompt_payload = {
+        "task": "Review OCR/image-derived consumer-unit inspection evidence and return concise structured assistance.",
+        "reportType": report_type,
+        "inspectionType": inspection_type,
+        "textDetections": text_lines[:100],
+        "imageQuality": image_quality,
+        "derivedHints": hints,
+        "certificateContext": certificate_context,
+    }
+    return json.dumps(prompt_payload, ensure_ascii=False)
+
+
 def _build_local_llm_info() -> LocalLLMInfo:
     config = resolve_local_llm_provider_config()
     return LocalLLMInfo(
@@ -410,6 +434,23 @@ def analyze_image(payload: AnalyzeImageRequest) -> AnalyzeImageResponse:
     )
     inference_results, issues = _build_inference_results(raw_rule_results)
 
+    llm_result = None
+    try:
+        llm_result = asyncio.run(
+            run_hosted_inference(
+                prompt=_build_llm_prompt(
+                    report_type=payload.reportType,
+                    inspection_type=payload.inspectionType,
+                    text_lines=text_lines,
+                    image_quality=image_quality,
+                    hints=hints,
+                    certificate_context=certificate_context,
+                )
+            )
+        )
+    except Exception:
+        llm_result = None
+
     if certificate_context:
         report_sections["certificateContext"] = certificate_context
         _merge_certificate_context_prefill(report_sections, certificate_context)
@@ -422,6 +463,15 @@ def analyze_image(payload: AnalyzeImageRequest) -> AnalyzeImageResponse:
         for code in issue.suggestedCodes:
             if code not in recommended_codes:
                 recommended_codes.append(code)
+
+    if llm_result:
+        for llm_observation in llm_result.observations:
+            if llm_observation not in observations:
+                observations.append(llm_observation)
+
+        for llm_code in llm_result.recommended_codes:
+            if llm_code not in recommended_codes:
+                recommended_codes.append(llm_code)
 
     findings = Findings(
         consumerUnit=consumer_unit,
@@ -445,6 +495,8 @@ def analyze_image(payload: AnalyzeImageRequest) -> AnalyzeImageResponse:
         summary_bits.append("consumer unit hints extracted")
     if inference_results:
         summary_bits.append(f"{len(inference_results)} inference rules matched")
+    if llm_result and llm_result.summary:
+        summary_bits.append(f"llm: {llm_result.summary}")
 
     return AnalyzeImageResponse(
         success=True,

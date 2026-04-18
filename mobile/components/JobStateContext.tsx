@@ -72,6 +72,15 @@ export interface WizardState {
   supplyPhase: 'single_phase' | 'three_phase' | 'unknown' | null;
   hasOutbuildingsOrAncillarySupplies: boolean | null;
   consumerUnitMaterial: ConsumerUnitMaterial;
+  distributionBoardCount: number;
+  hasRcdProtection: boolean | null;
+  hasRcboProtection: boolean | null;
+  hasSurgeProtectionDevice: boolean | null;
+  hasEvCharger: boolean | null;
+  hasSolarPv: boolean | null;
+  hasBatteryStorage: boolean | null;
+  hasAfddProtection: boolean | null;
+  hasCommunalOrLandlordSupplies: boolean | null;
   hasDamagedAccessory: boolean | null;
   hasDamagedLuminaire: boolean | null;
   storeyCount: number;
@@ -154,6 +163,15 @@ const initialState: JobState = {
     supplyPhase: null,
     hasOutbuildingsOrAncillarySupplies: null,
     consumerUnitMaterial: null,
+    distributionBoardCount: 1,
+    hasRcdProtection: null,
+    hasRcboProtection: null,
+    hasSurgeProtectionDevice: null,
+    hasEvCharger: null,
+    hasSolarPv: null,
+    hasBatteryStorage: null,
+    hasAfddProtection: null,
+    hasCommunalOrLandlordSupplies: null,
     hasDamagedAccessory: null,
     hasDamagedLuminaire: null,
     storeyCount: 1,
@@ -261,6 +279,10 @@ function reducer(state: JobState, action: JobAction): JobState {
 
       if (action.payload.key === 'hasSolidFuelAppliance' && action.payload.value === false) {
         nextWizard.coDetectorTested = false;
+      }
+
+      if (action.payload.key === 'hasSolarPv' && action.payload.value === false) {
+        nextWizard.hasBatteryStorage = null;
       }
 
       if (action.payload.key === 'hasDamagedAccessory' && action.payload.value === false) {

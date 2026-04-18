@@ -17,6 +17,7 @@ import {
   Home,
   LogOut,
   Database,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +25,7 @@ const navItems = [
   { href: '/admin', label: 'Overview', icon: Home, tone: 'blue' },
   { href: '/admin/users', label: 'Users', icon: Users, tone: 'blue' },
   { href: '/admin/templates', label: 'Templates', icon: FileText, tone: 'purple' },
+  { href: '/admin/llm-test', label: 'LLM Test', icon: Sparkles, tone: 'purple' },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard, tone: 'green' },
   { href: '/admin/database', label: 'Database', icon: Database, tone: 'slate' },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3, tone: 'amber' },
