@@ -102,7 +102,23 @@ function getByPath(data: any, pathStr: string): any {
 }
 
 function existsValue(value: any): boolean {
-  return value != null && value !== '' && value !== [] && value !== {};
+  if (value == null) {
+    return false;
+  }
+
+  if (typeof value === 'string') {
+    return value.trim() !== '';
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === 'object') {
+    return Object.keys(value).length > 0;
+  }
+
+  return true;
 }
 
 function evaluateCondition(condition: RuleCondition, context: any): boolean {
