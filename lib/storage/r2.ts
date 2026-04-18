@@ -120,6 +120,14 @@ function buildPublicUrl(key: string): string {
     return `${publicBaseUrl}/${key}`;
   }
 
+  if (key.includes('/signature/')) {
+    return `/api/user/asset/signature?key=${encodeURIComponent(key)}`;
+  }
+
+  if (key.includes('/avatar/')) {
+    return `/api/user/asset/avatar?key=${encodeURIComponent(key)}`;
+  }
+
   return `https://pub-${accountId}.r2.dev/${key}`;
 }
 

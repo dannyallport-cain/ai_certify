@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { errors as joseErrors } from 'jose';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { verifyMobileCaptureToken } from '@/lib/auth/mobile-capture';
@@ -15,8 +16,8 @@ const requestSchema = z.object({
   dataUrl: dataUrlSchema,
 });
 
-const SIGNATURE_MAX_LENGTH = 800_000;
-const AVATAR_MAX_LENGTH = 3_000_000;
+const SIGNATURE_MAX_LENGTH = 2_000_000;
+const AVATAR_MAX_LENGTH = 20_000_000;
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,6 +31,13 @@ export async function POST(request: NextRequest) {
     const { token, dataUrl } = parsedRequest.data;
     const { userId, kind } = await verifyMobileCaptureToken(token);
     const now = new Date();
+
+    console.error('Mobile capture request received:', {
+      userId,
+      kind,
+      dataUrlLength: dataUrl.length,
+      dataUrlPrefix: dataUrl.slice(0, 40),
+    });
 
     if (kind === 'signature' && dataUrl.length > SIGNATURE_MAX_LENGTH) {
       return NextResponse.json({ error: 'Signature image is too large.' }, { status: 413 });
@@ -45,9 +53,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid image data.' }, { status: 400 });
     }
 
+    const normalizedContentType =
+      contentTypeMatch[1].toLowerCase() === 'image/jpg'
+        ? 'image/jpeg'
+        : contentTypeMatch[1].toLowerCase();
+
+    const normalizedDataUrl = dataUrl.replace(/^data:image\/jpg;base64,/i, 'data:image/jpeg;base64,');
+
+    console.error('Mobile capture normalized upload payload:', {
+      userId,
+      kind,
+      normalizedContentType,
+      normalizedPrefix: normalizedDataUrl.slice(0, 40),
+    });
+
     const upload = await uploadDataUrlToR2({
-      key: buildUserAssetKey(userId, kind, contentTypeMatch[1]),
-      dataUrl,
+      key: buildUserAssetKey(userId, kind, normalizedContentType),
+      dataUrl: normalizedDataUrl,
+    });
+
+    console.error('Mobile capture upload succeeded:', {
+      userId,
+      kind,
+      key: upload.key,
+      url: upload.url,
+      contentType: upload.contentType,
     });
 
     const updateValues =
@@ -82,6 +112,41 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error saving mobile capture asset:', error);
-    return NextResponse.json({ error: 'Failed to save uploaded asset.' }, { status: 500 });
+
+    if (error instanceof joseErrors.JWTExpired) {
+      return NextResponse.json(
+        { error: 'This mobile capture link has expired. Please generate a new one.' },
+        { status: 401 }
+      );
+    }
+
+    if (error instanceof joseErrors.JOSEError) {
+      return NextResponse.json(
+        { error: 'This mobile capture link is invalid. Please generate a new one.' },
+        { status: 401 }
+      );
+    }
+
+    if (error instanceof Error && /AUTH_SECRET/i.test(error.message)) {
+      return NextResponse.json(
+        { error: 'Mobile capture is not configured correctly on the server.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Failed to save uploaded asset.',
+        debug:
+          error instanceof Error
+            ? {
+                name: error.name,
+                message: error.message,
+                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+              }
+            : undefined,
+      },
+      { status: 500 }
+    );
   }
 }

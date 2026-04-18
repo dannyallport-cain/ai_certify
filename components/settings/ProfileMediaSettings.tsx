@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { mutate } from 'swr';
 import QRCode from 'qrcode';
 import useSWR from 'swr';
@@ -56,6 +56,7 @@ export default function ProfileMediaSettings() {
   const [isOpening, setIsOpening] = useState<UserAssetKind | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const openedCaptureWindowRef = useRef<Window | null>(null);
   const { data: user } = useSWR<User>('/api/user', fetcher, {
     refreshInterval: activeCapture ? 2500 : 0,
   });
@@ -103,11 +104,14 @@ export default function ProfileMediaSettings() {
     const currentUpdatedAt = getAssetUpdatedAt(user, activeCapture.kind);
 
     if (
-      currentValue &&
-      (currentValue !== activeCapture.initialValue ||
-        currentUpdatedAt !== activeCapture.initialUpdatedAt)
+      (currentUpdatedAt && currentUpdatedAt !== activeCapture.initialUpdatedAt) ||
+      (currentValue && currentValue !== activeCapture.initialValue)
     ) {
       void mutate('/api/user');
+      if (openedCaptureWindowRef.current && !openedCaptureWindowRef.current.closed) {
+        openedCaptureWindowRef.current.close();
+      }
+      openedCaptureWindowRef.current = null;
       setActiveCapture(null);
       setSuccess(
         activeCapture.kind === 'avatar'
@@ -135,6 +139,24 @@ export default function ProfileMediaSettings() {
 
       if (!response.ok) {
         throw new Error(payload.error || 'Failed to create the mobile capture link.');
+      }
+
+      if (
+        !payload ||
+        typeof payload.captureUrl !== 'string' ||
+        typeof payload.expiresAt !== 'string'
+      ) {
+        throw new Error('Mobile capture session response was incomplete.');
+      }
+
+      const captureWindow = window.open(
+        payload.captureUrl,
+        `mobile-capture-${kind}`,
+        'popup=yes,width=480,height=860,resizable=yes,scrollbars=yes'
+      );
+
+      if (captureWindow) {
+        openedCaptureWindowRef.current = captureWindow;
       }
 
       setActiveCapture({
@@ -277,7 +299,13 @@ export default function ProfileMediaSettings() {
               </div>
               <button
                 type="button"
-                onClick={() => setActiveCapture(null)}
+                onClick={() => {
+                  if (openedCaptureWindowRef.current && !openedCaptureWindowRef.current.closed) {
+                    openedCaptureWindowRef.current.close();
+                  }
+                  openedCaptureWindowRef.current = null;
+                  setActiveCapture(null);
+                }}
                 className="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                 aria-label="Close QR code dialog"
               >
