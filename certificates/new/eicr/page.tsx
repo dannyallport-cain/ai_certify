@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createCertificate } from '../../../actions';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
@@ -353,7 +353,17 @@ export default function EICRCertificatePage() {
     try {
       const formData = new FormData(e.currentTarget);
       formData.set('certificateType', 'EICR');
-      const scheduleForPdf = Object.fromEntries(Array.from(new Set([...Object.keys(inspSchedule.codes), ...Object.keys(inspSchedule.comments)])).map((ref) => [ref, { outcome: inspSchedule.codes[ref] || '', comment: inspSchedule.comments[ref] || '' }]));
+      
+      // Build inspection schedule from state - ensure all codes and comments are included
+      const scheduleForPdf: Record<string, { outcome: string; comment: string }> = {};
+      const allRefs = new Set([...Object.keys(inspSchedule.codes), ...Object.keys(inspSchedule.comments)]);
+      for (const ref of allRefs) {
+        scheduleForPdf[ref] = {
+          outcome: inspSchedule.codes[ref] || '',
+          comment: inspSchedule.comments[ref] || '',
+        };
+      }
+      
       const obsJson = JSON.stringify(observations.map((o) => ({
         itemType: 'observation',
         description: o.description,

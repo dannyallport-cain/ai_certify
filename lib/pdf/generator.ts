@@ -1301,7 +1301,13 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   const fd = (certificate.formData || {}) as Record<string, any>;
   const ss = safeString;
-  const inspectionData = parseJsonLike<Record<string, { comment?: string; outcome?: string }>>(fd.inspectionSchedule, {});
+  
+  // Safely parse inspection schedule data - handle both string and object formats
+  let inspectionData: Record<string, { comment?: string; outcome?: string }> = {};
+  if (fd.inspectionSchedule) {
+    inspectionData = parseJsonLike<Record<string, { comment?: string; outcome?: string }>>(fd.inspectionSchedule, {});
+  }
+  
   const circuitRows = parseJsonLike<Array<Record<string, any>>>(fd.circuits, []);
   const observations = normalizeObservationRows(certificate.items);
   const overallAssessment = deriveEicrAssessment(fd, observations);
@@ -2423,18 +2429,33 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       }
       // section outcome if no items
       if (section.items.length === 0) {
-        const secData = inspData[section.section];
+        let sectionOutcome: string;
+        if (section.section in inspData) {
+          // User has explicitly set this section - use their value
+          const secData = inspData[section.section];
+          sectionOutcome = secData?.outcome || '';
+        } else {
+          // No user data - default to N/A
+          sectionOutcome = 'N/A';
+        }
         pdf.setFont('helvetica', 'normal');
-        text(secData?.outcome || 'N/A', margin + W - outcomeW / 2, y + sectionH / 2 + 1, { align: 'center' });
+        text(sectionOutcome, margin + W - outcomeW / 2, y + sectionH / 2 + 1, { align: 'center' });
       }
       y += sectionH;
 
       section.items.forEach((item) => {
         const itemData = inspData[item.ref] || {};
         const comment = ss(itemData.comment || item.comment || '');
-        const outcome = itemData.outcome || item.outcome || (item.desc ? '\u2713' : 'N/A');
+        // Check if there's data from the user (the key exists in inspData)
+        let outcome: string;
+        if (item.ref in inspData) {
+          // User has explicitly set this item - use their value
+          outcome = itemData.outcome || '';
+        } else {
+          // No user data - use fallback
+          outcome = item.outcome || (item.desc ? '\u2713' : 'N/A');
+        }
 
-        pdf.setFontSize(5.2);
         pdf.setFont('helvetica', 'normal');
         const descLines = pdf.splitTextToSize(item.desc || 'N/A', descW - 3);
         const commentLines = comment ? pdf.splitTextToSize(comment, commentW - 3) : [''];
@@ -2464,8 +2485,11 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
         });
 
         // Outcome - use tick mark for acceptable
-        pdf.setFont('helvetica', 'bold');
-        const outcomeDisplay = outcome === '\u2713' ? '\u2713' : outcome;
+        pdf.setFont('times', 'bold');
+        let outcomeDisplay = outcome;
+        if (outcome === '✓' || outcome === '\u2713' || outcome === 'TICK') {
+          outcomeDisplay = '\u2713';  // Use Unicode check mark
+        }
         text(outcomeDisplay, margin + W - outcomeW / 2, y + rowH / 2 + 0.9, { align: 'center' });
         pdf.setFont('helvetica', 'normal');
 
