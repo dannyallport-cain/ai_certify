@@ -1542,6 +1542,8 @@ function ExpectedValueInput({
 export function EICRCertificatePage({ streamlined = false }: { streamlined?: boolean } = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const editId = searchParams.get('editId');
+  const isEditing = Boolean(editId);
   const { mutate } = useSWRConfig();
   const formRef = useRef<HTMLFormElement>(null);
   const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -1597,6 +1599,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const [profileDefaultsSaveMessage, setProfileDefaultsSaveMessage] = useState('');
   const [inspectorName, setInspectorName] = useState('');
   const [inspectorPosition, setInspectorPosition] = useState('');
+  const [persistedFieldValues, setPersistedFieldValues] = useState<Record<string, string>>({});
 
   type VerifyResult = { type: 'error' | 'warning' | 'pass'; message: string };
   const [verifyResults, setVerifyResults] = useState<VerifyResult[] | null>(null);
@@ -1756,16 +1759,19 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   };
 
   useEffect(() => {
+    if (isEditing) {
+      return;
+    }
+
     setCertificateNumber(generateCertificateNumber());
-  }, []);
+  }, [isEditing]);
 
   useEffect(() => {
     if (hasHydratedDraftRef.current) {
       return;
     }
 
-    const editId = searchParams.get('editId');
-    if (editId) {
+    if (isEditing) {
       return;
     }
 
@@ -1814,21 +1820,17 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       setOperationalQuickOption(savedDraft.operationalQuickOption ?? '__custom');
       setInspectorName(savedDraft.inspectorName ?? '');
       setInspectorPosition(savedDraft.inspectorPosition ?? '');
+      restorePersistedFieldValues(savedDraft.formValues);
 
-      requestAnimationFrame(() => {
-        applyEicrFormValues(formRef.current, savedDraft.formValues);
-      });
     }
 
     lastSavedDraftKeyRef.current = draftStorageKey;
     hasHydratedDraftRef.current = true;
-  }, [currentUser, searchParams]);
+  }, [currentUser, isEditing]);
 
   // Load certificate from database if editId is provided
   useEffect(() => {
     const loadCertificateForEditing = async () => {
-      const editId = searchParams.get('editId');
-      
       if (!editId || hasHydratedDraftRef.current) {
         return;
       }
@@ -1891,11 +1893,12 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         setIfPresent('externalEarthFaultLoopImpedance', setExternalEarthFaultLoopImpedance);
         setIfPresent('inspectorName', setInspectorName);
         setIfPresent('inspectorPosition', setInspectorPosition);
+        setIfPresent('premisesType', setPremisesType);
+        setIfPresent('evidenceOfAdditions', setEvidenceOfAdditions);
+        setIfPresent('nextInspectionPeriod', (value) => setNextInspectionPeriod(value as NextInspectionPeriodLabel));
 
         // Apply generic form values for uncontrolled fields
-        requestAnimationFrame(() => {
-          applyEicrFormValues(formRef.current, formData as Record<string, string>);
-        });
+        restorePersistedFieldValues(formData as Record<string, string>);
 
         // Load inspection schedule if present
         if (formData.inspectionSchedule) {
@@ -1976,7 +1979,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     };
 
     loadCertificateForEditing();
-  }, [searchParams]);
+  }, [editId]);
 
   useEffect(() => {
     if (!hasHydratedDraftRef.current || typeof window === 'undefined') {
@@ -2017,7 +2020,10 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       operationalQuickOption,
       inspectorName,
       inspectorPosition,
-      formValues: collectEicrFormValues(formRef.current),
+      formValues: {
+        ...collectEicrFormValues(formRef.current),
+        ...persistedFieldValues,
+      },
     };
 
     try {
@@ -2060,6 +2066,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     operationalQuickOption,
     inspectorName,
     inspectorPosition,
+    persistedFieldValues,
   ]);
 
   const addObservation = () => {
@@ -2301,6 +2308,14 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const hasMultiFunctionInstrument = instrumentMultiFunction.trim().length > 0;
 
   const setFieldValue = (name: string, value: string) => {
+    setPersistedFieldValues((prev) => {
+      if (prev[name] === value) {
+        return prev;
+      }
+
+      return { ...prev, [name]: value };
+    });
+
     const form = formRef.current;
     if (!form) return;
 
@@ -2310,6 +2325,56 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       field.dispatchEvent(new Event('input', { bubbles: true }));
       field.dispatchEvent(new Event('change', { bubbles: true }));
     });
+  };
+
+  const getPersistedFieldValue = (name: string, fallback = '') => {
+    const value = persistedFieldValues[name];
+    return typeof value === 'string' && value.length > 0 ? value : fallback;
+  };
+
+  const setPersistedFieldValue = (name: string, value: string) => {
+    setPersistedFieldValues((prev) => {
+      if (prev[name] === value) {
+        return prev;
+      }
+
+      return { ...prev, [name]: value };
+    });
+  };
+
+  const bindPersistedTextField = (name: string, fallback = '') => ({
+    value: getPersistedFieldValue(name, fallback),
+    onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setPersistedFieldValue(name, event.target.value),
+  });
+
+  const restorePersistedFieldValues = (values?: Record<string, unknown> | null) => {
+    if (!values) {
+      return;
+    }
+
+    const normalized = Object.fromEntries(
+      Object.entries(values)
+        .filter(([key]) => Boolean(key?.trim()))
+        .map(([key, value]) => [key, value == null ? '' : String(value)]),
+    ) as Record<string, string>;
+
+    setPersistedFieldValues((prev) => ({ ...prev, ...normalized }));
+
+    const applyNormalizedValues = () => {
+      applyEicrFormValues(formRef.current, normalized);
+    };
+
+    requestAnimationFrame(() => {
+      applyNormalizedValues();
+
+      requestAnimationFrame(() => {
+        applyNormalizedValues();
+      });
+    });
+
+    window.setTimeout(applyNormalizedValues, 0);
+    window.setTimeout(applyNormalizedValues, 150);
   };
 
   const getProfileDefaultValuesFromState = (): EicrProfileDefaults => ({
@@ -2449,16 +2514,20 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   };
 
   useEffect(() => {
+    if (isEditing) {
+      return;
+    }
+
     setNextInspectionPeriod(EICR_INTERVAL_PRESETS[recommendedIntervalPresetKey].period as NextInspectionPeriodLabel);
     setNatureOfSupply(declaredSupplyPreset.natureOfSupply);
     setFieldValue('nominalVoltageUo', declaredSupplyPreset.nominalVoltageUo);
     setFieldValue('nominalVoltageU', declaredSupplyPreset.nominalVoltageU);
     setFieldValue('nominalFrequency', declaredSupplyPreset.nominalFrequency);
     setFieldValue('numberOfSupplies', declaredSupplyPreset.numberOfSupplies);
-  }, [recommendedIntervalPresetKey, declaredSupplyPreset]);
+  }, [declaredSupplyPreset, isEditing, recommendedIntervalPresetKey]);
 
   useEffect(() => {
-    if (profilePrefillApplied || !currentUser?.eicrProfileDefaults) {
+    if (isEditing || profilePrefillApplied || !currentUser?.eicrProfileDefaults) {
       return;
     }
 
@@ -2479,7 +2548,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     });
 
     setProfilePrefillApplied(true);
-  }, [currentUser, profilePrefillApplied]);
+  }, [currentUser, isEditing, profilePrefillApplied]);
 
   useEffect(() => {
     if (hasExistingProfileDefaults) {
@@ -3213,6 +3282,10 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       );
 
       // Ensure all form fields are properly set
+      for (const [name, value] of Object.entries(persistedFieldValues)) {
+        formData.set(name, value);
+      }
+
       formData.set('items', obsJson);
       formData.set('inspectionSchedule', JSON.stringify(scheduleForPdf));
       formData.set('circuits', JSON.stringify(circuits));
@@ -3516,6 +3589,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   id="reasonForReport"
                   name="reasonForReport"
                   rows={3}
+                  value={getPersistedFieldValue('reasonForReport')}
+                  onChange={(e) => setPersistedFieldValue('reasonForReport', e.target.value)}
                   className="min-h-[4.5rem]"
                   placeholder="Safety assessment requested by client. To assess compliance with BS 7671."
                 />
@@ -3585,7 +3660,13 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
               </div>
               <div className="space-y-2">
                 <Label htmlFor="estimatedAgeOfWiring">Estimated Age of Wiring System (years)</Label>
-                <Input id="estimatedAgeOfWiring" name="estimatedAgeOfWiring" type="number" placeholder="15" />
+                <Input
+                  id="estimatedAgeOfWiring"
+                  name="estimatedAgeOfWiring"
+                  type="number"
+                  placeholder="15"
+                  {...bindPersistedTextField('estimatedAgeOfWiring')}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="evidenceOfAdditions">Evidence of Additions/Alterations?</Label>
@@ -3604,12 +3685,22 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
               {evidenceOfAdditions === 'Yes' && (
                 <div className="space-y-2">
                   <Label htmlFor="estimatedAgeOfAdditions">Estimated Age of Additions (years)</Label>
-                  <Input id="estimatedAgeOfAdditions" name="estimatedAgeOfAdditions" type="number" placeholder="5" />
+                  <Input
+                    id="estimatedAgeOfAdditions"
+                    name="estimatedAgeOfAdditions"
+                    type="number"
+                    placeholder="5"
+                    {...bindPersistedTextField('estimatedAgeOfAdditions')}
+                  />
                 </div>
               )}
               <div className="space-y-2">
                 <Label htmlFor="installationRecordsAvailable">Installation Records Available? (Reg 651.1)</Label>
-                <Select name="installationRecordsAvailable" defaultValue="No">
+                <Select
+                  name="installationRecordsAvailable"
+                  value={getPersistedFieldValue('installationRecordsAvailable', 'No')}
+                  onValueChange={(value) => setPersistedFieldValue('installationRecordsAvailable', value)}
+                >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Yes">Yes</SelectItem>
@@ -3619,7 +3710,12 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
               </div>
               <div className="space-y-2">
                 <Label htmlFor="dateOfLastInspection">Date of Last Inspection</Label>
-                <Input id="dateOfLastInspection" name="dateOfLastInspection" type="date" />
+                <Input
+                  id="dateOfLastInspection"
+                  name="dateOfLastInspection"
+                  type="date"
+                  {...bindPersistedTextField('dateOfLastInspection')}
+                />
               </div>
             </div>
           </CardContent>
@@ -3657,6 +3753,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                 id="extentOfInspection"
                 name="extentOfInspection"
                 rows={2}
+                value={getPersistedFieldValue('extentOfInspection')}
+                onChange={(e) => setPersistedFieldValue('extentOfInspection', e.target.value)}
                 className="min-h-[3.75rem]"
                 placeholder="50% of the installation in accordance with item 3.8.4 of Guidance Note 3."
               />
@@ -3697,6 +3795,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                 id="agreedLimitations"
                 name="agreedLimitations"
                 rows={3}
+                value={getPersistedFieldValue('agreedLimitations')}
+                onChange={(e) => setPersistedFieldValue('agreedLimitations', e.target.value)}
                 className="min-h-[4.5rem]"
                 placeholder="No testing of HVAC control cables. No lifting of floor boards or inspection of loft space..."
               />
@@ -3705,7 +3805,13 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
             <div className={EDITOR_GRID_TWO_CLASS}>
               <div className="space-y-2">
                 <Label htmlFor="agreedLimitationsWith">Agreed With</Label>
-                <Input id="agreedLimitationsWith" name="agreedLimitationsWith" placeholder="Client name / representative" />
+                <Input
+                  id="agreedLimitationsWith"
+                  name="agreedLimitationsWith"
+                  value={getPersistedFieldValue('agreedLimitationsWith')}
+                  onChange={(e) => setPersistedFieldValue('agreedLimitationsWith', e.target.value)}
+                  placeholder="Client name / representative"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="operationalLimitations">Operational Limitations</Label>
@@ -3729,7 +3835,13 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     <SelectItem value="Certain circuits remained energized due to operational requirements and could not be fully isolated.">Some circuits could not be isolated</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input id="operationalLimitations" name="operationalLimitations" placeholder="N/A" />
+                <Input
+                  id="operationalLimitations"
+                  name="operationalLimitations"
+                  value={getPersistedFieldValue('operationalLimitations')}
+                  onChange={(e) => setPersistedFieldValue('operationalLimitations', e.target.value)}
+                  placeholder="N/A"
+                />
               </div>
             </div>
           </CardContent>
@@ -3944,6 +4056,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       id="generalCondition"
                       name="generalCondition"
                       rows={3}
+                      value={getPersistedFieldValue('generalCondition')}
+                      onChange={(e) => setPersistedFieldValue('generalCondition', e.target.value)}
                       className="min-h-[5rem]"
                       placeholder="Adequate as per BS 7671 (2018)"
                     />
@@ -3963,7 +4077,9 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       id="tradingTitle"
                       name="tradingTitle"
                       placeholder="Contracting business name"
-                      onChange={() => {
+                      value={getPersistedFieldValue('tradingTitle')}
+                      onChange={(event) => {
+                        setPersistedFieldValue('tradingTitle', event.target.value);
                         if (!hasExistingProfileDefaults) {
                           setShowSaveProfilePrompt(true);
                           setProfileDefaultsSaveMessage('');
@@ -3977,7 +4093,9 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       id="registrationNumber"
                       name="registrationNumber"
                       placeholder="Registration number"
-                      onChange={() => {
+                      value={getPersistedFieldValue('registrationNumber')}
+                      onChange={(event) => {
+                        setPersistedFieldValue('registrationNumber', event.target.value);
                         if (!hasExistingProfileDefaults) {
                           setShowSaveProfilePrompt(true);
                           setProfileDefaultsSaveMessage('');
@@ -3991,7 +4109,9 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       id="companyAddress"
                       name="companyAddress"
                       placeholder="Business address"
-                      onChange={() => {
+                      value={getPersistedFieldValue('companyAddress')}
+                      onChange={(event) => {
+                        setPersistedFieldValue('companyAddress', event.target.value);
                         if (!hasExistingProfileDefaults) {
                           setShowSaveProfilePrompt(true);
                           setProfileDefaultsSaveMessage('');
@@ -4005,7 +4125,9 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       id="companyTelephone"
                       name="companyTelephone"
                       placeholder="Business telephone number"
-                      onChange={() => {
+                      value={getPersistedFieldValue('companyTelephone')}
+                      onChange={(event) => {
+                        setPersistedFieldValue('companyTelephone', event.target.value);
                         if (!hasExistingProfileDefaults) {
                           setShowSaveProfilePrompt(true);
                           setProfileDefaultsSaveMessage('');
@@ -4020,7 +4142,9 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       name="companyEmail"
                       type="email"
                       placeholder="business@example.co.uk"
-                      onChange={() => {
+                      value={getPersistedFieldValue('companyEmail')}
+                      onChange={(event) => {
+                        setPersistedFieldValue('companyEmail', event.target.value);
                         if (!hasExistingProfileDefaults) {
                           setShowSaveProfilePrompt(true);
                           setProfileDefaultsSaveMessage('');
@@ -4137,6 +4261,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       name="instrumentInsulationResistance"
                       placeholder="Serial/asset"
                       disabled={hasMultiFunctionInstrument}
+                      {...bindPersistedTextField('instrumentInsulationResistance')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -4146,6 +4271,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       name="instrumentEarthLoop"
                       placeholder="Serial/asset"
                       disabled={hasMultiFunctionInstrument}
+                      {...bindPersistedTextField('instrumentEarthLoop')}
                     />
                   </div>
                   <div className="space-y-2">
@@ -4155,13 +4281,19 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       name="instrumentContinuity"
                       placeholder="Serial/asset"
                       disabled={hasMultiFunctionInstrument}
+                      {...bindPersistedTextField('instrumentContinuity')}
                     />
                   </div>
                 </CertificateGroup>
                 <CertificateGroup title="Additional Instruments" columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="instrumentEarthElectrode">Earth Electrode Resistance Instrument</Label>
-                    <Input id="instrumentEarthElectrode" name="instrumentEarthElectrode" placeholder="Serial/asset" />
+                    <Input
+                      id="instrumentEarthElectrode"
+                      name="instrumentEarthElectrode"
+                      placeholder="Serial/asset"
+                      {...bindPersistedTextField('instrumentEarthElectrode')}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="instrumentRCD">RCD Instrument</Label>
@@ -4170,6 +4302,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       name="instrumentRCD"
                       placeholder="Serial/asset"
                       disabled={hasMultiFunctionInstrument}
+                      {...bindPersistedTextField('instrumentRCD')}
                     />
                   </div>
                 </CertificateGroup>
@@ -4213,7 +4346,13 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="numberOfSupplies">Number of Supplies</Label>
-                    <Input id="numberOfSupplies" name="numberOfSupplies" placeholder="1" />
+                    <Input
+                      id="numberOfSupplies"
+                      name="numberOfSupplies"
+                      value={getPersistedFieldValue('numberOfSupplies')}
+                      onChange={(e) => setPersistedFieldValue('numberOfSupplies', e.target.value)}
+                      placeholder="1"
+                    />
                   </div>
                 </CertificateGroup>
                  <CertificateGroup title="Declared Supply Parameters" columns={3}>
@@ -4222,7 +4361,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                      <Input
                        id="nominalVoltageU"
                        name="nominalVoltageU"
-                       defaultValue={DECLARED_SUPPLY_PARAMETER_PRESETS[premisesType as keyof typeof DECLARED_SUPPLY_PARAMETER_PRESETS]?.nominalVoltageU ?? DECLARED_SUPPLY_PARAMETER_PRESETS.Other.nominalVoltageU}
+                       value={getPersistedFieldValue('nominalVoltageU')}
+                       onChange={(e) => setPersistedFieldValue('nominalVoltageU', e.target.value)}
                        placeholder="400"
                      />
                    </div>
@@ -4231,7 +4371,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                      <Input
                        id="nominalVoltageUo"
                        name="nominalVoltageUo"
-                       defaultValue={DECLARED_SUPPLY_PARAMETER_PRESETS[premisesType as keyof typeof DECLARED_SUPPLY_PARAMETER_PRESETS]?.nominalVoltageUo ?? DECLARED_SUPPLY_PARAMETER_PRESETS.Other.nominalVoltageUo}
+                       value={getPersistedFieldValue('nominalVoltageUo')}
+                       onChange={(e) => setPersistedFieldValue('nominalVoltageUo', e.target.value)}
                        placeholder="230"
                      />
                    </div>
@@ -4240,13 +4381,19 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                      <Input
                        id="nominalFrequency"
                        name="nominalFrequency"
-                       defaultValue={DECLARED_SUPPLY_PARAMETER_PRESETS[premisesType as keyof typeof DECLARED_SUPPLY_PARAMETER_PRESETS]?.nominalFrequency ?? DECLARED_SUPPLY_PARAMETER_PRESETS.Other.nominalFrequency}
+                       value={getPersistedFieldValue('nominalFrequency')}
+                       onChange={(e) => setPersistedFieldValue('nominalFrequency', e.target.value)}
                        placeholder="50"
                      />
                    </div>
                    <div className="space-y-2">
                      <Label htmlFor="prospectiveFaultCurrent">Prospective Fault Current, Ipf (kA)</Label>
-                     <Input id="prospectiveFaultCurrent" name="prospectiveFaultCurrent" placeholder="1.8" />
+                      <Input
+                        id="prospectiveFaultCurrent"
+                        name="prospectiveFaultCurrent"
+                        placeholder="1.8"
+                        {...bindPersistedTextField('prospectiveFaultCurrent')}
+                      />
                    </div>
                    <div className="space-y-2">
                      <Label htmlFor="externalEarthFaultLoopImpedance">External Earth Fault Loop Impedance, Ze (Ω)</Label>
@@ -4260,13 +4407,22 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                    </div>
                    <div className="space-y-2">
                      <Label htmlFor="shortCircuitCapacity">Short-Circuit Capacity (kA)</Label>
-                     <Input id="shortCircuitCapacity" name="shortCircuitCapacity" placeholder="33" />
+                      <Input
+                        id="shortCircuitCapacity"
+                        name="shortCircuitCapacity"
+                        placeholder="33"
+                        {...bindPersistedTextField('shortCircuitCapacity')}
+                      />
                    </div>
                  </CertificateGroup>
                 <CertificateGroup title="Distributor's Protective Device" columns={2}>
                   <div className="space-y-2">
                     <Label htmlFor="supplyProtectiveDeviceType">Supply Protective Device Type (BS EN)</Label>
-                    <Select name="supplyProtectiveDeviceType" defaultValue="BS 1361 Type IIb cartridge fuse">
+                    <Select
+                      name="supplyProtectiveDeviceType"
+                      value={getPersistedFieldValue('supplyProtectiveDeviceType', 'BS 1361 Type IIb cartridge fuse')}
+                      onValueChange={(value) => setPersistedFieldValue('supplyProtectiveDeviceType', value)}
+                    >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {SUPPLY_PROTECTIVE_DEVICE_TYPE_OPTIONS.map((option) => (
@@ -4277,7 +4433,12 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="supplyProtectiveDeviceRating">Supply Protective Device Rating (A)</Label>
-                    <Input id="supplyProtectiveDeviceRating" name="supplyProtectiveDeviceRating" placeholder="100" />
+                    <Input
+                      id="supplyProtectiveDeviceRating"
+                      name="supplyProtectiveDeviceRating"
+                      placeholder="100"
+                      {...bindPersistedTextField('supplyProtectiveDeviceRating')}
+                    />
                   </div>
                 </CertificateGroup>
               </CardContent>
@@ -4303,7 +4464,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="earthElectrodeMeasurementMethod">Earth Electrode Measurement Method</Label>
-                      <Select name="earthElectrodeMeasurementMethod" defaultValue="N/A">
+                      <Select
+                        name="earthElectrodeMeasurementMethod"
+                        value={getPersistedFieldValue('earthElectrodeMeasurementMethod', 'N/A')}
+                        onValueChange={(value) => setPersistedFieldValue('earthElectrodeMeasurementMethod', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {EARTH_ELECTRODE_MEASUREMENT_OPTIONS.map((option) => (
@@ -4316,7 +4481,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   <CertificateGroup title="Protective Measures and Demand" columns={1}>
                     <div className="space-y-2">
                       <Label htmlFor="protectiveMeasures">Protective Measure(s) Against Electric Shock</Label>
-                      <Select name="protectiveMeasures" defaultValue="ADS">
+                      <Select
+                        name="protectiveMeasures"
+                        value={getPersistedFieldValue('protectiveMeasures', 'ADS')}
+                        onValueChange={(value) => setPersistedFieldValue('protectiveMeasures', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {PROTECTIVE_MEASURE_OPTIONS.map((option) => (
@@ -4327,7 +4496,12 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="maximumDemand">Maximum Demand (Load)</Label>
-                      <Input id="maximumDemand" name="maximumDemand" placeholder="100 Amps" />
+                      <Input
+                        id="maximumDemand"
+                        name="maximumDemand"
+                        placeholder="100 Amps"
+                        {...bindPersistedTextField('maximumDemand')}
+                      />
                     </div>
                   </CertificateGroup>
                 </div>
@@ -4342,7 +4516,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   <CertificateGroup title="Origin Verification and Supply Conductors" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="supplyPolarityConfirmed">Supply Polarity Confirmed</Label>
-                      <Select name="supplyPolarityConfirmed" defaultValue="Yes">
+                      <Select
+                        name="supplyPolarityConfirmed"
+                        value={getPersistedFieldValue('supplyPolarityConfirmed', 'Yes')}
+                        onValueChange={(value) => setPersistedFieldValue('supplyPolarityConfirmed', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Yes">Yes</SelectItem>
@@ -4352,7 +4530,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="supplyProtectiveDeviceStandard">Supply Protective Device Standard</Label>
-                      <Select name="supplyProtectiveDeviceStandard" defaultValue="BS 1361 Type IIb">
+                      <Select
+                        name="supplyProtectiveDeviceStandard"
+                        value={getPersistedFieldValue('supplyProtectiveDeviceStandard', 'BS 1361 Type IIb')}
+                        onValueChange={(value) => setPersistedFieldValue('supplyProtectiveDeviceStandard', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {SUPPLY_PROTECTIVE_DEVICE_STANDARDS.map((option) => (
@@ -4363,7 +4545,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="supplyConductorMaterial">Supply Conductor Material</Label>
-                      <Select name="supplyConductorMaterial" defaultValue="Copper">
+                      <Select
+                        name="supplyConductorMaterial"
+                        value={getPersistedFieldValue('supplyConductorMaterial', 'Copper')}
+                        onValueChange={(value) => setPersistedFieldValue('supplyConductorMaterial', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {CONDUCTOR_MATERIAL_OPTIONS.map((option) => (
@@ -4386,7 +4572,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   <CertificateGroup title="Earth Electrode Details" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="earthElectrodeType">Earth Electrode Type</Label>
-                      <Select name="earthElectrodeType" defaultValue="N/A">
+                      <Select
+                        name="earthElectrodeType"
+                        value={getPersistedFieldValue('earthElectrodeType', 'N/A')}
+                        onValueChange={(value) => setPersistedFieldValue('earthElectrodeType', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {EARTH_ELECTRODE_TYPE_OPTIONS.map((option) => (
@@ -4397,17 +4587,31 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="earthElectrodeResistance">Earth Electrode Resistance (ohms)</Label>
-                      <Input id="earthElectrodeResistance" name="earthElectrodeResistance" placeholder="N/A" />
+                      <Input
+                        id="earthElectrodeResistance"
+                        name="earthElectrodeResistance"
+                        placeholder="N/A"
+                        {...bindPersistedTextField('earthElectrodeResistance')}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="earthElectrodeLocation">Earth Electrode Location</Label>
-                      <Input id="earthElectrodeLocation" name="earthElectrodeLocation" placeholder="N/A" />
+                      <Input
+                        id="earthElectrodeLocation"
+                        name="earthElectrodeLocation"
+                        placeholder="N/A"
+                        {...bindPersistedTextField('earthElectrodeLocation')}
+                      />
                     </div>
                   </CertificateGroup>
                   <CertificateGroup title="Main Switch" columns={2} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="mainSwitchType">Main Switch Type / BS(EN)</Label>
-                      <Select name="mainSwitchType" defaultValue="Isolator">
+                      <Select
+                        name="mainSwitchType"
+                        value={getPersistedFieldValue('mainSwitchType', 'Isolator')}
+                        onValueChange={(value) => setPersistedFieldValue('mainSwitchType', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {MAIN_SWITCH_TYPE_OPTIONS.map((option) => (
@@ -4418,7 +4622,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="mainSwitchPoles">Main Switch Number of Poles</Label>
-                      <Select name="mainSwitchPoles" defaultValue="2">
+                      <Select
+                        name="mainSwitchPoles"
+                        value={getPersistedFieldValue('mainSwitchPoles', '2')}
+                        onValueChange={(value) => setPersistedFieldValue('mainSwitchPoles', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {MAIN_SWITCH_POLE_OPTIONS.map((option) => (
@@ -4429,35 +4637,69 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="mainSwitchCurrentRating">Main Switch Current Rating (A)</Label>
-                      <Input id="mainSwitchCurrentRating" name="mainSwitchCurrentRating" placeholder="100" />
+                      <Input
+                        id="mainSwitchCurrentRating"
+                        name="mainSwitchCurrentRating"
+                        placeholder="100"
+                        {...bindPersistedTextField('mainSwitchCurrentRating')}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="mainSwitchFuseRating">Main Switch Fuse/Device Rating (A)</Label>
-                      <Input id="mainSwitchFuseRating" name="mainSwitchFuseRating" placeholder="100" />
+                      <Input
+                        id="mainSwitchFuseRating"
+                        name="mainSwitchFuseRating"
+                        placeholder="100"
+                        {...bindPersistedTextField('mainSwitchFuseRating')}
+                      />
                     </div>
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="mainSwitchVoltageRating">Main Switch Voltage Rating (V)</Label>
-                      <Input id="mainSwitchVoltageRating" name="mainSwitchVoltageRating" placeholder="240" />
+                      <Input
+                        id="mainSwitchVoltageRating"
+                        name="mainSwitchVoltageRating"
+                        placeholder="240"
+                        {...bindPersistedTextField('mainSwitchVoltageRating')}
+                      />
                     </div>
                   </CertificateGroup>
                   <CertificateGroup title="RCD Main Switch Details" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="rcdRatedResidualCurrent">RCD Rated Residual Current IΔn (mA)</Label>
-                      <Input id="rcdRatedResidualCurrent" name="rcdRatedResidualCurrent" placeholder="30" />
+                      <Input
+                        id="rcdRatedResidualCurrent"
+                        name="rcdRatedResidualCurrent"
+                        placeholder="30"
+                        {...bindPersistedTextField('rcdRatedResidualCurrent')}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="rcdRatedTimeDelay">RCD Rated Time Delay (ms)</Label>
-                      <Input id="rcdRatedTimeDelay" name="rcdRatedTimeDelay" placeholder="0" />
+                      <Input
+                        id="rcdRatedTimeDelay"
+                        name="rcdRatedTimeDelay"
+                        placeholder="0"
+                        {...bindPersistedTextField('rcdRatedTimeDelay')}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="rcdMeasuredTime">RCD Measured Operating Time (ms)</Label>
-                      <Input id="rcdMeasuredTime" name="rcdMeasuredTime" placeholder="N/A" />
+                      <Input
+                        id="rcdMeasuredTime"
+                        name="rcdMeasuredTime"
+                        placeholder="N/A"
+                        {...bindPersistedTextField('rcdMeasuredTime')}
+                      />
                     </div>
                   </CertificateGroup>
                   <CertificateGroup title="Earthing Conductor" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="earthingConductorMaterial">Earthing Conductor Material</Label>
-                      <Select name="earthingConductorMaterial" defaultValue="Copper">
+                      <Select
+                        name="earthingConductorMaterial"
+                        value={getPersistedFieldValue('earthingConductorMaterial', 'Copper')}
+                        onValueChange={(value) => setPersistedFieldValue('earthingConductorMaterial', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {CONDUCTOR_MATERIAL_OPTIONS.map((option) => (
@@ -4468,11 +4710,20 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="earthingConductorCSA">Earthing Conductor CSA (mm2)</Label>
-                      <Input id="earthingConductorCSA" name="earthingConductorCSA" placeholder="16" />
+                      <Input
+                        id="earthingConductorCSA"
+                        name="earthingConductorCSA"
+                        placeholder="16"
+                        {...bindPersistedTextField('earthingConductorCSA')}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="earthingConductorVerified">Earthing Conductor Verified</Label>
-                      <Select name="earthingConductorVerified" defaultValue="Yes">
+                      <Select
+                        name="earthingConductorVerified"
+                        value={getPersistedFieldValue('earthingConductorVerified', 'Yes')}
+                        onValueChange={(value) => setPersistedFieldValue('earthingConductorVerified', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Yes">Yes</SelectItem>
@@ -4484,7 +4735,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   <CertificateGroup title="Main Protective Bonding Conductor" columns={1} className="h-fit">
                     <div className="space-y-2">
                       <Label htmlFor="mainBondingMaterial">Main Bonding Material</Label>
-                      <Select name="mainBondingMaterial" defaultValue="Copper">
+                      <Select
+                        name="mainBondingMaterial"
+                        value={getPersistedFieldValue('mainBondingMaterial', 'Copper')}
+                        onValueChange={(value) => setPersistedFieldValue('mainBondingMaterial', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {CONDUCTOR_MATERIAL_OPTIONS.map((option) => (
@@ -4495,11 +4750,20 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="mainBondingCSA">Main Bonding CSA (mm2)</Label>
-                      <Input id="mainBondingCSA" name="mainBondingCSA" placeholder="10" />
+                      <Input
+                        id="mainBondingCSA"
+                        name="mainBondingCSA"
+                        placeholder="10"
+                        {...bindPersistedTextField('mainBondingCSA')}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="mainBondingVerified">Main Bonding Verified</Label>
-                      <Select name="mainBondingVerified" defaultValue="Yes">
+                      <Select
+                        name="mainBondingVerified"
+                        value={getPersistedFieldValue('mainBondingVerified', 'Yes')}
+                        onValueChange={(value) => setPersistedFieldValue('mainBondingVerified', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Yes">Yes</SelectItem>
@@ -4511,7 +4775,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   <CertificateGroup title="Bonding to Extraneous-Conductive-Parts" columns={3} className="h-fit md:col-span-2 xl:col-span-3">
                     <div className="space-y-2">
                       <Label htmlFor="bondingWater">Bonding: Water Pipes</Label>
-                      <Select name="bondingWater" defaultValue="Yes">
+                      <Select
+                        name="bondingWater"
+                        value={getPersistedFieldValue('bondingWater', 'Yes')}
+                        onValueChange={(value) => setPersistedFieldValue('bondingWater', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Yes">Yes</SelectItem>
@@ -4522,7 +4790,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="bondingGas">Bonding: Gas Pipes</Label>
-                      <Select name="bondingGas" defaultValue="Yes">
+                      <Select
+                        name="bondingGas"
+                        value={getPersistedFieldValue('bondingGas', 'Yes')}
+                        onValueChange={(value) => setPersistedFieldValue('bondingGas', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Yes">Yes</SelectItem>
@@ -4533,7 +4805,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="bondingOil">Bonding: Oil Pipes</Label>
-                      <Select name="bondingOil" defaultValue="N/A">
+                      <Select
+                        name="bondingOil"
+                        value={getPersistedFieldValue('bondingOil', 'N/A')}
+                        onValueChange={(value) => setPersistedFieldValue('bondingOil', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Yes">Yes</SelectItem>
@@ -4544,7 +4820,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="bondingLightning">Bonding: Lightning Protection</Label>
-                      <Select name="bondingLightning" defaultValue="N/A">
+                      <Select
+                        name="bondingLightning"
+                        value={getPersistedFieldValue('bondingLightning', 'N/A')}
+                        onValueChange={(value) => setPersistedFieldValue('bondingLightning', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Yes">Yes</SelectItem>
@@ -4555,7 +4835,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="bondingSteel">Bonding: Structural Steel</Label>
-                      <Select name="bondingSteel" defaultValue="N/A">
+                      <Select
+                        name="bondingSteel"
+                        value={getPersistedFieldValue('bondingSteel', 'N/A')}
+                        onValueChange={(value) => setPersistedFieldValue('bondingSteel', value)}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Yes">Yes</SelectItem>
@@ -4651,6 +4935,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     showExpectedValues={showExpectedValues}
                     id="consumerUnitDesignation"
                     name="consumerUnitDesignation"
+                    value={getPersistedFieldValue('consumerUnitDesignation')}
+                    onChange={(e) => setPersistedFieldValue('consumerUnitDesignation', e.target.value)}
                     placeholder="DB1"
                   />
                 </div>
@@ -4661,7 +4947,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     showExpectedValues={showExpectedValues}
                     id="consumerUnitLocation"
                     name="consumerUnitLocation"
-                    defaultValue=""
+                    value={getPersistedFieldValue('consumerUnitLocation')}
+                    onChange={(e) => setPersistedFieldValue('consumerUnitLocation', e.target.value)}
                     placeholder="Location"
                   />
                 </div>
@@ -4672,6 +4959,8 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     showExpectedValues={showExpectedValues}
                     id="consumerUnitPfc"
                     name="consumerUnitPfc"
+                    value={getPersistedFieldValue('consumerUnitPfc')}
+                    onChange={(e) => setPersistedFieldValue('consumerUnitPfc', e.target.value)}
                     placeholder="1.2"
                   />
                 </div>
