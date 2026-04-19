@@ -3193,7 +3193,18 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       formData.set('inspectionSchedule', JSON.stringify(scheduleForPdf));
       formData.set('circuits', JSON.stringify(circuits));
 
-      const result = await createCertificate({}, formData);
+      // Build data object with certificate metadata fields
+      const data = {
+        certificateType: 'EICR',
+        certificateNumber: certificateNumber,
+        siteName: siteName,
+        siteAddress: clientAddress,
+        inspectionDate: inspectionDate,
+        nextInspectionDate: nextInspectionDate,
+        inspectorName: inspectorName,
+      };
+
+      const result = await createCertificate(data as any, formData);
 
       if (result?.error) {
         if (isSessionExpiredError(result.error)) {

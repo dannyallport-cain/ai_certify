@@ -2,7 +2,7 @@
 
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { customers, certificates, certificateItems, ActivityType, NewCertificate } from '@/lib/db/schema';
+import { customers, certificates, certificateItems, teams, ActivityType, NewCertificate } from '@/lib/db/schema';
 import { getUser, getTeamForUser } from '@/lib/db/queries'; // Keep other imports from @/lib/db/queries
 import { logActivity } from '../../lib/db/queries'; // Use relative path for logActivity
 import { redirect } from 'next/navigation';
@@ -321,14 +321,16 @@ export const addCertificateItem = validatedActionWithUser(
 // Helper function to get certificate data for PDF generation
 async function getCertificateForPDF(certificateId: number): Promise<CertificateData | null> {
   try {
-    // Fetch certificate with customer
+    // Fetch certificate with customer and team
     const certificateWithDetails = await db
       .select({
         certificate: certificates,
         customer: customers,
+        team: teams,
       })
       .from(certificates)
       .leftJoin(customers, eq(certificates.customerId, customers.id))
+      .leftJoin(teams, eq(certificates.teamId, teams.id))
       .where(eq(certificates.id, certificateId))
       .limit(1);
 
@@ -336,7 +338,7 @@ async function getCertificateForPDF(certificateId: number): Promise<CertificateD
       return null;
     }
 
-    const { certificate, customer } = certificateWithDetails[0];
+    const { certificate, customer, team } = certificateWithDetails[0];
 
     if (!customer) {
       return null;
@@ -360,6 +362,7 @@ async function getCertificateForPDF(certificateId: number): Promise<CertificateD
       inspectorName: certificate.inspectorName,
       status: certificate.status,
       formData: certificate.formData as Record<string, any> | undefined,
+      teamLogo: team?.logoDataUri || null,
       customer: {
         name: customer.name,
         email: customer.email,
