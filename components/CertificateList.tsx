@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { duplicateCertificate } from '@/app/(dashboard)/actions';
 import { Button } from '@/components/ui/button';
 import {
   Search,
@@ -284,6 +285,7 @@ export default function CertificateList({
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Customer</th>
                     <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Created</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
@@ -302,9 +304,26 @@ export default function CertificateList({
                         </td>
                         <td className="px-4 py-4 align-top text-sm">{cert.certificateType || '—'}</td>
                         <td className="px-4 py-4 align-top text-sm">{(row.customer && row.customer.name) || '—'}</td>
-                        <td className="px-4 py-4 align-top text-sm flex items-center gap-1 text-slate-600">
-                          <Calendar className="h-4 w-4" />
-                          <span>{cert.inspectionDate ? new Date(cert.inspectionDate).toLocaleDateString() : '—'}</span>
+                        <td className="px-4 py-4 align-top text-sm text-slate-600">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            <span>{cert.inspectionDate ? new Date(cert.inspectionDate).toLocaleDateString() : '—'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 align-top text-sm text-slate-600">
+                          {cert.createdAt ? (
+                            <div className="space-y-0.5">
+                              <div>{new Date(cert.createdAt).toLocaleDateString()}</div>
+                              <div className="text-xs text-slate-500">
+                                {new Date(cert.createdAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="px-4 py-4 align-top text-sm">
                           <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
@@ -316,6 +335,12 @@ export default function CertificateList({
                             <Link href={`/certificates/${cert.id}`}>
                               <Button variant="ghost" size="sm">View</Button>
                             </Link>
+                            <form action={duplicateCertificate}>
+                              <input type="hidden" name="id" value={cert.id} />
+                              <Button type="submit" variant="outline" size="sm">
+                                copy/new
+                              </Button>
+                            </form>
                             <Button asChild variant="outline" size="sm">
                               <a href={`/api/certificates/${cert.id}/pdf`} aria-label={`Download PDF for ${cert.certificateNumber || 'certificate'}`}>
                                 <Download className="h-4 w-4" />

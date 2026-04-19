@@ -62,12 +62,22 @@ export function getReachableBaseUrl(request: NextRequest) {
     parseUrlCandidate(process.env.BASE_URL) ||
     parseUrlCandidate(process.env.NEXTAUTH_URL);
 
-  if (configuredBaseUrl && !isLoopbackHost(configuredBaseUrl.hostname)) {
-    return configuredBaseUrl.origin;
-  }
-
   if (!isLoopbackHost(requestUrl.hostname)) {
     return requestUrl.origin;
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    const lanOrigin = buildLanOrigin(requestUrl);
+
+    if (lanOrigin) {
+      return lanOrigin;
+    }
+
+    return requestUrl.origin;
+  }
+
+  if (configuredBaseUrl && !isLoopbackHost(configuredBaseUrl.hostname)) {
+    return configuredBaseUrl.origin;
   }
 
   const lanOrigin = buildLanOrigin(configuredBaseUrl || requestUrl);
