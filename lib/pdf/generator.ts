@@ -32,6 +32,7 @@ export interface CertificateData {
   status: string;
   formData?: Record<string, any>;
   templateConfig?: TemplateConfig;
+  teamLogo?: string | null;
   customer: {
     name: string;
     email?: string | null;
@@ -829,6 +830,195 @@ function parseJsonLike<T>(value: unknown, fallback: T): T {
   return value as T;
 }
 
+function parseCircuitResistance(value: unknown): number | null {
+  const numeric = Number(String(value).replace(/[^0-9.+-]/g, ''));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function isRingFinalCircuit(designation: unknown, ringFinal: unknown): boolean {
+  const hasTick = safeString(ringFinal).trim() === '✓';
+  const mentionsRing = /\bring\b|\bring final\b/i.test(safeString(designation));
+  return hasTick || mentionsRing;
+}
+
+function inferCircuitValidationMode(row: Record<string, any>): 'ring' | 'radial' | 'equal-r1-r2' | null {
+  const designation = safeString(row.designation).trim().toLowerCase();
+  const isRingFinal = isRingFinalCircuit(designation, row.ringFinal);
+  const r1 = parseCircuitResistance(row.r1Line);
+  const rn = parseCircuitResistance(row.rnNeutral);
+  const r2 = parseCircuitResistance(row.r2Cpc);
+  const r1r2 = parseCircuitResistance(row.r1r2);
+
+  const hasAllRingValues = r1 !== null && rn !== null && r2 !== null;
+  const mentionsRadial = /\bradial\b/i.test(designation);
+  const mentionsRing = /\bring\b|\bring final\b/i.test(designation);
+
+  if (mentionsRadial && !isRingFinal) {
+    return 'radial';
+  }
+
+  if (hasAllRingValues) {
+    const ringLikeLineNeutral = rn !== null && r1 !== null && Math.abs(r1 - rn) / Math.max(Math.abs(r1), Math.abs(rn), 1) * 100 <= 10;
+    const equalR1R2 = r1 !== null && r2 !== null && Math.abs(r1 - r2) / Math.max(Math.abs(r1), Math.abs(r2), 1) * 100 <= 10;
+    const ringLikeR1R2 =
+      r1r2 !== null && r1 !== null && r2 !== null &&
+      (Math.abs(r1r2 - (r1 + r2) / 4) / Math.max(Math.abs(r1r2), Math.abs((r1 + r2) / 4), 1) * 100 <= 15 ||
+       (rn !== null && Math.abs(r1r2 - (rn + r2) / 4) / Math.max(Math.abs(r1r2), Math.abs((rn + r2) / 4), 1) * 100 <= 15));
+
+    if (equalR1R2 && (isRingFinal || mentionsRing || ringLikeLineNeutral || ringLikeR1R2)) {
+      return 'equal-r1-r2';
+    }
+
+    if (isRingFinal || mentionsRing || ringLikeLineNeutral || ringLikeR1R2) {
+      return 'ring';
+    }
+  }
+
+  if (isRingFinal || mentionsRing) {
+    if (r1 !== null && r2 !== null && Math.abs(r1 - r2) / Math.max(Math.abs(r1), Math.abs(r2), 1) * 100 <= 10) {
+      return 'equal-r1-r2';
+    }
+    return 'ring';
+  }
+
+  return 'radial';
+}
+
+function formatValidationPercent(percent: number): string {
+  return `${percent.toFixed(1)}%`;
+}
+
+function extractAiAnalysisNotes(fd: Record<string, any>): string[] {
+  const candidateKeys = [
+    'aiValidationIssues',
+    'visualAnalysisIssues',
+    'imageAnalysisIssues',
+    'imageAnalysisSummary',
+    'visionAnalysisNotes',
+    'analysisIssues',
+    'aiObservations',
+    'aiRemarks',
+    'analysisNotes',
+    'visionNotes',
+  ];
+
+  const notes: string[] = [];
+  candidateKeys.forEach((key) => {
+    const value = fd[key];
+    if (typeof value === 'string' && value.trim()) {
+      notes.push(value.trim());
+    } else if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item !== null && item !== undefined) {
+          notes.push(String(item));
+        }
+      });
+    } else if (typeof value === 'object' && value !== null) {
+      const stringified = JSON.stringify(value);
+      if (stringified && stringified !== '{}') {
+        notes.push(stringified);
+      }
+    }
+  });
+
+  return notes;
+}
+
+function buildEicrCircuitValidationIssues(
+  circuitRows: Array<Record<string, any>>,
+  externalEarthFaultLoopImpedance: string,
+): string[] {
+  const issues: string[] = [];
+  const ze = parseCircuitResistance(externalEarthFaultLoopImpedance);
+
+  circuitRows.forEach((row, index) => {
+    const circuitName = safeString(row.designation) || `Circuit ${index + 1}`;
+    const r1 = parseCircuitResistance(row.r1Line);
+    const rn = parseCircuitResistance(row.rnNeutral);
+    const r2 = parseCircuitResistance(row.r2Cpc);
+    const r1r2 = parseCircuitResistance(row.r1r2);
+    const measuredZs = parseCircuitResistance(row.measuredZs);
+    const mode = inferCircuitValidationMode(row);
+
+    const isRing = mode === 'ring' || mode === 'equal-r1-r2';
+    const expectedCircuitResistance = isRing && r1 !== null && r2 !== null ? (r1 + r2) / 4 : r1r2;
+    const toleranceZs = mode === 'radial' ? 15 : 25;
+    const toleranceR1R2 = isRing ? 25 : 15;
+
+    if (isRing && r1 !== null && rn !== null) {
+      const rnMismatch = Math.abs(r1 - rn) / Math.max(Math.abs(r1), Math.abs(rn), 1) * 100;
+      if (rnMismatch > 10) {
+        issues.push(
+          `${circuitName}: neutral continuity is not sufficiently consistent with r1 on this ring final circuit (${rnMismatch.toFixed(1)}% difference).`,
+        );
+      }
+    }
+
+    if (measuredZs !== null && ze !== null && expectedCircuitResistance !== null) {
+      const corrected = expectedCircuitResistance * 1.2;
+      const expectedZs = ze + corrected;
+      const delta = Math.abs(measuredZs - expectedZs);
+      const percent = expectedZs === 0 ? 0 : (delta / expectedZs) * 100;
+      if (percent > toleranceZs) {
+        issues.push(
+          `${circuitName}: measured Zs ${measuredZs.toFixed(2)}Ω is outside ${toleranceZs}% of expected ${expectedZs.toFixed(2)}Ω (${formatValidationPercent(percent)} off).`,
+        );
+      }
+    }
+
+    if (r1r2 !== null && expectedCircuitResistance !== null && expectedCircuitResistance > 0) {
+      const delta = Math.abs(r1r2 - expectedCircuitResistance);
+      const percent = (delta / expectedCircuitResistance) * 100;
+      if (percent > toleranceR1R2) {
+        issues.push(
+          `${circuitName}: reported R1+R2 ${r1r2.toFixed(2)}Ω differs from expected ${expectedCircuitResistance.toFixed(2)}Ω by ${formatValidationPercent(percent)}.`,
+        );
+      }
+    }
+
+    if (mode === 'radial' && row.wiringType && r1 !== null && r2 !== null) {
+      const expectedR2 = r1 * 1.75;
+      const delta = Math.abs(r2 - expectedR2);
+      const percent = expectedR2 === 0 ? 0 : (delta / expectedR2) * 100;
+      if (percent > 10) {
+        issues.push(
+          `${circuitName}: radial twin-and-earth conductor R2 ${r2.toFixed(2)}Ω is outside 10% of 1.75×R1 (${expectedR2.toFixed(2)}Ω).`,
+        );
+      }
+    }
+  });
+
+  return issues;
+}
+
+function buildEicrValidationSummary(
+  fd: Record<string, any>,
+  circuitRows: Array<Record<string, any>>,
+): string[] {
+  const extraLines = extractAiAnalysisNotes(fd);
+  const circuitIssues = buildEicrCircuitValidationIssues(circuitRows, safeString(fd.externalEarthFaultLoopImpedance));
+
+  if (circuitIssues.length === 0 && extraLines.length === 0) {
+    return ['No AI validation issues were identified.'];
+  }
+
+  const summary: string[] = [
+    'This AI validation check cross-verifies the reported measurements, circuit logic, and any available visual/analysis observations.',
+  ];
+
+  if (circuitIssues.length > 0) {
+    summary.push('', 'Circuit verification issues:');
+    circuitIssues.forEach((issue) => summary.push(`- ${issue}`));
+  }
+
+  if (extraLines.length > 0) {
+    summary.push('', 'Visual / AI-derived analysis notes:');
+    extraLines.forEach((note) => summary.push(`- ${note}`));
+  }
+
+  return summary;
+}
+
 function normalizeObservationCode(value: unknown): 'C1' | 'C2' | 'C3' | 'FI' | '' {
   const normalized = safeString(value).trim().toUpperCase();
   if (normalized === 'C1' || normalized === 'C2' || normalized === 'C3' || normalized === 'FI') {
@@ -1623,6 +1813,10 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // Section 5 – Summary of the Condition
   sectionHeader('5', 'Summary of the Condition of the Installation');
   italicNote('See page 3 for a summary of the general condition of the installation in terms of electrical safety.');
+
+  sectionHeader('', 'AI Validation Check');
+  textBlock(buildEicrValidationSummary(fd, circuitRows).join('\n'), 6.5);
+  y += 1;
 
   const isSatisfactory = overallAssessment === 'SATISFACTORY';
   const assessLabel = isSatisfactory ? 'SATISFACTORY' : 'UNSATISFACTORY';

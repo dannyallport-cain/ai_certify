@@ -73,6 +73,7 @@ export const teams = pgTable('teams', {
   subscriptionBypassSetAt: timestamp('subscription_bypass_set_at'),
   subscriptionBypassSetBy: integer('subscription_bypass_set_by'),
   trialEndDate: timestamp('trial_end_date'),
+  logoDataUri: text('logo_data_uri'),
 });
 
 export const teamMembers = pgTable('team_members', {

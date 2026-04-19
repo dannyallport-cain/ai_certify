@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { updateAccount } from '@/app/(login)/actions';
 import { User } from '@/lib/db/schema';
 import ProfileMediaSettings from '@/components/settings/ProfileMediaSettings';
+import TeamBrandingSettings from '@/components/settings/TeamBrandingSettings';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 
@@ -118,6 +119,7 @@ export default function GeneralPage() {
         </CardContent>
       </Card>
 
+      <TeamBrandingSettings />
       <ProfileMediaSettings />
     </section>
   );
