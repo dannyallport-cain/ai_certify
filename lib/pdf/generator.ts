@@ -68,6 +68,327 @@ function lighten(rgb: [number, number, number], factor: number): [number, number
   ];
 }
 
+function hashString(input: string): number {
+  let hash = 2166136261;
+
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+const watermarkImageCache = new Map<string, string>();
+const printedReferenceStampImageCache = new Map<string, string>();
+const printedReferenceStampFontPath = '/Users/admin/Library/Fonts/1952 RHEINMETALL.ttf';
+const printedReferenceStampFontFamily = '1952 RHEINMETALL';
+let printedReferenceStampFontRegistered = false;
+
+function buildWatermarkPayload(certificate: CertificateData): string {
+  const serial = safeString(certificate.certificateNumber).trim() || `CERT-${certificate.id}`;
+  const addressParts = [
+    safeString(certificate.siteAddress).trim(),
+    safeString(certificate.customer.address).trim(),
+    safeString(certificate.customer.postcode).trim(),
+  ].filter(Boolean);
+
+  const hiddenAddress = addressParts.join(', ') || 'ADDRESS NOT SUPPLIED';
+  return `SERIAL ${serial} · ADDRESS ${hiddenAddress}`;
+}
+
+function buildPrintedReferenceStampImageDataUrl(
+  certificateNumber: string,
+  targetWidthMm: number,
+  targetHeightMm: number,
+): string {
+  const ref = safeString(certificateNumber).trim();
+  if (!ref) return '';
+
+  const stampText = `REF ${ref}`;
+  const seed = hashString(stampText);
+  const canvasWidth = Math.max(1200, Math.round(targetWidthMm * 32));
+  const canvasHeight = Math.max(280, Math.round(targetHeightMm * 32));
+  const cacheKey = `${canvasWidth}x${canvasHeight}:${stampText}`;
+  const cached = printedReferenceStampImageCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const { createCanvas, registerFont } = require('canvas') as typeof import('canvas');
+
+    if (!printedReferenceStampFontRegistered) {
+      try {
+        registerFont(printedReferenceStampFontPath, { family: printedReferenceStampFontFamily });
+        printedReferenceStampFontRegistered = true;
+      } catch {
+        printedReferenceStampFontRegistered = false;
+      }
+    }
+
+    const canvas = createCanvas(canvasWidth, canvasHeight);
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    const layerValue = (shift: number, range: number) =>
+      ((((seed >> shift) & 0xff) / 255) - 0.5) * range;
+
+    const fontSize = Math.max(144, Math.round(canvasHeight * 0.9));
+    const x = 28;
+    const y = canvasHeight - 18;
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = printedReferenceStampFontRegistered
+      ? `${fontSize}px "${printedReferenceStampFontFamily}"`
+      : `700 ${fontSize}px "Courier New", Courier, monospace`;
+
+    const layers = [
+      { dx: -10 + layerValue(0, 8), dy: -3 + layerValue(8, 6), gray: 64, alpha: 0.82 },
+      { dx: 5 + layerValue(4, 7), dy: 3 + layerValue(12, 6), gray: 110, alpha: 0.42 },
+      { dx: -3 + layerValue(16, 6), dy: 6 + layerValue(20, 5), gray: 82, alpha: 0.58 },
+      { dx: 8 + layerValue(6, 5), dy: -2 + layerValue(14, 4), gray: 150, alpha: 0.2 },
+      { dx: -13 + layerValue(10, 5), dy: 1 + layerValue(18, 4), gray: 122, alpha: 0.16 },
+      { dx: 1 + layerValue(2, 4), dy: -5 + layerValue(22, 5), gray: 52, alpha: 0.14 },
+    ];
+
+    layers.forEach((layer, index) => {
+      ctx.fillStyle = `rgba(${layer.gray}, ${layer.gray}, ${layer.gray}, ${layer.alpha})`;
+      ctx.save();
+      ctx.translate(x + layer.dx, y + layer.dy);
+      ctx.rotate((((index % 2 === 0 ? -1 : 1) * (0.18 + index * 0.09)) * Math.PI) / 180);
+      ctx.scale(1 + layerValue(index + 1, 0.018), 1 + layerValue(index + 9, 0.026));
+      ctx.fillText(stampText, 0, 0);
+      ctx.restore();
+    });
+
+    const textMetrics = ctx.measureText(stampText);
+    const textWidth = Math.max(80, textMetrics.width);
+    const textHeight = Math.max(fontSize * 0.8, 54);
+    const stampLeft = x;
+    const stampTop = y - textHeight;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = 'rgba(72, 72, 72, 0.08)';
+
+    for (let i = 0; i < 16; i++) {
+      const blotXSeed = (seed >> ((i * 5 + 1) % 24)) & 0xff;
+      const blotYSeed = (seed >> ((i * 7 + 3) % 24)) & 0xff;
+      const blotWSeed = (seed >> ((i * 4 + 9) % 24)) & 0x1f;
+      const blotHSeed = (seed >> ((i * 3 + 15) % 24)) & 0x1f;
+      const blotX = x + 8 + (blotXSeed / 255) * Math.max(textMetrics.width - 18, 20);
+      const blotY = y - fontSize * 0.78 + (blotYSeed / 255) * Math.max(fontSize * 0.72, 18);
+      const blotW = 6 + (blotWSeed / 31) * 22;
+      const blotH = 0.8 + (blotHSeed / 31) * 3.6;
+      ctx.fillRect(blotX, blotY, blotW, blotH);
+    }
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+
+    for (let i = 0; i < 18; i++) {
+      const cutSeed = (seed >> ((i * 7) % 24)) & 0xff;
+      const cutYOffsetSeed = (seed >> ((i * 5 + 3) % 24)) & 0xff;
+      const cutWidthSeed = (seed >> ((i * 3 + 11) % 24)) & 0x0f;
+      const cutHeightSeed = (seed >> ((i * 4 + 9) % 24)) & 0x07;
+      const cutX = stampLeft + 10 + (cutSeed / 255) * Math.max(textWidth - 34, 16);
+      const cutY = stampTop + 8 + (cutYOffsetSeed / 255) * Math.max(textHeight - 18, 12);
+      const cutW = 9 + (cutWidthSeed / 15) * 28;
+      const cutH = 1.5 + (cutHeightSeed / 7) * 5;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+      ctx.fillRect(cutX, cutY, cutW, cutH);
+    }
+
+    for (let i = 0; i < 34; i++) {
+      const speckSeed = (seed >> ((i * 5) % 24)) & 0xff;
+      const speckYSeed = (seed >> ((i * 6 + 7) % 24)) & 0xff;
+      const speckRSeed = (seed >> ((i * 4 + 13) % 24)) & 0x07;
+      const speckX = stampLeft + (speckSeed / 255) * textWidth;
+      const speckY = stampTop + (speckYSeed / 255) * textHeight;
+      const speckR = 0.8 + (speckRSeed / 7) * 2.8;
+      ctx.beginPath();
+      ctx.arc(speckX, speckY, speckR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(88, 88, 88, 0.18)';
+    ctx.lineWidth = Math.max(1, fontSize * 0.018);
+
+    for (let i = 0; i < 8; i++) {
+      const startSeed = (seed >> ((i * 2 + 5) % 24)) & 0xff;
+      const endSeed = (seed >> ((i * 4 + 9) % 24)) & 0xff;
+      const ySeed = (seed >> ((i * 3 + 15) % 24)) & 0xff;
+      const scratchY = stampTop + 10 + (ySeed / 255) * Math.max(textHeight - 18, 8);
+
+      ctx.beginPath();
+      ctx.moveTo(stampLeft + 10 + (startSeed / 255) * Math.max(textWidth * 0.22, 16), scratchY);
+      ctx.lineTo(stampLeft + textWidth - 10 - (endSeed / 255) * Math.max(textWidth * 0.18, 12), scratchY + layerValue(i + 3, 5));
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    const dataUrl = canvas.toDataURL('image/png');
+    printedReferenceStampImageCache.set(cacheKey, dataUrl);
+    return dataUrl;
+  } catch {
+    return '';
+  }
+}
+
+function drawPrintedReferenceStamp(
+  pdf: jsPDF,
+  certificateNumber: string,
+  pageWidth: number,
+  pageHeight: number,
+) {
+  const ref = safeString(certificateNumber).trim();
+  if (!ref) return;
+
+  const stampText = `REF ${ref}`;
+  const isLandscape = pageWidth > pageHeight;
+  const fontSize = isLandscape
+    ? Math.min(11, Math.max(9.2, pageWidth / 28))
+    : Math.min(13, Math.max(10.2, pageWidth / 22));
+  const targetWidth = isLandscape
+    ? Math.max(34, Math.min(pageWidth * 0.23, stampText.length * (fontSize * 0.48)))
+    : Math.max(38, Math.min(pageWidth * 0.28, stampText.length * (fontSize * 0.52)));
+  const targetHeight = isLandscape
+    ? Math.max(5.4, fontSize * 0.54)
+    : Math.max(6.2, fontSize * 0.6);
+  const x = 4.2;
+  const y = pageHeight - targetHeight - 0.7;
+  const dataUrl = buildPrintedReferenceStampImageDataUrl(certificateNumber, targetWidth, targetHeight);
+
+  if (!dataUrl) {
+    pdf.setFont('courier', 'bold');
+    pdf.setFontSize(fontSize);
+    pdf.setTextColor(110, 110, 110);
+    pdf.text(stampText, x + 0.2, pageHeight - 1.2);
+    pdf.setTextColor(0, 0, 0);
+    return;
+  }
+
+  try {
+    pdf.addImage(dataUrl, 'PNG', x, y, targetWidth, targetHeight, undefined, 'FAST');
+  } catch {
+    pdf.setFont('courier', 'bold');
+    pdf.setFontSize(fontSize);
+    pdf.setTextColor(110, 110, 110);
+    pdf.text(stampText, x + 0.2, pageHeight - 1.2);
+    pdf.setTextColor(0, 0, 0);
+  }
+}
+
+function buildHiddenWatermarkImageDataUrl(
+  watermarkPayload: string,
+  pageWidth: number,
+  pageHeight: number,
+): string {
+  const payload = safeString(watermarkPayload).replace(/\s+/g, ' ').trim();
+  if (!payload) return '';
+
+  const canvasWidth = Math.max(1800, Math.round(pageWidth * 22));
+  const canvasHeight = Math.max(1280, Math.round(pageHeight * 22));
+  const cacheKey = `${canvasWidth}x${canvasHeight}:${payload}`;
+  const cached = watermarkImageCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const { createCanvas } = require('canvas') as typeof import('canvas');
+    const canvas = createCanvas(canvasWidth, canvasHeight);
+    const ctx = canvas.getContext('2d');
+
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    const drawWatermarkLayer = (angleDeg: number, alpha: number, rowSpread: number, colSpread: number) => {
+      ctx.save();
+      ctx.translate(canvasWidth / 2, canvasHeight / 2);
+      ctx.rotate((angleDeg * Math.PI) / 180);
+
+      const fontSize = Math.max(34, Math.round(canvasWidth / 24));
+      const repeatText = `${payload}    ${payload}`;
+      ctx.font = `${fontSize}px Courier New, Courier, monospace`;
+
+      const xStep = Math.max(fontSize * colSpread, ctx.measureText(repeatText).width * 0.68 || fontSize * 8);
+      const yStep = Math.max(fontSize * rowSpread, canvasHeight / 5.4);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = `rgba(160, 160, 160, ${alpha})`;
+
+      for (let row = -5; row <= 5; row++) {
+        for (let col = -4; col <= 4; col++) {
+          ctx.fillText(repeatText, col * xStep, row * yStep);
+        }
+      }
+
+      ctx.restore();
+    };
+
+    drawWatermarkLayer(-33, 0.05, 2.05, 7.1);
+    drawWatermarkLayer(18, 0.024, 2.8, 8.8);
+
+    const dataUrl = canvas.toDataURL('image/png');
+    watermarkImageCache.set(cacheKey, dataUrl);
+    return dataUrl;
+  } catch {
+    return '';
+  }
+}
+
+function drawHiddenWatermark(
+  pdf: jsPDF,
+  watermarkPayload: string,
+  pageWidth: number,
+  pageHeight: number,
+) {
+  const dataUrl = buildHiddenWatermarkImageDataUrl(watermarkPayload, pageWidth, pageHeight);
+  if (!dataUrl) return;
+
+  try {
+    pdf.addImage(dataUrl, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+  } catch {
+    // Intentionally swallow watermark rendering failures so PDF generation still succeeds.
+  }
+}
+
+function finalizeCertificatePdf(pdf: jsPDF, certificate: CertificateData) {
+  const watermarkPayload = buildWatermarkPayload(certificate);
+  const anyPdf = pdf as any;
+
+  if (typeof anyPdf.setProperties === 'function') {
+    anyPdf.setProperties({
+      title: `${safeString(certificate.certificateType)} ${safeString(certificate.certificateNumber)}`.trim(),
+      subject: 'AI Certificates generated report',
+      author: safeString(certificate.inspectorName) || 'AI Certificates',
+      creator: 'AI Certificates PDF Engine',
+      keywords: [
+        'ai-certificates',
+        safeString(certificate.certificateType),
+        `serial:${safeString(certificate.certificateNumber).trim()}`,
+        'image-watermark',
+      ].filter(Boolean).join(', '),
+    });
+  }
+
+  const totalPages = pdf.getNumberOfPages();
+
+  for (let pageIndex = 1; pageIndex <= totalPages; pageIndex++) {
+    pdf.setPage(pageIndex);
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    drawHiddenWatermark(pdf, watermarkPayload, pageWidth, pageHeight);
+    drawPrintedReferenceStamp(pdf, certificate.certificateNumber, pageWidth, pageHeight);
+  }
+}
+
 const CP12_GAS_SAFE_LOGO_DATA_URI =
   'data:image/webp;base64,UklGRoYXAABXRUJQVlA4IHoXAADQXACdASr7APoAPm0ylEekIqIhJzXq0IANiWJu4WdNdqacGv4P+HfyvwHPR95/qv67/mB83' +
   'Fc/pP3v/FnmMjqet3w5+D+6L5nf6D1Hfd97hH6Zf1z+0dZHzEf0H+7f9v+ye8b/qf129939m9QD+u/5X0s/Yt9AX9sfVu/237c/CD+2v7P+0b/9fYA/62w0f' +
@@ -226,7 +547,6 @@ export function generateCertificatePDF(certificate: CertificateData): Uint8Array
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     addText('Professional certification management services', margin + 5, margin + 20);
-    addText('Operated by Cain Enabled Engineering Ltd', margin + 5, margin + 26);
     
     // Reset text color
     pdf.setTextColor(0, 0, 0);
@@ -653,6 +973,7 @@ export function generateCertificatePDF(certificate: CertificateData): Uint8Array
     );
   }
 
+  finalizeCertificatePdf(pdf, certificate);
   return new Uint8Array(pdf.output('arraybuffer'));
 }
 
@@ -1474,6 +1795,7 @@ function generateCP12PDF(certificate: CertificateData): Uint8Array {
   pdf.setTextColor(90, 90, 90);
   pdf.text(footerLines, margin, pageHeight - footerBottomMargin - (footerLines.length - 1) * getLineHeight(footerFontSize));
 
+  finalizeCertificatePdf(pdf, certificate);
   return new Uint8Array(pdf.output('arraybuffer'));
 }
 
@@ -1517,8 +1839,8 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   const tableHeaderBg = tc?.secondary ? lighten(hexToRgb(tc.secondary), 0.84) : [237, 237, 237] as [number, number, number];
 
   const W = pageWidth - 2 * margin;
-  const companyName = ss(fd.tradingTitle) || 'Cain Enabled Engineering Ltd';
-  const companyEmail = ss(fd.companyEmail) || 'office@cain-enabled.co.uk';
+  const companyName = ss(fd.tradingTitle);
+  const companyEmail = ss(fd.companyEmail);
 
   // ── Helpers ──────────────────────────────────────────────
   const text = (t: string, x: number, yy: number, opts?: any) => {
@@ -1610,8 +1932,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     pdf.setDrawColor(0, 0, 0);
   };
 
-  // Right-side section tabs intentionally disabled, but retain the page section state
-  // because other pagination logic still assigns to this variable.
+  // Retain the page section state because other pagination logic still assigns to it.
   let currentPageSections: string[] = [];
 
   // Page footer with reference, page number, company info
@@ -1622,17 +1943,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     pdf.setTextColor(100, 100, 100);
     text('This form is based on the model shown in Appendix 6 of BS 7671:2018.', margin, footerY);
     pdf.setFont('helvetica', 'normal');
-    text(`Ref: ${ss(certificate.certificateNumber)}`, margin, footerY + 4);
     if (showPageNum) {
       text(`Page: ${currentPage} of ${totalPages}`, pageWidth / 2, footerY + 4, { align: 'center' });
     }
-    // Company name & email aligned right in footer area
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(brandRed[0], brandRed[1], brandRed[2]);
-    text(companyName, pageWidth - margin, footerY, { align: 'right' });
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(6);
-    text(companyEmail, pageWidth - margin, footerY + 4, { align: 'right' });
     pdf.setTextColor(0, 0, 0);
   };
 
@@ -1748,6 +2061,34 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     y += h;
   };
 
+  const wrapPdfText = (value: string, maxWidth: number) => {
+    const normalized = ss(value).replace(/\s+/g, ' ').trim();
+    const words = normalized ? normalized.split(' ') : [''];
+    const softened = words
+      .map((word) => {
+        if (!word || pdf.getTextWidth(word) <= maxWidth) return word;
+
+        const chunks: string[] = [];
+        let chunk = '';
+
+        Array.from(word).forEach((char) => {
+          const candidate = `${chunk}${char}`;
+          if (chunk && pdf.getTextWidth(candidate) > maxWidth) {
+            chunks.push(chunk);
+            chunk = char;
+          } else {
+            chunk = candidate;
+          }
+        });
+
+        if (chunk) chunks.push(chunk);
+        return chunks.join(' ');
+      })
+      .join(' ');
+
+    return pdf.splitTextToSize(softened || ' ', maxWidth);
+  };
+
   // ════════════════════════════════════════════════════════════
   // PAGE 1 – Cover page (sections 1-6)
   // ════════════════════════════════════════════════════════════
@@ -1813,10 +2154,6 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // Section 5 – Summary of the Condition
   sectionHeader('5', 'Summary of the Condition of the Installation');
   italicNote('See page 3 for a summary of the general condition of the installation in terms of electrical safety.');
-
-  sectionHeader('', 'AI Validation Check');
-  textBlock(buildEicrValidationSummary(fd, circuitRows).join('\n'), 6.5);
-  y += 1;
 
   const isSatisfactory = overallAssessment === 'SATISFACTORY';
   const assessLabel = isSatisfactory ? 'SATISFACTORY' : 'UNSATISFACTORY';
@@ -1887,7 +2224,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       C1: red, C2: orange, C3: charcoal, FI: purple
     };
     const clr = codeClr[obs.code] || charcoal;
-    const descLines = pdf.splitTextToSize(ss(obs.description), obsColWidths.desc - 4);
+    const descLines = wrapPdfText(ss(obs.description), obsColWidths.desc - 4);
     const h = Math.max(7, descLines.length * 3.2 + 3);
     checkPage(h);
 
@@ -2550,150 +2887,26 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // Get inspection data from formData (stored as JSON string via FormData.set)
   const inspData = inspectionData;
 
-  // Render inspection schedule across pages
-  const renderInspectionSchedule = () => {
-    newPage();
+  const getInspectionLegendHeight = () => {
+    const legendItems = [
+      { code: '✓', label: 'Acceptable' },
+      { code: 'C1', label: 'Danger present' },
+      { code: 'C2', label: 'Potentially dangerous' },
+      { code: 'C3', label: 'Improvement recommended' },
+      { code: 'FI', label: 'Further investigation' },
+      { code: 'NV', label: 'Not verified' },
+      { code: 'LIM', label: 'Limitation' },
+      { code: 'N/A', label: 'Not applicable' },
+    ];
 
-    const scheduleTitle = 'INSPECTION SCHEDULE FOR DOMESTIC & SIMILAR PREMISES WITH UP TO 100A SUPPLY';
-    let inspSectionNum = 13;
-    currentPageSections = ['13'];
-
-    // Section number for inspection
-    sectionHeader(String(inspSectionNum), scheduleTitle);
-
-    // Column widths for inspection table
-    const refW = 11;
-    const commentW = 22;
-    const outcomeW = 15;
-    const descW = W - refW - commentW - outcomeW;
-
-    // Table header
-    const drawTableHeader = () => {
-      checkPage(7);
-      filledRect(margin, y, W, 6, tableHeaderBg);
-      borderedRect(margin, y, W, 6);
-      pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(6);
-      pdf.setFont('helvetica', 'bold');
-      text('Item', margin + 2, y + 4.2);
-      text('Description', margin + refW + 2, y + 4.2);
-      text('Comments', margin + refW + descW + 2, y + 4.2);
-      text('Outcome', margin + W - outcomeW + 1.5, y + 4.2);
-      pdf.setTextColor(0, 0, 0);
-      y += 6;
-    };
-
-    const startInspectionSchedulePage = () => {
-      inspSectionNum++;
-      newPage();
-      currentPageSections = [String(inspSectionNum)];
-      sectionHeader(String(inspSectionNum), scheduleTitle);
-      drawTableHeader();
-    };
-
-    drawTableHeader();
-
-    inspectionSchedule.forEach((section) => {
-      const forceSectionBreak =
-        (section.section === '5.0' && inspSectionNum === 13) ||
-        (section.section === '6.0' && inspSectionNum === 14);
-
-      if (forceSectionBreak) {
-        startInspectionSchedulePage();
-      }
-
-      // Section row
-      pdf.setFontSize(5.4);
-      pdf.setFont('helvetica', 'bold');
-      const titleLines = pdf.splitTextToSize(section.title, descW - 2);
-      const sectionH = Math.max(5.2, titleLines.length * 2.2 + 1.8);
-      if (y + sectionH > maxContentY) {
-        startInspectionSchedulePage();
-      }
-      filledRect(margin, y, W, sectionH, light);
-      borderedRect(margin, y, W, sectionH);
-      const sectionLabel = section.items.length === 0
-        ? `${section.section}  ${section.title}`
-        : `${section.section}`;
-      text(sectionLabel, margin + 2, y + 4);
-      if (section.items.length > 0) {
-        titleLines.forEach((tLine: string, i: number) => {
-          text(tLine, margin + refW + 2, y + 3.6 + i * 2.2);
-        });
-      }
-      // section outcome if no items
-      if (section.items.length === 0) {
-        let sectionOutcome: string;
-        if (section.section in inspData) {
-          // User has explicitly set this section - use their value
-          const secData = inspData[section.section];
-          sectionOutcome = secData?.outcome || '';
-        } else {
-          // No user data - default to N/A
-          sectionOutcome = 'N/A';
-        }
-        pdf.setFont('helvetica', 'normal');
-        text(sectionOutcome, margin + W - outcomeW / 2, y + sectionH / 2 + 1, { align: 'center' });
-      }
-      y += sectionH;
-
-      section.items.forEach((item) => {
-        const itemData = inspData[item.ref] || {};
-        const comment = ss(itemData.comment || item.comment || '');
-        // Check if there's data from the user (the key exists in inspData)
-        let outcome: string;
-        if (item.ref in inspData) {
-          // User has explicitly set this item - use their value
-          outcome = itemData.outcome || '';
-        } else {
-          // No user data - use fallback
-          outcome = item.outcome || (item.desc ? '\u2713' : 'N/A');
-        }
-
-        pdf.setFont('helvetica', 'normal');
-        const descLines = pdf.splitTextToSize(item.desc || 'N/A', descW - 3);
-        const commentLines = comment ? pdf.splitTextToSize(comment, commentW - 3) : [''];
-        const rowH = Math.max(4.8, Math.max(descLines.length, commentLines.length) * 2.15 + 1.6);
-
-        if (y + rowH > maxContentY) {
-          startInspectionSchedulePage();
-        }
-
-        if ((Number(item.ref.replace(/[^0-9]/g, '')) || 0) % 2 === 0) {
-          filledRect(margin, y, W, rowH, white);
-        } else {
-          filledRect(margin, y, W, rowH, [250, 250, 250]);
-        }
-        borderedRect(margin, y, W, rowH);
-        vLine(margin + refW, y, rowH);
-        vLine(margin + refW + descW, y, rowH);
-        vLine(margin + W - outcomeW, y, rowH);
-
-        pdf.setFontSize(5.2);
-        text(item.ref, margin + 2, y + rowH / 2 + 0.9);
-        descLines.forEach((dLine: string, i: number) => {
-          text(dLine, margin + refW + 1.5, y + 3 + i * 2.15);
-        });
-        commentLines.forEach((cLine: string, i: number) => {
-          text(cLine, margin + refW + descW + 1.5, y + 3 + i * 2.15);
-        });
-
-        // Outcome - use tick mark for acceptable
-        if (outcome === '✓' || outcome === '\u2713' || outcome === 'TICK') {
-          pdf.setFont('ZapfDingbats', 'normal');
-          text('4', margin + W - outcomeW / 2, y + rowH / 2 + 0.9, { align: 'center' });
-        } else {
-          pdf.setFont('helvetica', 'bold');
-          text(outcome, margin + W - outcomeW / 2, y + rowH / 2 + 0.9, { align: 'center' });
-        }
-        pdf.setFont('helvetica', 'normal');
-
-        y += rowH;
-      });
-    });
-
-    // Outcomes legend
-    addOutcomesLegend();
+    const padding = 2;
+    const headerH = 6;
+    const itemH = 5.5;
+    const rowGap = 1.5;
+    const columns = 2;
+    const rows = Math.ceil(legendItems.length / columns);
+    const contentH = rows * itemH + (rows - 1) * rowGap;
+    return headerH + padding * 2 + contentH;
   };
 
   const addOutcomesLegend = () => {
@@ -2758,6 +2971,238 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     y += legendH;
   };
 
+  // Render inspection schedule across exactly two evenly-filled pages
+  const renderInspectionSchedule = () => {
+    type InspectionScheduleRow =
+      | {
+          kind: 'section';
+          section: string;
+          title: string;
+          outcome: string;
+          naturalHeight: number;
+        }
+      | {
+          kind: 'item';
+          ref: string;
+          desc: string;
+          comment: string;
+          outcome: string;
+          naturalHeight: number;
+        };
+
+    newPage();
+
+    const scheduleTitle = 'INSPECTION SCHEDULE FOR DOMESTIC & SIMILAR PREMISES WITH UP TO 100A SUPPLY';
+    const refW = 11;
+    const commentW = 22;
+    const outcomeW = 15;
+    const descW = W - refW - commentW - outcomeW;
+    const sectionFontSize = 4.8;
+    const itemFontSize = 4.8;
+    const lineHeight = 1.95;
+
+    const drawTableHeader = () => {
+      filledRect(margin, y, W, 6, tableHeaderBg);
+      borderedRect(margin, y, W, 6);
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(6);
+      pdf.setFont('helvetica', 'bold');
+      text('Item', margin + 2, y + 4.2);
+      text('Description', margin + refW + 2, y + 4.2);
+      text('Comments', margin + refW + descW + 2, y + 4.2);
+      text('Outcome', margin + W - outcomeW + 1.5, y + 4.2);
+      pdf.setTextColor(0, 0, 0);
+      y += 6;
+    };
+
+    const measureSectionHeight = (title: string) => {
+      pdf.setFontSize(sectionFontSize);
+      pdf.setFont('helvetica', 'bold');
+      const titleLines = pdf.splitTextToSize(title, descW - 2);
+      return Math.max(5.4, titleLines.length * lineHeight + 1.8);
+    };
+
+    const measureItemHeight = (desc: string, comment: string) => {
+      pdf.setFontSize(itemFontSize);
+      pdf.setFont('helvetica', 'normal');
+      const descLines = pdf.splitTextToSize(desc || 'N/A', descW - 3);
+      const commentLines = comment ? pdf.splitTextToSize(comment, commentW - 3) : [''];
+      return Math.max(4.8, Math.max(descLines.length, commentLines.length) * lineHeight + 1.7);
+    };
+
+    const rows: InspectionScheduleRow[] = [];
+
+    inspectionSchedule.forEach((section) => {
+      let sectionOutcome = 'N/A';
+      if (section.section in inspData) {
+        const secData = inspData[section.section];
+        sectionOutcome = secData?.outcome || '';
+      }
+
+      rows.push({
+        kind: 'section',
+        section: section.section,
+        title: section.title,
+        outcome: section.items.length === 0 ? sectionOutcome : '',
+        naturalHeight: measureSectionHeight(section.title),
+      });
+
+      section.items.forEach((item) => {
+        const itemData = inspData[item.ref] || {};
+        const comment = ss(itemData.comment || item.comment || '');
+        const outcome =
+          item.ref in inspData
+            ? itemData.outcome || ''
+            : item.outcome || (item.desc ? '\u2713' : 'N/A');
+
+        rows.push({
+          kind: 'item',
+          ref: item.ref,
+          desc: item.desc || 'N/A',
+          comment,
+          outcome,
+          naturalHeight: measureItemHeight(item.desc || 'N/A', comment),
+        });
+      });
+    });
+
+    const reserveLegendHeight = getInspectionLegendHeight() + 4;
+    const getPageAvailableHeight = (pageNumber: 13 | 14) => {
+      let probeY = y;
+      const savedY = y;
+      y = probeY;
+      currentPageSections = [String(pageNumber)];
+      sectionHeader(String(pageNumber), scheduleTitle);
+      drawTableHeader();
+      const tableStartY = y;
+      y = savedY;
+      return (pageNumber === 14 ? maxContentY - reserveLegendHeight : maxContentY) - tableStartY;
+    };
+
+    const firstPageAvailable = getPageAvailableHeight(13);
+    const secondPageAvailable = getPageAvailableHeight(14);
+    const totalNaturalHeight = rows.reduce((sum, row) => sum + row.naturalHeight, 0);
+    const firstPageTarget = totalNaturalHeight * (firstPageAvailable / (firstPageAvailable + secondPageAvailable));
+
+    let splitIndex = 1;
+    let accumulatedHeight = 0;
+    for (let i = 0; i < rows.length - 1; i++) {
+      accumulatedHeight += rows[i].naturalHeight;
+      splitIndex = i + 1;
+      if (accumulatedHeight >= firstPageTarget) {
+        break;
+      }
+    }
+
+    const pageRows: [InspectionScheduleRow[], InspectionScheduleRow[]] = [
+      rows.slice(0, splitIndex),
+      rows.slice(splitIndex),
+    ];
+
+    const startInspectionPage = (pageNumber: 13 | 14) => {
+      if (pageNumber === 14) {
+        newPage();
+      }
+      currentPageSections = [String(pageNumber)];
+      sectionHeader(String(pageNumber), scheduleTitle);
+      drawTableHeader();
+    };
+
+    const drawInspectionRow = (
+      row: InspectionScheduleRow,
+      rowH: number,
+      rowIndexOnPage: number,
+    ) => {
+      if (row.kind === 'section') {
+        pdf.setFontSize(sectionFontSize);
+        pdf.setFont('helvetica', 'bold');
+        const titleLines = pdf.splitTextToSize(row.title, descW - 2);
+
+        filledRect(margin, y, W, rowH, light);
+        borderedRect(margin, y, W, rowH);
+
+        text(row.section, margin + 2, y + rowH / 2 + 0.7);
+
+        const titleBlockHeight = titleLines.length * lineHeight;
+        const titleStartY = y + (rowH - titleBlockHeight) / 2 + 1.2;
+        titleLines.forEach((line: string, i: number) => {
+          text(line, margin + refW + 2, titleStartY + i * lineHeight);
+        });
+
+        if (row.outcome) {
+          pdf.setFont('helvetica', 'normal');
+          text(row.outcome, margin + W - outcomeW / 2, y + rowH / 2 + 0.7, { align: 'center' });
+        }
+
+        y += rowH;
+        return;
+      }
+
+      pdf.setFontSize(itemFontSize);
+      pdf.setFont('helvetica', 'normal');
+      const descLines = pdf.splitTextToSize(row.desc, descW - 3);
+      const commentLines = row.comment ? pdf.splitTextToSize(row.comment, commentW - 3) : [''];
+
+      if (rowIndexOnPage % 2 === 1) {
+        filledRect(margin, y, W, rowH, white);
+      } else {
+        filledRect(margin, y, W, rowH, [250, 250, 250]);
+      }
+      borderedRect(margin, y, W, rowH);
+      vLine(margin + refW, y, rowH);
+      vLine(margin + refW + descW, y, rowH);
+      vLine(margin + W - outcomeW, y, rowH);
+
+      text(row.ref, margin + 2, y + rowH / 2 + 0.7);
+
+      const descBlockHeight = descLines.length * lineHeight;
+      const descStartY = y + (rowH - descBlockHeight) / 2 + 1.2;
+      descLines.forEach((line: string, i: number) => {
+        text(line, margin + refW + 1.5, descStartY + i * lineHeight);
+      });
+
+      const commentBlockHeight = commentLines.length * lineHeight;
+      const commentStartY = y + (rowH - commentBlockHeight) / 2 + 1.2;
+      commentLines.forEach((line: string, i: number) => {
+        text(line, margin + refW + descW + 1.5, commentStartY + i * lineHeight);
+      });
+
+      if (row.outcome === '✓' || row.outcome === '\u2713' || row.outcome === 'TICK') {
+        pdf.setFont('ZapfDingbats', 'normal');
+        text('4', margin + W - outcomeW / 2, y + rowH / 2 + 0.7, { align: 'center' });
+        pdf.setFont('helvetica', 'normal');
+      } else {
+        pdf.setFont('helvetica', 'bold');
+        text(row.outcome, margin + W - outcomeW / 2, y + rowH / 2 + 0.7, { align: 'center' });
+        pdf.setFont('helvetica', 'normal');
+      }
+
+      y += rowH;
+    };
+
+    ([13, 14] as const).forEach((pageNumber, pageIdx) => {
+      startInspectionPage(pageNumber);
+
+      const rowsForPage = pageRows[pageIdx];
+      const availableHeight = pageNumber === 14 ? secondPageAvailable : firstPageAvailable;
+      const pageNaturalHeight = rowsForPage.reduce((sum, row) => sum + row.naturalHeight, 0) || 1;
+      const heightScale = availableHeight / pageNaturalHeight;
+      let consumedHeight = 0;
+
+      rowsForPage.forEach((row, index) => {
+        const remainingHeight = availableHeight - consumedHeight;
+        const isLastRow = index === rowsForPage.length - 1;
+        const rowH = isLastRow ? remainingHeight : row.naturalHeight * heightScale;
+        drawInspectionRow(row, rowH, index);
+        consumedHeight += rowH;
+      });
+
+      if (pageNumber === 14) {
+        addOutcomesLegend();
+      }
+    });
+  };
+
   renderInspectionSchedule();
   addPageFooter();
 
@@ -2780,14 +3225,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     pdf.setTextColor(100, 100, 100);
     text('This form is based on the model shown in Appendix 6 of BS 7671:2018.', margin, footerY);
     pdf.setFont('helvetica', 'normal');
-    text(`Ref: ${ss(certificate.certificateNumber)}`, margin, footerY + 4);
     text(`Page: ${currentPage} of ${totalPages}`, lsPageW / 2, footerY + 4, { align: 'center' });
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(brandRed[0], brandRed[1], brandRed[2]);
-    text(companyName, lsPageW - margin, footerY, { align: 'right' });
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(6);
-    text(companyEmail, lsPageW - margin, footerY + 4, { align: 'right' });
     pdf.setTextColor(0, 0, 0);
   };
 
@@ -2824,7 +3262,41 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   y += 8;
 
   // ── Circuit test results table ──
-  const circuits = Array.isArray(circuitRows) ? circuitRows : [];
+  const hasMeaningfulCircuitData = (circuit: Record<string, any>) => {
+    const fieldsToCheck = [
+      'designation',
+      'wiringType',
+      'refMethod',
+      'numPoints',
+      'liveCsa',
+      'cpcCsa',
+      'maxDiscTime',
+      'bsen',
+      'deviceType',
+      'rating',
+      'capacity',
+      'rcdRating',
+      'maxZs',
+      'r1Line',
+      'rnNeutral',
+      'r2Cpc',
+      'r1r2',
+      'r2',
+      'insResLL',
+      'insResLE',
+      'testVoltage',
+      'polarity',
+      'measuredZs',
+      'discTime',
+      'rcdTestButton',
+      'afddTestButton',
+      'ringFinal',
+    ];
+
+    return fieldsToCheck.some((field) => ss(circuit?.[field]).trim() !== '');
+  };
+
+  const circuits = (Array.isArray(circuitRows) ? circuitRows : []).filter(hasMeaningfulCircuitData);
 
   // Column definitions matching BS 7671 Appendix 6 model form (NICEIC layout)
   // group    = tier-1 merged header label
@@ -2840,7 +3312,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     { label: 'cpc\n(mm\u00B2)',                          w: 7,  group: 'Circuit conductors: csa',     subgroup: '', rotate: true },
     { label: 'Max disc.\ntime (s)',                       w: 7,  group: '',                            subgroup: '', rotate: true },
     { label: 'BS(EN)',                                   w: 10, group: 'Overcurrent protective devices', subgroup: '', rotate: true },
-    { label: 'Type\nNo',                                 w: 7,  group: 'Overcurrent protective devices', subgroup: '', rotate: true },
+    { label: 'Type\nNo',                                 w: 14, group: 'Overcurrent protective devices', subgroup: '', rotate: true },
     { label: 'Rating\n(A)',                              w: 7,  group: 'Overcurrent protective devices', subgroup: '', rotate: true },
     { label: 'Cap.\n(kA)',                               w: 7,  group: 'Overcurrent protective devices', subgroup: '', rotate: true },
     { label: 'Operating\ncurrent\nI\u0394n (mA)',        w: 7,  group: 'RCD',                         subgroup: '', rotate: true },
@@ -2853,7 +3325,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     { label: 'Live-Live\nM\u03A9',                      w: 9,  group: 'Insulation resistance',       subgroup: '', rotate: true },
     { label: 'Live-Earth\nM\u03A9',                     w: 9,  group: 'Insulation resistance',       subgroup: '', rotate: true },
     { label: 'Test\nvoltage (V)',                        w: 7,  group: 'Insulation resistance',       subgroup: '', rotate: true },
-    { label: 'Polarity',                                 w: 6,  group: '',                            subgroup: '' },
+    { label: 'Polarity',                                 w: 7,  group: '',                            subgroup: '', rotate: true },
     { label: 'Max Zs\nmeasured\n\u03A9',                 w: 9,  group: '',                            subgroup: '', rotate: true },
     { label: 'Disc.\ntime (ms)',                         w: 8,  group: 'RCD',                         subgroup: '', rotate: true },
     { label: 'Test btn',                        w: 7,  group: 'RCD',                         subgroup: '', rotate: true },
@@ -2880,9 +3352,9 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   //   tier 2: sub-group labels (Ring final circuits only | All circuits) – only for Circuit impedances
   //   tier 3: individual rotated column labels
   const drawTableHeader = (atY: number) => {
-    const t1H = 4.5;   // tier-1 height (group labels)
-    const t2H = 5;     // tier-2 height (sub-group labels)
-    const t3H = 18;    // tier-3 height (individual labels, rotated)
+    const t1H = 6.5;   // tier-1 height (group labels)
+    const t2H = 7;     // tier-2 height (sub-group labels)
+    const t3H = 31;    // tier-3 height (individual labels, rotated)
     const totalHeaderH = t1H + t2H + t3H;
 
     // ── Background ──
@@ -2928,38 +3400,34 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     });
 
     // ── Tier-1: group labels ──
-    pdf.setFontSize(4.6);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0, 0, 0);
-    pdf.setCharSpace(0.1);
-    t1Groups.forEach((g) => {
-      const spanW = g.x2 - g.x1;
-      const lines = pdf.splitTextToSize(g.label, spanW - 1.5);
-      const blockH = lines.length * 2.3;
-      const startY = atY + (t1H - blockH) / 2 + 2;
-      lines.forEach((line: string, i: number) => {
-        text(line, g.x1 + spanW / 2, startY + i * 2.3, { align: 'center' });
-      });
-    });
-    pdf.setCharSpace(0);
-
-    // ── Tier-2: sub-group labels ──
     pdf.setFontSize(4.1);
     pdf.setFont('helvetica', 'bold');
-    pdf.setCharSpace(0.1);
-    t2Groups.forEach((g) => {
+    pdf.setTextColor(0, 0, 0);
+    t1Groups.forEach((g) => {
       const spanW = g.x2 - g.x1;
-      const lines = pdf.splitTextToSize(g.label, spanW - 1.5);
-      const blockH = lines.length * 2.1;
-      const startY = atY + t1H + (t2H - blockH) / 2 + 2;
+      const lines = pdf.splitTextToSize(g.label, spanW - 2);
+      const blockH = lines.length * 2;
+      const startY = atY + (t1H - blockH) / 2 + 1.9;
       lines.forEach((line: string, i: number) => {
-        text(line, g.x1 + spanW / 2, startY + i * 2.1, { align: 'center' });
+        text(line, g.x1 + spanW / 2, startY + i * 2, { align: 'center' });
       });
     });
-    pdf.setCharSpace(0);
+
+    // ── Tier-2: sub-group labels ──
+    pdf.setFontSize(3.7);
+    pdf.setFont('helvetica', 'bold');
+    t2Groups.forEach((g) => {
+      const spanW = g.x2 - g.x1;
+      const lines = pdf.splitTextToSize(g.label, spanW - 2);
+      const blockH = lines.length * 1.9;
+      const startY = atY + t1H + (t2H - blockH) / 2 + 1.8;
+      lines.forEach((line: string, i: number) => {
+        text(line, g.x1 + spanW / 2, startY + i * 1.9, { align: 'center' });
+      });
+    });
 
     // ── Tier-3: individual column labels + vertical dividers ──
-    pdf.setFontSize(4.5);
+    pdf.setFontSize(4.3);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0, 0, 0);
 
@@ -2982,11 +3450,11 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       pdf.setFont('helvetica', 'bold');
       if (!c.rotate) {
         // Ungrouped horizontal columns: label centered in full header height
-        const lines = pdf.splitTextToSize(c.label, cp.w - 1.5);
-        const blockH = lines.length * 2.3;
-        const startY = atY + (totalHeaderH - blockH) / 2 + 2;
+        const lines = pdf.splitTextToSize(c.label, cp.w - 2);
+        const blockH = lines.length * 2.05;
+        const startY = atY + (totalHeaderH - blockH) / 2 + 1.7;
         lines.forEach((line: string, li: number) => {
-          text(line, cp.x + cp.w / 2, startY + li * 2.3, { align: 'center' });
+          text(line, cp.x + cp.w / 2, startY + li * 2.05, { align: 'center' });
         });
       } else {
         // Rotated 90° – each \n-delimited segment is a separate visual "row"
@@ -2994,17 +3462,19 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
         // lineSpacing is capped so all rows always fit within cp.w.
         const labelLines = c.label.split('\n');
         const numLines = labelLines.length;
-        const charHeightMm = 4.5 * 0.352778; // ~1.59mm at 4.5pt
+        const rotatedFontSize = 5.3;
+        pdf.setFontSize(rotatedFontSize);
+        const charHeightMm = rotatedFontSize * 0.352778;
         const lineSpacing = numLines <= 1
           ? 0
-          : Math.min(2.4, (cp.w - charHeightMm - 0.5) / (numLines - 1));
+          : Math.min(2.7, (cp.w - charHeightMm - 0.4) / (numLines - 1));
         const totalBlockW = (numLines - 1) * lineSpacing + charHeightMm;
         const firstLineX = cp.x + (cp.w - totalBlockW) / 2 + charHeightMm / 2;
 
         labelLines.forEach((line, lineIdx) => {
           const lineX = firstLineX + lineIdx * lineSpacing;
           // Start at the bottom of the header and render upward
-          let curY = atY + totalHeaderH - 1.5;
+          let curY = atY + totalHeaderH - 0.8;
 
           // Handle Δ/Ω special characters requiring font switching
           const parts = line.split(/([ΔΩ])/);
@@ -3041,73 +3511,56 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   const headerH = drawTableHeader(y);
   y += headerH;
+  const firstPageTableStartY = y;
 
-  // ── Draw one data row as a fully-gridded table row ──
-
-const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boolean) => {
-    // Alternating row background
+  // Draw one compact single-line circuit row.
+  const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boolean) => {
     if (isAlt) {
       filledRect(margin, rowY, lsW, rowH, light);
     }
 
-    // Outer row border
     pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
     pdf.setLineWidth(0.3);
     pdf.rect(margin, rowY, lsW, rowH);
 
-    // Cell text and vertical dividers
     pdf.setFontSize(5);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(0, 0, 0);
 
-    // Extract deviceType (col 9), rating (col 10), measuredZs (col 24)
     const deviceType = values[9]?.trim() || '';
     const rating = values[10]?.trim().replace(/A/i, '') || '';
     const measuredZsRaw = values[23]?.trim() || '';
     const maxZsComputed = calculateMaxZs(deviceType, rating);
-    const measuredZsNum = parseFloat(measuredZsRaw.replace(/[ΩΩ]|ohms/i, '')) || 0;
-    const maxZsNum = parseFloat(maxZsComputed.replace(/Ω|ohms/i, '')) || Infinity;
+    const measuredZsNum = parseFloat(measuredZsRaw.replace(/[Ω]|ohms/gi, '')) || 0;
+    const maxZsNum = parseFloat(maxZsComputed.replace(/Ω|ohms/gi, '')) || Infinity;
     const zsPass = measuredZsNum > 0 && measuredZsNum <= maxZsNum;
 
     values.forEach((val, ci) => {
       const cp = colPositions[ci];
 
-      // Vertical cell border
       if (ci > 0) {
         pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
         pdf.setLineWidth(0.2);
         pdf.line(cp.x, rowY, cp.x, rowY + rowH);
       }
 
-      let cellColor: [number,number,number] | null = null;
-
-      // ZS FAIL highlighting: measuredZs column (23) — only highlight if it exceeds the limit
-      if (ci === 23 && measuredZsRaw && !zsPass) {
-        cellColor = red;
-      }
-
-      // Background fill for ZS cell
-      if (cellColor) {
-        filledRect(cp.x + 0.5, rowY + 0.5, cp.w - 1, rowH - 1, cellColor);
-        pdf.setTextColor(255, 255, 255);  // white text on colored bg
+      const highlightMeasuredZs = ci === 23 && measuredZsRaw && !zsPass;
+      if (highlightMeasuredZs) {
+        filledRect(cp.x + 0.5, rowY + 0.5, cp.w - 1, rowH - 1, red);
+        pdf.setTextColor(255, 255, 255);
         pdf.setFont('helvetica', 'bold');
       } else {
         pdf.setTextColor(0, 0, 0);
         pdf.setFont('helvetica', 'normal');
       }
 
-      // Cell text - center-align numeric values, left-align text
-      const isText = ci === 1; // designation column
-      if (isText) {
-        // Left-align designation (may be long)
-        const truncated = val.length > 18 ? val.substring(0, 17) + '\u2026' : val;
-        text(truncated, cp.x + 1.5, rowY + rowH / 2 + 1.2);
+      if (ci === 1) {
+        const truncated = val.length > 18 ? `${val.substring(0, 17)}…` : val;
+        text(truncated, cp.x + 1.5, rowY + rowH / 2 + 0.9);
       } else {
-        // Center-align all other values
-        text(ss(val), cp.x + cp.w / 2, rowY + rowH / 2 + 1.2, { align: 'center' });
+        text(ss(val), cp.x + cp.w / 2, rowY + rowH / 2 + 0.9, { align: 'center' });
       }
 
-      // Restore normal styling after ZS cell
       pdf.setTextColor(0, 0, 0);
       pdf.setFont('helvetica', 'normal');
     });
@@ -3115,9 +3568,23 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
     pdf.setDrawColor(0, 0, 0);
   };
 
-  // ── Render data rows ──
-  const dataRowH = 6;
-  const minRows = 15; // Show at least 15 rows (empty ones if no data) like the original
+  // Render data rows.
+  const dataRowH = 4.5;
+  const getLandscapeRowsPerPage = (tableStartY: number) =>
+    Math.max(1, Math.floor((lsMaxY - tableStartY) / dataRowH));
+
+  const singleLine = (value: unknown): string => ss(value).replace(/\s+/g, ' ').trim();
+
+  const normalizePdfBooleanMark = (value: unknown): string => {
+    const normalized = singleLine(value).toLowerCase();
+
+    if (!normalized) return '';
+    if (normalized === '✓' || normalized === 'yes' || normalized === 'ok' || normalized === 'pass' || normalized === 'present' || normalized === 'true') return 'Yes';
+    if (normalized === '✗' || normalized === 'no' || normalized === 'fail' || normalized === 'absent' || normalized === 'false') return 'No';
+    if (normalized === 'n/a' || normalized === 'na') return 'N/A';
+
+    return singleLine(value);
+  };
 
   const getWiringCode = (typeStr: string): string => {
     if (!typeStr) return '';
@@ -3131,43 +3598,44 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
     if ((s.includes('thermoplastic') || s.includes('pvc')) && (s.includes('nonmetallic conduit') || s.includes('non-metallic conduit'))) return 'C';
     if ((s.includes('thermoplastic') || s.includes('pvc')) && s.includes('metallic conduit')) return 'B';
     if (s.includes('thermoplastic') || s.includes('pvc') || s.includes('twin') || s.includes('t&e')) return 'A';
-    return String(typeStr).charAt(0).toUpperCase(); // Best effort if not matched exactly
+    return String(typeStr).charAt(0).toUpperCase();
   };
 
   const circuitValues = (circuit: Record<string, any>, idx: number): string[] => [
-    ss(circuit.circuitNumber) || String(idx + 1),
-    ss(circuit.designation) || '',
-    getWiringCode(ss(circuit.wiringType)),
-    ss(circuit.refMethod) || '',
-    ss(circuit.numPoints) || '',
-    ss(circuit.liveCsa) || '',
-    ss(circuit.cpcCsa) || '',
-    ss(circuit.maxDiscTime) || '',
-    ss(circuit.bsen) || '',
-    ss(circuit.deviceType) || '',
-    ss(circuit.rating) || '',
-    ss(circuit.capacity) || '',
-    ss(circuit.rcdRating) || '',
-    ss(circuit.maxZs) || '',
-    ss(circuit.r1Line) || '',            // ring final circuits only: r1 (Line)
-    ss(circuit.rnNeutral) || '',         // ring final circuits only: rn (Neutral)
-    ss(circuit.r2Cpc) || '',             // ring final circuits only: r2 (cpc)
-    ss(circuit.r1r2) || '',              // all circuits: R1+R2
-    ss(circuit.r2) || '',                // all circuits: R2
-    ss(circuit.insResLL) || '',
-    ss(circuit.insResLE) || '',
-    ss(circuit.testVoltage) || '',
-    ss(circuit.polarity) || '',
-    ss(circuit.measuredZs) || '',
-    ss(circuit.discTime) || '',
-    ss(circuit.rcdTestButton) || '',
-    ss(circuit.afddTestButton) || '',    // AFDD test button
+    singleLine(circuit.circuitNumber) || String(idx + 1),
+    singleLine(circuit.designation) || '',
+    getWiringCode(singleLine(circuit.wiringType)),
+    singleLine(circuit.refMethod) || '',
+    singleLine(circuit.numPoints) || '',
+    singleLine(circuit.liveCsa) || '',
+    singleLine(circuit.cpcCsa) || '',
+    singleLine(circuit.maxDiscTime) || '',
+    singleLine(circuit.bsen) || '',
+    singleLine(circuit.deviceType) || '',
+    singleLine(circuit.rating) || '',
+    singleLine(circuit.capacity) || '',
+    singleLine(circuit.rcdRating) || '',
+    singleLine(circuit.maxZs) || '',
+    singleLine(circuit.r1Line) || '',
+    singleLine(circuit.rnNeutral) || '',
+    singleLine(circuit.r2Cpc) || '',
+    singleLine(circuit.r1r2) || '',
+    singleLine(circuit.r2) || '',
+    singleLine(circuit.insResLL) || '',
+    singleLine(circuit.insResLE) || '',
+    singleLine(circuit.testVoltage) || '',
+    normalizePdfBooleanMark(circuit.polarity) || '',
+    singleLine(circuit.measuredZs) || '',
+    singleLine(circuit.discTime) || '',
+    normalizePdfBooleanMark(circuit.rcdTestButton) || '',
+    normalizePdfBooleanMark(circuit.afddTestButton) || '',
   ];
 
-  const totalRows = Math.max(circuits.length, minRows);
-  for (let i = 0; i < totalRows; i++) {
-    // Check page overflow
-    if (y + dataRowH > lsMaxY) {
+  const rowsPerPage = getLandscapeRowsPerPage(firstPageTableStartY);
+  const totalPagesOfRows = Math.max(1, Math.ceil(circuits.length / rowsPerPage));
+
+  for (let pageIndex = 0; pageIndex < totalPagesOfRows; pageIndex++) {
+    if (pageIndex > 0) {
       addLandscapeFooter();
       pdf.addPage('a4', 'l');
       currentPage++;
@@ -3176,16 +3644,23 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
       y += hh;
     }
 
-    if (i < circuits.length) {
-      const vals = circuitValues(circuits[i], i);
-      drawCircuitRow(y, dataRowH, vals, i % 2 === 1);
-    } else {
-      // Empty row with grid
-      const emptyVals = Array(cols.length).fill('');
-      emptyVals[0] = String(i + 1); // row number
-      drawCircuitRow(y, dataRowH, emptyVals, i % 2 === 1);
+    const pageStartRowIndex = pageIndex * rowsPerPage;
+    const pageCircuitSlice = circuits.slice(pageStartRowIndex, pageStartRowIndex + rowsPerPage);
+
+    for (let rowIndexOnPage = 0; rowIndexOnPage < rowsPerPage; rowIndexOnPage++) {
+      const globalRowIndex = pageStartRowIndex + rowIndexOnPage;
+      const circuit = pageCircuitSlice[rowIndexOnPage];
+
+      if (circuit) {
+        drawCircuitRow(y, dataRowH, circuitValues(circuit, globalRowIndex), globalRowIndex % 2 === 1);
+      } else {
+        const emptyVals = Array(cols.length).fill('');
+        emptyVals[0] = String(globalRowIndex + 1);
+        drawCircuitRow(y, dataRowH, emptyVals, globalRowIndex % 2 === 1);
+      }
+
+      y += dataRowH;
     }
-    y += dataRowH;
   }
 
   y += 2;
@@ -3232,7 +3707,7 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
   pdf.addPage('a4', 'p'); // explicit portrait after landscape page
   currentPage++;
   y = margin;
-  currentPageSections = []; // guidance page is an appendix – no section tabs, no page counter
+  currentPageSections = []; // guidance page is an appendix – no page counter
 
   // Title
   filledRect(margin, y, W, 10, brandRed);
@@ -3282,5 +3757,6 @@ const drawCircuitRow = (rowY: number, rowH: number, values: string[], isAlt: boo
 
   addPageFooter(false); // guidance page is an appendix – no page numbering
 
+  finalizeCertificatePdf(pdf, certificate);
   return new Uint8Array(pdf.output('arraybuffer'));
 }

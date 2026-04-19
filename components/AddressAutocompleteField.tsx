@@ -110,6 +110,7 @@ export function AddressAutocompleteField({
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [shouldSuggest, setShouldSuggest] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const query = useMemo(() => composeAddress(parts).trim(), [parts]);
@@ -123,17 +124,23 @@ export function AddressAutocompleteField({
     }
   }, [value]);
 
-  const updateParts = (next: Partial<AddressParts>) => {
+  const updateParts = (
+    next: Partial<AddressParts>,
+    options?: { shouldTriggerSuggestions?: boolean },
+  ) => {
     const updated = {
       ...parts,
       ...next,
     };
     setParts(updated);
+    if (options?.shouldTriggerSuggestions ?? true) {
+      setShouldSuggest(true);
+    }
     onChange(composeAddress(updated));
   };
 
   useEffect(() => {
-    if (query.length < minQueryLength) {
+    if (!shouldSuggest || query.length < minQueryLength) {
       setSuggestions([]);
       setIsOpen(false);
       return;
@@ -181,7 +188,7 @@ export function AddressAutocompleteField({
     return () => {
       clearTimeout(timeout);
     };
-  }, [query, countryCodes, minQueryLength]);
+  }, [query, countryCodes, minQueryLength, shouldSuggest]);
 
   const baseFieldClass = cn(
     'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
@@ -194,6 +201,7 @@ export function AddressAutocompleteField({
   const handlePick = (result: NominatimResult) => {
     const next = resultToParts(result, parts.line1);
     setParts(next);
+    setShouldSuggest(false);
     onChange(composeAddress(next));
     setIsOpen(false);
   };

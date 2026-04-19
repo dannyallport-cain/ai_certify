@@ -216,8 +216,8 @@ function CodeButton({
 // --------------------------------------------------------------------------
 function OutcomesLegend() {
   return (
-    <div className="flex flex-wrap gap-2 mt-3 p-2 rounded border border-gray-200 bg-gray-50 text-xs">
-      <span className="font-semibold text-gray-600 mr-1">Outcomes:</span>
+    <div className="flex flex-wrap gap-2 text-xs">
+      <span className="mr-1 font-semibold text-gray-600">Outcome codes:</span>
       {(Object.entries(CODE_CONFIG) as [InspCode, typeof CODE_CONFIG[InspCode]][])
         .filter(([k]) => k !== '')
         .map(([code, cfg]) => (
@@ -284,17 +284,20 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
   };
 
   return (
-    <div className="space-y-3">
+    <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
       {/* Column header */}
-      <div className="grid grid-cols-[3rem_1fr_8rem_5rem] gap-x-2 px-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-        <span>Item</span>
-        <span>Description</span>
-        <span className="text-center">Comments</span>
-        <span className="text-center">Outcome</span>
+      <div className="border-b border-gray-200 bg-gray-50 px-3 py-2">
+        <div className="grid grid-cols-[3rem_1fr_8rem_5rem] gap-x-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <span>Item</span>
+          <span>Description</span>
+          <span className="text-center">Comments</span>
+          <span className="text-center">Outcome</span>
+        </div>
       </div>
 
-      {SCHEDULE_GROUPS.map((group) => (
-        <div key={group.section} className="border border-gray-200 rounded-md overflow-hidden">
+      <div className="space-y-3 p-3">
+        {SCHEDULE_GROUPS.map((group) => (
+          <div key={group.section} className="overflow-hidden rounded-md border border-gray-200">
           {/* Group heading */}
           <div className="bg-blue-50 border-b border-blue-200 px-3 py-1.5 flex items-start gap-2">
             <div className="min-w-0">
@@ -383,7 +386,10 @@ export function InspectionScheduleSection({ value, onCodeChange, onCommentChange
         </div>
       ))}
 
-      <OutcomesLegend />
+        <div className="border-t border-gray-200 pt-3">
+          <OutcomesLegend />
+        </div>
+      </div>
     </div>
   );
 }
