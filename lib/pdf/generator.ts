@@ -2485,12 +2485,13 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
         });
 
         // Outcome - use tick mark for acceptable
-        pdf.setFont('times', 'bold');
-        let outcomeDisplay = outcome;
         if (outcome === '✓' || outcome === '\u2713' || outcome === 'TICK') {
-          outcomeDisplay = '\u2713';  // Use Unicode check mark
+          pdf.setFont('ZapfDingbats');
+          text('4', margin + W - outcomeW / 2, y + rowH / 2 + 0.9, { align: 'center' });
+        } else {
+          pdf.setFont('helvetica', 'bold');
+          text(outcome, margin + W - outcomeW / 2, y + rowH / 2 + 0.9, { align: 'center' });
         }
-        text(outcomeDisplay, margin + W - outcomeW / 2, y + rowH / 2 + 0.9, { align: 'center' });
         pdf.setFont('helvetica', 'normal');
 
         y += rowH;

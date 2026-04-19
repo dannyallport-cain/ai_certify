@@ -1028,14 +1028,13 @@ function getMeasuredZsValidation(
     expectedCircuitResistance = (r1 + r2) / 4;
 
     if (mode === 'equal-r1-r2') {
-      tolerance = 8;
+      tolerance = 25;
     } else {
       if (rn === null) {
         return null;
       }
 
-      const rnBalancedWithR1 = areNearlyEqual(r1, rn, 10);
-      tolerance = rnBalancedWithR1 ? 12 : 10;
+      tolerance = 25;
     }
   }
 
@@ -1171,7 +1170,7 @@ function getR1R2ValidationState(
     const delta = r1r2 - expected;
     const percent = expected === 0 ? 0 : Math.abs(delta / expected) * 100;
     const direction = delta === 0 ? 'matches' : delta > 0 ? 'above' : 'below';
-    const tolerance = areNearlyEqual(r1, rn, 10) ? 12 : 10;
+    const tolerance = 25;
     const toleranceText = percent <= tolerance ? `Within ${tolerance}% tolerance` : `Outside ${tolerance}% tolerance`;
 
     return {
@@ -1189,7 +1188,7 @@ function getR1R2ValidationState(
     const delta = r1r2 - expected;
     const percent = expected === 0 ? 0 : Math.abs(delta / expected) * 100;
     const direction = delta === 0 ? 'matches' : delta > 0 ? 'above' : 'below';
-    const tolerance = 8;
+    const tolerance = 25;
     const toleranceText = percent <= tolerance ? `Within ${tolerance}% tolerance` : `Outside ${tolerance}% tolerance`;
 
     return {
@@ -1753,6 +1752,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       return;
     }
 
+    const editId = searchParams.get('editId');
+    if (editId) {
+      return;
+    }
+
     const draftStorageKey = buildEicrDraftStorageKey(currentUser);
     const savedDraft = readEicrDraftState(draftStorageKey);
 
@@ -1806,7 +1810,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
 
     lastSavedDraftKeyRef.current = draftStorageKey;
     hasHydratedDraftRef.current = true;
-  }, [currentUser]);
+  }, [currentUser, searchParams]);
 
   // Load certificate from database if editId is provided
   useEffect(() => {
@@ -1827,18 +1831,50 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         const certificateData = await response.json();
         const formData = certificateData.formData || {};
 
-        // Apply form values from the certificate
-        requestAnimationFrame(() => {
-          applyEicrFormValues(formRef.current, formData as Record<string, string>);
-        });
+        const getFormValue = (key: string) => {
+          const value = formData[key];
+          return value === undefined || value === null ? undefined : String(value);
+        };
 
-        // Set state from certificate data
+        const setIfPresent = (key: string, setter: (value: string) => void) => {
+          const value = getFormValue(key);
+          if (value !== undefined) {
+            setter(value);
+          }
+        };
+
+        // Set state from known controlled form fields first
+        if (certificateData.customer?.id) {
+          setSelectedCustomer(String(certificateData.customer.id));
+        } else if (getFormValue('customerId')) {
+          setSelectedCustomer(getFormValue('customerId')!);
+        }
+
+        setSelectedCustomerName(
+          certificateData.customer?.name || getFormValue('customerName') || '',
+        );
+
         if (certificateData.certificateNumber) setCertificateNumber(certificateData.certificateNumber);
         if (certificateData.siteName) setSiteName(certificateData.siteName);
         if (certificateData.siteAddress) setClientAddress(certificateData.siteAddress);
+        setInstallationAddress(getFormValue('installationAddress') || '');
         if (certificateData.inspectionDate) setInspectionDate(certificateData.inspectionDate);
         if (certificateData.nextInspectionDate) setNextInspectionDate(certificateData.nextInspectionDate);
-        if (certificateData.inspectorName) setInspectorName(certificateData.inspectorName);
+        setIfPresent('overallAssessment', setOverallAssessment);
+        setIfPresent('instrumentMultiFunction', setInstrumentMultiFunction);
+        setIfPresent('earthingArrangements', setEarthingArrangement);
+        setIfPresent('meansOfEarthing', setMeansOfEarthing);
+        setIfPresent('supplyConductorCSA', setSupplyConductorCSA);
+        setIfPresent('supplyConductorCSACustom', setSupplyConductorCSACustom);
+        setIfPresent('natureOfSupply', setNatureOfSupply);
+        setIfPresent('externalEarthFaultLoopImpedance', setExternalEarthFaultLoopImpedance);
+        setIfPresent('inspectorName', setInspectorName);
+        setIfPresent('inspectorPosition', setInspectorPosition);
+
+        // Apply generic form values for uncontrolled fields
+        requestAnimationFrame(() => {
+          applyEicrFormValues(formRef.current, formData as Record<string, string>);
+        });
 
         // Load inspection schedule if present
         if (formData.inspectionSchedule) {
