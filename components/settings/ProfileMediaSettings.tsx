@@ -58,7 +58,6 @@ export default function ProfileMediaSettings() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const captureCompletedRef = React.useRef(false);
-  const capturePollCountRef = React.useRef(0);
   const { data: user } = useSWR<User>('/api/user', fetcher, {
     refreshInterval: activeCapture ? 2500 : 0,
   });
@@ -98,16 +97,9 @@ export default function ProfileMediaSettings() {
   }, [activeCapture]);
 
   useEffect(() => {
-    if (!activeCapture) {
-      capturePollCountRef.current = 0;
+    if (!activeCapture || !user || captureCompletedRef.current) {
       return;
     }
-
-    if (!user) {
-      return;
-    }
-
-    capturePollCountRef.current += 1;
 
     const currentValue = getAssetValue(user, activeCapture.kind);
     const currentUpdatedAt = getAssetUpdatedAt(user, activeCapture.kind);
@@ -117,12 +109,8 @@ export default function ProfileMediaSettings() {
     const currentUpdatedAtChanged =
       currentUpdatedAt !== activeCapture.initialUpdatedAt &&
       (!!currentUpdatedAt || !!activeCapture.initialUpdatedAt);
-    const timedOutWaitingForRefresh = capturePollCountRef.current >= 4;
 
-    if (
-      !captureCompletedRef.current &&
-      (currentValueChanged || currentUpdatedAtChanged || timedOutWaitingForRefresh)
-    ) {
+    if (currentValueChanged || currentUpdatedAtChanged) {
       captureCompletedRef.current = true;
       setActiveCapture(null);
       setQrCodeDataUrl('');
@@ -135,6 +123,33 @@ export default function ProfileMediaSettings() {
       void mutate('/api/user', undefined, { revalidate: true });
     }
   }, [activeCapture, user]);
+
+  useEffect(() => {
+    if (!activeCapture || captureCompletedRef.current) {
+      return;
+    }
+
+    const expiresAt = new Date(activeCapture.expiresAt).getTime();
+
+    if (Number.isNaN(expiresAt)) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      if (captureCompletedRef.current) {
+        return;
+      }
+
+      setQrCodeDataUrl('');
+      setActiveCapture(null);
+      setSuccess(null);
+      setError('The mobile capture link expired before an upload was detected. Generate a new one and try again.');
+    }, Math.max(expiresAt - Date.now(), 0) + 1000);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [activeCapture]);
 
   const openMobileCapture = async (kind: UserAssetKind) => {
     try {
@@ -165,7 +180,6 @@ export default function ProfileMediaSettings() {
       }
 
       captureCompletedRef.current = false;
-      capturePollCountRef.current = 0;
 
       setActiveCapture({
         kind,
@@ -309,7 +323,6 @@ export default function ProfileMediaSettings() {
                 type="button"
                 onClick={() => {
                   captureCompletedRef.current = false;
-                  capturePollCountRef.current = 0;
                   setQrCodeDataUrl('');
                   setActiveCapture(null);
                 }}
