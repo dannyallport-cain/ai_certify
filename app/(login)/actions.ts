@@ -6,8 +6,10 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import {
   User,
+  type Team,
   users,
   teams,
+  teamRuntimeSafeColumns,
   teamMembers,
   activityLogs,
   type NewUser,
@@ -87,11 +89,10 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       },
-      team: teams
+      teamId: teamMembers.teamId
     })
     .from(users)
     .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
-    .leftJoin(teams, eq(teamMembers.teamId, teams.id))
     .where(eq(users.email, normalizedEmail))
     .limit(1);
 
@@ -103,7 +104,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
-  const { user: foundUser, team: foundTeam } = userWithTeam[0];
+  const { user: foundUser, teamId: foundTeamId } = userWithTeam[0];
 
   const isPasswordValid = await comparePasswords(
     password,
@@ -125,6 +126,17 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
       password: '',
       unverified: true,
     };
+  }
+
+  let foundTeam: Team | null = null;
+  if (foundTeamId !== null) {
+    const [team] = await db
+      .select(teamRuntimeSafeColumns)
+      .from(teams)
+      .where(eq(teams.id, foundTeamId))
+      .limit(1);
+
+    foundTeam = team ?? null;
   }
 
   await Promise.all([
@@ -174,7 +186,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const passwordHash = await hashPassword(password);
 
   let createdUser: typeof users.$inferSelect;
-  let createdTeam: typeof teams.$inferSelect | null = null;
+  let createdTeam: Team | null = null;
 
   try {
     const result = await db.transaction(async (tx) => {
@@ -202,9 +214,9 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         throw new Error('USER_CREATE_FAILED');
       }
 
-      let teamId: number;
-      let userRole: string;
-      let team: typeof teams.$inferSelect | null = null;
+      let teamId: number | null = null;
+      let userRole: string | null = null;
+      let team: Team | null = null;
 
       if (parsedInviteId) {
         const [invitation] = await tx
@@ -231,7 +243,11 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
           .set({ status: 'accepted' })
           .where(eq(invitations.id, invitation.id));
 
-        [team] = await tx.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+        [team] = await tx
+          .select(teamRuntimeSafeColumns)
+          .from(teams)
+          .where(eq(teams.id, teamId))
+          .limit(1);
 
         if (!team) {
           throw new Error('TEAM_NOT_FOUND');
@@ -248,7 +264,10 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
           name: `${normalizedEmail}'s Team`
         };
 
-        [team] = await tx.insert(teams).values(newTeam).returning();
+        [team] = await tx
+          .insert(teams)
+          .values(newTeam)
+          .returning(teamRuntimeSafeColumns);
 
         if (!team) {
           throw new Error('TEAM_CREATE_FAILED');
@@ -263,6 +282,10 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
           action: ActivityType.CREATE_TEAM,
           ipAddress: ''
         });
+      }
+
+      if (teamId === null || userRole === null) {
+        throw new Error('TEAM_MEMBERSHIP_CREATE_FAILED');
       }
 
       const newTeamMember: NewTeamMember = {

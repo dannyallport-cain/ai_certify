@@ -2680,7 +2680,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
         // Outcome - use tick mark for acceptable
         if (outcome === '✓' || outcome === '\u2713' || outcome === 'TICK') {
-          pdf.setFont('ZapfDingbats');
+          pdf.setFont('ZapfDingbats', 'normal');
           text('4', margin + W - outcomeW / 2, y + rowH / 2 + 0.9, { align: 'center' });
         } else {
           pdf.setFont('helvetica', 'bold');
@@ -2698,22 +2698,63 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   const addOutcomesLegend = () => {
     y += 1.5;
-    const legendText = '✓ Acceptable   C1 Danger present   C2 Potentially dangerous   C3 Improvement recommended   FI Further investigation   NV Not verified   LIM Limitation   N/A Not applicable';
-    pdf.setFontSize(5.2);
-    const legendLines = pdf.splitTextToSize(legendText, W - 26);
-    const legendH = Math.max(6.5, legendLines.length * 2.2 + 2);
-    if (y + legendH > maxContentY) {
-      return;
-    }
+
+    const legendItems = [
+      { code: '✓', label: 'Acceptable' },
+      { code: 'C1', label: 'Danger present' },
+      { code: 'C2', label: 'Potentially dangerous' },
+      { code: 'C3', label: 'Improvement recommended' },
+      { code: 'FI', label: 'Further investigation' },
+      { code: 'NV', label: 'Not verified' },
+      { code: 'LIM', label: 'Limitation' },
+      { code: 'N/A', label: 'Not applicable' },
+    ];
+
+    const padding = 2;
+    const headerH = 6;
+    const itemH = 5.5;
+    const rowGap = 1.5;
+    const colGap = 3;
+    const columns = 2;
+    const rows = Math.ceil(legendItems.length / columns);
+    const contentTop = y + headerH + padding;
+    const contentH = rows * itemH + (rows - 1) * rowGap;
+    const legendH = headerH + padding * 2 + contentH;
+
+    checkPage(legendH);
+
     filledRect(margin, y, W, legendH, light);
     borderedRect(margin, y, W, legendH);
-    pdf.setFontSize(5.2);
+
+    pdf.setFontSize(5.8);
     pdf.setFont('helvetica', 'bold');
     text('OUTCOME CODES', margin + 2, y + 4);
-    pdf.setFont('helvetica', 'normal');
-    legendLines.forEach((line: string, i: number) => {
-      text(line, margin + 24, y + 4 + i * 2.2);
+
+    const colW = (W - padding * 2 - colGap) / columns;
+    const codeBoxW = 10;
+
+    legendItems.forEach((item, index) => {
+      const col = index % columns;
+      const rowIndex = Math.floor(index / columns);
+      const itemX = margin + padding + col * (colW + colGap);
+      const itemY = contentTop + rowIndex * (itemH + rowGap);
+
+      borderedRect(itemX, itemY, codeBoxW, itemH);
+      pdf.setFontSize(5.2);
+
+      if (item.code === '✓') {
+        pdf.setFont('ZapfDingbats', 'normal');
+        text('4', itemX + codeBoxW / 2, itemY + 3.9, { align: 'center' });
+        pdf.setFont('helvetica', 'normal');
+      } else {
+        pdf.setFont('helvetica', 'bold');
+        text(item.code, itemX + codeBoxW / 2, itemY + 3.8, { align: 'center' });
+      }
+
+      pdf.setFont('helvetica', 'normal');
+      text(item.label, itemX + codeBoxW + 2, itemY + 3.8);
     });
+
     y += legendH;
   };
 

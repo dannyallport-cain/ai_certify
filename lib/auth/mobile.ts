@@ -1,7 +1,7 @@
 import { jwtVerify, SignJWT } from 'jose';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
-import { users, teamMembers, teams } from '@/lib/db/schema';
+import { users, teamMembers, teams, teamRuntimeSafeColumns } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 
 const key = new TextEncoder().encode(process.env.AUTH_SECRET);
@@ -57,7 +57,7 @@ export async function getMobileUser(request: NextRequest) {
   if (!result[0]) return null;
 
   const teamResult = await db
-    .select()
+    .select(teamRuntimeSafeColumns)
     .from(teams)
     .where(eq(teams.id, result[0].teamId!))
     .limit(1);
