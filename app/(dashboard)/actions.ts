@@ -100,6 +100,26 @@ const createCertificateSchema = z.object({
   formData: z.record(z.any()).optional()
 });
 
+function generateCertificateNumber(certificateType: string) {
+  const date = new Date();
+  const year = date.getFullYear();
+  const yearShort = String(year).slice(-2);
+  const yearFirst = yearShort.charAt(0);
+  const yearLast = yearShort.charAt(1);
+
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date.getTime() - start.getTime();
+  const oneDay = 1000 * 60 * 60 * 24;
+  const dayOfYear = Math.floor(diff / oneDay);
+
+  const certTypeLetter = certificateType.charAt(0).toUpperCase();
+  const certTypeNumber = Math.floor(Math.random() * 9) + 1;
+  const twoRand = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+  const randNum = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+
+  return `${certTypeLetter}${certTypeNumber}${String(dayOfYear).padStart(3, '0')}${yearFirst}${twoRand}${yearLast}${randNum}`;
+}
+
 export const createCertificate = validatedActionWithUser(
   createCertificateSchema,
   async (data, formData, user) => {
@@ -217,6 +237,83 @@ export const createCertificate = validatedActionWithUser(
     redirect(`/certificates/${certificate.id}`);
   }
 );
+
+const duplicateCertificateSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+export async function duplicateCertificate(formData: FormData) {
+  const user = await getUser();
+  if (!user) {
+    redirect('/sign-in');
+  }
+
+  const parsed = duplicateCertificateSchema.safeParse({
+    id: formData.get('id'),
+  });
+
+  if (!parsed.success) {
+    throw new Error(parsed.error.errors[0]?.message || 'Invalid certificate id');
+  }
+
+  const team = await getTeamForUser();
+  if (!team) {
+    throw new Error('User not part of a team');
+  }
+
+  const [sourceCertificate] = await db
+    .select()
+    .from(certificates)
+    .where(and(eq(certificates.id, parsed.data.id), eq(certificates.teamId, team.id)))
+    .limit(1);
+
+  if (!sourceCertificate) {
+    throw new Error('Certificate not found');
+  }
+
+  const sourceItems = await db
+    .select()
+    .from(certificateItems)
+    .where(eq(certificateItems.certificateId, sourceCertificate.id))
+    .orderBy(certificateItems.sortOrder);
+
+  const [certificate] = await db
+    .insert(certificates)
+    .values({
+      customerId: sourceCertificate.customerId,
+      certificateType: sourceCertificate.certificateType,
+      certificateNumber: generateCertificateNumber(sourceCertificate.certificateType),
+      siteName: sourceCertificate.siteName,
+      siteAddress: sourceCertificate.siteAddress,
+      inspectionDate: sourceCertificate.inspectionDate,
+      nextInspectionDate: sourceCertificate.nextInspectionDate,
+      inspectorName: sourceCertificate.inspectorName,
+      inspectorSignature: sourceCertificate.inspectorSignature,
+      formData: sourceCertificate.formData || {},
+      teamId: team.id,
+      status: 'draft',
+    })
+    .returning();
+
+  if (sourceItems.length > 0) {
+    await db.insert(certificateItems).values(
+      sourceItems.map((item) => ({
+        certificateId: certificate.id,
+        itemType: item.itemType,
+        location: item.location,
+        description: item.description,
+        status: item.status,
+        defects: item.defects,
+        recommendations: item.recommendations,
+        sortOrder: item.sortOrder,
+      }))
+    );
+  }
+
+  await logActivity(team.id, user.id, ActivityType.CREATE_CERTIFICATE);
+
+  redirect(`/certificates/${certificate.id}`);
+}
 
 const updateCertificateSchema = z.object({
   id: z.number(),

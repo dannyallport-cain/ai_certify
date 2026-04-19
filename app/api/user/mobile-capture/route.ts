@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { verifyMobileCaptureToken } from '@/lib/auth/mobile-capture';
 import { db } from '@/lib/db/drizzle';
 import { users } from '@/lib/db/schema';
-import { buildUserAssetKey, uploadDataUrlToR2 } from '@/lib/storage/r2';
+import { buildUserAssetKey, uploadDataUrlToR2, type R2UploadResult } from '@/lib/storage/r2';
 
 const dataUrlSchema = z
   .string()
@@ -76,20 +76,16 @@ export async function POST(request: NextRequest) {
       normalizedPrefix: normalizedDataUrl.slice(0, 40),
     });
 
-    if (!isR2Configured()) {
-      return NextResponse.json(
-        {
-          error:
-            'Mobile capture uploads are not available because R2 storage is not configured on the server.',
-        },
-        { status: 503 }
-      );
-    }
-
-    const upload = await uploadDataUrlToR2({
-      key: buildUserAssetKey(userId, kind, normalizedContentType),
-      dataUrl: normalizedDataUrl,
-    });
+    const upload: Pick<R2UploadResult, 'url' | 'contentType'> & { key: string | null } = isR2Configured()
+      ? await uploadDataUrlToR2({
+          key: buildUserAssetKey(userId, kind, normalizedContentType),
+          dataUrl: normalizedDataUrl,
+        })
+      : {
+          key: null,
+          url: normalizedDataUrl,
+          contentType: normalizedContentType,
+        };
 
     console.error('Mobile capture upload succeeded:', {
       userId,
