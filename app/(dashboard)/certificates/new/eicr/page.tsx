@@ -791,6 +791,18 @@ function applyEicrFormValues(form: HTMLFormElement | null, values: Record<string
   });
 }
 
+let observationIdSequence = 0;
+
+function createObservationId(prefix = 'obs'): string {
+  observationIdSequence += 1;
+
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+
+  return `${prefix}-${Date.now()}-${observationIdSequence}`;
+}
+
 const asSimpleOptions = (values: readonly string[]): readonly CircuitSelectOption[] =>
   values.map((value) => ({ value, menuLabel: value }));
 
@@ -1854,10 +1866,19 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
           certificateData.customer?.name || getFormValue('customerName') || '',
         );
 
+        const persistedSiteName = certificateData.siteName || getFormValue('siteName') || '';
+        const persistedClientAddress =
+          certificateData.siteAddress ||
+          getFormValue('clientAddress') ||
+          certificateData.customer?.address ||
+          '';
+        const persistedInstallationAddress =
+          getFormValue('installationAddress') || persistedClientAddress || '';
+
         if (certificateData.certificateNumber) setCertificateNumber(certificateData.certificateNumber);
-        if (certificateData.siteName) setSiteName(certificateData.siteName);
-        if (certificateData.siteAddress) setClientAddress(certificateData.siteAddress);
-        setInstallationAddress(getFormValue('installationAddress') || '');
+        if (persistedSiteName) setSiteName(persistedSiteName);
+        if (persistedClientAddress) setClientAddress(persistedClientAddress);
+        setInstallationAddress(persistedInstallationAddress);
         if (certificateData.inspectionDate) setInspectionDate(certificateData.inspectionDate);
         if (certificateData.nextInspectionDate) setNextInspectionDate(certificateData.nextInspectionDate);
         setIfPresent('overallAssessment', setOverallAssessment);
@@ -1933,8 +1954,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
             if (Array.isArray(itemsData)) {
               const obs = itemsData
                 .filter((item: any) => item.itemType === 'observation')
-                .map((item: any) => ({
-                  id: item.id || Date.now().toString(),
+                .map((item: any, index: number) => ({
+                  id:
+                    typeof item.id === 'string' && item.id.trim()
+                      ? item.id
+                      : createObservationId(`loaded-${index}`),
                   description: item.description || '',
                   code: (item.defects || 'C3') as any,
                 }));
@@ -2039,7 +2063,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   ]);
 
   const addObservation = () => {
-    setObservations(prev => [...prev, { id: Date.now().toString(), description: '', code: 'C3' }]);
+    setObservations(prev => [...prev, { id: createObservationId(), description: '', code: 'C3' }]);
   };
 
   const updateObservation = (id: string, field: keyof Observation, value: string) => {

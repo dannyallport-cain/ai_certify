@@ -57,6 +57,13 @@
       "when": 1776214800000,
       "tag": "0009_add_payment_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776565800000,
+      "tag": "0010_add_team_logo_data_uri",
+      "breakpoints": true
     }
   ]
 }

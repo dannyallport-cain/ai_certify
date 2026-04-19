@@ -12,7 +12,7 @@ import {
   index,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { USER_ROLES } from '@/lib/auth/roles';
 
 export type EicrProfileDefaults = {
@@ -75,6 +75,26 @@ export const teams = pgTable('teams', {
   trialEndDate: timestamp('trial_end_date'),
   logoDataUri: text('logo_data_uri'),
 });
+
+export const teamRuntimeSafeColumns = {
+  id: teams.id,
+  name: teams.name,
+  createdAt: teams.createdAt,
+  updatedAt: teams.updatedAt,
+  stripeCustomerId: teams.stripeCustomerId,
+  stripeSubscriptionId: teams.stripeSubscriptionId,
+  stripeProductId: teams.stripeProductId,
+  planName: teams.planName,
+  subscriptionStatus: teams.subscriptionStatus,
+  discountPercentage: teams.discountPercentage,
+  subscriptionBypass: teams.subscriptionBypass,
+  subscriptionBypassReason: teams.subscriptionBypassReason,
+  subscriptionBypassRemovedAt: teams.subscriptionBypassRemovedAt,
+  subscriptionBypassSetAt: teams.subscriptionBypassSetAt,
+  subscriptionBypassSetBy: teams.subscriptionBypassSetBy,
+  trialEndDate: teams.trialEndDate,
+  logoDataUri: sql<string | null>`null`,
+};
 
 export const teamMembers = pgTable('team_members', {
   id: serial('id').primaryKey(),

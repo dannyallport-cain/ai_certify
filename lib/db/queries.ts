@@ -11,6 +11,7 @@ import {
   paymentTransactions,
   purchaseEntitlements,
   ActivityType,
+  teamRuntimeSafeColumns,
   type NewActivityLog,
   type NewPaymentTransaction,
   type NewPurchaseEntitlement,
@@ -67,7 +68,7 @@ export async function getUser() {
 
 export async function getTeamByStripeCustomerId(customerId: string) {
   const result = await db
-    .select()
+    .select(teamRuntimeSafeColumns)
     .from(teams)
     .where(eq(teams.stripeCustomerId, customerId))
     .limit(1);
@@ -134,28 +135,42 @@ export async function getTeamForUser() {
     return null;
   }
 
-  const result = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    with: {
-      team: {
-        with: {
-          teamMembers: {
-            with: {
-              user: {
-                columns: {
-                  id: true,
-                  name: true,
-                  email: true
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  });
+  const teamResult = await db
+    .select({
+      team: teamRuntimeSafeColumns,
+    })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+    .where(eq(teamMembers.userId, user.id))
+    .limit(1);
 
-  return result?.team || null;
+  const team = teamResult[0]?.team;
+  if (!team) {
+    return null;
+  }
+
+  const members = await db
+    .select({
+      id: teamMembers.id,
+      userId: teamMembers.userId,
+      teamId: teamMembers.teamId,
+      role: teamMembers.role,
+      joinedAt: teamMembers.joinedAt,
+      user: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+      },
+    })
+    .from(teamMembers)
+    .innerJoin(users, eq(teamMembers.userId, users.id))
+    .where(eq(teamMembers.teamId, team.id))
+    .orderBy(asc(teamMembers.joinedAt));
+
+  return {
+    ...team,
+    teamMembers: members,
+  };
 }
 
 // Customer queries
