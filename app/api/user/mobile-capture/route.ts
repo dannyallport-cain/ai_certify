@@ -5,11 +5,18 @@ import { z } from 'zod';
 import { verifyMobileCaptureToken } from '@/lib/auth/mobile-capture';
 import { db } from '@/lib/db/drizzle';
 import { users } from '@/lib/db/schema';
-import { buildUserAssetKey, uploadDataUrlToR2, type R2UploadResult } from '@/lib/storage/r2';
+import {
+  buildUserAssetKey,
+  uploadDataUrlToR2,
+  type R2UploadResult,
+} from '@/lib/storage/r2';
 
 const dataUrlSchema = z
   .string()
-  .regex(/^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i, 'Invalid image data.');
+  .regex(
+    /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i,
+    'Invalid image data.'
+  );
 
 const requestSchema = z.object({
   token: z.string().min(1),
@@ -34,7 +41,10 @@ export async function POST(request: NextRequest) {
     const parsedRequest = requestSchema.safeParse(body);
 
     if (!parsedRequest.success) {
-      return NextResponse.json({ error: 'Invalid upload payload.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid upload payload.' },
+        { status: 400 }
+      );
     }
 
     const { token, dataUrl } = parsedRequest.data;
@@ -49,14 +59,22 @@ export async function POST(request: NextRequest) {
     });
 
     if (kind === 'signature' && dataUrl.length > SIGNATURE_MAX_LENGTH) {
-      return NextResponse.json({ error: 'Signature image is too large.' }, { status: 413 });
+      return NextResponse.json(
+        { error: 'Signature image is too large.' },
+        { status: 413 }
+      );
     }
 
     if (kind === 'avatar' && dataUrl.length > AVATAR_MAX_LENGTH) {
-      return NextResponse.json({ error: 'Avatar image is too large.' }, { status: 413 });
+      return NextResponse.json(
+        { error: 'Avatar image is too large.' },
+        { status: 413 }
+      );
     }
 
-    const contentTypeMatch = dataUrl.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,/i);
+    const contentTypeMatch = dataUrl.match(
+      /^data:(image\/(?:png|jpeg|jpg|webp));base64,/i
+    );
 
     if (!contentTypeMatch) {
       return NextResponse.json({ error: 'Invalid image data.' }, { status: 400 });
@@ -67,7 +85,10 @@ export async function POST(request: NextRequest) {
         ? 'image/jpeg'
         : contentTypeMatch[1].toLowerCase();
 
-    const normalizedDataUrl = dataUrl.replace(/^data:image\/jpg;base64,/i, 'data:image/jpeg;base64,');
+    const normalizedDataUrl = dataUrl.replace(
+      /^data:image\/jpg;base64,/i,
+      'data:image/jpeg;base64,'
+    );
 
     console.error('Mobile capture normalized upload payload:', {
       userId,
@@ -76,7 +97,9 @@ export async function POST(request: NextRequest) {
       normalizedPrefix: normalizedDataUrl.slice(0, 40),
     });
 
-    const upload: Pick<R2UploadResult, 'url' | 'contentType'> & { key: string | null } = isR2Configured()
+    const upload: Pick<R2UploadResult, 'url' | 'contentType'> & {
+      key: string | null;
+    } = isR2Configured()
       ? await uploadDataUrlToR2({
           key: buildUserAssetKey(userId, kind, normalizedContentType),
           dataUrl: normalizedDataUrl,
@@ -151,13 +174,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Failed to save uploaded asset.',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to save uploaded asset.',
         debug:
           error instanceof Error
             ? {
                 name: error.name,
                 message: error.message,
-                stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+                stack:
+                  process.env.NODE_ENV === 'development'
+                    ? error.stack
+                    : undefined,
               }
             : undefined,
       },

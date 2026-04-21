@@ -1813,6 +1813,22 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   const fd = (certificate.formData || {}) as Record<string, any>;
   const ss = safeString;
+  const preferredClientName = ss(fd.customerName) || ss(certificate.customer.name);
+  const preferredClientAddress =
+    ss(fd.clientAddress) ||
+    ss(fd.installationAddress) ||
+    ss(certificate.siteAddress) ||
+    ss(certificate.customer.address);
+  const preferredInstallationAddress =
+    ss(fd.installationAddress) ||
+    ss(fd.clientAddress) ||
+    ss(certificate.siteAddress) ||
+    ss(certificate.customer.address);
+  const preferredSiteName = ss(fd.siteName) || ss(certificate.siteName);
+  const preferredInspectionDate = ss(fd.inspectionDate) || ss(certificate.inspectionDate);
+  const preferredNextInspectionDate =
+    ss(fd.nextInspectionDate) || ss(certificate.nextInspectionDate);
+  const preferredInspectorName = ss(fd.inspectorName) || ss(certificate.inspectorName);
   
   // Safely parse inspection schedule data - handle both string and object formats
   let inspectionData: Record<string, { comment?: string; outcome?: string }> = {};
@@ -2113,19 +2129,22 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   // Section 1 – Details of the Person Ordering the Report
   sectionHeader('1', 'Details of the Person Ordering the Report');
-  row('Client:', ss(certificate.customer.name));
-  row('Address:', ss(certificate.customer.address || fd.clientAddress));
+  row('Client:', preferredClientName);
+  row('Address:', preferredClientAddress);
   y += 1;
 
   // Section 2 – Reason for Producing This Report
   sectionHeader('2', 'Reason for Producing This Report');
   row('Reason for producing this report:', ss(fd.reasonForReport) || 'Landlords safety report.');
-  row('Date(s) on which inspection and testing was carried out:', formatDate(certificate.inspectionDate));
+  row(
+    'Date(s) on which inspection and testing was carried out:',
+    formatDate(preferredInspectionDate || null),
+  );
   y += 1;
 
   // Section 3 – Details of the Installation
   sectionHeader('3', 'Details of the Installation Which Is the Subject of This Report');
-  row('Installation Address:', ss(fd.installationAddress) || ss(certificate.siteAddress) || ss(certificate.customer.address));
+  row('Installation Address:', preferredInstallationAddress);
   const wiringAge = ss(fd.estimatedAgeOfWiring);
   row('Estimated age of wiring system:', wiringAge ? `${wiringAge} years` : 'N/A');
   const hasAdditions = ss(fd.evidenceOfAdditions) || 'No';
@@ -2181,7 +2200,11 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   sectionHeader('6', 'Recommendations');
   italicNote("Where the overall assessment of the suitability of the installation for continued use on page 1 is stated as 'UNSATISFACTORY', I/We recommend that any observations classified as 'Code 1 - Danger Present' or 'Code 2 - Potentially dangerous' are acted upon as a matter of urgency. Investigation without delay is recommended for observations identified as 'FI - Further Investigation Required'. Observations classified as 'Code 3 - Improvement recommended' should be given due consideration.");
 
-  row('Subject to the necessary remedial action being taken, I/we recommend that the installation is further inspected and tested by:', ss(fd.nextInspectionPeriod) || '5 Years or change of tenant/owner', 100);
+  row(
+    'Subject to the necessary remedial action being taken, I/we recommend that the installation is further inspected and tested by:',
+    ss(fd.nextInspectionPeriod) || '5 Years or change of tenant/owner',
+    100,
+  );
   y += 1;
   italicNote('Note: The proposed date for the next inspection should take into consideration the frequency and quality of maintenance that the installation can reasonably be expected to receive during its intended life. The period should be agreed between relevant parties.');
 
@@ -2369,8 +2392,13 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   declarationTwoColRow('Registration Number (if applicable):', ss(fd.registrationNumber) || '', 'Telephone Number:', ss(fd.companyTelephone) || '');
   y += 0.5;
   subHeader('For the INSPECTION, TESTING AND ASSESSMENT of the report:');
-  declarationTwoColRow('Name:', ss(certificate.inspectorName), 'Position:', ss(fd.inspectorPosition) || 'Qualified Supervisor');
-  declarationTwoColRow('Signature:', '', 'Date:', formatDate(certificate.inspectionDate || null));
+  declarationTwoColRow(
+    'Name:',
+    preferredInspectorName,
+    'Position:',
+    ss(fd.inspectorPosition) || 'Qualified Supervisor',
+  );
+  declarationTwoColRow('Signature:', '', 'Date:', formatDate(preferredInspectionDate || null));
 
   // Test Instruments (Section 10)
   sectionHeader('10', 'Details of Test Instruments Used');

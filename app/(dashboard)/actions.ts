@@ -329,13 +329,37 @@ const updateCertificateSchema = z.object({
 
 export const updateCertificate = validatedActionWithUser(
   updateCertificateSchema,
-  async (data, _, user) => {
+  async (data, formData, user) => {
     const team = await getTeamForUser();
     if (!team) {
       throw new Error('User not part of a team');
     }
 
     const { id, ...updateData } = data;
+
+    const collectedFormData: Record<string, any> = {};
+    const skipFields = [
+      'customerId',
+      'customerName',
+      'certificateType',
+      'certificateNumber',
+      'siteName',
+      'siteAddress',
+      'inspectionDate',
+      'nextInspectionDate',
+      'inspectorName'
+    ];
+
+    if (formData) {
+      for (const [key, value] of formData.entries()) {
+        if (!skipFields.includes(key)) {
+          collectedFormData[key] = value;
+        }
+      }
+    }
+
+    const resolvedFormData =
+      Object.keys(collectedFormData).length > 0 ? collectedFormData : (updateData.formData || {});
 
     // Get the current certificate to check status change
     const currentCertificate = await db
@@ -356,10 +380,37 @@ export const updateCertificate = validatedActionWithUser(
         inspectionDate: updateData.inspectionDate || null,
         nextInspectionDate: updateData.nextInspectionDate || null,
         inspectorName: updateData.inspectorName || null,
-        formData: updateData.formData || {},
+        formData: resolvedFormData,
         updatedAt: new Date()
       })
       .where(eq(certificates.id, id));
+
+    await db.delete(certificateItems).where(eq(certificateItems.certificateId, id));
+
+    const rawItems = resolvedFormData.items;
+    if (rawItems) {
+      try {
+        const parsedItems: Array<Record<string, any>> = typeof rawItems === 'string'
+          ? JSON.parse(rawItems)
+          : rawItems;
+        if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+          await db.insert(certificateItems).values(
+            parsedItems.map((item, idx) => ({
+              certificateId: id,
+              itemType: item.itemType || 'observation',
+              location: item.location || null,
+              description: item.description || null,
+              status: item.status || 'satisfactory',
+              defects: item.defects || null,
+              recommendations: item.recommendations || null,
+              sortOrder: idx,
+            }))
+          );
+        }
+      } catch {
+        // Non-critical – proceed without items if parsing fails
+      }
+    }
 
     await logActivity(team.id, user.id, ActivityType.UPDATE_CERTIFICATE);
 

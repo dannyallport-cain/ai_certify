@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createCertificate } from '../../../actions';
-import { useState, useEffect, useRef, type ChangeEvent, type ReactNode, type InputHTMLAttributes } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent, type DragEvent, type ReactNode, type InputHTMLAttributes } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import useSWR, { useSWRConfig } from 'swr';
@@ -1584,17 +1584,18 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   );
   const [selectedCircuitRow, setSelectedCircuitRow] = useState<number>(0);
   const [selectedCircuitTemplate, setSelectedCircuitTemplate] = useState('__template');
-  const [draggedCircuitRow, setDraggedCircuitRow] = useState<number | null>(null);
-  const [dragOverCircuitRow, setDragOverCircuitRow] = useState<number | null>(null);
   const [natureOfSupply, setNatureOfSupply] = useState('1-phase (2 wire) ac');
   const [externalEarthFaultLoopImpedance, setExternalEarthFaultLoopImpedance] = useState('');
   const isThreePhase = natureOfSupply.startsWith('3-phase');
+  const [draggedCircuitRow, setDraggedCircuitRow] = useState<number | null>(null);
+  const [dragOverCircuitRow, setDragOverCircuitRow] = useState<number | null>(null);
   const [extentQuickOption, setExtentQuickOption] = useState('__custom');
   const [limitationsQuickOption, setLimitationsQuickOption] = useState('__custom');
   const [operationalQuickOption, setOperationalQuickOption] = useState('__custom');
   const { data: currentUser } = useSWR<EicrDraftUser>('/api/user', fetcher);
   const hasHydratedDraftRef = useRef(false);
   const lastSavedDraftKeyRef = useRef<string | null>(null);
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
   const [profilePrefillApplied, setProfilePrefillApplied] = useState(false);
   const [showSaveProfilePrompt, setShowSaveProfilePrompt] = useState(false);
   const [isSavingProfileDefaults, setIsSavingProfileDefaults] = useState(false);
@@ -1768,11 +1769,52 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     setCertificateNumber(generateCertificateNumber());
   }, [isEditing]);
 
-  useEffect(() => {
-    if (hasHydratedDraftRef.current) {
-      return;
-    }
+  const applySavedDraftState = (savedDraft: EicrDraftState) => {
+    setSelectedCustomer(savedDraft.selectedCustomer ?? '');
+    setSelectedCustomerName(savedDraft.selectedCustomerName ?? '');
+    setSiteName(savedDraft.siteName ?? '');
+    setClientAddress(savedDraft.clientAddress ?? '');
+    setInstallationAddress(savedDraft.installationAddress ?? '');
+    setIsSiteNameAuto(savedDraft.isSiteNameAuto ?? false);
+    setIsClientAddressAuto(savedDraft.isClientAddressAuto ?? false);
+    setCertificateNumber(savedDraft.certificateNumber ?? certificateNumber);
+    setInspectionDate(savedDraft.inspectionDate ?? inspectionDate);
+    setIsInspectionDateAuto(savedDraft.isInspectionDateAuto ?? false);
+    setNextInspectionDate(savedDraft.nextInspectionDate ?? '');
+    setNextInspectionPeriod(savedDraft.nextInspectionPeriod ?? '3 Years');
+    setOverallAssessment(savedDraft.overallAssessment ?? 'SATISFACTORY');
+    setInstrumentMultiFunction(savedDraft.instrumentMultiFunction ?? '');
+    setEarthingArrangement(savedDraft.earthingArrangement ?? 'TN-C-S');
+    setMeansOfEarthing(savedDraft.meansOfEarthing ?? "Distributor's facility");
+    setSupplyConductorCSA(savedDraft.supplyConductorCSA ?? '25');
+    setSupplyConductorCSACustom(savedDraft.supplyConductorCSACustom ?? '');
+    setObservations(savedDraft.observations ?? []);
+    setEvidenceOfAdditions(savedDraft.evidenceOfAdditions ?? 'No');
+    setPremisesType(savedDraft.premisesType ?? 'Domestic');
+    setInspSchedule(
+      savedDraft.inspSchedule ?? {
+        codes: {},
+        comments: {},
+      },
+    );
+    setCircuits(
+      Array.isArray(savedDraft.circuits) && savedDraft.circuits.length > 0
+        ? savedDraft.circuits
+        : Array.from({ length: DEFAULT_CIRCUIT_ROW_COUNT }, (_, index) => createEmptyCircuitRow(index)),
+    );
+    setSelectedCircuitRow(savedDraft.selectedCircuitRow ?? 0);
+    setSelectedCircuitTemplate(savedDraft.selectedCircuitTemplate ?? '__template');
+    setNatureOfSupply(savedDraft.natureOfSupply ?? '1-phase (2 wire) ac');
+    setExternalEarthFaultLoopImpedance(savedDraft.externalEarthFaultLoopImpedance ?? '');
+    setExtentQuickOption(savedDraft.extentQuickOption ?? '__custom');
+    setLimitationsQuickOption(savedDraft.limitationsQuickOption ?? '__custom');
+    setOperationalQuickOption(savedDraft.operationalQuickOption ?? '__custom');
+    setInspectorName(savedDraft.inspectorName ?? '');
+    setInspectorPosition(savedDraft.inspectorPosition ?? '');
+    restorePersistedFieldValues(savedDraft.formValues);
+  };
 
+  useEffect(() => {
     if (isEditing) {
       return;
     }
@@ -1780,54 +1822,12 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     const draftStorageKey = buildEicrDraftStorageKey(currentUser);
     const savedDraft = readEicrDraftState(draftStorageKey);
 
-    if (savedDraft) {
-      setSelectedCustomer(savedDraft.selectedCustomer ?? '');
-      setSelectedCustomerName(savedDraft.selectedCustomerName ?? '');
-      setSiteName(savedDraft.siteName ?? '');
-      setClientAddress(savedDraft.clientAddress ?? '');
-      setInstallationAddress(savedDraft.installationAddress ?? '');
-      setIsSiteNameAuto(savedDraft.isSiteNameAuto ?? false);
-      setIsClientAddressAuto(savedDraft.isClientAddressAuto ?? false);
-      setCertificateNumber(savedDraft.certificateNumber ?? certificateNumber);
-      setInspectionDate(savedDraft.inspectionDate ?? inspectionDate);
-      setIsInspectionDateAuto(savedDraft.isInspectionDateAuto ?? false);
-      setNextInspectionDate(savedDraft.nextInspectionDate ?? '');
-      setNextInspectionPeriod(savedDraft.nextInspectionPeriod ?? '3 Years');
-      setOverallAssessment(savedDraft.overallAssessment ?? 'SATISFACTORY');
-      setInstrumentMultiFunction(savedDraft.instrumentMultiFunction ?? '');
-      setEarthingArrangement(savedDraft.earthingArrangement ?? 'TN-C-S');
-      setMeansOfEarthing(savedDraft.meansOfEarthing ?? "Distributor's facility");
-      setSupplyConductorCSA(savedDraft.supplyConductorCSA ?? '25');
-      setSupplyConductorCSACustom(savedDraft.supplyConductorCSACustom ?? '');
-      setObservations(savedDraft.observations ?? []);
-      setEvidenceOfAdditions(savedDraft.evidenceOfAdditions ?? 'No');
-      setPremisesType(savedDraft.premisesType ?? 'Domestic');
-      setInspSchedule(
-        savedDraft.inspSchedule ?? {
-          codes: {},
-          comments: {},
-        },
-      );
-      setCircuits(
-        Array.isArray(savedDraft.circuits) && savedDraft.circuits.length > 0
-          ? savedDraft.circuits
-          : Array.from({ length: DEFAULT_CIRCUIT_ROW_COUNT }, (_, index) => createEmptyCircuitRow(index)),
-      );
-      setSelectedCircuitRow(savedDraft.selectedCircuitRow ?? 0);
-      setSelectedCircuitTemplate(savedDraft.selectedCircuitTemplate ?? '__template');
-      setNatureOfSupply(savedDraft.natureOfSupply ?? '1-phase (2 wire) ac');
-      setExternalEarthFaultLoopImpedance(savedDraft.externalEarthFaultLoopImpedance ?? '');
-      setExtentQuickOption(savedDraft.extentQuickOption ?? '__custom');
-      setLimitationsQuickOption(savedDraft.limitationsQuickOption ?? '__custom');
-      setOperationalQuickOption(savedDraft.operationalQuickOption ?? '__custom');
-      setInspectorName(savedDraft.inspectorName ?? '');
-      setInspectorPosition(savedDraft.inspectorPosition ?? '');
-      restorePersistedFieldValues(savedDraft.formValues);
-
-    }
-
+    setHasSavedDraft(Boolean(savedDraft));
     lastSavedDraftKeyRef.current = draftStorageKey;
-    hasHydratedDraftRef.current = true;
+
+    if (!hasHydratedDraftRef.current) {
+      hasHydratedDraftRef.current = true;
+    }
   }, [currentUser, isEditing]);
 
   // Load certificate from database if editId is provided
@@ -1870,19 +1870,26 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
           certificateData.customer?.name || getFormValue('customerName') || '',
         );
 
-        const persistedSiteName = certificateData.siteName || getFormValue('siteName') || '';
+        const persistedSiteName = getFormValue('siteName') || certificateData.siteName || '';
         const persistedClientAddress =
-          certificateData.siteAddress ||
           getFormValue('clientAddress') ||
+          certificateData.siteAddress ||
           certificateData.customer?.address ||
           '';
         const persistedInstallationAddress =
-          getFormValue('installationAddress') || persistedClientAddress || '';
+          getFormValue('installationAddress') ||
+          certificateData.siteAddress ||
+          persistedClientAddress ||
+          '';
 
         if (certificateData.certificateNumber) setCertificateNumber(certificateData.certificateNumber);
         if (persistedSiteName) setSiteName(persistedSiteName);
-        if (persistedClientAddress) setClientAddress(persistedClientAddress);
-        setInstallationAddress(persistedInstallationAddress);
+        if (persistedClientAddress && !clientAddressTouchedRef.current) {
+          setClientAddress(persistedClientAddress);
+        }
+        if (!installationAddressTouchedRef.current) {
+          setInstallationAddress(persistedInstallationAddress);
+        }
         if (certificateData.inspectionDate) setInspectionDate(certificateData.inspectionDate);
         if (certificateData.nextInspectionDate) setNextInspectionDate(certificateData.nextInspectionDate);
         setIfPresent('overallAssessment', setOverallAssessment);
@@ -1899,8 +1906,16 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         setIfPresent('evidenceOfAdditions', setEvidenceOfAdditions);
         setIfPresent('nextInspectionPeriod', (value) => setNextInspectionPeriod(value as NextInspectionPeriodLabel));
 
-        // Apply generic form values for uncontrolled fields
-        restorePersistedFieldValues(formData as Record<string, string>);
+        // Apply generic form values only for uncontrolled fields.
+        // Controlled address fields are restored via React state above so late async hydration
+        // cannot overwrite manual edits made while the certificate is loading.
+        const uncontrolledFormData = { ...(formData as Record<string, unknown>) };
+        delete uncontrolledFormData.customerName;
+        delete uncontrolledFormData.siteName;
+        delete uncontrolledFormData.clientAddress;
+        delete uncontrolledFormData.installationAddress;
+        delete uncontrolledFormData.inspectionDate;
+        restorePersistedFieldValues(uncontrolledFormData);
 
         // Load inspection schedule if present
         if (formData.inspectionSchedule) {
@@ -2233,6 +2248,41 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     });
 
     setSelectedCircuitRow(toIndex);
+  };
+
+  const handleCircuitRowDragStart = (event: DragEvent<HTMLButtonElement>, rowIndex: number) => {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', String(rowIndex));
+    setDraggedCircuitRow(rowIndex);
+    setDragOverCircuitRow(rowIndex);
+  };
+
+  const handleCircuitRowDragOver = (event: DragEvent<HTMLTableRowElement>, rowIndex: number) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+
+    if (draggedCircuitRow === null || dragOverCircuitRow === rowIndex) {
+      return;
+    }
+
+    setDragOverCircuitRow(rowIndex);
+  };
+
+  const handleCircuitRowDrop = (event: DragEvent<HTMLTableRowElement>, rowIndex: number) => {
+    event.preventDefault();
+
+    if (draggedCircuitRow === null) {
+      return;
+    }
+
+    moveCircuitRow(draggedCircuitRow, rowIndex);
+    setDraggedCircuitRow(null);
+    setDragOverCircuitRow(null);
+  };
+
+  const handleCircuitRowDragEnd = () => {
+    setDraggedCircuitRow(null);
+    setDragOverCircuitRow(null);
   };
 
   const addCircuitRow = () => {
@@ -3234,6 +3284,34 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     }
   };
 
+  const handleRestoreSavedDraft = () => {
+    if (isEditing) {
+      return;
+    }
+
+    const draftStorageKey = buildEicrDraftStorageKey(currentUser);
+    const savedDraft = readEicrDraftState(draftStorageKey);
+
+    if (!savedDraft) {
+      setHasSavedDraft(false);
+      return;
+    }
+
+    applySavedDraftState(savedDraft);
+    setHasSavedDraft(false);
+  };
+
+  const handleDiscardSavedDraft = () => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const draftStorageKey = buildEicrDraftStorageKey(currentUser);
+    window.localStorage.removeItem(draftStorageKey);
+    lastSavedDraftKeyRef.current = null;
+    setHasSavedDraft(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -3297,7 +3375,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         certificateType: 'EICR',
         certificateNumber: certificateNumber,
         siteName: siteName,
-        siteAddress: clientAddress,
+        siteAddress: installationAddress || clientAddress,
         inspectionDate: inspectionDate,
         nextInspectionDate: nextInspectionDate,
         inspectorName: inspectorName,
@@ -3322,6 +3400,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         window.localStorage.removeItem(draftStorageKey);
       }
       lastSavedDraftKeyRef.current = null;
+      setHasSavedDraft(false);
     } catch (error) {
       console.error('Error creating certificate:', error);
       setFormError('Unable to create certificate. Please try again.');
@@ -3372,6 +3451,27 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
           <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {formError}
           </p>
+        )}
+
+        {!isEditing && hasSavedDraft && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-medium text-amber-900">Saved draft found</p>
+                <p className="text-xs text-amber-800">
+                  Starting a new EICR now stays blank by default. Restore the previous draft only if you want to continue it.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={handleDiscardSavedDraft}>
+                  Discard saved draft
+                </Button>
+                <Button type="button" onClick={handleRestoreSavedDraft}>
+                  Restore saved draft
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         <Card className={EDITOR_CARD_CLASS}>
@@ -3469,7 +3569,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       setIsSiteNameAuto(true);
                     }
 
-                    if (customer && !clientAddress && customer.address) {
+                    if (customer && !clientAddressTouchedRef.current && !clientAddress && customer.address) {
                       setClientAddress(customer.address);
                       setIsClientAddressAuto(true);
                     }
@@ -3520,9 +3620,10 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     setIsSiteNameAuto(false);
                   }}
                   onAddressPick={(address) => {
+                    clientAddressTouchedRef.current = true;
                     setClientAddress(address);
                     setIsClientAddressAuto(true);
-                    if (!installationAddress) {
+                    if (!installationAddressTouchedRef.current && !installationAddress) {
                       setInstallationAddress(address);
                     }
                   }}
@@ -3544,6 +3645,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   placeholder="Marsh Lane, Farnworth, Bolton, BL4 0AW"
                   value={clientAddress}
                   onChange={(newValue) => {
+                    clientAddressTouchedRef.current = true;
                     setClientAddress(newValue);
                     setIsClientAddressAuto(false);
                   }}
@@ -3630,7 +3732,10 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     variant="outline"
                     size="sm"
                     className="h-7 px-2 text-[10px]"
-                    onClick={() => setInstallationAddress(clientAddress)}
+                    onClick={() => {
+                      installationAddressTouchedRef.current = true;
+                      setInstallationAddress(clientAddress);
+                    }}
                     disabled={!clientAddress}
                   >
                     <Copy className="mr-1 h-3 w-3" />
@@ -3642,7 +3747,10 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   name="installationAddress"
                   placeholder="Same as client address"
                   value={installationAddress}
-                  onChange={setInstallationAddress}
+                  onChange={(newValue) => {
+                    installationAddressTouchedRef.current = true;
+                    setInstallationAddress(newValue);
+                  }}
                   className={EDITOR_NATIVE_INPUT_CLASS}
                 />
               </div>
@@ -5022,7 +5130,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                 <span className="ml-auto text-[10px] text-muted-foreground">Selected row: {selectedCircuitRow + 1}</span>
               </div>
               <table className="w-full border-collapse text-[10px]">
-                <thead className="bg-muted/30 text-[9px]">
+                    <thead className="bg-muted/30 text-[9px]">
                   <tr>
                     {visibleCircuitColumns.map((col, index) => {
                       const stickyColumnClass = getStickyCircuitColumnClass(col.key);
@@ -5103,242 +5211,220 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                       </th>
                     ))}
                   </tr>
-                </thead>
-                <tbody>
-                  {circuits.map((row, rowIndex) => (
-                    <tr
-                      key={`circuit-row-${rowIndex}`}
-                      draggable
-                      onDragStart={() => {
-                        setDraggedCircuitRow(rowIndex);
-                        setSelectedCircuitRow(rowIndex);
-                      }}
-                      onDragOver={(event) => {
-                        event.preventDefault();
-                        if (dragOverCircuitRow !== rowIndex) {
-                          setDragOverCircuitRow(rowIndex);
-                        }
-                      }}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        if (draggedCircuitRow !== null) {
-                          moveCircuitRow(draggedCircuitRow, rowIndex);
-                        }
-                        setDraggedCircuitRow(null);
-                        setDragOverCircuitRow(null);
-                      }}
-                      onDragEnd={() => {
-                        setDraggedCircuitRow(null);
-                        setDragOverCircuitRow(null);
-                      }}
-                      className={`border-t ${
-                        selectedCircuitRow === rowIndex ? 'bg-blue-50/60' : ''
-                      } ${
-                        dragOverCircuitRow === rowIndex ? 'border-t-2 border-t-blue-500' : ''
-                      } ${
-                        draggedCircuitRow === rowIndex ? 'opacity-60' : ''
-                      }`}
-                      onClick={() => setSelectedCircuitRow(rowIndex)}
-                    >
-                      {visibleCircuitColumns.map((col) => {
-                        const options = CIRCUIT_SELECT_OPTIONS[col.key];
-                        const stickyColumnClass = getStickyCircuitColumnClass(col.key);
+                    </thead>
+                    <tbody>
+                      {circuits.map((row, rowIndex) => {
+                        const isDraggedRow = draggedCircuitRow === rowIndex;
+                        const isDragOverRow = dragOverCircuitRow === rowIndex && draggedCircuitRow !== rowIndex;
 
                         return (
-                          <td
-                            key={`${rowIndex}-${col.key}`}
+                          <tr
+                            key={`circuit-row-${rowIndex}-${row.circuitNumber}`}
                             className={cn(
-                              'border border-border p-0 align-top',
-                              getCircuitColumnCellClass(col),
-                              stickyColumnClass,
-                              stickyColumnClass && getStickyCircuitColumnBackgroundClass(selectedCircuitRow === rowIndex, rowIndex % 2 === 0),
+                              'border-t',
+                              selectedCircuitRow === rowIndex && 'bg-blue-50/60',
+                              isDraggedRow && 'opacity-60',
+                              isDragOverRow && 'bg-sky-50/60',
                             )}
+                            onClick={() => setSelectedCircuitRow(rowIndex)}
+                            onDragOver={(event) => handleCircuitRowDragOver(event, rowIndex)}
+                            onDrop={(event) => handleCircuitRowDrop(event, rowIndex)}
                           >
-                            {col.key === 'ringFinal' ? (
-                              <button
-                                type="button"
-                                title="Click to cycle ring final between tick and blank"
-                                onClick={() =>
-                                  updateCircuitField(rowIndex, col.key, row[col.key] === '✓' ? '' : '✓')
-                                }
-                                className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${getCircuitColumnCellClass(col) || 'w-12'} ${
-                                  row[col.key] === '✓'
-                                    ? 'text-green-700 hover:bg-green-50'
-                                    : 'text-slate-300 hover:bg-slate-50'
-                                }`}
-                              >
-                                {row[col.key] || '☐'}
-                              </button>
-                            ) : options ? (
-                              <Select
-                                value={row[col.key] || '__unset'}
-                                onValueChange={(value) =>
-                                  updateCircuitField(rowIndex, col.key, value === '__unset' ? '' : value)
-                                }
-                              >
-                                <SelectTrigger
-                                  className={cn(
-                                    'relative h-6 rounded-none border-0 px-0 pr-[6px] text-[9px] leading-none shadow-none gap-0 justify-center text-center',
-                                    '[&>span]:block [&>span]:min-w-0 [&>span]:flex-none [&>span]:truncate [&>span]:text-center [&>span]:mx-auto [&>span]:pr-0',
-                                    '[&>svg]:absolute [&>svg]:right-[1px] [&>svg]:top-1/2 [&>svg]:h-[4px] [&>svg]:w-[4px] [&>svg]:-translate-y-1/2 [&>svg]:shrink-0',
-                                    getCircuitColumnCellClass(col) || 'w-12',
-                                  )}
-                                  title={options.find((option) => option.value === row[col.key])?.title}
-                                >
-                                  <SelectValue placeholder="-">
-                                    {row[col.key] || '-'}
-                                  </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent className="z-[100] max-h-64 min-w-[10rem] overflow-y-auto border-border bg-white text-slate-900 text-[10px]">
-                                  <SelectItem className="text-[10px]" value="__unset">
-                                    -
-                                  </SelectItem>
-                                  {options.map((option) => (
-                                    <SelectItem
-                                      className="text-[10px]"
-                                      key={option.value}
-                                      value={option.value}
-                                      title={option.title}
-                                      textValue={option.menuLabel}
-                                    >
-                                      <span className="font-medium">{option.value}</span>
-                                      {option.title ? <span className="text-slate-500"> — {option.title}</span> : null}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : col.key === 'designation' ? (
-                              <Input
-                                value={row[col.key]}
-                                onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'}`}
-                              />
-                            ) : ['r1Line', 'rnNeutral', 'r2Cpc', 'r1r2', 'insResLN', 'insResLL', 'insResLE'].includes(col.key) ? (
-                              <ExpectedValueInput
-                                fieldKey={col.key as keyof typeof EXPECTED_VALUE_MAP}
-                                showExpectedValues={showExpectedValues}
-                                value={row[col.key]}
-                                onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                title={
-                                  col.key === 'r2Cpc'
-                                      ? getTwinAndEarthR2RatioTitle(row)
-                                      : col.key === 'r1r2'
-                                        ? getR1R2ValidationState(row)?.title
-                                        : undefined
-                                }
-                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'} ${getCircuitFieldInconsistencyClass(row, col.key, externalEarthFaultLoopImpedance)}`}
-                              />
-                            ) : col.key === 'maxZs' ? (
-                              <div className={`grid h-10 grid-cols-2 divide-x divide-border ${getCircuitColumnCellClass(col) || 'w-12'}`}>
-                                <Input
-                                  value={row[col.key]}
-                                  onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                  className="h-10 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0"
-                                  title="Maximum permitted Zs"
-                                />
-                                <div
-                                  className="flex items-center justify-center px-0 text-center text-[8px] font-medium leading-none text-green-700"
-                                  title={`Derated by installation method and wiring type (factor ${getDeratingFactorForCircuit(row).toFixed(2)})`}
-                                >
-                                  {getDeratedMaxZsDisplay(row) || '-'}
+                              {visibleCircuitColumns.map((col) => {
+                                const options = CIRCUIT_SELECT_OPTIONS[col.key];
+                                const stickyColumnClass = getStickyCircuitColumnClass(col.key);
+
+                                return (
+                                  <td
+                                    key={`${rowIndex}-${col.key}`}
+                                    className={cn(
+                                      'border border-border p-0 align-top',
+                                      getCircuitColumnCellClass(col),
+                                      stickyColumnClass,
+                                      stickyColumnClass && getStickyCircuitColumnBackgroundClass(selectedCircuitRow === rowIndex, rowIndex % 2 === 0),
+                                    )}
+                                  >
+                                    {col.key === 'ringFinal' ? (
+                                      <button
+                                        type="button"
+                                        title="Click to cycle ring final between tick and blank"
+                                        onClick={() =>
+                                          updateCircuitField(rowIndex, col.key, row[col.key] === '✓' ? '' : '✓')
+                                        }
+                                        className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${getCircuitColumnCellClass(col) || 'w-12'} ${
+                                          row[col.key] === '✓'
+                                            ? 'text-green-700 hover:bg-green-50'
+                                            : 'text-slate-300 hover:bg-slate-50'
+                                        }`}
+                                      >
+                                        {row[col.key] || '☐'}
+                                      </button>
+                                    ) : options ? (
+                                      <Select
+                                        value={row[col.key] || '__unset'}
+                                        onValueChange={(value) =>
+                                          updateCircuitField(rowIndex, col.key, value === '__unset' ? '' : value)
+                                        }
+                                      >
+                                        <SelectTrigger
+                                          className={cn(
+                                            'relative h-6 rounded-none border-0 px-0 pr-[6px] text-[9px] leading-none shadow-none gap-0 justify-center text-center',
+                                            '[&>span]:block [&>span]:min-w-0 [&>span]:flex-none [&>span]:truncate [&>span]:text-center [&>span]:mx-auto [&>span]:pr-0',
+                                            '[&>svg]:absolute [&>svg]:right-[1px] [&>svg]:top-1/2 [&>svg]:h-[4px] [&>svg]:w-[4px] [&>svg]:-translate-y-1/2 [&>svg]:shrink-0',
+                                            getCircuitColumnCellClass(col) || 'w-12',
+                                          )}
+                                          title={options.find((option) => option.value === row[col.key])?.title}
+                                        >
+                                          <SelectValue placeholder="-">
+                                            {row[col.key] || '-'}
+                                          </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent className="z-[100] max-h-64 min-w-[10rem] overflow-y-auto border-border bg-white text-slate-900 text-[10px]">
+                                          <SelectItem className="text-[10px]" value="__unset">
+                                            -
+                                          </SelectItem>
+                                          {options.map((option) => (
+                                            <SelectItem
+                                              className="text-[10px]"
+                                              key={option.value}
+                                              value={option.value}
+                                              title={option.title}
+                                              textValue={option.menuLabel}
+                                            >
+                                              <span className="font-medium">{option.value}</span>
+                                              {option.title ? <span className="text-slate-500"> — {option.title}</span> : null}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : col.key === 'designation' ? (
+                                      <Input
+                                        value={row[col.key]}
+                                        onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
+                                        className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'}`}
+                                      />
+                                    ) : ['r1Line', 'rnNeutral', 'r2Cpc', 'r1r2', 'insResLN', 'insResLL', 'insResLE'].includes(col.key) ? (
+                                      <ExpectedValueInput
+                                        fieldKey={col.key as keyof typeof EXPECTED_VALUE_MAP}
+                                        showExpectedValues={showExpectedValues}
+                                        value={row[col.key]}
+                                        onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
+                                        title={
+                                          col.key === 'r2Cpc'
+                                              ? getTwinAndEarthR2RatioTitle(row)
+                                              : col.key === 'r1r2'
+                                                ? getR1R2ValidationState(row)?.title
+                                                : undefined
+                                        }
+                                        className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'} ${getCircuitFieldInconsistencyClass(row, col.key, externalEarthFaultLoopImpedance)}`}
+                                      />
+                                    ) : col.key === 'maxZs' ? (
+                                      <div className={`grid h-10 grid-cols-2 divide-x divide-border ${getCircuitColumnCellClass(col) || 'w-12'}`}>
+                                        <Input
+                                          value={row[col.key]}
+                                          onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
+                                          className="h-10 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0"
+                                          title="Maximum permitted Zs"
+                                        />
+                                        <div
+                                          className="flex items-center justify-center px-0 text-center text-[8px] font-medium leading-none text-green-700"
+                                          title={`Derated by installation method and wiring type (factor ${getDeratingFactorForCircuit(row).toFixed(2)})`}
+                                        >
+                                          {getDeratedMaxZsDisplay(row) || '-'}
+                                        </div>
+                                      </div>
+                                    ) : col.key === 'measuredZs' ? (
+                                      <ExpectedValueInput
+                                        fieldKey="measuredZs"
+                                        showExpectedValues={showExpectedValues}
+                                        value={row[col.key]}
+                                        onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
+                                        title={
+                                          getMeasuredZsValidationTitle(row, externalEarthFaultLoopImpedance) ??
+                                          (zsExceedsMax(row)
+                                            ? `Exceeds maximum permitted Zs (${getDeratedMaxZsDisplay(row) ?? row.maxZs}) – C2 observation added to Section 7`
+                                            : undefined)
+                                        }
+                                        className={cn(
+                                          'h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0',
+                                          getCircuitColumnCellClass(col) || 'w-12',
+                                          getMeasuredZsValidation(row, externalEarthFaultLoopImpedance)
+                                            ? getCircuitFieldInconsistencyClass(row, 'measuredZs', externalEarthFaultLoopImpedance)
+                                            : zsExceedsMax(row) || hasCircuitInconsistency(row, externalEarthFaultLoopImpedance)
+                                              ? 'bg-orange-100 text-orange-900 font-semibold'
+                                              : row.measuredZs.trim() && row.r1r2.trim()
+                                                ? 'bg-amber-100 text-amber-900 font-semibold'
+                                                : '',
+                                        )}
+                                      />
+                                    ) : col.cycling ? (
+                                      <button
+                                        type="button"
+                                        title={`Click to cycle: ${(col.cycling ?? []).join(' → ')}`}
+                                        onClick={() => {
+                                          const cyclingOptions = col.cycling ?? [];
+                                          const val = row[col.key] as string;
+                                          const idx = cyclingOptions.indexOf(val);
+                                          updateCircuitField(
+                                            rowIndex,
+                                            col.key,
+                                            cyclingOptions[(idx + 1) % cyclingOptions.length] ?? cyclingOptions[0] ?? '',
+                                          );
+                                        }}
+                                        className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${getCircuitColumnCellClass(col) || 'w-12'} ${
+                                          (row[col.key] as string) === '✓'
+                                            ? 'text-green-700 hover:bg-green-50'
+                                            : (row[col.key] as string) === '✗'
+                                              ? 'text-red-600 hover:bg-red-50'
+                                              : (row[col.key] as string) === 'N/A'
+                                                ? 'text-slate-400 hover:bg-slate-50'
+                                                : (row[col.key] as string)
+                                                  ? 'text-slate-700 hover:bg-slate-50'
+                                                  : 'text-slate-300 hover:bg-slate-50'
+                                        }`}
+                                      >
+                                        {(row[col.key] as string) || '-'}
+                                      </button>
+                                    ) : (
+                                      <Input
+                                        value={row[col.key]}
+                                        onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
+                                        className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'}`}
+                                      />
+                                    )}
+                                  </td>
+                                );
+                              })}
+                              <td className="border border-border p-0.5 align-top">
+                                <div className="flex flex-col items-center gap-0.5">
+                                  <button
+                                    type="button"
+                                    draggable
+                                    onDragStart={(event) => handleCircuitRowDragStart(event, rowIndex)}
+                                    onDragEnd={handleCircuitRowDragEnd}
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="flex h-7 w-7 cursor-grab items-center justify-center rounded-sm text-slate-400 transition-colors touch-none hover:bg-slate-100 hover:text-slate-700 active:cursor-grabbing"
+                                    title="Drag to reorder row"
+                                    aria-label={`Drag circuit row ${row.circuitNumber} to reorder`}
+                                  >
+                                    <GripVertical className="h-4 w-4" />
+                                  </button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0 text-red-600"
+                                    onClick={() => removeCircuitRow(rowIndex)}
+                                    disabled={circuits.length <= 1}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </div>
-                              </div>
-                            ) : col.key === 'measuredZs' ? (
-                              <ExpectedValueInput
-                                fieldKey="measuredZs"
-                                showExpectedValues={showExpectedValues}
-                                value={row[col.key]}
-                                onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                title={
-                                  getMeasuredZsValidationTitle(row, externalEarthFaultLoopImpedance) ??
-                                  (zsExceedsMax(row)
-                                    ? `Exceeds maximum permitted Zs (${getDeratedMaxZsDisplay(row) ?? row.maxZs}) – C2 observation added to Section 7`
-                                    : undefined)
-                                }
-                                className={cn(
-                                  'h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0',
-                                  getCircuitColumnCellClass(col) || 'w-12',
-                                  getMeasuredZsValidation(row, externalEarthFaultLoopImpedance)
-                                    ? getCircuitFieldInconsistencyClass(row, 'measuredZs', externalEarthFaultLoopImpedance)
-                                    : zsExceedsMax(row) || hasCircuitInconsistency(row, externalEarthFaultLoopImpedance)
-                                      ? 'bg-orange-100 text-orange-900 font-semibold'
-                                      : row.measuredZs.trim() && row.r1r2.trim()
-                                        ? 'bg-amber-100 text-amber-900 font-semibold'
-                                        : '',
-                                )}
-                              />
-                            ) : col.cycling ? (
-                              <button
-                                type="button"
-                                title={`Click to cycle: ${(col.cycling ?? []).join(' → ')}`}
-                                onClick={() => {
-                                  const cyclingOptions = col.cycling ?? [];
-                                  const val = row[col.key] as string;
-                                  const idx = cyclingOptions.indexOf(val);
-                                  updateCircuitField(
-                                    rowIndex,
-                                    col.key,
-                                    cyclingOptions[(idx + 1) % cyclingOptions.length] ?? cyclingOptions[0] ?? '',
-                                  );
-                                }}
-                                className={`h-6 w-full flex items-center justify-center text-[9px] font-medium leading-none cursor-pointer transition-colors ${getCircuitColumnCellClass(col) || 'w-12'} ${
-                                  (row[col.key] as string) === '✓'
-                                    ? 'text-green-700 hover:bg-green-50'
-                                    : (row[col.key] as string) === '✗'
-                                      ? 'text-red-600 hover:bg-red-50'
-                                      : (row[col.key] as string) === 'N/A'
-                                        ? 'text-slate-400 hover:bg-slate-50'
-                                        : (row[col.key] as string)
-                                          ? 'text-slate-700 hover:bg-slate-50'
-                                          : 'text-slate-300 hover:bg-slate-50'
-                                }`}
-                              >
-                                {(row[col.key] as string) || '-'}
-                              </button>
-                            ) : (
-                              <Input
-                                value={row[col.key]}
-                                onChange={(e) => updateCircuitField(rowIndex, col.key, e.target.value)}
-                                className={`h-6 rounded-none border-0 px-0 text-center text-[9px] leading-none shadow-none focus-visible:ring-0 ${getCircuitColumnCellClass(col) || 'w-12'}`}
-                              />
-                            )}
-                          </td>
+                              </td>
+                          </tr>
                         );
                       })}
-                      <td className="border border-border p-0.5 align-top">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <button
-                            type="button"
-                            draggable
-                            onDragStart={(event) => {
-                              event.stopPropagation();
-                              setDraggedCircuitRow(rowIndex);
-                              setSelectedCircuitRow(rowIndex);
-                            }}
-                            onDragEnd={() => {
-                              setDraggedCircuitRow(null);
-                              setDragOverCircuitRow(null);
-                            }}
-                            className="flex h-7 w-7 items-center justify-center rounded-sm text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                            title="Drag to reorder row"
-                          >
-                            <GripVertical className="h-4 w-4" />
-                          </button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 w-7 p-0 text-red-600"
-                            onClick={() => removeCircuitRow(rowIndex)}
-                            disabled={circuits.length <= 1}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
+                    </tbody>
               </table>
             </div>
           </CardContent>

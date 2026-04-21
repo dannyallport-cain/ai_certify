@@ -1,0 +1,66 @@
+  2260	
+  2261	    moveCircuitRow(draggedCircuitRow, rowIndex);
+  2262	    setDraggedCircuitRow(null);
+  2263	    setDragOverCircuitRow(null);
+  2264	  };
+  2265	
+  2266	  const handleCircuitRowDragEnd = () => {
+  2267	    setDraggedCircuitRow(null);
+  2268	    setDragOverCircuitRow(null);
+  2269	  };
+  2270	
+  2271	  const addCircuitRow = () => {
+  2272	    setCircuits((prev) => {
+  2273	      setSelectedCircuitRow(prev.length);
+  2274	      return normalizeCircuitRows([...prev, createEmptyCircuitRow(prev.length)], isThreePhase);
+  2275	    });
+  2276	  };
+  2277	
+  2278	  const insertCircuitRow = () => {
+  2279	    setCircuits((prev) => {
+  2280	      const insertIndex = Math.max(0, Math.min(selectedCircuitRow, prev.length));
+  2281	      const nextRows = [...prev];
+  2282	      nextRows.splice(insertIndex, 0, createEmptyCircuitRow(insertIndex));
+  2283	      return normalizeCircuitRows(nextRows, isThreePhase);
+  2284	    });
+  2285	  };
+  2286	
+  2287	  const copyCircuitRow = () => {
+  2288	    setCircuits((prev) => {
+  2289	      if (selectedCircuitRow < 0 || selectedCircuitRow >= prev.length) {
+  2290	        return prev;
+  2291	      }
+  2292	      const next = [...prev];
+  2293	      next.splice(selectedCircuitRow + 1, 0, { ...prev[selectedCircuitRow] });
+  2294	      return normalizeCircuitRows(next, isThreePhase);
+  2295	    });
+  2296	    setSelectedCircuitRow((prev) => prev + 1);
+  2297	  };
+  2298	
+  2299	  const removeCircuitRow = (rowIndex: number) => {
+  2300	    setCircuits((prev) => {
+  2301	      const removedCircuitNumber = prev[rowIndex]?.circuitNumber;
+  2302	      if (removedCircuitNumber) {
+  2303	        setObservations((obs) => obs.filter((o) => o.fromCircuitZs !== removedCircuitNumber));
+  2304	      }
+  2305	      const next = prev.filter((_, idx) => idx !== rowIndex);
+  2306	      return normalizeCircuitRows(next, isThreePhase);
+  2307	    });
+  2308	    setSelectedCircuitRow((prev) => {
+  2309	      if (rowIndex < prev) return prev - 1;
+  2310	      if (rowIndex === prev) return Math.max(0, prev - 1);
+  2311	      return prev;
+  2312	    });
+  2313	  };
+  2314	
+  2315	  const deleteSelectedCircuitRow = () => {
+  2316	    if (circuits.length <= 1) return;
+  2317	    removeCircuitRow(selectedCircuitRow);
+  2318	  };
+  2319	
+  2320	  const nextInspectionPeriodMonths = REINSPECTION_PERIODS.find(
+  2321	    (period) => period.label === nextInspectionPeriod,
+  2322	  )?.months;
+  2323	
+  2324	  const setRecommendedInspectionInterval = (presetKey: EicrIntervalPresetKey) => {
+  2325	    const preset = EICR_INTERVAL_PRESETS[presetKey];

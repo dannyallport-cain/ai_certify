@@ -1,0 +1,76 @@
+  2400	      applyEicrFormValues(formRef.current, normalized);
+  2401	    };
+  2402	
+  2403	    requestAnimationFrame(() => {
+  2404	      applyNormalizedValues();
+  2405	
+  2406	      requestAnimationFrame(() => {
+  2407	        applyNormalizedValues();
+  2408	      });
+  2409	    });
+  2410	
+  2411	    window.setTimeout(applyNormalizedValues, 0);
+  2412	    window.setTimeout(applyNormalizedValues, 150);
+  2413	  };
+  2414	
+  2415	  const getProfileDefaultValuesFromState = (): EicrProfileDefaults => ({
+  2416	    tradingTitle: formRef.current?.querySelector<HTMLInputElement>('[name="tradingTitle"]')?.value ?? '',
+  2417	    companyAddress: formRef.current?.querySelector<HTMLInputElement>('[name="companyAddress"]')?.value ?? '',
+  2418	    registrationNumber: formRef.current?.querySelector<HTMLInputElement>('[name="registrationNumber"]')?.value ?? '',
+  2419	    companyTelephone: formRef.current?.querySelector<HTMLInputElement>('[name="companyTelephone"]')?.value ?? '',
+  2420	    companyEmail: formRef.current?.querySelector<HTMLInputElement>('[name="companyEmail"]')?.value ?? '',
+  2421	  });
+  2422	
+  2423	  const hasAnyProfileDefaultValue = (values: EicrProfileDefaults) =>
+  2424	    EICR_PROFILE_DEFAULT_FIELDS.some((field) => Boolean(values[field]?.trim()));
+  2425	
+  2426	  const hasExistingProfileDefaults = hasAnyProfileDefaultValue(currentUser?.eicrProfileDefaults ?? {});
+  2427	
+  2428	  const saveProfileDefaultsToUser = async () => {
+  2429	    const defaults = getProfileDefaultValuesFromState();
+  2430	
+  2431	    if (!hasAnyProfileDefaultValue(defaults)) {
+  2432	      setProfileDefaultsSaveMessage('Add at least one business detail before saving to your profile.');
+  2433	      return;
+  2434	    }
+  2435	
+  2436	    setIsSavingProfileDefaults(true);
+  2437	    setProfileDefaultsSaveMessage('');
+  2438	
+  2439	    try {
+  2440	      const response = await fetch('/api/user', {
+  2441	        method: 'PATCH',
+  2442	        headers: {
+  2443	          'Content-Type': 'application/json',
+  2444	        },
+  2445	        body: JSON.stringify({
+  2446	          eicrProfileDefaults: defaults,
+  2447	        }),
+  2448	      });
+  2449	
+  2450	      const payload = await response.json().catch(() => ({}));
+  2451	
+  2452	      if (!response.ok) {
+  2453	        throw new Error(payload?.error || 'Unable to save profile defaults.');
+  2454	      }
+  2455	
+  2456	      const mergedUser = {
+  2457	        ...(currentUser ?? {}),
+  2458	        ...payload,
+  2459	        eicrProfileDefaults: defaults,
+  2460	      };
+  2461	
+  2462	      await mutate('/api/user', mergedUser, false);
+  2463	      setShowSaveProfilePrompt(false);
+  2464	      setProfileDefaultsSaveMessage('Business details saved to your profile for next time.');
+  2465	    } catch (error) {
+  2466	      setProfileDefaultsSaveMessage(error instanceof Error ? error.message : 'Unable to save profile defaults.');
+  2467	    } finally {
+  2468	      setIsSavingProfileDefaults(false);
+  2469	    }
+  2470	  };
+  2471	
+  2472	  const saveInspectorHistoryToUser = async (name: string, position: string) => {
+  2473	    const trimmedName = name.trim();
+  2474	    const trimmedPosition = position.trim();
+  2475	
