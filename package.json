@@ -45,7 +45,7 @@
     "@types/react": "19.1.4",
     "@types/react-dom": "19.1.5",
     "@types/tesseract.js": "^2.0.0",
-    "autoprefixer": "^10.4.21",
+    "autoprefixer": "^10.5.0",
     "bcryptjs": "^3.0.2",
     "canvas": "^3.2.3",
     "class-variance-authority": "^0.7.1",
@@ -85,7 +85,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "baseline-browser-mapping": "^2.10.11",
+    "baseline-browser-mapping": "^2.10.20",
     "tsx": "^4.21.0"
   }
 }
