@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
+import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type NominatimResult = {
@@ -40,7 +41,6 @@ const compactAddress = (result: NominatimResult): string => {
     return parts.join(', ');
   }
 
-  // Fallback: strip country suffixes from the provider label.
   return result.display_name
     .replace(/,\s*England\s*,\s*United Kingdom$/i, '')
     .replace(/,\s*United Kingdom$/i, '')
@@ -70,7 +70,6 @@ const resultToParts = (result: NominatimResult, typedLine1: string): AddressPart
   const town = (addr.town || addr.city || addr.village || addr.hamlet || addr.suburb || addr.state_district || '').trim();
   const postcode = (addr.postcode || '').trim();
 
-  // Prefer Nominatim house_number; fall back to extracting any leading number/unit the user typed
   const nominatimNumber = (addr.house_number || '').trim();
   const typedNumberMatch = typedLine1.match(/^((?:flat|unit|apt|apartment|suite|room)\s*\S+|#?\d+[A-Za-z0-9/-]*)\s*/i);
   const typedNumber = typedNumberMatch ? typedNumberMatch[1].trim() : '';
@@ -80,6 +79,8 @@ const resultToParts = (result: NominatimResult, typedLine1: string): AddressPart
 
   return { line1, town, postcode };
 };
+
+const buildCacheKey = (query: string, countryCodes: string) => `${countryCodes}:${query.trim().toLowerCase()}`;
 
 interface AddressAutocompleteFieldProps {
   id: string;
@@ -105,90 +106,127 @@ export function AddressAutocompleteField({
   title,
   countryCodes = 'gb',
   minQueryLength = 4,
-}: AddressAutocompleteFieldProps) {
-  const [parts, setParts] = useState<AddressParts>(() => parseAddress(value ?? ''));
+}: AddressAutocompleteFieldProps): ReactElement {
+  const parts = useMemo(() => parseAddress(value ?? ''), [value]);
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [shouldSuggest, setShouldSuggest] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const cacheRef = useRef<Map<string, NominatimResult[]>>(new Map());
 
   const query = useMemo(() => composeAddress(parts).trim(), [parts]);
+  const normalizedQuery = query.toLowerCase();
+  const hasMinimumQuery = query.length >= minQueryLength;
 
-  useEffect(() => {
-    const external = parseAddress(value);
-    const current = composeAddress(parts);
-    const incoming = composeAddress(external);
-    if (incoming !== current) {
-      setParts(external);
-    }
-  }, [value]);
-
-  const updateParts = (
-    next: Partial<AddressParts>,
-    options?: { shouldTriggerSuggestions?: boolean },
-  ) => {
+  const updateParts = (next: Partial<AddressParts>) => {
     const updated = {
       ...parts,
       ...next,
     };
-    setParts(updated);
-    if (options?.shouldTriggerSuggestions ?? true) {
-      setShouldSuggest(true);
-    }
+
     onChange(composeAddress(updated));
+
+    if (isOpen) {
+      const nextQuery = composeAddress(updated).trim().toLowerCase();
+      if (!nextQuery) {
+        setIsOpen(false);
+      }
+    }
   };
 
+  const filteredSuggestions = useMemo(() => {
+    if (!normalizedQuery) {
+      return suggestions;
+    }
+
+    return suggestions.filter((item) => compactAddress(item).toLowerCase().includes(normalizedQuery));
+  }, [normalizedQuery, suggestions]);
+
   useEffect(() => {
-    if (!shouldSuggest || query.length < minQueryLength) {
-      setSuggestions([]);
-      setIsOpen(false);
+    if (!isOpen) {
       return;
     }
 
-    const timeout = setTimeout(async () => {
-      if (abortRef.current) {
-        abortRef.current.abort();
-      }
+    setIsOpen(filteredSuggestions.length > 0);
+  }, [filteredSuggestions.length, isOpen]);
 
-      const controller = new AbortController();
-      abortRef.current = controller;
-      setIsLoading(true);
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
-      try {
-        const params = new URLSearchParams({
-          q: query,
-          format: 'jsonv2',
-          addressdetails: '1',
-          limit: '6',
-          countrycodes: countryCodes,
-        });
+  const searchAddresses = async () => {
+    if (!hasMinimumQuery) {
+      setSuggestions([]);
+      setIsOpen(false);
+      setHasSearched(true);
+      return;
+    }
 
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-          signal: controller.signal,
-        });
+    const cacheKey = buildCacheKey(query, countryCodes);
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached) {
+      setSuggestions(cached);
+      setIsOpen(cached.length > 0);
+      setHasSearched(true);
+      return;
+    }
 
-        if (!response.ok) {
-          setSuggestions([]);
-          setIsOpen(false);
-          return;
-        }
+    abortRef.current?.abort();
 
-        const data = (await response.json()) as NominatimResult[];
-        setSuggestions(Array.isArray(data) ? data : []);
-        setIsOpen(Array.isArray(data) && data.length > 0);
-      } catch {
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setIsLoading(true);
+    setHasSearched(true);
+
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        format: 'jsonv2',
+        addressdetails: '1',
+        limit: '6',
+        countrycodes: countryCodes,
+      });
+
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
         setSuggestions([]);
         setIsOpen(false);
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    }, 350);
 
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, [query, countryCodes, minQueryLength, shouldSuggest]);
+      const data = (await response.json()) as NominatimResult[];
+      const nextSuggestions = Array.isArray(data) ? data : [];
+      cacheRef.current.set(cacheKey, nextSuggestions);
+      setSuggestions(nextSuggestions);
+      setIsOpen(nextSuggestions.length > 0);
+    } catch {
+      setSuggestions([]);
+      setIsOpen(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePick = (result: NominatimResult) => {
+    const next = resultToParts(result, parts.line1);
+    onChange(composeAddress(next));
+    setIsOpen(false);
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') {
+      return;
+    }
+
+    event.preventDefault();
+    void searchAddresses();
+  };
 
   const baseFieldClass = cn(
     'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
@@ -198,22 +236,16 @@ export function AddressAutocompleteField({
     className,
   );
 
-  const handlePick = (result: NominatimResult) => {
-    const next = resultToParts(result, parts.line1);
-    setParts(next);
-    setShouldSuggest(false);
-    onChange(composeAddress(next));
-    setIsOpen(false);
-  };
-
   return (
     <div className="relative">
       <input type="hidden" name={name} value={composeAddress(parts)} readOnly />
 
       <div className="flex flex-col gap-2">
         <input
+          id={id}
           value={parts.line1}
           onChange={(e) => updateParts({ line1: e.target.value })}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder || 'Address line 1 (e.g. 12 High Street)'}
           aria-label="Address line 1"
           required={required}
@@ -225,6 +257,7 @@ export function AddressAutocompleteField({
         <input
           value={parts.town}
           onChange={(e) => updateParts({ town: e.target.value })}
+          onKeyDown={handleKeyDown}
           placeholder="Town"
           aria-label="Town"
           title={title}
@@ -232,21 +265,34 @@ export function AddressAutocompleteField({
           className={baseFieldClass}
         />
 
-        <input
-          value={parts.postcode}
-          onChange={(e) => updateParts({ postcode: e.target.value.toUpperCase() })}
-          placeholder="Postcode"
-          aria-label="Postcode"
-          title={title}
-          autoComplete="postal-code"
-          className={baseFieldClass}
-        />
+        <div className="flex gap-2">
+          <input
+            value={parts.postcode}
+            onChange={(e) => updateParts({ postcode: e.target.value.toUpperCase() })}
+            onKeyDown={handleKeyDown}
+            placeholder="Postcode"
+            aria-label="Postcode"
+            title={title}
+            autoComplete="postal-code"
+            className={baseFieldClass}
+          />
+          <button
+            type="button"
+            onClick={() => void searchAddresses()}
+            disabled={!hasMinimumQuery || isLoading}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Search address suggestions"
+          >
+            <Search className="h-4 w-4" />
+            {isLoading ? 'Searching...' : 'Find'}
+          </button>
+        </div>
       </div>
 
-      {isOpen && (
+      {isOpen && filteredSuggestions.length > 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-background shadow-lg">
           <ul className="max-h-64 overflow-auto py-1">
-            {suggestions.map((item) => (
+            {filteredSuggestions.map((item) => (
               <li key={item.place_id}>
                 <button
                   type="button"
@@ -265,7 +311,11 @@ export function AddressAutocompleteField({
       )}
 
       <p className="mt-1 text-xs text-muted-foreground">
-        {isLoading ? 'Searching online addresses...' : 'Address suggestions powered by OpenStreetMap Nominatim'}
+        {isLoading
+          ? 'Searching online addresses...'
+          : hasSearched
+            ? 'Typing stays local. Online lookup only runs when you click Find or press Enter.'
+            : 'Typing stays local. Click Find when ready to look up matching addresses.'}
       </p>
     </div>
   );

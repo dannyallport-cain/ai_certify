@@ -1,0 +1,157 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/admin/Development/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/admin/Development/ai_certify/pnpm-lock.yaml
+
+   ▲ Next.js 15.6.0-canary.61 (Turbopack)
+   - Environments: .env
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ Compiled successfully in 18.3s
+   Running TypeScript ...
+   Collecting page data ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   Generating static pages (0/97) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Warning: Please use the `legacy` build in Node.js environments.
+   Generating static pages (24/97) 
+   Generating static pages (48/97) 
+   Generating static pages (72/97) 
+ ✓ Generating static pages (97/97) in 4.7s
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ƒ /admin
+├ ƒ /admin/database
+├ ƒ /admin/llm-test
+├ ƒ /admin/reports
+├ ƒ /admin/reports/disseminator
+├ ƒ /admin/stripe
+├ ƒ /admin/stripe-config
+├ ƒ /admin/subscriptions
+├ ƒ /admin/templates
+├ ƒ /admin/templates/[id]
+├ ƒ /admin/templates/[id]/preview
+├ ƒ /admin/templates/new
+├ ƒ /admin/users
+├ ƒ /admin/users/new
+├ ○ /ai-analysis
+├ ƒ /api/admin/database/backups
+├ ƒ /api/admin/database/backups/delete
+├ ƒ /api/admin/database/restore
+├ ƒ /api/admin/llm-test
+├ ƒ /api/admin/report-disseminator
+├ ƒ /api/admin/report-disseminator/[id]
+├ ƒ /api/admin/report-disseminator/advisor
+├ ƒ /api/admin/report-disseminator/ai-gateway-analyze
+├ ƒ /api/admin/report-disseminator/azure-analyze
+├ ƒ /api/admin/report-disseminator/extract-fields
+├ ƒ /api/admin/report-disseminator/ocr-text
+├ ƒ /api/admin/report-disseminator/option-search
+├ ƒ /api/admin/report-disseminator/reports
+├ ƒ /api/admin/report-disseminator/reports/[id]
+├ ƒ /api/admin/templates
+├ ƒ /api/admin/templates/[id]
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[id]
+├ ƒ /api/ai/analyze-image
+├ ƒ /api/auth/mobile
+├ ƒ /api/auth/sign-out
+├ ƒ /api/auth/user
+├ ƒ /api/certificates
+├ ƒ /api/certificates/[id]
+├ ƒ /api/certificates/[id]/pdf
+├ ƒ /api/cron/db-backup
+├ ƒ /api/customers
+├ ƒ /api/mobile/analyse-image
+├ ƒ /api/mobile/certificates/[certificateId]
+├ ƒ /api/mobile/certificates/draft
+├ ƒ /api/mobile/customers
+├ ƒ /api/mobile/servicem8/clients
+├ ƒ /api/mobile/servicem8/connection
+├ ƒ /api/mobile/servicem8/jobs
+├ ƒ /api/mobile/servicem8/jobs/[jobUuid]
+├ ƒ /api/mobile/servicem8/jobs/[jobUuid]/attachments
+├ ƒ /api/mobile/uploads
+├ ƒ /api/servicem8/activate
+├ ƒ /api/servicem8/callback
+├ ƒ /api/servicem8/clients
+├ ƒ /api/servicem8/connection
+├ ƒ /api/servicem8/jobs
+├ ƒ /api/servicem8/webhook
+├ ƒ /api/stripe/checkout
+├ ƒ /api/stripe/template-checkout
+├ ƒ /api/stripe/webhook
+├ ƒ /api/team
+├ ƒ /api/team/logo
+├ ƒ /api/user
+├ ƒ /api/user/asset/[kind]
+├ ƒ /api/user/company-profiles
+├ ƒ /api/user/mobile-capture
+├ ƒ /api/user/mobile-capture/session
+├ ○ /blog
+├ ƒ /calculators
+├ ƒ /calculators/conduit-fill
+├ ƒ /calculators/disconnection-time
+├ ƒ /calculators/insulation-resistance
+├ ƒ /calculators/maximum-demand-commercial
+├ ƒ /calculators/maximum-demand-domestic
+├ ƒ /calculators/power-factor
+├ ƒ /calculators/trunking-fill
+├ ○ /careers
+├ ƒ /certificates
+├ ƒ /certificates/[certificateId]
+├ ƒ /certificates/new
+├ ƒ /certificates/new/bs5266
+├ ƒ /certificates/new/bs5839-1
+├ ƒ /certificates/new/bs5839-6
+├ ƒ /certificates/new/cp12
+├ ƒ /certificates/new/dry-riser
+├ ƒ /certificates/new/eicr
+├ ƒ /certificates/new/eicr/streamlined
+├ ƒ /certificates/new/fire-extinguisher
+├ ○ /contact
+├ ƒ /customers
+├ ƒ /customers/new
+├ ƒ /dashboard
+├ ƒ /dashboard/activity
+├ ƒ /dashboard/admin/[[...slug]]
+├ ƒ /dashboard/general
+├ ƒ /dashboard/security
+├ ƒ /dashboard/servicem8
+├ ○ /features
+├ ○ /icon.svg
+├ ○ /login
+├ ○ /ml-workflow
+├ ƒ /mobile-capture
+├ ○ /pricing
+├ ○ /privacy
+├ ○ /roadmap
+├ ○ /security
+├ ƒ /servicem8
+├ ○ /sign-in
+├ ○ /sign-up
+├ ƒ /subscription
+├ ○ /terms
+└ ƒ /verify-email
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

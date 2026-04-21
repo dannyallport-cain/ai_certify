@@ -1,12 +1,9 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import './certificate-preview.css';
 
-import {
-  createCertificatePreviewLayoutEditController,
-  type CertificatePreviewBlockPositions,
-} from './preview/layout-editing';
+import { type CertificatePreviewBlockPositions } from './preview/layout-editing';
 
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return 'Not specified';
@@ -154,31 +151,179 @@ export const CertificatePreview = React.memo(function CertificatePreview({
   onMoveBlock,
 }: CertificatePreviewProps) {
   const systemDetails = useMemo(() => getSystemDetails(data), [data]);
+  const blockRefs = useRef<Record<string, HTMLDivElement | HTMLTableRowElement | null>>({});
+  const livePositionsRef = useRef<CertificatePreviewBlockPositions>({});
+  const activeDragRef = useRef<{
+    blockId: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    rafId: number | null;
+    nextX: number;
+    nextY: number;
+  } | null>(null);
 
-  const layoutEditController = useMemo(
-    () =>
-      createCertificatePreviewLayoutEditController({
-        enabled: layoutEditMode,
-        selection: {
-          selectedBlockId,
-          onSelectBlock,
-        },
-        movement: {
-          blockPositions,
-          onMoveBlock,
-        },
-      }),
-    [blockPositions, layoutEditMode, onMoveBlock, onSelectBlock, selectedBlockId]
-  );
+  useEffect(() => {
+    livePositionsRef.current = blockPositions ?? {};
 
-  const getEditableBlockProps = (blockId: string, baseClassName = '') =>
-    layoutEditController.getBlockBindings(blockId, baseClassName);
+    Object.entries(blockRefs.current).forEach(([blockId, element]) => {
+      if (!element) return;
+
+      const position = livePositionsRef.current[blockId] ?? { x: 0, y: 0 };
+      const hasOffset = Boolean(position.x || position.y);
+      element.style.transform = hasOffset ? `translate(${position.x}px, ${position.y}px)` : '';
+    });
+  }, [blockPositions]);
+
+  useEffect(() => {
+    return () => {
+      const activeDrag = activeDragRef.current;
+      if (activeDrag?.rafId) {
+        window.cancelAnimationFrame(activeDrag.rafId);
+      }
+    };
+  }, []);
+
+  const setBlockRef = (blockId: string) => (node: HTMLDivElement | HTMLTableRowElement | null) => {
+    blockRefs.current[blockId] = node;
+
+    if (!node) return;
+
+    const position = livePositionsRef.current[blockId] ?? blockPositions[blockId] ?? { x: 0, y: 0 };
+    if (position.x || position.y) {
+      node.style.transform = `translate(${position.x}px, ${position.y}px)`;
+    } else {
+      node.style.transform = '';
+    }
+  };
+
+  const getEditableBlockProps = (blockId: string, baseClassName = '') => {
+    const position = blockPositions[blockId] ?? { x: 0, y: 0 };
+    const isSelected = layoutEditMode && selectedBlockId === blockId;
+    const className = `${baseClassName} ${
+      layoutEditMode
+        ? 'relative cursor-move select-none rounded-sm outline outline-1 outline-dashed outline-blue-300 hover:outline-blue-500'
+        : ''
+    } ${layoutEditMode && isSelected ? 'outline-2 outline-blue-600 bg-blue-50/30' : ''}`.trim();
+
+    if (!layoutEditMode) {
+      return {
+        ref: setBlockRef(blockId),
+        className,
+        style:
+          position.x || position.y
+            ? { transform: `translate(${position.x}px, ${position.y}px)` }
+            : undefined,
+      };
+    }
+
+    return {
+      ref: setBlockRef(blockId),
+      className,
+      style:
+        position.x || position.y
+          ? { transform: `translate(${position.x}px, ${position.y}px)` }
+          : undefined,
+      onMouseDown: (event: React.MouseEvent<HTMLDivElement | HTMLTableRowElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const element = blockRefs.current[blockId];
+        if (!element) return;
+
+        onSelectBlock?.(blockId);
+
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const origin = livePositionsRef.current[blockId] ?? blockPositions[blockId] ?? { x: 0, y: 0 };
+
+        const dragState = {
+          blockId,
+          pointerId: 0,
+          startX,
+          startY,
+          originX: origin.x,
+          originY: origin.y,
+          rafId: null as number | null,
+          nextX: origin.x,
+          nextY: origin.y,
+        };
+
+        activeDragRef.current = dragState;
+
+        const flushPosition = () => {
+          const active = activeDragRef.current;
+          if (!active || active.blockId !== blockId) return;
+
+          const nextPosition = { x: active.nextX, y: active.nextY };
+          livePositionsRef.current = {
+            ...livePositionsRef.current,
+            [blockId]: nextPosition,
+          };
+
+          if (element) {
+            element.style.transform =
+              nextPosition.x || nextPosition.y
+                ? `translate(${nextPosition.x}px, ${nextPosition.y}px)`
+                : '';
+          }
+
+          active.rafId = null;
+        };
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+          const active = activeDragRef.current;
+          if (!active || active.blockId !== blockId) return;
+
+          active.nextX = active.originX + (moveEvent.clientX - active.startX);
+          active.nextY = active.originY + (moveEvent.clientY - active.startY);
+
+          if (active.rafId == null) {
+            active.rafId = window.requestAnimationFrame(flushPosition);
+          }
+        };
+
+        const handleMouseUp = () => {
+          const active = activeDragRef.current;
+          if (active?.rafId) {
+            window.cancelAnimationFrame(active.rafId);
+            active.rafId = null;
+          }
+
+          const finalPosition = livePositionsRef.current[blockId] ?? {
+            x: dragState.originX,
+            y: dragState.originY,
+          };
+
+          onMoveBlock?.(blockId, finalPosition);
+
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+
+          if (activeDragRef.current?.blockId === blockId) {
+            activeDragRef.current = null;
+          }
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+      },
+      onClick: (event: React.MouseEvent<HTMLDivElement | HTMLTableRowElement>) => {
+        event.stopPropagation();
+        onSelectBlock?.(blockId);
+      },
+    };
+  };
 
   return (
     <div
       className={`bg-white text-gray-900 print:bg-white ${className}`}
       onClick={() => {
-        layoutEditController.clearSelection();
+        if (layoutEditMode) {
+          onSelectBlock?.(null);
+        }
       }}
     >
       <div className="mx-auto m-0 border border-gray-300 bg-white shadow-sm print:shadow-none certificate-preview-page">
