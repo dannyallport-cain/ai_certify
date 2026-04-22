@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
   integer,
+  real,
   boolean,
   json,
   date,
@@ -348,6 +349,72 @@ export const certificateTemplates = pgTable('certificate_templates', {
     .references(() => users.id),
 });
 
+export const fireAlarmRoomCaptures = pgTable(
+  'fire_alarm_room_captures',
+  {
+    id: serial('id').primaryKey(),
+    teamId: integer('team_id')
+      .notNull()
+      .references(() => teams.id),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    externalSessionId: varchar('external_session_id', { length: 255 }).notNull(),
+    sessionName: varchar('session_name', { length: 255 }),
+    captureStatus: varchar('capture_status', { length: 50 }).notNull().default('completed'),
+    units: varchar('units', { length: 20 }),
+    startedAt: timestamp('started_at'),
+    endedAt: timestamp('ended_at'),
+    deviceCount: integer('device_count').notNull().default(0),
+    metadata: json('metadata'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    teamIdIdx: index('fire_alarm_room_captures_team_id_idx').on(table.teamId),
+    createdByIdx: index('fire_alarm_room_captures_created_by_idx').on(table.createdBy),
+    externalSessionIdx: uniqueIndex('fire_alarm_room_captures_team_session_idx').on(
+      table.teamId,
+      table.externalSessionId
+    ),
+    createdAtIdx: index('fire_alarm_room_captures_created_at_idx').on(table.createdAt),
+  })
+);
+
+export const fireAlarmCaptureDevices = pgTable(
+  'fire_alarm_capture_devices',
+  {
+    id: serial('id').primaryKey(),
+    captureId: integer('capture_id')
+      .notNull()
+      .references(() => fireAlarmRoomCaptures.id, { onDelete: 'cascade' }),
+    externalDeviceId: varchar('external_device_id', { length: 255 }),
+    deviceType: varchar('device_type', { length: 50 }).notNull(),
+    label: varchar('label', { length: 255 }),
+    manufacturerName: varchar('manufacturer_name', { length: 255 }),
+    manufacturerConfidence: real('manufacturer_confidence'),
+    confidence: real('confidence'),
+    locationX: real('location_x'),
+    locationY: real('location_y'),
+    locationZ: real('location_z'),
+    boundingBox: json('bounding_box'),
+    notes: text('notes'),
+    source: varchar('source', { length: 50 }),
+    roomId: varchar('room_id', { length: 255 }),
+    wallSegmentId: varchar('wall_segment_id', { length: 255 }),
+    identifiedByUser: boolean('identified_by_user').notNull().default(false),
+    metadata: json('metadata'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    captureIdIdx: index('fire_alarm_capture_devices_capture_id_idx').on(table.captureId),
+    deviceTypeIdx: index('fire_alarm_capture_devices_device_type_idx').on(table.deviceType),
+    externalDeviceIdx: index('fire_alarm_capture_devices_external_device_id_idx').on(
+      table.externalDeviceId
+    ),
+    createdAtIdx: index('fire_alarm_capture_devices_created_at_idx').on(table.createdAt),
+  })
+);
+
 export const servicem8Connections = pgTable('servicem8_connections', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
@@ -464,6 +531,7 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   customers: many(customers),
   certificates: many(certificates),
   certificateTemplates: many(certificateTemplates),
+  fireAlarmRoomCaptures: many(fireAlarmRoomCaptures),
   reportDisseminatorTemplates: many(reportDisseminatorTemplates),
   reportDisseminatorReports: many(reportDisseminatorReports),
   servicem8Connections: many(servicem8Connections),
@@ -476,6 +544,7 @@ export const teamsRelations = relations(teams, ({ many }) => ({
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
+  fireAlarmRoomCaptures: many(fireAlarmRoomCaptures),
   reportDisseminatorTemplates: many(reportDisseminatorTemplates),
   reportDisseminatorReports: many(reportDisseminatorReports),
   emailVerificationTokens: many(emailVerificationTokens),
@@ -591,6 +660,25 @@ export const certificateTemplatesRelations = relations(certificateTemplates, ({ 
   }),
 }));
 
+export const fireAlarmRoomCapturesRelations = relations(fireAlarmRoomCaptures, ({ one, many }) => ({
+  team: one(teams, {
+    fields: [fireAlarmRoomCaptures.teamId],
+    references: [teams.id],
+  }),
+  createdByUser: one(users, {
+    fields: [fireAlarmRoomCaptures.createdBy],
+    references: [users.id],
+  }),
+  devices: many(fireAlarmCaptureDevices),
+}));
+
+export const fireAlarmCaptureDevicesRelations = relations(fireAlarmCaptureDevices, ({ one }) => ({
+  capture: one(fireAlarmRoomCaptures, {
+    fields: [fireAlarmCaptureDevices.captureId],
+    references: [fireAlarmRoomCaptures.id],
+  }),
+}));
+
 export const reportDisseminatorTemplatesRelations = relations(reportDisseminatorTemplates, ({ one }) => ({
   team: one(teams, {
     fields: [reportDisseminatorTemplates.teamId],
@@ -671,6 +759,10 @@ export type CertificateItem = typeof certificateItems.$inferSelect;
 export type NewCertificateItem = typeof certificateItems.$inferInsert;
 export type CertificateTemplate = typeof certificateTemplates.$inferSelect;
 export type NewCertificateTemplate = typeof certificateTemplates.$inferInsert;
+export type FireAlarmRoomCapture = typeof fireAlarmRoomCaptures.$inferSelect;
+export type NewFireAlarmRoomCapture = typeof fireAlarmRoomCaptures.$inferInsert;
+export type FireAlarmCaptureDevice = typeof fireAlarmCaptureDevices.$inferSelect;
+export type NewFireAlarmCaptureDevice = typeof fireAlarmCaptureDevices.$inferInsert;
 export type ReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferSelect;
 export type NewReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferInsert;
 export type ReportDisseminatorReport = typeof reportDisseminatorReports.$inferSelect;

@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { FireAlarmScanSession } from '@/modules/fire-alarm-roomplan';
+import { getRoomPlanSession, saveRoomPlanSession } from '@/services/roomplan/session-store';
 
 function parseSessionParam(value: string | string[] | undefined, id?: string | string[]) {
   const rawValue = Array.isArray(value) ? value[0] : value;
@@ -50,17 +51,67 @@ function formatTypeLabel(value: string) {
 
 export default function RoomPlanSessionScreen() {
   const params = useLocalSearchParams<{ id?: string; session?: string }>();
-  const session = useMemo(() => parseSessionParam(params.session, params.id), [params.id, params.session]);
+  const [session, setSession] = useState<FireAlarmScanSession | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadSession = async () => {
+      const parsedSession = parseSessionParam(params.session, params.id);
+
+      if (params.session) {
+        if (!isCancelled) {
+          setSession(parsedSession);
+        }
+        await saveRoomPlanSession(parsedSession);
+        return;
+      }
+
+      const sessionId = Array.isArray(params.id) ? params.id[0] : params.id;
+      if (sessionId) {
+        const storedSession = await getRoomPlanSession(sessionId);
+        if (storedSession) {
+          if (!isCancelled) {
+            setSession(storedSession);
+          }
+          return;
+        }
+      }
+
+      if (!isCancelled) {
+        setSession(parsedSession);
+      }
+    };
+
+    void loadSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [params.id, params.session]);
 
   const reviewHref = useMemo(() => {
+    if (!session) {
+      return null;
+    }
+
     return {
       pathname: '/room-plan/review',
       params: {
-        id: session.id,
+        sessionId: session.id,
         session: JSON.stringify(session),
       },
     } as const;
   }, [session]);
+
+  if (!session) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white px-6">
+        <ActivityIndicator size="small" color="#0f172a" />
+        <Text className="mt-3 text-sm text-slate-600">Loading RoomPlan session…</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 24 }}>
@@ -91,7 +142,7 @@ export default function RoomPlanSessionScreen() {
         </Text>
         <Text className="mt-1 text-sm text-slate-600">Devices captured: {session.devices.length}</Text>
 
-        <Link href={reviewHref} asChild>
+        <Link href={reviewHref!} asChild>
           <Pressable className="mt-4 rounded-xl bg-blue-600 px-4 py-3">
             <Text className="text-center text-sm font-semibold text-white">Open review workflow</Text>
           </Pressable>

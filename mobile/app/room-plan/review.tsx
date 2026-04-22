@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,6 +9,7 @@ import type {
   FireAlarmManufacturer,
   FireAlarmScanSession,
 } from '@/modules/fire-alarm-roomplan';
+import { getRoomPlanSession, saveRoomPlanSession } from '@/services/roomplan/session-store';
 
 const DEVICE_TYPES: FireAlarmDeviceType[] = [
   'panel',
@@ -119,32 +120,68 @@ function createEmptyDevice(sessionId: string): EditableDevice {
 }
 
 export default function RoomPlanReviewScreen() {
-  const params = useLocalSearchParams<{ session?: string; id?: string }>();
+  const params = useLocalSearchParams<{ session?: string; id?: string; sessionId?: string }>();
   const [session, setSession] = useState<FireAlarmScanSession>(buildInitialSession);
   const [devices, setDevices] = useState<EditableDevice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const parsedSession = parseSessionParam(params.session);
+    let isCancelled = false;
 
-    if (parsedSession) {
-      setSession(parsedSession);
-      setDevices(
-        (parsedSession.devices ?? []).map((device) => ({
-          ...device,
-          reviewed: false,
-        })),
-      );
-      return;
-    }
+    const loadSession = async () => {
+      setIsLoading(true);
 
-    const fallbackSession = buildInitialSession();
-    if (params.id) {
-      fallbackSession.id = params.id;
-    }
+      const parsedSession = parseSessionParam(params.session);
+      const requestedSessionId = params.sessionId ?? params.id;
 
-    setSession(fallbackSession);
-    setDevices([]);
-  }, [params.id, params.session]);
+      if (parsedSession) {
+        if (!isCancelled) {
+          setSession(parsedSession);
+          setDevices(
+            (parsedSession.devices ?? []).map((device) => ({
+              ...device,
+              reviewed: false,
+            })),
+          );
+          setIsLoading(false);
+        }
+        await saveRoomPlanSession(parsedSession);
+        return;
+      }
+
+      if (requestedSessionId) {
+        const storedSession = await getRoomPlanSession(requestedSessionId);
+        if (storedSession && !isCancelled) {
+          setSession(storedSession);
+          setDevices(
+            (storedSession.devices ?? []).map((device) => ({
+              ...device,
+              reviewed: false,
+            })),
+          );
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const fallbackSession = buildInitialSession();
+      if (requestedSessionId) {
+        fallbackSession.id = requestedSessionId;
+      }
+
+      if (!isCancelled) {
+        setSession(fallbackSession);
+        setDevices([]);
+        setIsLoading(false);
+      }
+    };
+
+    void loadSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [params.id, params.session, params.sessionId]);
 
   const updateDevice = useCallback((deviceId: string, updater: (device: EditableDevice) => EditableDevice) => {
     setDevices((currentDevices) =>
@@ -189,14 +226,32 @@ export default function RoomPlanReviewScreen() {
     };
   }, [devices, session]);
 
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    void saveRoomPlanSession(reviewedSession);
+  }, [isLoading, reviewedSession]);
+
   const exportHref = useMemo(() => {
     return {
       pathname: '/room-plan/export',
       params: {
+        sessionId: reviewedSession.id,
         session: JSON.stringify(reviewedSession),
       },
     } as const;
   }, [reviewedSession]);
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white px-6">
+        <ActivityIndicator size="small" color="#0f172a" />
+        <Text className="mt-3 text-sm text-slate-600">Loading RoomPlan session…</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 24 }}>
@@ -437,7 +492,10 @@ export default function RoomPlanReviewScreen() {
         </Text>
         <Pressable
           className="mt-4 rounded-xl bg-blue-600 px-4 py-3"
-          onPress={() => router.push(exportHref)}
+          onPress={async () => {
+            await saveRoomPlanSession(reviewedSession);
+            router.push(exportHref);
+          }}
         >
           <Text className="text-center text-sm font-semibold text-white">Go to export</Text>
         </Pressable>
