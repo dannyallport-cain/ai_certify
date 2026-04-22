@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { createCertificate } from '../../../actions';
+import { createCertificate, updateCertificate } from '../../../actions';
 import { useState, useEffect, useRef, type ChangeEvent, type DragEvent, type ReactNode, type InputHTMLAttributes } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -632,6 +632,7 @@ type EicrDraftUser = {
 type EicrDraftState = {
   selectedCustomer: string;
   selectedCustomerName: string;
+  selectedServiceM8JobUuid: string;
   siteName: string;
   clientAddress: string;
   installationAddress: string;
@@ -664,6 +665,37 @@ type EicrDraftState = {
   inspectorPosition: string;
   formValues: Record<string, string>;
 };
+
+type ServiceM8JobOption = {
+  uuid: string;
+  generated_job_id: string | null;
+  job_description: string | null;
+  job_address: string | null;
+  status: string | null;
+  date: string | null;
+  company_uuid?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+};
+
+function buildServiceM8JobCustomerName(job: ServiceM8JobOption | null): string {
+  if (!job) {
+    return '';
+  }
+
+  return [job.first_name, job.last_name]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean)
+    .join(' ');
+}
+
+function buildServiceM8JobSitePrefill(job: ServiceM8JobOption | null): string {
+  if (!job) {
+    return '';
+  }
+
+  return job.job_address?.trim() || job.job_description?.trim() || job.generated_job_id?.trim() || '';
+}
 
 const EICR_DRAFT_STORAGE_PREFIX = 'eicr-form-draft';
 const EICR_PROFILE_DEFAULT_FIELDS = [
@@ -1552,8 +1584,17 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [selectedServiceM8JobUuid, setSelectedServiceM8JobUuid] = useState('');
   const { data: customersData } = useSWR('/api/customers', fetcher);
+  const { data: servicem8JobsData } = useSWR<{ jobs?: ServiceM8JobOption[]; error?: string }>(
+    '/api/servicem8/jobs',
+    fetcher,
+  );
   const customers = Array.isArray(customersData) ? customersData : [];
+  const servicem8Jobs = Array.isArray(servicem8JobsData?.jobs) ? servicem8JobsData.jobs : [];
+  const servicem8JobsError = typeof servicem8JobsData?.error === 'string' ? servicem8JobsData.error : '';
+  const selectedServiceM8Job = servicem8Jobs.find((job) => job.uuid === selectedServiceM8JobUuid) ?? null;
+  const selectedServiceM8JobCustomerName = buildServiceM8JobCustomerName(selectedServiceM8Job);
   const [siteName, setSiteName] = useState('');
   const [clientAddress, setClientAddress] = useState('');
   const [installationAddress, setInstallationAddress] = useState('');
@@ -1627,6 +1668,54 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     ...(earthingArrangementRequiresEarthElectrode ? [] : [earthElectrodeInspectionRef]),
     ...(isTTEarthingArrangement ? [] : [ttOnlyRcdFaultProtectionRef]),
   ];
+
+  useEffect(() => {
+    if (!selectedServiceM8Job) {
+      return;
+    }
+
+    const nextSiteName = buildServiceM8JobSitePrefill(selectedServiceM8Job);
+    const nextAddress = selectedServiceM8Job.job_address?.trim() || '';
+
+    if (nextSiteName && (!siteName || isSiteNameAuto) && siteName !== nextSiteName) {
+      setSiteName(nextSiteName);
+      setIsSiteNameAuto(true);
+    }
+
+    if (
+      nextAddress &&
+      (!clientAddress || isClientAddressAuto || !clientAddressTouchedRef.current) &&
+      clientAddress !== nextAddress
+    ) {
+      setClientAddress(nextAddress);
+      setIsClientAddressAuto(true);
+    }
+
+    if (selectedServiceM8JobCustomerName && !selectedCustomerName && !selectedCustomer) {
+      const normalizedCustomerName = selectedServiceM8JobCustomerName.trim().toLowerCase();
+      const matchingCustomer = customers.find(
+        (customer: any) => customer.name?.trim().toLowerCase() === normalizedCustomerName,
+      );
+
+      if (matchingCustomer) {
+        setSelectedCustomer(String(matchingCustomer.id));
+        setSelectedCustomerName(matchingCustomer.name);
+      } else {
+        setSelectedCustomer('');
+        setSelectedCustomerName(selectedServiceM8JobCustomerName);
+      }
+    }
+  }, [
+    clientAddress,
+    customers,
+    isClientAddressAuto,
+    isSiteNameAuto,
+    selectedCustomer,
+    selectedCustomerName,
+    selectedServiceM8Job,
+    selectedServiceM8JobCustomerName,
+    siteName,
+  ]);
 
   // When an inspection code changes to C1/C2, auto-add an observation and vice-versa
   const handleInspCodeChange = (
@@ -1772,6 +1861,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const applySavedDraftState = (savedDraft: EicrDraftState) => {
     setSelectedCustomer(savedDraft.selectedCustomer ?? '');
     setSelectedCustomerName(savedDraft.selectedCustomerName ?? '');
+    setSelectedServiceM8JobUuid(savedDraft.selectedServiceM8JobUuid ?? '');
     setSiteName(savedDraft.siteName ?? '');
     setClientAddress(savedDraft.clientAddress ?? '');
     setInstallationAddress(savedDraft.installationAddress ?? '');
@@ -1869,6 +1959,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         setSelectedCustomerName(
           certificateData.customer?.name || getFormValue('customerName') || '',
         );
+        setSelectedServiceM8JobUuid(certificateData.servicem8JobMapping?.servicem8JobUuid || '');
 
         const persistedSiteName = getFormValue('siteName') || certificateData.siteName || '';
         const persistedClientAddress =
@@ -2007,6 +2098,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     const draftState: EicrDraftState = {
       selectedCustomer,
       selectedCustomerName,
+      selectedServiceM8JobUuid,
       siteName,
       clientAddress,
       installationAddress,
@@ -2053,6 +2145,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     currentUser,
     selectedCustomer,
     selectedCustomerName,
+    selectedServiceM8JobUuid,
     siteName,
     clientAddress,
     installationAddress,
@@ -3381,9 +3474,24 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         inspectorName: inspectorName,
       };
 
-      const result = await createCertificate(data as any, formData);
+      formData.set('servicem8JobUuid', selectedServiceM8JobUuid);
 
-      if (result?.error) {
+      const result = isEditing && editId
+        ? await updateCertificate(
+            {
+              id: Number(editId),
+              certificateNumber,
+              siteName,
+              siteAddress: installationAddress || clientAddress,
+              inspectionDate,
+              nextInspectionDate,
+              inspectorName,
+            },
+            formData,
+          )
+        : await createCertificate(data as any, formData);
+
+      if ('error' in result && result.error) {
         if (isSessionExpiredError(result.error)) {
           router.push(getSignInRedirectPath('/certificates/new/eicr'));
           return;
@@ -3401,6 +3509,11 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       }
       lastSavedDraftKeyRef.current = null;
       setHasSavedDraft(false);
+
+      if (isEditing && editId) {
+        router.push(`/certificates/${editId}`);
+        return;
+      }
     } catch (error) {
       console.error('Error creating certificate:', error);
       setFormError('Unable to create certificate. Please try again.');
@@ -3580,6 +3693,52 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     <option key={c.id} value={c.name} />
                   ))}
                 </datalist>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="servicem8JobUuid">ServiceM8 Job Link</Label>
+                <input type="hidden" name="servicem8JobUuid" value={selectedServiceM8JobUuid} />
+                <Select
+                  value={selectedServiceM8JobUuid || '__none'}
+                  onValueChange={(value) => setSelectedServiceM8JobUuid(value === '__none' ? '' : value)}
+                >
+                  <SelectTrigger id="servicem8JobUuid">
+                    <SelectValue placeholder="No linked ServiceM8 job" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">No linked ServiceM8 job</SelectItem>
+                    {servicem8Jobs.map((job) => (
+                      <SelectItem key={job.uuid} value={job.uuid}>
+                        {job.generated_job_id || 'Job'}
+                        {job.job_description ? ` — ${job.job_description}` : ''}
+                        {job.job_address ? ` — ${job.job_address}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedServiceM8Job ? (
+                  <div className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                    <p className="font-medium">
+                      Linked job: {selectedServiceM8Job.generated_job_id || 'ServiceM8 Job'}
+                      {selectedServiceM8Job.status ? ` (${selectedServiceM8Job.status})` : ''}
+                    </p>
+                    {selectedServiceM8Job.job_description ? (
+                      <p className="mt-1">{selectedServiceM8Job.job_description}</p>
+                    ) : null}
+                    {selectedServiceM8Job.job_address ? (
+                      <p className="mt-1">{selectedServiceM8Job.job_address}</p>
+                    ) : null}
+                    {selectedServiceM8JobCustomerName ? (
+                      <p className="mt-1">Contact: {selectedServiceM8JobCustomerName}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+                {servicem8JobsError ? (
+                  <p className="text-xs text-red-600">{servicem8JobsError}</p>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Optional. Selecting a ServiceM8 job will keep the link on save and auto-fill the site/address fields when they are blank or still auto-generated.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -5482,7 +5641,13 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         {/* ── Submit ── */}
         <div className="flex gap-4 pb-8">
           <Button type="submit" disabled={isSubmitting} className="flex-1">
-            {isSubmitting ? 'Creating EICR...' : 'Create EICR Certificate'}
+            {isSubmitting
+              ? isEditing
+                ? 'Updating EICR...'
+                : 'Creating EICR...'
+              : isEditing
+                ? 'Update EICR Certificate'
+                : 'Create EICR Certificate'}
           </Button>
           <Button type="button" variant="outline" asChild>
             <Link href="/certificates">Cancel</Link>

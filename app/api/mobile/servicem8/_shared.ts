@@ -78,7 +78,10 @@ export async function getMobileServiceM8Client(request: NextRequest) {
     };
   }
 
-  const serviceM8Client = await ServiceM8Client_API.fromTeamId(mobileSession.team.id);
+  const serviceM8Client =
+    (mobileSession.user.id != null
+      ? await ServiceM8Client_API.fromUserId(mobileSession.user.id)
+      : null) ?? (await ServiceM8Client_API.fromTeamId(mobileSession.team.id));
 
   if (!serviceM8Client) {
     return {

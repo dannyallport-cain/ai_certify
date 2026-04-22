@@ -12,21 +12,27 @@ import { servicem8ClientMappings, customers } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 
-async function getTeamId(): Promise<number | null> {
+async function getServiceM8Context(): Promise<{ userId: number; teamId: number } | null> {
   const user = await getUser();
   if (!user) return null;
+
   const team = await getTeamForUser();
-  return team?.id ?? null;
+  if (!team) return null;
+
+  return {
+    userId: user.id,
+    teamId: team.id,
+  };
 }
 
 export async function GET() {
   try {
-    const teamId = await getTeamId();
-    if (!teamId) {
+    const context = await getServiceM8Context();
+    if (!context) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const client = await ServiceM8Client_API.fromTeamId(teamId);
+    const client = await ServiceM8Client_API.fromUserId(context.userId);
     if (!client) {
       return NextResponse.json({ error: 'ServiceM8 not connected' }, { status: 400 });
     }
@@ -42,12 +48,12 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const teamId = await getTeamId();
-    if (!teamId) {
+    const context = await getServiceM8Context();
+    if (!context) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    const sm8Client = await ServiceM8Client_API.fromTeamId(teamId);
+    const sm8Client = await ServiceM8Client_API.fromUserId(context.userId);
     if (!sm8Client) {
       return NextResponse.json({ error: 'ServiceM8 not connected' }, { status: 400 });
     }
@@ -69,7 +75,7 @@ export async function POST(request: NextRequest) {
           .from(servicem8ClientMappings)
           .where(
             and(
-              eq(servicem8ClientMappings.teamId, teamId),
+              eq(servicem8ClientMappings.teamId, context.teamId),
               eq(servicem8ClientMappings.servicem8CompanyUuid, c.uuid)
             )
           )
@@ -87,7 +93,7 @@ export async function POST(request: NextRequest) {
           .join(', ');
 
         const [newCustomer] = await db.insert(customers).values({
-          teamId,
+          teamId: context.teamId,
           name: name || 'Unnamed Client',
           email: c.email || null,
           phone: c.phone || c.mobile || null,
@@ -98,7 +104,8 @@ export async function POST(request: NextRequest) {
 
         // Create mapping
         await db.insert(servicem8ClientMappings).values({
-          teamId,
+          teamId: context.teamId,
+          servicem8ConnectionUserId: context.userId,
           customerId: newCustomer.id,
           servicem8CompanyUuid: c.uuid,
           syncStatus: 'synced',
@@ -128,7 +135,7 @@ export async function POST(request: NextRequest) {
         .from(servicem8ClientMappings)
         .where(
           and(
-            eq(servicem8ClientMappings.teamId, teamId),
+            eq(servicem8ClientMappings.teamId, context.teamId),
             eq(servicem8ClientMappings.customerId, customerId)
           )
         )
@@ -138,6 +145,7 @@ export async function POST(request: NextRequest) {
         await db
           .update(servicem8ClientMappings)
           .set({
+            servicem8ConnectionUserId: context.userId,
             servicem8CompanyUuid,
             syncStatus: 'synced',
             lastSyncAt: new Date(),
@@ -146,7 +154,8 @@ export async function POST(request: NextRequest) {
           .where(eq(servicem8ClientMappings.id, existing[0].id));
       } else {
         await db.insert(servicem8ClientMappings).values({
-          teamId,
+          teamId: context.teamId,
+          servicem8ConnectionUserId: context.userId,
           customerId,
           servicem8CompanyUuid,
           syncStatus: 'synced',
@@ -170,7 +179,7 @@ export async function POST(request: NextRequest) {
         .where(
           and(
             eq(customers.id, customerId),
-            eq(customers.teamId, teamId)
+            eq(customers.teamId, context.teamId)
           )
         )
         .limit(1);
@@ -192,7 +201,8 @@ export async function POST(request: NextRequest) {
 
       // Create mapping
       await db.insert(servicem8ClientMappings).values({
-        teamId,
+        teamId: context.teamId,
+        servicem8ConnectionUserId: context.userId,
         customerId,
         servicem8CompanyUuid: result.uuid,
         syncStatus: 'synced',

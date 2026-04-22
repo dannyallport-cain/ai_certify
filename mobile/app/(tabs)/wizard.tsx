@@ -87,7 +87,7 @@ function StepCard({ title, detail, done, locked, actionLabel, onPress }: StepIte
           <Ionicons
             name={done ? 'checkmark' : locked ? 'lock-closed-outline' : 'ellipse-outline'}
             size={18}
-            color={done ? '#16a34a' : locked ? '#9ca3af' : '#BE0000'}
+            color={done ? '#16a34a' : locked ? '#9ca3af' : '#0D47A1'}
           />
         </View>
         <View className="flex-1">
@@ -764,7 +764,7 @@ export default function WizardScreen() {
                   <Ionicons
                     name={item.complete ? 'checkmark-circle' : item.blocked ? 'alert-circle-outline' : 'camera-outline'}
                     size={20}
-                    color={item.complete ? '#16a34a' : item.blocked ? '#b45309' : '#BE0000'}
+                    color={item.complete ? '#16a34a' : item.blocked ? '#b45309' : '#0D47A1'}
                   />
                 </View>
               ))}

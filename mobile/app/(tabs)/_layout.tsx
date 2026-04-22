@@ -14,14 +14,14 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={({ navigation, route }) => ({
         headerStyle: {
-          backgroundColor: '#f6f1eb',
+          backgroundColor: '#FAFBFC',
         },
         headerShadowVisible: false,
-        headerTintColor: '#1f2937',
+        headerTintColor: '#1A202C',
         headerTitleStyle: {
           fontSize: 18,
           fontWeight: '700',
-          color: '#1f2937',
+          color: '#1A202C',
         },
         headerLeft: () => <HeaderBackButton navigation={navigation} />,
         headerRight: () => {
@@ -44,10 +44,10 @@ export default function TabsLayout() {
           return null;
         },
         sceneStyle: {
-          backgroundColor: '#f8f5f1',
+          backgroundColor: '#F5F7FA',
         },
-        tabBarActiveTintColor: '#7c5a45',
-        tabBarInactiveTintColor: '#9b8d82',
+        tabBarActiveTintColor: '#0D47A1',
+        tabBarInactiveTintColor: '#A0AEC0',
         tabBarStyle: {
           position: 'absolute',
           left: 16,
@@ -58,7 +58,7 @@ export default function TabsLayout() {
           paddingBottom: 10,
           borderTopWidth: 0,
           borderRadius: 24,
-          backgroundColor: '#fffdf9',
+          backgroundColor: '#FFFFFF',
           shadowColor: '#4b3425',
           shadowOpacity: 0.1,
           shadowRadius: 18,

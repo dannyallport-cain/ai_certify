@@ -426,7 +426,7 @@ export default function CustomerScreen() {
                             <Ionicons
                               name={selected ? 'checkbox' : 'square-outline'}
                               size={22}
-                              color={selected ? '#BE0000' : '#6b7280'}
+                              color={selected ? '#0D47A1' : '#718096'}
                             />
                           </View>
                           <Text className="mt-2 text-sm text-gray-600">
@@ -459,13 +459,13 @@ export default function CustomerScreen() {
             className="flex-row items-center rounded-xl border border-brand bg-brand/10 px-4 py-3"
             onPress={() => setShowNewModal(true)}
           >
-            <Ionicons name="add-circle-outline" size={22} color="#BE0000" style={{ marginRight: 8 }} />
+            <Ionicons name="add-circle-outline" size={22} color="#0D47A1" style={{ marginRight: 8 }} />
             <Text className="font-semibold text-brand">New Customer</Text>
           </TouchableOpacity>
         </View>
 
         {isLoading ? (
-          <ActivityIndicator className="mt-8" color="#BE0000" />
+          <ActivityIndicator className="mt-8" color="#0D47A1" />
         ) : (
           <View style={{ paddingHorizontal: 16 }}>
             {customers.length === 0 ? (
@@ -491,7 +491,7 @@ export default function CustomerScreen() {
                       <Text className="font-semibold text-gray-900">{customer.name}</Text>
                       {customer.email ? <Text className="text-sm text-gray-400">{customer.email}</Text> : null}
                     </View>
-                    {selected && <Ionicons name="checkmark-circle" size={22} color="#BE0000" />}
+                    {selected && <Ionicons name="checkmark-circle" size={22} color="#0D47A1" />}
                   </TouchableOpacity>
                 );
               })

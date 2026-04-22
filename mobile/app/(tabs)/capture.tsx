@@ -331,7 +331,7 @@ export default function CaptureScreen() {
         Alert.alert("Analysis Complete", buildAnalysisMessage(result));
       }
     } catch (error) {
-      console.warn("Image analysis failed", error);
+      // console.warn("Image analysis failed", error); // Debug log disabled for production
       Alert.alert("Analysis Failed", "Image captured but AI analysis failed. Please retake the photo.");
     } finally {
       setAnalysing(false);
@@ -358,16 +358,16 @@ export default function CaptureScreen() {
 
   if (!permission.granted) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#f8f5f1] px-8">
-        <View className="mb-5 h-20 w-20 items-center justify-center rounded-[28px] bg-[#efe6dc]">
-          <Ionicons name="camera-outline" size={36} color="#7c5a45" />
+      <View className="flex-1 items-center justify-center bg-[#F5F7FA] px-8">
+        <View className="mb-5 h-20 w-20 items-center justify-center rounded-[28px] bg-[#E3F2FD]">
+          <Ionicons name="camera-outline" size={36} color="#0D47A1" />
         </View>
-        <Text className="mb-2 text-center text-2xl font-bold text-[#1f2937]">Camera access required</Text>
-        <Text className="mb-6 text-center text-base leading-6 text-[#6b7280]">
+        <Text className="mb-2 text-center text-2xl font-bold text-[#1A202C]">Camera access required</Text>
+        <Text className="mb-6 text-center text-base leading-6 text-[#718096]">
           Enable camera access to capture inspection evidence in the mobile workflow.
         </Text>
-        <TouchableOpacity className="rounded-[20px] bg-[#7c5a45] px-8 py-4" onPress={requestPermission}>
-          <Text className="font-semibold text-[#fffdf9]">Grant Access</Text>
+        <TouchableOpacity className="rounded-[20px] bg-[#0D47A1] px-8 py-4" onPress={requestPermission}>
+          <Text className="font-semibold text-[#FFFFFF]">Grant Access</Text>
         </TouchableOpacity>
       </View>
     );
@@ -392,14 +392,14 @@ export default function CaptureScreen() {
                   {activeRequirement?.description ?? "Capture a clear evidence photo for the inspection record."}
                 </Text>
               </View>
-              <View className="h-12 w-12 items-center justify-center rounded-2xl bg-[#7c5a45]/80">
-                <Ionicons name="camera-outline" size={22} color="#fffdf9" />
+              <View className="h-12 w-12 items-center justify-center rounded-2xl bg-[#0D47A1]/80">
+                <Ionicons name="camera-outline" size={22} color="#FFFFFF" />
               </View>
             </View>
 
             {activeRequirement ? (
-              <View className="mb-3 rounded-[20px] bg-[#7c5a45]/75 px-4 py-3">
-                <Text className="font-semibold text-[#fffdf9]">Why this photo matters</Text>
+              <View className="mb-3 rounded-[20px] bg-[#0D47A1]/75 px-4 py-3">
+                <Text className="font-semibold text-[#FFFFFF]">Why this photo matters</Text>
                 <Text className="mt-1 text-sm leading-5 text-[#f3e9df]">{activeRequirement.reason}</Text>
               </View>
             ) : null}
@@ -408,7 +408,7 @@ export default function CaptureScreen() {
               <Text className="mb-2 font-semibold text-white">Framing guidance</Text>
               {guidance.map((item) => (
                 <View key={item} className="mb-1 flex-row items-start">
-                  <Text className="mr-2 text-[#e7d8c9]">•</Text>
+                  <Text className="mr-2 text-[#BBDEFB]">•</Text>
                   <Text className="flex-1 text-sm text-white/85">{item}</Text>
                 </View>
               ))}
@@ -489,14 +489,14 @@ export default function CaptureScreen() {
                     <Text className="font-semibold text-white">Retake</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    className="flex-1 items-center rounded-[20px] bg-[#7c5a45] px-4 py-4"
+                    className="flex-1 items-center rounded-[20px] bg-[#0D47A1] px-4 py-4"
                     onPress={confirmPhoto}
                     disabled={analysing}
                   >
                     {analysing ? (
-                      <ActivityIndicator color="#fffdf9" />
+                      <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                      <Text className="font-semibold text-[#fffdf9]">Use photo</Text>
+                      <Text className="font-semibold text-[#FFFFFF]">Use photo</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -512,7 +512,7 @@ export default function CaptureScreen() {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    className="h-[74px] w-[74px] items-center justify-center rounded-full border-4 border-white bg-[#7c5a45]"
+                    className="h-[74px] w-[74px] items-center justify-center rounded-full border-4 border-white bg-[#0D47A1]"
                     onPress={takePicture}
                   >
                     <View className="h-[54px] w-[54px] rounded-full bg-white" />

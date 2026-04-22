@@ -46,7 +46,7 @@ export default function LocationScreen() {
         payload: { address, coords: { latitude: loc.coords.latitude, longitude: loc.coords.longitude } },
       });
     } catch (error) {
-      console.warn('Location detection failed', error);
+      // console.warn('Location detection failed', error); // Debug log disabled for production
       Alert.alert('Location Error', 'Could not determine location. Please enter manually.');
     } finally {
       setLoading(false);
@@ -80,9 +80,9 @@ export default function LocationScreen() {
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="#BE0000" className="mr-3" />
+          <ActivityIndicator color="#0D47A1" className="mr-3" />
         ) : (
-          <Ionicons name="locate" size={24} color="#BE0000" style={{ marginRight: 12 }} />
+          <Ionicons name="locate" size={24} color="#0D47A1" style={{ marginRight: 12 }} />
         )}
         <View>
           <Text className="font-semibold text-brand">Use GPS Location</Text>

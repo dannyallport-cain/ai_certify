@@ -5,22 +5,42 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: '#BE0000',
+        // Modern professional brand colors
+        brand: {
+          primary: '#0D47A1',      // Deep blue
+          secondary: '#E8591E',    // Warm orange
+          tertiary: '#4CAF50',     // Fresh green
+          accent: '#FF6F00',       // Vibrant orange
+        },
         ui: {
-          canvas: '#f8f5f1',
-          surface: '#fffdf9',
-          panel: '#f6f1eb',
-          line: '#e6dbcf',
-          lineStrong: '#e8ddd2',
-          accent: '#7c5a45',
-          accentSoft: '#efe6dc',
-          accentMuted: '#e7d8c9',
-          text: '#1f2937',
-          textMuted: '#6b7280',
-          textSoft: '#9b8d82',
-          success: '#4f7a5c',
-          successSoft: '#e4efe7',
-          warning: '#f2c97d',
+          // Surface colors - clean and bright
+          canvas: '#FFFFFF',
+          surface: '#F5F7FA',
+          panel: '#FAFBFC',
+          
+          // Border and divider colors
+          line: '#E0E6ED',
+          lineStrong: '#D1D8E0',
+          
+          // Accent colors - professional tones
+          accent: '#0D47A1',
+          accentSoft: '#E3F2FD',
+          accentMuted: '#BBDEFB',
+          
+          // Text colors with good contrast
+          text: '#1A202C',
+          textMuted: '#718096',
+          textSoft: '#A0AEC0',
+          
+          // Status colors - semantic
+          success: '#4CAF50',
+          successSoft: '#E8F5E9',
+          warning: '#FF6F00',
+          warningLight: '#FFF3E0',
+          error: '#D32F2F',
+          errorSoft: '#FFEBEE',
+          info: '#0D47A1',
+          infoLight: '#E3F2FD',
         },
       },
     },

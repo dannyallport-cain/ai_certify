@@ -1,8 +1,8 @@
 /**
  * ServiceM8 Connection Management API
- * 
- * GET  - Get connection status for current team
- * DELETE - Disconnect ServiceM8 from current team
+ *
+ * GET  - Get connection status for current user
+ * DELETE - Disconnect ServiceM8 from current user
  * PATCH - Update sync settings
  */
 
@@ -12,17 +12,23 @@ import { servicem8Connections } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 
-async function getTeamId(): Promise<number | null> {
+async function getServiceM8Context(): Promise<{ userId: number; teamId: number } | null> {
   const user = await getUser();
   if (!user) return null;
+
   const team = await getTeamForUser();
-  return team?.id ?? null;
+  if (!team) return null;
+
+  return {
+    userId: user.id,
+    teamId: team.id,
+  };
 }
 
 export async function GET() {
   try {
-    const teamId = await getTeamId();
-    if (!teamId) {
+    const context = await getServiceM8Context();
+    if (!context) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
@@ -36,9 +42,11 @@ export async function GET() {
         lastSyncAt: servicem8Connections.lastSyncAt,
         createdAt: servicem8Connections.createdAt,
         updatedAt: servicem8Connections.updatedAt,
+        userId: servicem8Connections.userId,
+        teamId: servicem8Connections.teamId,
       })
       .from(servicem8Connections)
-      .where(eq(servicem8Connections.teamId, teamId))
+      .where(eq(servicem8Connections.userId, context.userId))
       .limit(1);
 
     if (connections.length === 0) {
@@ -57,14 +65,14 @@ export async function GET() {
 
 export async function DELETE() {
   try {
-    const teamId = await getTeamId();
-    if (!teamId) {
+    const context = await getServiceM8Context();
+    if (!context) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
     await db
       .delete(servicem8Connections)
-      .where(eq(servicem8Connections.teamId, teamId));
+      .where(eq(servicem8Connections.userId, context.userId));
 
     return NextResponse.json({ success: true, message: 'ServiceM8 disconnected' });
   } catch (error) {
@@ -75,8 +83,8 @@ export async function DELETE() {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const teamId = await getTeamId();
-    if (!teamId) {
+    const context = await getServiceM8Context();
+    if (!context) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
@@ -92,7 +100,7 @@ export async function PATCH(request: NextRequest) {
     await db
       .update(servicem8Connections)
       .set(updates)
-      .where(eq(servicem8Connections.teamId, teamId));
+      .where(eq(servicem8Connections.userId, context.userId));
 
     return NextResponse.json({ success: true });
   } catch (error) {
