@@ -82,6 +82,7 @@ export interface FireAlarmDeviceDetection {
   roomId?: string | null;
   wallSegmentId?: string | null;
   lifecyclePhase?: FireAlarmCaptureLifecyclePhase | null;
+  identifiedByUser?: boolean;
   metadata?: Record<string, unknown> | null;
 }
 

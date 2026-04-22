@@ -1,9 +1,10 @@
-import { useMemo } from 'react';
-import { Alert, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { FireAlarmScanSession } from '@/modules/fire-alarm-roomplan';
+import { getRoomPlanSession, saveRoomPlanSession } from '@/services/roomplan/session-store';
 
 function buildFallbackSession(): FireAlarmScanSession {
   const now = new Date().toISOString();
@@ -46,10 +47,56 @@ function parseSessionParam(value: string | string[] | undefined) {
 }
 
 export default function RoomPlanExportScreen() {
-  const params = useLocalSearchParams<{ session?: string }>();
-  const session = useMemo(() => parseSessionParam(params.session), [params.session]);
+  const params = useLocalSearchParams<{ session?: string; sessionId?: string }>();
+  const [session, setSession] = useState<FireAlarmScanSession | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadSession = async () => {
+      const parsedSession = parseSessionParam(params.session);
+
+      if (params.session) {
+        if (!isCancelled) {
+          setSession(parsedSession);
+        }
+        await saveRoomPlanSession(parsedSession);
+        return;
+      }
+
+      const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
+      if (sessionId) {
+        const storedSession = await getRoomPlanSession(sessionId);
+        if (storedSession) {
+          if (!isCancelled) {
+            setSession(storedSession);
+          }
+          return;
+        }
+      }
+
+      if (!isCancelled) {
+        setSession(parsedSession);
+      }
+    };
+
+    void loadSession();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [params.session, params.sessionId]);
 
   const exportJson = useMemo(() => JSON.stringify(session, null, 2), [session]);
+
+  if (!session) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white px-6">
+        <ActivityIndicator size="small" color="#0f172a" />
+        <Text className="mt-3 text-sm text-slate-600">Loading export payload…</Text>
+      </View>
+    );
+  }
 
   const handleShare = async () => {
     try {

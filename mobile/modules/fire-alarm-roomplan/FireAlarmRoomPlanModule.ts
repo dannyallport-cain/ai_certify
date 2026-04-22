@@ -1,4 +1,8 @@
-import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
+import {
+  LegacyEventEmitter,
+  requireOptionalNativeModule,
+} from 'expo-modules-core';
+import { Platform } from 'react-native';
 
 import type {
   FireAlarmDeviceDetection,
@@ -13,24 +17,38 @@ import type {
   FireAlarmRoomPlanSupportInfo,
   FireAlarmScanError,
   FireAlarmScanSession,
+  FireAlarmScanSessionMetadata,
   FireAlarmScanStatus,
 } from './types';
 
 type NativeFireAlarmRoomPlanModule = {
-  isSupported?: () => Promise<boolean | FireAlarmRoomPlanSupportInfo> | boolean | FireAlarmRoomPlanSupportInfo;
-  startScan?: (options?: FireAlarmRoomPlanStartOptions) => Promise<FireAlarmScanSession> | FireAlarmScanSession;
-  stopScan?: () => Promise<void> | void;
+  isSupported?:
+    | (() => Promise<boolean | FireAlarmRoomPlanSupportInfo>)
+    | (() => boolean | FireAlarmRoomPlanSupportInfo);
+  startScan?:
+    | ((options?: FireAlarmRoomPlanStartOptions) => Promise<FireAlarmScanSession>)
+    | ((options?: FireAlarmRoomPlanStartOptions) => FireAlarmScanSession);
+  stopScan?: (() => Promise<void>) | (() => void);
   exportSession?:
-    | ((session: FireAlarmScanSession, options?: FireAlarmRoomPlanExportOptions) => Promise<string | Record<string, unknown>> | string | Record<string, unknown>)
+    | ((
+        session: FireAlarmScanSession,
+        options?: FireAlarmRoomPlanExportOptions,
+      ) => Promise<string | Record<string, unknown>>)
+    | ((
+        session: FireAlarmScanSession,
+        options?: FireAlarmRoomPlanExportOptions,
+      ) => string | Record<string, unknown>)
     | undefined;
 };
 
 const NATIVE_MODULE_NAME = 'FireAlarmRoomPlan';
 
-const nativeModule = NativeModules[NATIVE_MODULE_NAME] as NativeFireAlarmRoomPlanModule | undefined;
+const nativeModule = requireOptionalNativeModule<NativeFireAlarmRoomPlanModule>(
+  NATIVE_MODULE_NAME,
+);
 
 const nativeEventEmitter =
-  nativeModule && Platform.OS !== 'web' ? new NativeEventEmitter(NativeModules[NATIVE_MODULE_NAME]) : null;
+  nativeModule && Platform.OS !== 'web' ? new LegacyEventEmitter(nativeModule) : null;
 
 const statusListeners = new Set<(event: FireAlarmRoomPlanStatusEvent) => void>();
 const progressListeners = new Set<(event: FireAlarmRoomPlanProgressEvent) => void>();
@@ -46,13 +64,13 @@ function createSessionId() {
   return `fire-alarm-roomplan-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function createMetadata(options?: FireAlarmRoomPlanStartOptions) {
+function createMetadata(options?: FireAlarmRoomPlanStartOptions): FireAlarmScanSessionMetadata {
   return {
     startedAt: new Date().toISOString(),
     platform: Platform.OS,
     scannerVersion: 'js-bridge',
     sessionName: options?.roomName?.trim() || 'Room capture',
-    captureState: 'preparing' as const,
+    captureState: 'preparing',
     framesCaptured: 0,
     roomsDetected: 0,
     surfacesDetected: 0,
@@ -205,9 +223,14 @@ function ensureNativeEventSubscription<K extends keyof FireAlarmRoomPlanEventMap
   if (!nativeEventEmitter) return;
 
   if (eventName === 'status' && !statusNativeSubscription) {
-    const subscription = nativeEventEmitter.addListener('FireAlarmRoomPlan:status', (event) => {
-      statusListeners.forEach((listener) => listener(event as FireAlarmRoomPlanStatusEvent));
-    });
+    const subscription = nativeEventEmitter.addListener(
+      'FireAlarmRoomPlan:status',
+      (event: unknown) => {
+        statusListeners.forEach((listener) =>
+          listener(event as FireAlarmRoomPlanStatusEvent),
+        );
+      },
+    );
 
     statusNativeSubscription = {
       remove: () => subscription.remove(),
@@ -215,9 +238,14 @@ function ensureNativeEventSubscription<K extends keyof FireAlarmRoomPlanEventMap
   }
 
   if (eventName === 'progress' && !progressNativeSubscription) {
-    const subscription = nativeEventEmitter.addListener('FireAlarmRoomPlan:progress', (event) => {
-      progressListeners.forEach((listener) => listener(event as FireAlarmRoomPlanProgressEvent));
-    });
+    const subscription = nativeEventEmitter.addListener(
+      'FireAlarmRoomPlan:progress',
+      (event: unknown) => {
+        progressListeners.forEach((listener) =>
+          listener(event as FireAlarmRoomPlanProgressEvent),
+        );
+      },
+    );
 
     progressNativeSubscription = {
       remove: () => subscription.remove(),
@@ -225,9 +253,14 @@ function ensureNativeEventSubscription<K extends keyof FireAlarmRoomPlanEventMap
   }
 
   if (eventName === 'detection' && !detectionNativeSubscription) {
-    const subscription = nativeEventEmitter.addListener('FireAlarmRoomPlan:detection', (event) => {
-      detectionListeners.forEach((listener) => listener(event as FireAlarmRoomPlanDetectionEvent));
-    });
+    const subscription = nativeEventEmitter.addListener(
+      'FireAlarmRoomPlan:detection',
+      (event: unknown) => {
+        detectionListeners.forEach((listener) =>
+          listener(event as FireAlarmRoomPlanDetectionEvent),
+        );
+      },
+    );
 
     detectionNativeSubscription = {
       remove: () => subscription.remove(),
@@ -235,9 +268,14 @@ function ensureNativeEventSubscription<K extends keyof FireAlarmRoomPlanEventMap
   }
 
   if (eventName === 'session' && !sessionNativeSubscription) {
-    const subscription = nativeEventEmitter.addListener('FireAlarmRoomPlan:session', (event) => {
-      sessionListeners.forEach((listener) => listener(event as FireAlarmRoomPlanSessionEvent));
-    });
+    const subscription = nativeEventEmitter.addListener(
+      'FireAlarmRoomPlan:session',
+      (event: unknown) => {
+        sessionListeners.forEach((listener) =>
+          listener(event as FireAlarmRoomPlanSessionEvent),
+        );
+      },
+    );
 
     sessionNativeSubscription = {
       remove: () => subscription.remove(),
@@ -278,7 +316,7 @@ function toSupportInfo(result: boolean | FireAlarmRoomPlanSupportInfo): FireAlar
       supportsLiveProgressEvents: result,
       supportsDetectionEvents: result,
       supportsSessionExport: result,
-      requiredPermissions: result ? ['camera'] : ['camera'],
+      requiredPermissions: ['camera'],
       metadata: null,
     };
   }
@@ -292,11 +330,11 @@ function toSupportInfo(result: boolean | FireAlarmRoomPlanSupportInfo): FireAlar
           : false,
     platform: result?.platform ?? Platform.OS,
     reason: result?.reason ?? null,
-    supportsRoomCapture: result?.supportsRoomCapture ?? null ?? undefined,
-    supportsDevicePoseTracking: result?.supportsDevicePoseTracking ?? null ?? undefined,
-    supportsLiveProgressEvents: result?.supportsLiveProgressEvents ?? null ?? undefined,
-    supportsDetectionEvents: result?.supportsDetectionEvents ?? null ?? undefined,
-    supportsSessionExport: result?.supportsSessionExport ?? null ?? undefined,
+    supportsRoomCapture: result?.supportsRoomCapture ?? undefined,
+    supportsDevicePoseTracking: result?.supportsDevicePoseTracking ?? undefined,
+    supportsLiveProgressEvents: result?.supportsLiveProgressEvents ?? undefined,
+    supportsDetectionEvents: result?.supportsDetectionEvents ?? undefined,
+    supportsSessionExport: result?.supportsSessionExport ?? undefined,
     requiredPermissions: result?.requiredPermissions ?? ['camera'],
     metadata: result?.metadata ?? null,
   };
@@ -347,7 +385,9 @@ async function startScan(options?: FireAlarmRoomPlanStartOptions): Promise<FireA
     try {
       const session = await nativeModule.startScan(options);
       emitStatus(session.status, session.id, {
-        phase: session.metadata.captureState ?? (session.status === 'completed' ? 'completed' : null),
+        phase:
+          session.metadata.captureState ??
+          (session.status === 'completed' ? 'completed' : null),
         progress: session.status === 'completed' ? 1 : null,
       });
       emitSession(session);
@@ -355,7 +395,10 @@ async function startScan(options?: FireAlarmRoomPlanStartOptions): Promise<FireA
     } catch (error) {
       const scanError: FireAlarmScanError = {
         code: 'start_scan_failed',
-        message: error instanceof Error ? error.message : 'Failed to start room capture session.',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to start room capture session.',
         details: error instanceof Error ? null : { error },
       };
 
@@ -367,6 +410,23 @@ async function startScan(options?: FireAlarmRoomPlanStartOptions): Promise<FireA
 
       throw error;
     }
+  }
+
+  if (Platform.OS === 'ios') {
+    const error = new Error('Native FireAlarmRoomPlan module is not installed.');
+    const scanError: FireAlarmScanError = {
+      code: 'native_module_missing',
+      message: error.message,
+      details: null,
+    };
+
+    emitStatus('error', null, {
+      phase: 'failed',
+      error: scanError,
+      message: scanError.message,
+    });
+
+    throw error;
   }
 
   const session = createFallbackSession(options);

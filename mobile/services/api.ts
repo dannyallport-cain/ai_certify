@@ -8,6 +8,10 @@ import type {
   FireAlarmDiagnosticAssistantFeedback,
   FireAlarmDiagnosticAssistantRequest,
 } from '@/modules/fire-alarm-diagnostics/types';
+import type {
+  FireAlarmDeviceDetection,
+  FireAlarmScanSession,
+} from '@/modules/fire-alarm-roomplan/types';
 import type { ImportedServiceM8Image } from '@/components/JobStateContext';
 
 const TOKEN_KEY = 'mobile_auth_token';
@@ -117,6 +121,49 @@ export async function createCustomer(input: CreateCustomerInput): Promise<Custom
   }
   const data = await res.json();
   return data.customer ?? data;
+}
+
+// ── Room captures ─────────────────────────────────────────────────────────────
+
+export interface SaveRoomCaptureResponse {
+  capture: {
+    id: number;
+    teamId: number;
+    createdBy: number | null;
+    externalSessionId: string;
+    sessionName: string | null;
+    captureStatus: string;
+    units: string | null;
+    startedAt: string | null;
+    endedAt: string | null;
+    deviceCount: number;
+    metadata: unknown;
+    createdAt: string;
+    updatedAt: string;
+  };
+  savedDeviceCount: number;
+}
+
+export async function saveFireAlarmRoomCapture(
+  session: FireAlarmScanSession,
+  devices: FireAlarmDeviceDetection[],
+  metadata?: Record<string, unknown>,
+): Promise<SaveRoomCaptureResponse> {
+  const res = await authFetch('/api/mobile/room-captures', {
+    method: 'POST',
+    body: JSON.stringify({
+      session,
+      devices,
+      metadata: metadata ?? {},
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to save room capture');
+  }
+
+  return res.json();
 }
 
 // ── Image Analysis ────────────────────────────────────────────────────────────
