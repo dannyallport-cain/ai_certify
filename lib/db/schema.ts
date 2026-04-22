@@ -419,7 +419,10 @@ export const servicem8Connections = pgTable('servicem8_connections', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
     .notNull()
-    .references(() => teams.id)
+    .references(() => teams.id),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' })
     .unique(),
   accessToken: text('access_token').notNull(),
   refreshToken: text('refresh_token').notNull(),
@@ -440,6 +443,9 @@ export const servicem8JobMappings = pgTable('servicem8_job_mappings', {
   teamId: integer('team_id')
     .notNull()
     .references(() => teams.id),
+  servicem8ConnectionUserId: integer('servicem8_connection_user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   certificateId: integer('certificate_id')
     .notNull()
     .references(() => certificates.id),
@@ -455,6 +461,9 @@ export const servicem8ClientMappings = pgTable('servicem8_client_mappings', {
   teamId: integer('team_id')
     .notNull()
     .references(() => teams.id),
+  servicem8ConnectionUserId: integer('servicem8_connection_user_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   customerId: integer('customer_id')
     .notNull()
     .references(() => customers.id),
@@ -550,6 +559,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   emailVerificationTokens: many(emailVerificationTokens),
   paymentTransactions: many(paymentTransactions),
   purchaseEntitlements: many(purchaseEntitlements),
+  servicem8Connections: many(servicem8Connections),
+  servicem8JobMappings: many(servicem8JobMappings),
+  servicem8ClientMappings: many(servicem8ClientMappings),
 }));
 
 export const emailVerificationTokensRelations = relations(
@@ -710,12 +722,20 @@ export const servicem8ConnectionsRelations = relations(servicem8Connections, ({ 
     fields: [servicem8Connections.teamId],
     references: [teams.id],
   }),
+  user: one(users, {
+    fields: [servicem8Connections.userId],
+    references: [users.id],
+  }),
 }));
 
 export const servicem8JobMappingsRelations = relations(servicem8JobMappings, ({ one }) => ({
   team: one(teams, {
     fields: [servicem8JobMappings.teamId],
     references: [teams.id],
+  }),
+  connectionUser: one(users, {
+    fields: [servicem8JobMappings.servicem8ConnectionUserId],
+    references: [users.id],
   }),
   certificate: one(certificates, {
     fields: [servicem8JobMappings.certificateId],
@@ -727,6 +747,10 @@ export const servicem8ClientMappingsRelations = relations(servicem8ClientMapping
   team: one(teams, {
     fields: [servicem8ClientMappings.teamId],
     references: [teams.id],
+  }),
+  connectionUser: one(users, {
+    fields: [servicem8ClientMappings.servicem8ConnectionUserId],
+    references: [users.id],
   }),
   customer: one(customers, {
     fields: [servicem8ClientMappings.customerId],

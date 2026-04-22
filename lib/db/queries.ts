@@ -10,6 +10,7 @@ import {
   certificateItems,
   paymentTransactions,
   purchaseEntitlements,
+  servicem8JobMappings,
   ActivityType,
   teamRuntimeSafeColumns,
   type NewActivityLog,
@@ -369,10 +370,23 @@ export async function getCertificateById(certificateId: number) {
     .where(eq(certificateItems.certificateId, certificateId))
     .orderBy(certificateItems.sortOrder);
 
+  const [servicem8JobMapping] = await db
+    .select()
+    .from(servicem8JobMappings)
+    .where(
+      and(
+        eq(servicem8JobMappings.certificateId, certificateId),
+        eq(servicem8JobMappings.teamId, team.id)
+      )
+    )
+    .orderBy(desc(servicem8JobMappings.updatedAt))
+    .limit(1);
+
   return {
     ...result[0].certificate,
     customer: result[0].customer,
     items,
+    servicem8JobMapping: servicem8JobMapping ?? null,
   };
 }
 

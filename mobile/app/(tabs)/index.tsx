@@ -15,45 +15,45 @@ interface StepCardProps {
 function StepCard({ icon, title, subtitle, done, stepNumber, onPress }: StepCardProps) {
   return (
     <TouchableOpacity
-      className="mb-3 rounded-[24px] border border-[#e8ddd2] bg-[#fffdf9] px-4 py-4"
+      className="mb-3 rounded-[24px] border border-[#E0E6ED] bg-[#FFFFFF] px-4 py-4"
       onPress={onPress}
       activeOpacity={0.85}
     >
       <View className="flex-row items-center">
         <View
           className={`mr-4 h-12 w-12 items-center justify-center rounded-2xl ${
-            done ? 'bg-[#e4efe7]' : 'bg-[#f3ece5]'
+            done ? 'bg-[#E8F5E9]' : 'bg-[#E3F2FD]'
           }`}
         >
           <Ionicons
             name={done ? 'checkmark' : icon}
             size={22}
-            color={done ? '#4f7a5c' : '#7c5a45'}
+            color={done ? '#4CAF50' : '#0D47A1'}
           />
         </View>
 
         <View className="flex-1 pr-3">
           <View className="mb-1 flex-row items-center">
-            <View className="mr-2 rounded-full bg-[#f3ece5] px-2 py-1">
-              <Text className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#9b8d82]">
+            <View className="mr-2 rounded-full bg-[#E3F2FD] px-2 py-1">
+              <Text className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#A0AEC0]">
                 Step {stepNumber}
               </Text>
             </View>
             {done && (
-              <View className="rounded-full bg-[#edf6ef] px-2 py-1">
-                <Text className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#4f7a5c]">
+              <View className="rounded-full bg-[#E8F5E9] px-2 py-1">
+                <Text className="text-[11px] font-semibold uppercase tracking-[0.6px] text-[#4CAF50]">
                   Done
                 </Text>
               </View>
             )}
           </View>
 
-          <Text className="mb-1 text-base font-semibold text-[#1f2937]">{title}</Text>
-          <Text className="text-sm leading-5 text-[#7b7280]">{subtitle}</Text>
+          <Text className="mb-1 text-base font-semibold text-[#1A202C]">{title}</Text>
+          <Text className="text-sm leading-5 text-[#718096]">{subtitle}</Text>
         </View>
 
-        <View className="h-10 w-10 items-center justify-center rounded-full bg-[#f7f1ea]">
-          <Ionicons name="chevron-forward" size={18} color="#9b8d82" />
+        <View className="h-10 w-10 items-center justify-center rounded-full bg-[#F5F7FA]">
+          <Ionicons name="chevron-forward" size={18} color="#A0AEC0" />
         </View>
       </View>
     </TouchableOpacity>
@@ -76,53 +76,53 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-[#f8f5f1]"
+      className="flex-1 bg-[#F5F7FA]"
       contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 132 }}
     >
-      <View className="mb-5 rounded-[30px] border border-[#e6dbcf] bg-[#fffdf9] px-5 py-5">
+      <View className="mb-5 rounded-[30px] border border-[#E0E6ED] bg-[#FFFFFF] px-5 py-5">
         <View className="mb-4 flex-row items-start justify-between">
           <View className="mr-4 flex-1">
-            <View className="mb-3 self-start rounded-full bg-[#f3ece5] px-3 py-1.5">
-              <Text className="text-xs font-semibold uppercase tracking-[1px] text-[#8d7a6d]">
+            <View className="mb-3 self-start rounded-full bg-[#E3F2FD] px-3 py-1.5">
+              <Text className="text-xs font-semibold uppercase tracking-[1px] text-[#718096]">
                 Task requirement
               </Text>
             </View>
-            <Text className="mb-2 text-[28px] font-bold leading-8 text-[#1f2937]">
+            <Text className="mb-2 text-[28px] font-bold leading-8 text-[#1A202C]">
               What do you need to do today?
             </Text>
-            <Text className="text-sm leading-6 text-[#6b7280]">
+            <Text className="text-sm leading-6 text-[#718096]">
               Start a certificate, capture a fire alarm plan, or jump straight into diagnostics.
               Top-level actions live here, while lower-level certificate steps stay inside the guided wizard.
             </Text>
           </View>
 
-          <View className="h-14 w-14 items-center justify-center rounded-[20px] bg-[#f3ece5]">
+          <View className="h-14 w-14 items-center justify-center rounded-[20px] bg-[#E3F2FD]">
             <Ionicons
               name={hasDraftCertificate ? 'document-text-outline' : 'grid-outline'}
               size={26}
-              color="#7c5a45"
+              color="#0D47A1"
             />
           </View>
         </View>
 
         {hasDraftCertificate ? (
-          <View className="rounded-[22px] bg-[#f6f1eb] px-4 py-4">
+          <View className="rounded-[22px] bg-[#FAFBFC] px-4 py-4">
             <Text className="text-sm font-semibold text-[#5e5148]">Current certificate</Text>
-            <Text className="mt-2 text-sm leading-5 text-[#7b7280]">
+            <Text className="mt-2 text-sm leading-5 text-[#718096]">
               A draft certificate already exists for this job. You can continue editing it directly or return to the guided workflow to finish any remaining setup steps.
             </Text>
           </View>
         ) : hasWorkflowProgress ? (
-          <View className="rounded-[22px] bg-[#f6f1eb] px-4 py-4">
+          <View className="rounded-[22px] bg-[#FAFBFC] px-4 py-4">
             <Text className="text-sm font-semibold text-[#5e5148]">Certificate workflow in progress</Text>
-            <Text className="mt-2 text-sm leading-5 text-[#7b7280]">
+            <Text className="mt-2 text-sm leading-5 text-[#718096]">
               You have started capturing certificate information. Continue the guided wizard to complete the remaining steps in order.
             </Text>
           </View>
         ) : (
-          <View className="rounded-[22px] bg-[#f6f1eb] px-4 py-4">
+          <View className="rounded-[22px] bg-[#FAFBFC] px-4 py-4">
             <Text className="text-sm font-semibold text-[#5e5148]">Choose a starting point</Text>
-            <Text className="mt-2 text-sm leading-5 text-[#7b7280]">
+            <Text className="mt-2 text-sm leading-5 text-[#718096]">
               Select one of the task cards below. Certificate creation now starts in either a guided or manual route, while fire alarm tools remain separate top-level workflows.
             </Text>
           </View>
@@ -131,12 +131,12 @@ export default function HomeScreen() {
 
       <View className="mb-3 flex-row items-center justify-between">
         <View>
-          <Text className="text-lg font-semibold text-[#1f2937]">Tasks</Text>
+          <Text className="text-lg font-semibold text-[#1A202C]">Tasks</Text>
           <Text className="text-sm text-[#8b7f75]">Choose the workflow you want to open</Text>
         </View>
 
         <View className="rounded-full bg-[#eee5dc] px-3 py-1.5">
-          <Text className="text-xs font-semibold uppercase tracking-[0.8px] text-[#8d7a6d]">
+          <Text className="text-xs font-semibold uppercase tracking-[0.8px] text-[#718096]">
             Start
           </Text>
         </View>
@@ -199,13 +199,13 @@ export default function HomeScreen() {
         >
           <View className="flex-row items-center justify-between">
             <View className="mr-4 flex-1">
-              <Text className="mb-1 text-lg font-semibold text-[#1f2937]">Resume certificate workflow</Text>
-              <Text className="text-sm leading-5 text-[#6b7280]">
+              <Text className="mb-1 text-lg font-semibold text-[#1A202C]">Resume certificate workflow</Text>
+              <Text className="text-sm leading-5 text-[#718096]">
                 Continue the in-progress certificate from inside the certificate workflow.
               </Text>
             </View>
-            <View className="h-11 w-11 items-center justify-center rounded-full bg-[#f3ece5]">
-              <Ionicons name="arrow-forward" size={20} color="#7c5a45" />
+            <View className="h-11 w-11 items-center justify-center rounded-full bg-[#E3F2FD]">
+              <Ionicons name="arrow-forward" size={20} color="#0D47A1" />
             </View>
           </View>
         </TouchableOpacity>
@@ -215,7 +215,7 @@ export default function HomeScreen() {
         className="mb-2 mt-1 items-center rounded-full py-3"
         onPress={() => dispatch({ type: 'RESET' })}
       >
-        <Text className="text-sm font-medium text-[#9b8d82]">Reset job</Text>
+        <Text className="text-sm font-medium text-[#A0AEC0]">Reset job</Text>
       </TouchableOpacity>
     </ScrollView>
   );

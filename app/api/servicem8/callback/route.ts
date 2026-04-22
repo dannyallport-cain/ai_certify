@@ -2,7 +2,7 @@
  * ServiceM8 external integration OAuth callback.
  *
  * After the user authorizes AI Certify in ServiceM8, this route exchanges the
- * returned authorization code and stores the tokens against the current team.
+ * returned authorization code and stores the tokens against the current user.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,7 +12,119 @@ import { servicem8Connections } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 
-async function storeConnectionForCurrentTeam(tokenData: ServiceM8TokenResponse) {
+function parseServiceM8State(state: string | null): Record<string, string> {
+  if (!state) {
+    return {};
+  }
+
+  try {
+    const decoded = Buffer.from(state, 'base64url').toString('utf8');
+    const parsed = JSON.parse(decoded) as Record<string, unknown>;
+
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([key, value]) =>
+        typeof value === 'string' ? [[key, value]] : []
+      )
+    );
+  } catch {
+    return {};
+  }
+}
+
+function buildDashboardRedirectUrl(
+  request: NextRequest,
+  outcome: { success?: string; error?: string }
+) {
+  const url = new URL('/dashboard/servicem8', request.url);
+
+  if (outcome.success) {
+    url.searchParams.set('success', outcome.success);
+  } else {
+    url.searchParams.set('error', outcome.error || 'callback_failed');
+  }
+
+  return url;
+}
+
+function finishOAuthResponse(
+  request: NextRequest,
+  outcome: { success?: string; error?: string },
+  isPopup: boolean
+) {
+  if (isPopup) {
+    const redirectUrl = buildDashboardRedirectUrl(request, outcome).toString();
+    const payload = {
+      source: 'servicem8-oauth',
+      ...outcome,
+    };
+
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ServiceM8 Connection</title>
+  </head>
+  <body>
+    <script>
+      (function () {
+        var payload = ${JSON.stringify(payload)};
+        var redirectUrl = ${JSON.stringify(redirectUrl)};
+
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(payload, window.location.origin);
+            window.close();
+            setTimeout(function () {
+              window.location.replace(redirectUrl);
+            }, 300);
+            return;
+          }
+        } catch (error) {
+          console.error('Failed to notify opener window', error);
+        }
+
+        window.location.replace(redirectUrl);
+      })();
+    </script>
+    <p>Completing ServiceM8 connection…</p>
+  </body>
+</html>`;
+
+    const response = new NextResponse(html, {
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'no-store',
+      },
+    });
+
+    response.cookies.delete('sm8_oauth_state');
+    response.cookies.delete('sm8_pending_token');
+
+    return response;
+  }
+
+  const response = NextResponse.redirect(buildDashboardRedirectUrl(request, outcome));
+  response.cookies.delete('sm8_oauth_state');
+  response.cookies.delete('sm8_pending_token');
+  return response;
+}
+
+function buildPendingSignInRedirect(request: NextRequest, isPopup: boolean) {
+  const signInUrl = new URL('/sign-in', request.url);
+  signInUrl.searchParams.set(
+    'redirect',
+    isPopup ? '/api/servicem8/callback?complete_pending=1&popup=1' : '/api/servicem8/callback?complete_pending=1'
+  );
+
+  return signInUrl;
+}
+
+async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) {
+  const user = await getUser();
+  if (!user) {
+    return { ok: false as const, reason: 'no_user' };
+  }
+
   const teamData = await getTeamForUser();
   if (!teamData) {
     return { ok: false as const, reason: 'no_team' };
@@ -24,7 +136,8 @@ async function storeConnectionForCurrentTeam(tokenData: ServiceM8TokenResponse) 
   const client = new ServiceM8Client_API(
     tokenData.access_token,
     tokenData.refresh_token,
-    teamId
+    teamId,
+    user.id
   );
 
   let companyName = '';
@@ -40,7 +153,7 @@ async function storeConnectionForCurrentTeam(tokenData: ServiceM8TokenResponse) 
   const existing = await db
     .select()
     .from(servicem8Connections)
-    .where(eq(servicem8Connections.teamId, teamId))
+    .where(eq(servicem8Connections.userId, user.id))
     .limit(1);
 
   if (existing.length > 0) {
@@ -55,10 +168,11 @@ async function storeConnectionForCurrentTeam(tokenData: ServiceM8TokenResponse) 
         isActive: true,
         updatedAt: new Date(),
       })
-      .where(eq(servicem8Connections.teamId, teamId));
+      .where(eq(servicem8Connections.userId, user.id));
   } else {
     await db.insert(servicem8Connections).values({
       teamId,
+      userId: user.id,
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token,
       tokenExpiresAt: expiresAt,
@@ -79,30 +193,24 @@ export async function GET(request: NextRequest) {
     const code = searchParams.get('code');
     const state = searchParams.get('state');
     const error = searchParams.get('error');
+    const parsedState = parseServiceM8State(state);
+    const isPopup = searchParams.get('popup') === '1' || parsedState.popup === '1';
 
-    // Handle OAuth errors
     if (error) {
       console.error('ServiceM8 OAuth error:', error);
-      return NextResponse.redirect(
-        new URL(`/dashboard/servicem8?error=${encodeURIComponent(error)}`, request.url)
-      );
+      return finishOAuthResponse(request, { error }, isPopup);
     }
 
     const isCompletingPending = searchParams.get('complete_pending') === '1';
     const pendingTokenCookie = request.cookies.get('sm8_pending_token')?.value;
 
     if (!code && !isCompletingPending) {
-      return NextResponse.redirect(
-        new URL('/dashboard/servicem8?error=no_code', request.url)
-      );
+      return finishOAuthResponse(request, { error: 'no_code' }, isPopup);
     }
 
-    // Verify state to prevent CSRF only during the live OAuth callback step
     const storedState = request.cookies.get('sm8_oauth_state')?.value;
     if (code && state && storedState && state !== storedState) {
-      return NextResponse.redirect(
-        new URL('/dashboard/servicem8?error=invalid_state', request.url)
-      );
+      return finishOAuthResponse(request, { error: 'invalid_state' }, isPopup);
     }
 
     const user = await getUser().catch(() => null);
@@ -111,9 +219,7 @@ export async function GET(request: NextRequest) {
       const tokenData = await ServiceM8Client_API.exchangeCode(code);
 
       if (!user) {
-        const response = NextResponse.redirect(
-          new URL('/sign-in?redirect=/api/servicem8/callback?complete_pending=1', request.url)
-        );
+        const response = NextResponse.redirect(buildPendingSignInRedirect(request, isPopup));
         response.cookies.set('sm8_pending_token', JSON.stringify(tokenData), {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
@@ -125,51 +231,34 @@ export async function GET(request: NextRequest) {
         return response;
       }
 
-      const stored = await storeConnectionForCurrentTeam(tokenData);
+      const stored = await storeConnectionForCurrentUser(tokenData);
       if (!stored.ok) {
-        return NextResponse.redirect(
-          new URL('/dashboard/servicem8?error=no_team', request.url)
-        );
+        return finishOAuthResponse(request, { error: 'no_team' }, isPopup);
       }
 
-      const response = NextResponse.redirect(
-        new URL('/dashboard/servicem8?success=connected', request.url)
-      );
-      response.cookies.delete('sm8_oauth_state');
-      response.cookies.delete('sm8_pending_token');
-      return response;
+      return finishOAuthResponse(request, { success: 'connected' }, isPopup);
     }
 
     if (isCompletingPending && pendingTokenCookie) {
       if (!user) {
-        return NextResponse.redirect(
-          new URL('/sign-in?redirect=/api/servicem8/callback?complete_pending=1', request.url)
-        );
+        return NextResponse.redirect(buildPendingSignInRedirect(request, isPopup));
       }
 
       const tokenData = JSON.parse(pendingTokenCookie) as ServiceM8TokenResponse;
-      const stored = await storeConnectionForCurrentTeam(tokenData);
+      const stored = await storeConnectionForCurrentUser(tokenData);
       if (!stored.ok) {
-        return NextResponse.redirect(
-          new URL('/dashboard/servicem8?error=no_team', request.url)
-        );
+        return finishOAuthResponse(request, { error: 'no_team' }, isPopup);
       }
 
-      const response = NextResponse.redirect(
-        new URL('/dashboard/servicem8?success=connected', request.url)
-      );
-      response.cookies.delete('sm8_oauth_state');
-      response.cookies.delete('sm8_pending_token');
-      return response;
+      return finishOAuthResponse(request, { success: 'connected' }, isPopup);
     }
 
-    return NextResponse.redirect(
-      new URL('/dashboard/servicem8?error=no_code', request.url)
-    );
+    return finishOAuthResponse(request, { error: 'no_code' }, isPopup);
   } catch (error) {
     console.error('ServiceM8 callback error:', error);
-    return NextResponse.redirect(
-      new URL('/dashboard/servicem8?error=callback_failed', request.url)
-    );
+    const fallbackState = request.nextUrl.searchParams.get('state');
+    const parsedState = parseServiceM8State(fallbackState);
+    const isPopup = request.nextUrl.searchParams.get('popup') === '1' || parsedState.popup === '1';
+    return finishOAuthResponse(request, { error: 'callback_failed' }, isPopup);
   }
 }

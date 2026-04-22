@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "ios:device:xcode": "bash ./build-ios-device.sh",
+    "ios:build-and-install": "bash ./build-and-install.sh",
     "lint": "eslint ."
   },
   "dependencies": {

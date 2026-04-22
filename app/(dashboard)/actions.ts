@@ -2,13 +2,14 @@
 
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { customers, certificates, certificateItems, teams, ActivityType, NewCertificate } from '@/lib/db/schema';
+import { customers, certificates, certificateItems, teams, servicem8JobMappings, ActivityType, NewCertificate } from '@/lib/db/schema';
 import { getUser, getTeamForUser } from '@/lib/db/queries'; // Keep other imports from @/lib/db/queries
 import { logActivity } from '../../lib/db/queries'; // Use relative path for logActivity
 import { redirect } from 'next/navigation';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { generateCertificatePDF, CertificateData } from '@/lib/pdf/generator';
+import { processServiceM8JobMapping } from '@/lib/servicem8/sync';
 
 // Customer schemas and actions
 const createCustomerSchema = z.object({
@@ -120,6 +121,106 @@ function generateCertificateNumber(certificateType: string) {
   return `${certTypeLetter}${certTypeNumber}${String(dayOfYear).padStart(3, '0')}${yearFirst}${twoRand}${yearLast}${randNum}`;
 }
 
+function extractServiceM8JobUuid(formValues?: Record<string, any>) {
+  const rawValue = formValues?.servicem8JobUuid;
+
+  if (typeof rawValue !== 'string') {
+    return null;
+  }
+
+  const trimmedValue = rawValue.trim();
+  return trimmedValue.length > 0 ? trimmedValue : null;
+}
+
+async function syncCertificateServiceM8JobMapping({
+  teamId,
+  servicem8ConnectionUserId,
+  certificateId,
+  servicem8JobUuid,
+}: {
+  teamId: number;
+  servicem8ConnectionUserId: number;
+  certificateId: number;
+  servicem8JobUuid: string | null;
+}) {
+  const existingMappings = await db
+    .select({ id: servicem8JobMappings.id })
+    .from(servicem8JobMappings)
+    .where(
+      and(
+        eq(servicem8JobMappings.teamId, teamId),
+        eq(servicem8JobMappings.certificateId, certificateId)
+      )
+    )
+    .limit(1);
+
+  const existingMapping = existingMappings[0];
+
+  if (!servicem8JobUuid) {
+    if (existingMapping) {
+      await db
+        .delete(servicem8JobMappings)
+        .where(
+          and(
+            eq(servicem8JobMappings.teamId, teamId),
+            eq(servicem8JobMappings.certificateId, certificateId)
+          )
+        );
+    }
+    return;
+  }
+
+  if (existingMapping) {
+    await db
+      .update(servicem8JobMappings)
+      .set({
+        servicem8ConnectionUserId,
+        servicem8JobUuid,
+        syncStatus: 'pending',
+        updatedAt: new Date(),
+      })
+      .where(eq(servicem8JobMappings.id, existingMapping.id));
+    return;
+  }
+
+  await db.insert(servicem8JobMappings).values({
+    teamId,
+    servicem8ConnectionUserId,
+    certificateId,
+    servicem8JobUuid,
+    syncStatus: 'pending',
+    lastSyncAt: null,
+  });
+}
+
+async function processLatestServiceM8JobMapping({
+  teamId,
+  certificateId,
+  pdfBytes,
+}: {
+  teamId: number;
+  certificateId: number;
+  pdfBytes?: Uint8Array | null;
+}) {
+  const [mapping] = await db
+    .select({ id: servicem8JobMappings.id })
+    .from(servicem8JobMappings)
+    .where(
+      and(
+        eq(servicem8JobMappings.teamId, teamId),
+        eq(servicem8JobMappings.certificateId, certificateId)
+      )
+    )
+    .orderBy(desc(servicem8JobMappings.updatedAt), desc(servicem8JobMappings.id))
+    .limit(1);
+
+  if (!mapping) {
+    return null;
+  }
+
+  return processServiceM8JobMapping(mapping.id, { pdfBytes });
+}
+
 export const createCertificate = validatedActionWithUser(
   createCertificateSchema,
   async (data, formData, user) => {
@@ -205,6 +306,22 @@ export const createCertificate = validatedActionWithUser(
       .insert(certificates)
       .values(newCertificateData)
       .returning();
+
+    await syncCertificateServiceM8JobMapping({
+      teamId: team.id,
+      servicem8ConnectionUserId: user.id,
+      certificateId: certificate.id,
+      servicem8JobUuid: extractServiceM8JobUuid(collectedFormData),
+    });
+
+    try {
+      await processLatestServiceM8JobMapping({
+        teamId: team.id,
+        certificateId: certificate.id,
+      });
+    } catch (error) {
+      console.error('Error processing ServiceM8 mapping after certificate creation:', error);
+    }
 
     // Insert observations/items submitted via the form into the certificateItems table
     const rawItems = collectedFormData.items;
@@ -385,6 +502,13 @@ export const updateCertificate = validatedActionWithUser(
       })
       .where(eq(certificates.id, id));
 
+    await syncCertificateServiceM8JobMapping({
+      teamId: team.id,
+      servicem8ConnectionUserId: user.id,
+      certificateId: id,
+      servicem8JobUuid: extractServiceM8JobUuid(resolvedFormData),
+    });
+
     await db.delete(certificateItems).where(eq(certificateItems.certificateId, id));
 
     const rawItems = resolvedFormData.items;
@@ -414,18 +538,30 @@ export const updateCertificate = validatedActionWithUser(
 
     await logActivity(team.id, user.id, ActivityType.UPDATE_CERTIFICATE);
 
+    let completedPdfBytes: Uint8Array | null = null;
+
     // Auto-generate PDF when certificate is completed for the first time
     if (!wasCompleted && isNowCompleted) {
       try {
         const certificateData = await getCertificateForPDF(id);
         if (certificateData) {
-          const pdfBytes = generateCertificatePDF(certificateData);
+          completedPdfBytes = generateCertificatePDF(certificateData);
           await logActivity(team.id, user.id, ActivityType.EXPORT_CERTIFICATE);
         }
       } catch (error) {
         console.error('Error auto-generating PDF:', error);
         // Don't fail the update if PDF generation fails
       }
+    }
+
+    try {
+      await processLatestServiceM8JobMapping({
+        teamId: team.id,
+        certificateId: id,
+        pdfBytes: completedPdfBytes,
+      });
+    } catch (error) {
+      console.error('Error processing ServiceM8 mapping after certificate update:', error);
     }
 
     return { success: 'Certificate updated successfully' };

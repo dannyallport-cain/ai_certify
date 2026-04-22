@@ -201,7 +201,7 @@ export default function CertificateScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-gray-50 items-center justify-center px-6">
-        <ActivityIndicator color="#BE0000" />
+        <ActivityIndicator color="#0D47A1" />
         <Text className="text-gray-500 mt-3 text-center">Loading draft certificate…</Text>
       </View>
     );

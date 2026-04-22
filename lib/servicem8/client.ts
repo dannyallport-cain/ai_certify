@@ -125,15 +125,52 @@ export class ServiceM8Client_API {
   private accessToken: string;
   private refreshToken: string;
   private teamId: number;
+  private connectionUserId: number;
 
-  constructor(accessToken: string, refreshToken: string, teamId: number) {
+  constructor(accessToken: string, refreshToken: string, teamId: number, connectionUserId: number) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
     this.teamId = teamId;
+    this.connectionUserId = connectionUserId;
+  }
+
+  private static async fromConnectionRow(
+    conn: typeof servicem8Connections.$inferSelect,
+  ): Promise<ServiceM8Client_API | null> {
+    const client = new ServiceM8Client_API(
+      conn.accessToken,
+      conn.refreshToken,
+      conn.teamId,
+      conn.userId,
+    );
+
+    if (conn.tokenExpiresAt && new Date(conn.tokenExpiresAt) < new Date()) {
+      const refreshed = await client.refreshAccessToken();
+      if (!refreshed) return null;
+    }
+
+    return client;
+  }
+
+  /**
+   * Create a ServiceM8 client from a user's stored connection
+   */
+  static async fromUserId(userId: number): Promise<ServiceM8Client_API | null> {
+    const connections = await db
+      .select()
+      .from(servicem8Connections)
+      .where(eq(servicem8Connections.userId, userId))
+      .limit(1);
+
+    if (connections.length === 0) return null;
+
+    return ServiceM8Client_API.fromConnectionRow(connections[0]);
   }
 
   /**
    * Create a ServiceM8 client from a team's stored connection
+   *
+   * Kept for compatibility while routes are migrated to per-user resolution.
    */
   static async fromTeamId(teamId: number): Promise<ServiceM8Client_API | null> {
     const connections = await db
@@ -144,18 +181,7 @@ export class ServiceM8Client_API {
 
     if (connections.length === 0) return null;
 
-    const conn = connections[0];
-
-    // Check if token is expired
-    if (conn.tokenExpiresAt && new Date(conn.tokenExpiresAt) < new Date()) {
-      // Token expired, try to refresh
-      const client = new ServiceM8Client_API(conn.accessToken, conn.refreshToken, teamId);
-      const refreshed = await client.refreshAccessToken();
-      if (!refreshed) return null;
-      return client;
-    }
-
-    return new ServiceM8Client_API(conn.accessToken, conn.refreshToken, teamId);
+    return ServiceM8Client_API.fromConnectionRow(connections[0]);
   }
 
   /**
@@ -221,7 +247,7 @@ export class ServiceM8Client_API {
           tokenExpiresAt: expiresAt,
           updatedAt: new Date(),
         })
-        .where(eq(servicem8Connections.teamId, this.teamId));
+        .where(eq(servicem8Connections.userId, this.connectionUserId));
 
       return true;
     } catch (error) {

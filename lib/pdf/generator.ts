@@ -542,6 +542,19 @@ export function generateCertificatePDF(certificate: CertificateData): Uint8Array
     pdf.setTextColor(255, 255, 255);
     addText('AI-CERTIFICATES', margin + 5, margin + 10);
     
+    // Add team logo if available (top-right corner)
+    if (certificate.teamLogo) {
+      try {
+        const logoWidth = 12;
+        const logoHeight = 12;
+        const logoX = pageWidth - margin - 4 - logoWidth;
+        const logoY = margin + 4;
+        pdf.addImage(certificate.teamLogo, 'JPEG', logoX, logoY, logoWidth, logoHeight);
+      } catch (err) {
+        // Logo rendering failed silently
+      }
+    }
+    
     // Company details
     pdf.setTextColor(52, 73, 124);
     pdf.setFontSize(8);
@@ -1563,6 +1576,20 @@ function generateCP12PDF(certificate: CertificateData): Uint8Array {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
   pdf.text('Gas Safety (Installation and Use) Regulations 1998', margin + 20, y + 17);
+  
+  // Add team logo if available (left side)
+  if (certificate.teamLogo) {
+    try {
+      const logoWidth = 16;
+      const logoHeight = 16;
+      const logoX = margin + 2;
+      const logoY = y + 3;
+      pdf.addImage(certificate.teamLogo, 'JPEG', logoX, logoY, logoWidth, logoHeight);
+    } catch (err) {
+      // Logo rendering failed silently
+    }
+  }
+  
   drawGasSafeBadge(margin + contentWidth - 21, y + 2.5, 18, 18);
   pdf.setTextColor(0, 0, 0);
   y += 26;
@@ -2112,6 +2139,20 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   // Report title block
   filledRect(margin, y, W, 16, brandRed);
+  
+  // Add team logo if available
+  if (certificate.teamLogo) {
+    try {
+      const logoWidth = 14;
+      const logoHeight = 14;
+      const logoX = margin + W - logoWidth - 2;
+      const logoY = y + 1;
+      pdf.addImage(certificate.teamLogo, 'JPEG', logoX, logoY, logoWidth, logoHeight);
+    } catch (err) {
+      // Logo rendering failed silently
+    }
+  }
+  
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');

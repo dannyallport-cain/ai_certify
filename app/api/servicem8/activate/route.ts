@@ -17,9 +17,11 @@ export async function GET(request: NextRequest) {
     
     // Generate a state parameter for CSRF protection
     // Include our team context if available
+    const isPopup = request.nextUrl.searchParams.get('popup') === '1';
     const stateData: Record<string, string> = {
       nonce: crypto.randomUUID(),
       timestamp: Date.now().toString(),
+      popup: isPopup ? '1' : '0',
     };
     
     // If we have URL params from ServiceM8 activation, forward them

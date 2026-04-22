@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  ExternalLink,
   Users,
   Briefcase,
 } from 'lucide-react';
@@ -61,21 +60,69 @@ export default function ServiceM8Page() {
     '/api/servicem8/connection',
     fetcher
   );
-  const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'clients' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'clients' | 'settings'>(
+    'overview'
+  );
   const [disconnecting, setDisconnecting] = useState(false);
   const [importingClients, setImportingClients] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(
+    null
+  );
+  const [urlMessage, setUrlMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
+    null
+  );
+  const popupPollRef = useRef<number | null>(null);
 
   const isConnected = connData?.connected === true;
+
+  function clearConnectPolling() {
+    if (popupPollRef.current !== null) {
+      window.clearInterval(popupPollRef.current);
+      popupPollRef.current = null;
+    }
+  }
 
   // ─── Connection Actions ─────────────────────────────────────────────────
 
   async function handleConnect() {
-    window.location.href = '/api/servicem8/activate';
+    setUrlMessage(null);
+    setIsConnecting(true);
+
+    const width = 640;
+    const height = 760;
+    const left = Math.max(0, window.screenX + Math.round((window.outerWidth - width) / 2));
+    const top = Math.max(0, window.screenY + Math.round((window.outerHeight - height) / 2));
+
+    const popup = window.open(
+      '/api/servicem8/activate?popup=1',
+      'servicem8-oauth',
+      `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
+
+    if (!popup) {
+      setIsConnecting(false);
+      window.location.href = '/api/servicem8/activate';
+      return;
+    }
+
+    popup.focus();
+    clearConnectPolling();
+    popupPollRef.current = window.setInterval(() => {
+      if (popup.closed) {
+        clearConnectPolling();
+        setIsConnecting(false);
+        mutate('/api/servicem8/connection');
+      }
+    }, 500);
   }
 
   async function handleDisconnect() {
-    if (!confirm('Are you sure you want to disconnect ServiceM8? This will remove the integration but keep any imported data.')) {
+    if (
+      !confirm(
+        'Are you sure you want to disconnect ServiceM8? This will remove the integration but keep any imported data.'
+      )
+    ) {
       return;
     }
     setDisconnecting(true);
@@ -122,9 +169,7 @@ export default function ServiceM8Page() {
     }
   }
 
-  // ─── Error from URL ─────────────────────────────────────────────────────
-
-  const [urlMessage, setUrlMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // ─── Error from URL / popup callback ────────────────────────────────────
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -141,16 +186,55 @@ export default function ServiceM8Page() {
       const errorKey = params.get('error') || '';
       setUrlMessage({ type: 'error', text: errorMap[errorKey] || `Error: ${errorKey}` });
     }
-    // Clean URL
+
     if (params.has('success') || params.has('error')) {
       window.history.replaceState({}, '', '/dashboard/servicem8');
     }
   }, []);
 
+  useEffect(() => {
+    const errorMap: Record<string, string> = {
+      no_code: 'Authorization failed - no code received from ServiceM8.',
+      invalid_state: 'Security check failed. Please try again.',
+      no_team: 'You need to be part of a team to connect ServiceM8.',
+      callback_failed: 'Connection failed. Please try again.',
+      servicem8_activation_failed: 'Addon activation failed. Please try again.',
+    };
+
+    function handleOAuthMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) {
+        return;
+      }
+
+      const payload = event.data as { source?: string; success?: string; error?: string } | null;
+      if (!payload || payload.source !== 'servicem8-oauth') {
+        return;
+      }
+
+      clearConnectPolling();
+      setIsConnecting(false);
+
+      if (payload.success === 'connected') {
+        setUrlMessage({ type: 'success', text: 'ServiceM8 connected successfully!' });
+        mutate('/api/servicem8/connection');
+        return;
+      }
+
+      const errorKey = payload.error || 'callback_failed';
+      setUrlMessage({ type: 'error', text: errorMap[errorKey] || `Error: ${errorKey}` });
+    }
+
+    window.addEventListener('message', handleOAuthMessage);
+    return () => {
+      window.removeEventListener('message', handleOAuthMessage);
+      clearConnectPolling();
+    };
+  }, []);
+
   // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <main className="flex-1 space-y-6 p-4 md:p-8 pt-6">
+    <main className="flex-1 space-y-6 p-4 pt-6 md:p-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -177,13 +261,19 @@ export default function ServiceM8Page() {
       {/* URL Messages */}
       {urlMessage && (
         <div
-          className={`p-4 rounded-lg border ${
+          className={`rounded-lg border p-4 ${
             urlMessage.type === 'success'
-              ? 'bg-green-50 border-green-200 text-green-800'
-              : 'bg-red-50 border-red-200 text-red-800'
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : 'border-red-200 bg-red-50 text-red-800'
           }`}
         >
           {urlMessage.text}
+        </div>
+      )}
+
+      {connError && !connLoading && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+          Failed to load ServiceM8 connection.
         </div>
       )}
 
@@ -202,8 +292,8 @@ export default function ServiceM8Page() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
-              <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50">
-                <Briefcase className="h-5 w-5 mt-0.5 text-orange-500" />
+              <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
+                <Briefcase className="mt-0.5 h-5 w-5 text-orange-500" />
                 <div>
                   <h4 className="font-medium">Job Sync</h4>
                   <p className="text-sm text-muted-foreground">
@@ -211,8 +301,8 @@ export default function ServiceM8Page() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50">
-                <Users className="h-5 w-5 mt-0.5 text-orange-500" />
+              <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
+                <Users className="mt-0.5 h-5 w-5 text-orange-500" />
                 <div>
                   <h4 className="font-medium">Client Import</h4>
                   <p className="text-sm text-muted-foreground">
@@ -220,8 +310,8 @@ export default function ServiceM8Page() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 p-4 rounded-lg bg-gray-50">
-                <ArrowUpFromLine className="h-5 w-5 mt-0.5 text-orange-500" />
+              <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
+                <ArrowUpFromLine className="mt-0.5 h-5 w-5 text-orange-500" />
                 <div>
                   <h4 className="font-medium">PDF Attachments</h4>
                   <p className="text-sm text-muted-foreground">
@@ -230,9 +320,18 @@ export default function ServiceM8Page() {
                 </div>
               </div>
             </div>
-            <Button onClick={handleConnect} size="lg" className="w-full md:w-auto">
-              <Plug className="mr-2 h-4 w-4" />
-              Connect to ServiceM8
+            <Button
+              onClick={handleConnect}
+              size="lg"
+              className="w-full md:w-auto"
+              disabled={isConnecting}
+            >
+              {isConnecting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plug className="mr-2 h-4 w-4" />
+              )}
+              {isConnecting ? 'Opening ServiceM8…' : 'Connect to ServiceM8'}
             </Button>
           </CardContent>
         </Card>
@@ -255,10 +354,10 @@ export default function ServiceM8Page() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`py-2 px-1 border-b-2 text-sm font-medium capitalize transition-colors ${
+                  className={`border-b-2 px-1 py-2 text-sm font-medium capitalize transition-colors ${
                     activeTab === tab
                       ? 'border-orange-500 text-orange-600'
-                      : 'border-transparent text-muted-foreground hover:text-gray-700 hover:border-gray-300'
+                      : 'border-transparent text-muted-foreground hover:border-gray-300 hover:text-gray-700'
                   }`}
                 >
                   {tab}
@@ -280,8 +379,7 @@ export default function ServiceM8Page() {
                     {connData.connection.servicem8CompanyName || 'Connected'}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Connected since{' '}
-                    {new Date(connData.connection.createdAt).toLocaleDateString()}
+                    Connected since {new Date(connData.connection.createdAt).toLocaleDateString()}
                   </p>
                 </CardContent>
               </Card>
@@ -312,9 +410,7 @@ export default function ServiceM8Page() {
                       ? new Date(connData.connection.lastSyncAt).toLocaleString()
                       : 'Never'}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Last synchronisation time
-                  </p>
+                  <p className="text-xs text-muted-foreground">Last synchronisation time</p>
                 </CardContent>
               </Card>
             </div>
@@ -328,11 +424,7 @@ export default function ServiceM8Page() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">ServiceM8 Clients</h3>
-                <Button
-                  onClick={handleImportClients}
-                  disabled={importingClients}
-                  variant="outline"
-                >
+                <Button onClick={handleImportClients} disabled={importingClients} variant="outline">
                   {importingClients ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
@@ -343,8 +435,9 @@ export default function ServiceM8Page() {
               </div>
 
               {importResult && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
-                  Imported {importResult.imported} clients, skipped {importResult.skipped} already existing.
+                <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+                  Imported {importResult.imported} clients, skipped {importResult.skipped} already
+                  existing.
                 </div>
               )}
 
@@ -381,24 +474,39 @@ export default function ServiceM8Page() {
                   </div>
 
                   <div>
-                    <h4 className="font-medium mb-3">Sync Direction</h4>
+                    <h4 className="mb-3 font-medium">Sync Direction</h4>
                     <div className="grid gap-2 md:grid-cols-3">
                       {[
-                        { value: 'from_servicem8', label: 'From ServiceM8', icon: ArrowDownToLine, desc: 'Import from ServiceM8 only' },
-                        { value: 'to_servicem8', label: 'To ServiceM8', icon: ArrowUpFromLine, desc: 'Export to ServiceM8 only' },
-                        { value: 'bidirectional', label: 'Bidirectional', icon: ArrowLeftRight, desc: 'Sync both ways' },
+                        {
+                          value: 'from_servicem8',
+                          label: 'From ServiceM8',
+                          icon: ArrowDownToLine,
+                          desc: 'Import from ServiceM8 only',
+                        },
+                        {
+                          value: 'to_servicem8',
+                          label: 'To ServiceM8',
+                          icon: ArrowUpFromLine,
+                          desc: 'Export to ServiceM8 only',
+                        },
+                        {
+                          value: 'bidirectional',
+                          label: 'Bidirectional',
+                          icon: ArrowLeftRight,
+                          desc: 'Sync both ways',
+                        },
                       ].map(({ value, label, icon: Icon, desc }) => (
                         <button
                           key={value}
                           onClick={() => handleSyncSettingChange('syncDirection', value)}
-                          className={`p-4 rounded-lg border text-left transition-colors ${
+                          className={`rounded-lg border p-4 text-left transition-colors ${
                             connData.connection!.syncDirection === value
                               ? 'border-orange-500 bg-orange-50'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
-                          <Icon className="h-5 w-5 mb-2" />
-                          <div className="font-medium text-sm">{label}</div>
+                          <Icon className="mb-2 h-5 w-5" />
+                          <div className="text-sm font-medium">{label}</div>
                           <div className="text-xs text-muted-foreground">{desc}</div>
                         </button>
                       ))}
@@ -411,8 +519,8 @@ export default function ServiceM8Page() {
                 <CardHeader>
                   <CardTitle className="text-red-600">Danger Zone</CardTitle>
                   <CardDescription>
-                    Disconnect ServiceM8 from your account. This will not delete any
-                    previously imported data.
+                    Disconnect ServiceM8 from your account. This will not delete any previously
+                    imported data.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -441,10 +549,7 @@ export default function ServiceM8Page() {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function JobsTab() {
-  const { data, error, isLoading } = useSWR<{ jobs: SM8Job[] }>(
-    '/api/servicem8/jobs',
-    fetcher
-  );
+  const { data, error, isLoading } = useSWR<{ jobs: SM8Job[] }>('/api/servicem8/jobs', fetcher);
 
   if (isLoading) {
     return (
@@ -455,19 +560,11 @@ function JobsTab() {
   }
 
   if (error || !data?.jobs) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        Failed to load jobs. Please try again.
-      </div>
-    );
+    return <div className="py-8 text-center text-muted-foreground">Failed to load jobs. Please try again.</div>;
   }
 
   if (data.jobs.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        No jobs found in ServiceM8.
-      </div>
-    );
+    return <div className="py-8 text-center text-muted-foreground">No jobs found in ServiceM8.</div>;
   }
 
   return (
@@ -494,8 +591,8 @@ function JobsTab() {
                     job.status === 'Completed'
                       ? 'bg-green-100 text-green-800'
                       : job.status === 'Work Order'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-gray-100 text-gray-800'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-800'
                   }`}
                 >
                   {job.status}
@@ -528,7 +625,7 @@ function ClientsTab() {
 
   if (error || !data?.clients) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="py-8 text-center text-muted-foreground">
         Failed to load clients. Please try again.
       </div>
     );
@@ -536,9 +633,7 @@ function ClientsTab() {
 
   if (data.clients.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No clients found in ServiceM8.
-      </div>
+      <div className="py-8 text-center text-muted-foreground">No clients found in ServiceM8.</div>
     );
   }
 
@@ -563,7 +658,9 @@ function ClientsTab() {
               </td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{client.email || '-'}</td>
               <td className="px-4 py-3 text-sm text-muted-foreground">{client.phone || '-'}</td>
-              <td className="px-4 py-3 text-sm text-muted-foreground">{client.billing_address || '-'}</td>
+              <td className="px-4 py-3 text-sm text-muted-foreground">
+                {client.billing_address || '-'}
+              </td>
             </tr>
           ))}
         </tbody>
