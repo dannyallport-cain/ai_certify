@@ -21,6 +21,8 @@ CONFIGURATION="Release"
 # Default device UDID (can be overridden with environment variable)
 DEFAULT_DEVICE_UDID="00008101-0019452434A1001E"
 IOS_DEVICE_UDID="${IOS_DEVICE_UDID:-$DEFAULT_DEVICE_UDID}"
+# Xcode signing team (can be overridden with environment variable)
+DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-}"
 
 # Paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -80,8 +82,9 @@ check_dependencies() {
 check_device() {
     log_info "Checking for connected iOS devices..."
 
-    # Get list of connected devices
+    # Get list of connected devices and sanitize any non-printable characters
     DEVICES=$(xcrun xctrace list devices 2>/dev/null | grep -E "iPhone|iPad" | grep -v "Simulator" | head -1)
+    DEVICES=$(printf '%s' "$DEVICES" | tr -cd '[:print:]\n')
 
     if [ -z "$DEVICES" ]; then
         log_error "No iOS devices found. Please connect your iPhone and ensure it's unlocked."
@@ -89,11 +92,11 @@ check_device() {
         exit 1
     fi
 
-    # Extract UDID from the device list
-    DETECTED_UDID=$(echo "$DEVICES" | grep -oE '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}')
+    # Extract the last parenthesized identifier from the device line
+    DETECTED_UDID=$(printf '%s' "$DEVICES" | grep -oE '\([0-9A-Za-z-]{16,}\)' | tail -1 | tr -d '()')
 
     if [ -n "$DETECTED_UDID" ] && [ "$IOS_DEVICE_UDID" = "$DEFAULT_DEVICE_UDID" ]; then
-        log_info "Using detected device UDID: $DETECTED_UDID"
+        log_info "Using detected device identifier: $DETECTED_UDID"
         IOS_DEVICE_UDID="$DETECTED_UDID"
     fi
 
@@ -137,24 +140,29 @@ build_and_install() {
     mkdir -p "$BUILD_DIR"
 
     # Build and install using xcodebuild
+    BUILD_SETTINGS=()
+
+    if [ -n "$DEVELOPMENT_TEAM" ]; then
+        BUILD_SETTINGS+=(DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" CODE_SIGN_STYLE=Automatic)
+    else
+        log_warning "No DEVELOPMENT_TEAM provided. Xcode signing may fail unless the project already has a valid team configured."
+    fi
+
     NODE_BINARY="$(command -v node)" xcodebuild \
         -workspace "$WORKSPACE" \
         -scheme "$SCHEME_NAME" \
         -configuration "$CONFIGURATION" \
         -destination "id=$IOS_DEVICE_UDID" \
         -derivedDataPath "$DERIVED_DATA_DIR" \
+        -allowProvisioningUpdates \
+        "${BUILD_SETTINGS[@]}" \
         build
 
     log_success "Build completed successfully"
 
-    # Check if the app was installed
-    if xcrun simctl listapps "$IOS_DEVICE_UDID" 2>/dev/null | grep -q "$PROJECT_NAME"; then
-        log_success "App installed successfully on device!"
-        log_info "You should see the app on your iPhone now."
-    else
-        log_warning "Build completed, but couldn't verify app installation."
-        log_info "Check your iPhone for the installed app."
-    fi
+    log_info "The app build succeeded. If Xcode signing was configured correctly, it should now be installed on your device."
+    log_info "If you do not see it on your iPhone, open Xcode and verify the signing team for the AICertifyField target."
+
 }
 
 show_usage() {
@@ -164,15 +172,19 @@ show_usage() {
     echo ""
     echo "Options:"
     echo "  -d, --device UDID    Specify iOS device UDID (default: auto-detect or $DEFAULT_DEVICE_UDID)"
+    echo "  -t, --team TEAM      Specify Xcode development team ID for signing"
     echo "  -h, --help           Show this help message"
     echo ""
     echo "Environment Variables:"
     echo "  IOS_DEVICE_UDID      Override default device UDID"
+    echo "  DEVELOPMENT_TEAM     Xcode development team ID for signing"
     echo ""
     echo "Examples:"
     echo "  $0                    # Build and install using auto-detected device"
     echo "  $0 -d 00008101-0019452434A1001E  # Build for specific device"
+    echo "  $0 -t ABCDE12345  # Use specific Xcode development team"
     echo "  IOS_DEVICE_UDID=00008101-0019452434A1001E $0  # Using environment variable"
+    echo "  DEVELOPMENT_TEAM=ABCDE12345 $0  # Using environment variable"
 }
 
 # Parse command line arguments
@@ -180,6 +192,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         -d|--device)
             IOS_DEVICE_UDID="$2"
+            shift 2
+            ;;
+        -t|--team)
+            DEVELOPMENT_TEAM="$2"
             shift 2
             ;;
         -h|--help)
