@@ -6,7 +6,7 @@ import { mutate } from 'swr';
 import QRCode from 'qrcode';
 import useSWR from 'swr';
 import { Camera, PenLine, QrCode, X } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { User } from '@/lib/db/schema';
@@ -51,6 +51,25 @@ function getUserInitials(user: User | undefined) {
     .toUpperCase();
 }
 
+function isDataUri(value: string | null | undefined) {
+  return typeof value === 'string' && value.startsWith('data:image/');
+}
+
+function getDataUriMeta(value: string | null | undefined) {
+  if (!isDataUri(value)) {
+    return null;
+  }
+
+  const match = value!.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,/i);
+  const mimeSubtype = match?.[1]?.toLowerCase() || 'unknown';
+  const sizeKb = Math.round(new Blob([value!]).size / 1024);
+
+  return {
+    mimeSubtype,
+    sizeKb,
+  };
+}
+
 export default function ProfileMediaSettings() {
   const [activeCapture, setActiveCapture] = useState<CaptureSession | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
@@ -63,6 +82,7 @@ export default function ProfileMediaSettings() {
   });
 
   const previewInitials = useMemo(() => getUserInitials(user), [user]);
+  const avatarDataUriMeta = useMemo(() => getDataUriMeta(user?.avatarUrl), [user?.avatarUrl]);
 
   useEffect(() => {
     if (!activeCapture) {
@@ -215,7 +235,7 @@ export default function ProfileMediaSettings() {
               <div className="mb-4 flex items-center gap-4">
                 <Avatar className="size-20 ring-1 ring-slate-200 overflow-hidden">
                   {user?.avatarUrl ? (
-                    <img
+                    <AvatarImage
                       key={user.avatarUpdatedAt?.toString() || user.avatarUrl}
                       src={user.avatarUrl}
                       alt={user?.name || user?.email || 'User avatar'}
@@ -289,15 +309,49 @@ export default function ProfileMediaSettings() {
 
           {user?.avatarUrl ? (
             <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="mb-2 text-xs font-medium text-slate-500">Avatar URL</p>
-              <a
-                href={user.avatarUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="break-all text-sm text-blue-600 hover:text-blue-700"
-              >
-                {user.avatarUrl}
-              </a>
+              <p className="mb-2 text-xs font-medium text-slate-500">Avatar storage</p>
+              {isDataUri(user.avatarUrl) ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-700">
+                    Your avatar is stored directly in your account as embedded image data, not as a public file URL.
+                  </p>
+                  <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 sm:grid-cols-2">
+                    <div>
+                      <span className="font-medium text-slate-700">Storage type:</span>{' '}
+                      Embedded data URI
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-700">Image format:</span>{' '}
+                      {avatarDataUriMeta?.mimeSubtype?.toUpperCase() || 'Unknown'}
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-700">Approx. size:</span>{' '}
+                      {avatarDataUriMeta?.sizeKb ?? 0} KB
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-700">URL field meaning:</span>{' '}
+                      Stored image data
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    So seeing <code>data:image/...</code> is expected here—it means the image bytes are embedded inline rather than hosted at a normal web address.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-700">
+                    Your avatar is stored as an external image URL.
+                  </p>
+                  <a
+                    href={user.avatarUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="break-all text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    {user.avatarUrl}
+                  </a>
+                </div>
+              )}
             </div>
           ) : null}
         </CardContent>

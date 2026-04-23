@@ -79,6 +79,22 @@ function hashString(input: string): number {
   return hash >>> 0;
 }
 
+function getJsPdfImageFormat(imageData: string): 'PNG' | 'JPEG' | 'WEBP' {
+  const match = imageData.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,/i);
+  const subtype = match?.[1]?.toLowerCase();
+
+  switch (subtype) {
+    case 'png':
+      return 'PNG';
+    case 'webp':
+      return 'WEBP';
+    case 'jpg':
+    case 'jpeg':
+    default:
+      return 'JPEG';
+  }
+}
+
 const watermarkImageCache = new Map<string, string>();
 const printedReferenceStampImageCache = new Map<string, string>();
 const printedReferenceStampFontPath = '/Users/admin/Library/Fonts/1952 RHEINMETALL.ttf';
@@ -549,7 +565,8 @@ export function generateCertificatePDF(certificate: CertificateData): Uint8Array
         const logoHeight = 12;
         const logoX = pageWidth - margin - 4 - logoWidth;
         const logoY = margin + 4;
-        pdf.addImage(certificate.teamLogo, 'JPEG', logoX, logoY, logoWidth, logoHeight);
+        const logoFormat = getJsPdfImageFormat(certificate.teamLogo);
+        pdf.addImage(certificate.teamLogo, logoFormat, logoX, logoY, logoWidth, logoHeight);
       } catch (err) {
         // Logo rendering failed silently
       }
@@ -1584,7 +1601,8 @@ function generateCP12PDF(certificate: CertificateData): Uint8Array {
       const logoHeight = 16;
       const logoX = margin + 2;
       const logoY = y + 3;
-      pdf.addImage(certificate.teamLogo, 'JPEG', logoX, logoY, logoWidth, logoHeight);
+      const logoFormat = getJsPdfImageFormat(certificate.teamLogo);
+      pdf.addImage(certificate.teamLogo, logoFormat, logoX, logoY, logoWidth, logoHeight);
     } catch (err) {
       // Logo rendering failed silently
     }
@@ -2147,7 +2165,8 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
       const logoHeight = 14;
       const logoX = margin + W - logoWidth - 2;
       const logoY = y + 1;
-      pdf.addImage(certificate.teamLogo, 'JPEG', logoX, logoY, logoWidth, logoHeight);
+      const logoFormat = getJsPdfImageFormat(certificate.teamLogo);
+      pdf.addImage(certificate.teamLogo, logoFormat, logoX, logoY, logoWidth, logoHeight);
     } catch (err) {
       // Logo rendering failed silently
     }
