@@ -4,12 +4,31 @@ import { getCurrentUser } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
 import { users, type EicrInspectorHistoryEntry, type EicrProfileDefaults } from '@/lib/db/schema';
 
-function buildUserAssetProxyUrl(kind: 'avatar' | 'signature', key: string | null | undefined) {
-  if (!key) {
-    return null;
+function buildUserAssetProxyUrl(kind: 'avatar' | 'signature', key?: string | null) {
+  if (key) {
+    return `/api/user/asset/${kind}?key=${encodeURIComponent(key)}`;
   }
 
-  return `/api/user/asset/${kind}?key=${encodeURIComponent(key)}`;
+  return `/api/user/asset/${kind}`;
+}
+
+function shouldProxyUserAsset(
+  key: string | null | undefined,
+  url: string | null | undefined
+) {
+  return Boolean(key || (typeof url === 'string' && /^data:image\//i.test(url)));
+}
+
+function getUserAssetUrl(
+  kind: 'avatar' | 'signature',
+  key: string | null | undefined,
+  url: string | null | undefined
+) {
+  if (shouldProxyUserAsset(key, url)) {
+    return buildUserAssetProxyUrl(kind, key);
+  }
+
+  return url || null;
 }
 
 function withoutPasswordHash<T extends { passwordHash?: string | null }>(user: T) {
@@ -80,9 +99,16 @@ export async function GET(_request: NextRequest) {
     return NextResponse.json(
       {
         ...sanitizedUser,
-        avatarUrl: buildUserAssetProxyUrl('avatar', sanitizedUser.avatarR2Key) || sanitizedUser.avatarUrl,
-        signatureUrl:
-          buildUserAssetProxyUrl('signature', sanitizedUser.signatureR2Key) || sanitizedUser.signatureUrl,
+        avatarUrl: getUserAssetUrl(
+          'avatar',
+          sanitizedUser.avatarR2Key,
+          sanitizedUser.avatarUrl
+        ),
+        signatureUrl: getUserAssetUrl(
+          'signature',
+          sanitizedUser.signatureR2Key,
+          sanitizedUser.signatureUrl
+        ),
       },
       {
         headers: {
@@ -158,9 +184,16 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       ...sanitizedUser,
-      avatarUrl: buildUserAssetProxyUrl('avatar', sanitizedUser.avatarR2Key) || sanitizedUser.avatarUrl,
-      signatureUrl:
-        buildUserAssetProxyUrl('signature', sanitizedUser.signatureR2Key) || sanitizedUser.signatureUrl,
+      avatarUrl: getUserAssetUrl(
+        'avatar',
+        sanitizedUser.avatarR2Key,
+        sanitizedUser.avatarUrl
+      ),
+      signatureUrl: getUserAssetUrl(
+        'signature',
+        sanitizedUser.signatureR2Key,
+        sanitizedUser.signatureUrl
+      ),
     });
   } catch (error) {
     console.error('Error updating user:', error);
