@@ -4,11 +4,15 @@
   "description": "Fire safety certificate management system",
   "private": true,
   "packageManager": "pnpm@10.8.1",
+  "bin": {
+    "build-and-install": "./build-and-install.sh"
+  },
   "scripts": {
     "dev": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next dev --turbopack -H 0.0.0.0 -p 4000",
     "build": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next build",
     "start": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true PORT=4000 next start -H 0.0.0.0",
     "menu": "pnpm exec tsx scripts/cli-menu.ts",
+    "ios:build-and-install": "bash ./build-and-install.sh",
     "db:setup": "npx tsx lib/db/setup.ts",
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
