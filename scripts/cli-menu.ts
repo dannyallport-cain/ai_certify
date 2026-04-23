@@ -94,14 +94,14 @@ async function runMobileBuildAndInstall() {
   }
 
   console.log('');
-  info('This runs the existing mobile script: pnpm --dir mobile run ios:build-and-install');
+  info('This runs the root build-and-install script: ./build-and-install.sh');
 
   const udid = await prompt('Optional iPhone UDID (press Enter to auto-detect): ');
 
   await runCommand(
-    'pnpm',
-    ['--dir', 'mobile', 'run', 'ios:build-and-install'],
-    udid ? { env: { IOS_DEVICE_UDID: udid } } : {}
+    './build-and-install.sh',
+    udid ? ['-d', udid] : [],
+    {}
   );
 
   success('Mobile build/install command completed.');
