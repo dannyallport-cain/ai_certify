@@ -94,7 +94,7 @@ export const teamRuntimeSafeColumns = {
   subscriptionBypassSetAt: teams.subscriptionBypassSetAt,
   subscriptionBypassSetBy: teams.subscriptionBypassSetBy,
   trialEndDate: teams.trialEndDate,
-  logoDataUri: sql<string | null>`null`,
+  logoDataUri: teams.logoDataUri,
 };
 
 export const teamMembers = pgTable('team_members', {

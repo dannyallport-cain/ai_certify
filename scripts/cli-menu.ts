@@ -10,6 +10,7 @@ const rl = createInterface({ input, output });
 
 const projectRoot = process.cwd();
 const mobileDir = path.join(projectRoot, 'mobile');
+const mobileBuildScript = path.join('mobile', 'build-and-install.sh');
 
 function color(code: number, text: string) {
   return `\u001b[${code}m${text}\u001b[0m`;
@@ -94,15 +95,24 @@ async function runMobileBuildAndInstall() {
   }
 
   console.log('');
-  info('This runs the root build-and-install script: ./build-and-install.sh');
+  info(`This runs the existing mobile build script: ${mobileBuildScript}`);
 
   const udid = await prompt('Optional iPhone UDID (press Enter to auto-detect): ');
-
-  await runCommand(
-    './build-and-install.sh',
-    udid ? ['-d', udid] : [],
-    {}
+  const developmentTeam = await prompt(
+    'Optional Xcode development team ID (press Enter to use environment/default): '
   );
+
+  const args = [mobileBuildScript];
+
+  if (udid) {
+    args.push('-d', udid);
+  }
+
+  if (developmentTeam) {
+    args.push('-t', developmentTeam);
+  }
+
+  await runCommand('bash', args);
 
   success('Mobile build/install command completed.');
 }

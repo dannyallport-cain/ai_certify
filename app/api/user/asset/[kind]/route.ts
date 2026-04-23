@@ -43,6 +43,47 @@ function isAllowedUserAssetKey(key: string, userId: number, kind: string) {
   return key.startsWith(expectedPrefix);
 }
 
+function getInlineUserAssetUrl(
+  user: Awaited<ReturnType<typeof getCurrentUser>>,
+  kind: string
+) {
+  if (!user) {
+    return null;
+  }
+
+  if (kind === 'avatar') {
+    return typeof user.avatarUrl === 'string' ? user.avatarUrl : null;
+  }
+
+  if (kind === 'signature') {
+    return typeof user.signatureUrl === 'string' ? user.signatureUrl : null;
+  }
+
+  return null;
+}
+
+function decodeImageDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, contentType, base64Payload] = match;
+
+  try {
+    const buffer = Buffer.from(base64Payload, 'base64');
+
+    if (!buffer.length) {
+      return null;
+    }
+
+    return { contentType, buffer };
+  } catch {
+    return null;
+  }
+}
+
 async function resolveExistingUserAssetKey(bucket: string, key: string) {
   const client = getR2Client();
   const candidates = [key];
@@ -80,9 +121,35 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const { kind } = await context.params;
+
+    if (!(kind in ALLOWED_KIND_PREFIX)) {
+      return NextResponse.json({ error: 'Invalid asset kind.' }, { status: 400 });
+    }
+
     const key = getSingleQueryValue(request.nextUrl.searchParams.getAll('key'))?.trim();
 
-    if (!key || !isAllowedUserAssetKey(key, user.id, kind)) {
+    if (!key) {
+      const inlineUrl = getInlineUserAssetUrl(user, kind);
+
+      if (!inlineUrl) {
+        return NextResponse.json({ error: 'Asset not found.' }, { status: 404 });
+      }
+
+      const decoded = decodeImageDataUrl(inlineUrl);
+
+      if (!decoded) {
+        return NextResponse.json({ error: 'Unsupported inline asset format.' }, { status: 400 });
+      }
+
+      return new NextResponse(decoded.buffer, {
+        headers: {
+          'Content-Type': decoded.contentType,
+          'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+        },
+      });
+    }
+
+    if (!isAllowedUserAssetKey(key, user.id, kind)) {
       return NextResponse.json({ error: 'Invalid asset key.' }, { status: 400 });
     }
 
