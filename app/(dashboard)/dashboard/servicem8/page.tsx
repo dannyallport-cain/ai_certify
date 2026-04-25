@@ -55,6 +55,35 @@ interface SM8Client {
   billing_address: string;
 }
 
+const PENDING_SERVICE_M8_ACTION_KEY = 'ai_certify_servicem8_pending_action';
+
+type PendingServiceM8Action = 'import_clients';
+
+function getPendingServiceM8Action(): PendingServiceM8Action | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const action = window.sessionStorage.getItem(PENDING_SERVICE_M8_ACTION_KEY);
+  return action === 'import_clients' ? action : null;
+}
+
+function setPendingServiceM8Action(action: PendingServiceM8Action) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.setItem(PENDING_SERVICE_M8_ACTION_KEY, action);
+}
+
+function clearPendingServiceM8Action() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.removeItem(PENDING_SERVICE_M8_ACTION_KEY);
+}
+
 export default function ServiceM8Page() {
   const { data: connData, error: connError, isLoading: connLoading } = useSWR<ConnectionData>(
     '/api/servicem8/connection',
@@ -80,6 +109,19 @@ export default function ServiceM8Page() {
     if (popupPollRef.current !== null) {
       window.clearInterval(popupPollRef.current);
       popupPollRef.current = null;
+    }
+  }
+
+  async function resumePendingServiceM8Action() {
+    const pendingAction = getPendingServiceM8Action();
+    if (!pendingAction) {
+      return;
+    }
+
+    clearPendingServiceM8Action();
+
+    if (pendingAction === 'import_clients') {
+      await handleImportClients({ allowConnectRedirect: false });
     }
   }
 
@@ -125,6 +167,7 @@ export default function ServiceM8Page() {
     ) {
       return;
     }
+    clearPendingServiceM8Action();
     setDisconnecting(true);
     try {
       await fetch('/api/servicem8/connection', { method: 'DELETE' });
@@ -149,18 +192,44 @@ export default function ServiceM8Page() {
     }
   }
 
-  async function handleImportClients() {
+  async function handleImportClients(options: { allowConnectRedirect?: boolean } = {}) {
+    const { allowConnectRedirect = true } = options;
     setImportingClients(true);
     setImportResult(null);
+
     try {
+      if (allowConnectRedirect && !isConnected) {
+        setPendingServiceM8Action('import_clients');
+        await handleConnect();
+        return;
+      }
+
       const res = await fetch('/api/servicem8/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'import_all' }),
       });
-      const data = await res.json();
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: boolean;
+        imported?: number;
+        skipped?: number;
+        error?: string;
+      };
+
+      if (!res.ok) {
+        if (allowConnectRedirect && (res.status === 401 || data.error === 'ServiceM8 not connected')) {
+          setPendingServiceM8Action('import_clients');
+          await handleConnect();
+          return;
+        }
+
+        throw new Error(data.error || 'Failed to import clients');
+      }
+
+      clearPendingServiceM8Action();
+
       if (data.success) {
-        setImportResult({ imported: data.imported, skipped: data.skipped });
+        setImportResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0 });
       }
     } catch (error) {
       console.error('Failed to import clients:', error);
@@ -173,9 +242,15 @@ export default function ServiceM8Page() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
     if (params.get('success') === 'connected') {
       setUrlMessage({ type: 'success', text: 'ServiceM8 connected successfully!' });
+      void (async () => {
+        await mutate('/api/servicem8/connection');
+        await resumePendingServiceM8Action();
+      })();
     } else if (params.get('error')) {
+      clearPendingServiceM8Action();
       const errorMap: Record<string, string> = {
         no_code: 'Authorization failed - no code received from ServiceM8.',
         invalid_state: 'Security check failed. Please try again.',
@@ -216,10 +291,14 @@ export default function ServiceM8Page() {
 
       if (payload.success === 'connected') {
         setUrlMessage({ type: 'success', text: 'ServiceM8 connected successfully!' });
-        mutate('/api/servicem8/connection');
+        void (async () => {
+          await mutate('/api/servicem8/connection');
+          await resumePendingServiceM8Action();
+        })();
         return;
       }
 
+      clearPendingServiceM8Action();
       const errorKey = payload.error || 'callback_failed';
       setUrlMessage({ type: 'error', text: errorMap[errorKey] || `Error: ${errorKey}` });
     }
@@ -424,7 +503,7 @@ export default function ServiceM8Page() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">ServiceM8 Clients</h3>
-                <Button onClick={handleImportClients} disabled={importingClients} variant="outline">
+                <Button onClick={() => handleImportClients()} disabled={importingClients} variant="outline">
                   {importingClients ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (

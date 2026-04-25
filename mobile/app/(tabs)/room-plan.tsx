@@ -131,6 +131,29 @@ function formatStatusLabel(
   return 'idle';
 }
 
+function inferDeviceIdentification(device: FireAlarmDeviceDetection) {
+  const labelText = device.label?.toLowerCase() ?? '';
+  const manufacturerName = getManufacturerName(device.manufacturer).toLowerCase();
+
+  if (device.identifiedByUser === true) {
+    return true;
+  }
+
+  if (device.type !== 'unknown') {
+    return true;
+  }
+
+  if (manufacturerName && manufacturerName !== 'unknown' && manufacturerName !== 'null') {
+    return true;
+  }
+
+  if (/panel|detector|sounder|interface|io[_\s]?unit|vad/.test(labelText)) {
+    return true;
+  }
+
+  return false;
+}
+
 function mergeDeviceLists(
   existingDevices: FireAlarmDeviceDetection[],
   incomingDevices: FireAlarmDeviceDetection[],
@@ -138,9 +161,14 @@ function mergeDeviceLists(
   const existingById = new Map(existingDevices.map((device) => [device.id, device]));
   const merged = incomingDevices.map((incomingDevice) => {
     const existingDevice = existingById.get(incomingDevice.id);
+    const identifiedByUser =
+      existingDevice?.identifiedByUser ?? incomingDevice.identifiedByUser ?? inferDeviceIdentification(incomingDevice);
 
     if (!existingDevice) {
-      return incomingDevice;
+      return {
+        ...incomingDevice,
+        identifiedByUser,
+      } satisfies FireAlarmDeviceDetection;
     }
 
     return {
@@ -152,7 +180,7 @@ function mergeDeviceLists(
       label: existingDevice.label ?? incomingDevice.label,
       manufacturer: existingDevice.manufacturer ?? incomingDevice.manufacturer,
       notes: existingDevice.notes ?? incomingDevice.notes,
-      identifiedByUser: existingDevice.identifiedByUser ?? incomingDevice.identifiedByUser,
+      identifiedByUser,
       metadata: {
         ...(incomingDevice.metadata ?? {}),
         ...(existingDevice.metadata ?? {}),
@@ -269,6 +297,31 @@ export default function RoomPlanScreen() {
     });
 
     setSelectedDeviceId((currentSelectedDeviceId) => currentSelectedDeviceId ?? event.detection.id);
+  }, []);
+
+  const autoIdentifyDetectedDevices = useCallback(() => {
+    setCapturedDevices((currentDevices) =>
+      currentDevices.map((device) => {
+        if (device.identifiedByUser === true) {
+          return device;
+        }
+
+        const shouldIdentify = inferDeviceIdentification(device);
+
+        return {
+          ...device,
+          identifiedByUser: shouldIdentify,
+          metadata: {
+            ...(device.metadata ?? {}),
+            autoIdentified: device.identifiedByUser == null ? shouldIdentify : device.metadata?.autoIdentified ?? false,
+          },
+          notes:
+            shouldIdentify && !device.notes
+              ? 'Auto-identified from detection metadata.'
+              : device.notes,
+        };
+      }),
+    );
   }, []);
 
   useEffect(() => {
@@ -539,6 +592,17 @@ export default function RoomPlanScreen() {
           Tap any detected item to classify it as a fire alarm device during the capture process.
           Only rows marked identified are sent to the backend.
         </Text>
+
+        {capturedDevices.length > 0 && capturedDevices.some((device) => device.identifiedByUser !== true) ? (
+          <Pressable
+            className="mt-4 rounded-xl bg-blue-600 px-4 py-3"
+            onPress={autoIdentifyDetectedDevices}
+          >
+            <Text className="text-center text-sm font-semibold text-white">
+              Auto-identify likely fire alarm devices
+            </Text>
+          </Pressable>
+        ) : null}
 
         {capturedDevices.length === 0 ? (
           <View className="mt-4 rounded-xl border border-dashed border-gray-300 p-4">

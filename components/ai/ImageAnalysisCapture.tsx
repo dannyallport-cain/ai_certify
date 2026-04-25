@@ -4,6 +4,8 @@ import { ChangeEvent, useMemo, useRef, useState } from 'react';
 import { Camera, FileImage, Loader2, RefreshCw, Sparkles, Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import type {
   AnalyzeImageResponse,
   AnalyzeImageObservationRecommendation,
@@ -25,6 +27,17 @@ const INITIAL_STATE: AnalysisState = {
   error: null,
   isSubmitting: false,
 };
+
+type TrainingLabels = {
+  deviceType: string;
+  manufacturer: string;
+  mounting: string;
+  visibility: string;
+  notes: string;
+  clarification: string;
+};
+
+type SubmissionStatus = 'idle' | 'submitting' | 'saved' | 'error';
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -79,6 +92,10 @@ function formatBoolean(value: boolean | null | undefined) {
   return value ? 'Yes' : 'No';
 }
 
+function needsHumanReview(result: AnalyzeImageResponse | null) {
+  return Boolean(result?.needsHumanReview) || (result?.findings?.textDetections?.length ?? 0) === 0;
+}
+
 function getScheduleItemTitle(item: AnalyzeImageScheduleItem) {
   return item.item || item.description || 'Schedule item';
 }
@@ -98,6 +115,16 @@ export default function ImageAnalysisCapture() {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<AnalysisState>(INITIAL_STATE);
+  const [trainingLabels, setTrainingLabels] = useState<TrainingLabels>({
+    deviceType: '',
+    manufacturer: '',
+    mounting: '',
+    visibility: '',
+    notes: '',
+    clarification: '',
+  });
+  const [submissionStatus, setSubmissionStatus] = useState<SubmissionStatus>('idle');
+  const [submissionMessage, setSubmissionMessage] = useState<string | null>(null);
 
   const extractedTextLines = useMemo(() => {
     const textDetections = state.result?.findings?.textDetections;
@@ -166,6 +193,16 @@ export default function ImageAnalysisCapture() {
         result: null,
         error: null,
       }));
+      setTrainingLabels({
+        deviceType: '',
+        manufacturer: '',
+        mounting: '',
+        visibility: '',
+        notes: '',
+        clarification: '',
+      });
+      setSubmissionStatus('idle');
+      setSubmissionMessage(null);
     } catch (nextError) {
       setState((current) => ({
         ...current,
@@ -190,6 +227,8 @@ export default function ImageAnalysisCapture() {
         error: null,
         result: null,
       }));
+      setSubmissionStatus('idle');
+      setSubmissionMessage(null);
 
       const response = await fetch('/api/ai/analyze-image', {
         method: 'POST',
@@ -222,6 +261,10 @@ export default function ImageAnalysisCapture() {
         result: payload,
         isSubmitting: false,
       }));
+      setTrainingLabels((current) => ({
+        ...current,
+        manufacturer: payload.findings?.consumerUnit?.brand ?? current.manufacturer,
+      }));
     } catch (nextError) {
       setState((current) => ({
         ...current,
@@ -233,6 +276,71 @@ export default function ImageAnalysisCapture() {
 
   const handleReset = () => {
     setState(INITIAL_STATE);
+    setTrainingLabels({
+      deviceType: '',
+      manufacturer: '',
+      mounting: '',
+      visibility: '',
+      notes: '',
+      clarification: '',
+    });
+    setSubmissionStatus('idle');
+    setSubmissionMessage(null);
+  };
+
+  const handleTrainingChange = (field: keyof TrainingLabels, value: string) => {
+    setTrainingLabels((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleSubmitTrainingSample = async () => {
+    if (!state.imageDataUrl || !state.result) {
+      setSubmissionStatus('error');
+      setSubmissionMessage('Run analysis before submitting a training sample.');
+      return;
+    }
+
+    setSubmissionStatus('submitting');
+    setSubmissionMessage(null);
+
+    try {
+      const response = await fetch('/api/ai/submit-training-sample', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageBase64: state.imageDataUrl,
+          labels: {
+            deviceType: trainingLabels.deviceType,
+            manufacturer: trainingLabels.manufacturer,
+            mounting: trainingLabels.mounting,
+            visibility: trainingLabels.visibility,
+          },
+          notes: trainingLabels.notes,
+          clarification: trainingLabels.clarification,
+          metadata: {
+            fileName: state.fileName,
+            source: 'ai-analysis-page',
+            uploadedAt: new Date().toISOString(),
+          },
+          analysis: state.result,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || 'Failed to submit training sample.');
+      }
+
+      setSubmissionStatus('saved');
+      setSubmissionMessage(`Training sample saved as ${payload.sampleId}.`);
+    } catch (error) {
+      setSubmissionStatus('error');
+      setSubmissionMessage(error instanceof Error ? error.message : 'Failed to submit training sample.');
+    }
   };
 
   return (
@@ -544,6 +652,120 @@ export default function ImageAnalysisCapture() {
                   No summary comments were returned.
                 </div>
               )}
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Training sample review</h3>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm text-slate-700">
+                  The classifier returned a candidate result for this image. If the sample is unclear, correct the labels below and submit it as a training sample.
+                </p>
+                {needsHumanReview(state.result) ? (
+                  <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    This image has been flagged for human review. Confirm or refine the device labels before submission.
+                  </div>
+                ) : null}
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Device type
+                    </label>
+                    <Input
+                      value={trainingLabels.deviceType}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => handleTrainingChange('deviceType', event.target.value)}
+                      placeholder="e.g. smoke_detector"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Manufacturer
+                    </label>
+                    <Input
+                      value={trainingLabels.manufacturer}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => handleTrainingChange('manufacturer', event.target.value)}
+                      placeholder="e.g. Apollo"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Mounting
+                    </label>
+                    <Input
+                      value={trainingLabels.mounting}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => handleTrainingChange('mounting', event.target.value)}
+                      placeholder="e.g. ceiling"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Visibility
+                    </label>
+                    <Input
+                      value={trainingLabels.visibility}
+                      onChange={(event: ChangeEvent<HTMLInputElement>) => handleTrainingChange('visibility', event.target.value)}
+                      placeholder="e.g. partial, clear"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Clarification notes
+                    </label>
+                    <Textarea
+                      value={trainingLabels.clarification}
+                      onChange={(event: ChangeEvent<HTMLTextAreaElement>) => handleTrainingChange('clarification', event.target.value)}
+                      placeholder="Why is this sample hard to classify? e.g. glare, partial occlusion, low contrast"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Additional training notes
+                    </label>
+                    <Textarea
+                      value={trainingLabels.notes}
+                      onChange={(event: ChangeEvent<HTMLTextAreaElement>) => handleTrainingChange('notes', event.target.value)}
+                      placeholder="Any extra context to store with this training sample"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Button
+                    type="button"
+                    onClick={handleSubmitTrainingSample}
+                    disabled={submissionStatus === 'submitting'}
+                  >
+                    {submissionStatus === 'submitting' ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Submit training sample
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleReset} disabled={submissionStatus === 'submitting'}>
+                    Reset form
+                  </Button>
+                </div>
+
+                {submissionMessage ? (
+                  <div
+                    className={`rounded-2xl border px-4 py-3 text-sm ${
+                      submissionStatus === 'saved'
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                        : 'border-red-200 bg-red-50 text-red-900'
+                    }`}
+                  >
+                    {submissionMessage}
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="space-y-3">

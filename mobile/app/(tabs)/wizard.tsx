@@ -379,7 +379,7 @@ export default function WizardScreen() {
       locked: !stepFlags.address,
     },
     {
-      key: 'report-purpose',
+      key: 'data-entry-mode',
       title: '4. Data entry mode',
       detail: state.wizard.dataEntryMode.replaceAll('_', ' '),
       done: stepFlags.dataEntryMode,
@@ -540,8 +540,8 @@ export default function WizardScreen() {
       </View>
 
       <Text className="mb-3 text-lg font-bold text-gray-900">Workflow progress</Text>
-      {steps.map(({ key, ...step }) => (
-        <StepCard key={key} {...step} />
+      {steps.map(({ key, ...step }, index) => (
+        <StepCard key={`${key}-${index}`} {...step} />
       ))}
 
       <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
