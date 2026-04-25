@@ -14,7 +14,7 @@ Before building and installing the app on your iPhone, ensure you have:
 
 ### Quick Build & Install (Recommended)
 
-To build the app and install it directly on your connected iPhone:
+To build the app and install it directly on your connected iPhone using the existing native iOS project:
 
 ```bash
 npm run ios:build-and-install
@@ -24,6 +24,18 @@ Or run the script directly:
 
 ```bash
 ./build-and-install.sh
+```
+
+If you actually changed native iOS config or Expo plugins and need a fresh native project, run:
+
+```bash
+CLEAN_PREBUILD=true npm run ios:build-and-install
+```
+
+Or:
+
+```bash
+./build-and-install.sh --clean-prebuild
 ```
 
 ### Custom Device UDID
@@ -53,10 +65,11 @@ The `build-and-install.sh` script performs these steps:
 
 1. **Dependency Check**: Verifies Xcode, Node.js, Expo CLI, and CocoaPods are installed
 2. **Device Detection**: Automatically detects connected iOS devices or uses specified UDID
-3. **Expo Prebuild**: Converts the Expo app to native iOS project
+3. **Optional Expo Prebuild**: Regenerates the native iOS project only when requested or when the `ios/` project is missing
 4. **CocoaPods Install**: Installs iOS dependencies
 5. **Xcode Build**: Builds the app for your device using xcodebuild
-6. **Device Install**: Installs the built app on your connected iPhone
+6. **Bundle Verification**: Confirms `main.jsbundle` was embedded into the release app
+7. **Device Install**: Installs the built app on your connected iPhone
 
 ## Troubleshooting
 
@@ -66,6 +79,7 @@ The `build-and-install.sh` script performs these steps:
 - Enable Developer Mode in Settings → Privacy & Security → Developer Mode
 
 ### Build fails
+- Use a clean prebuild only when native iOS files changed: `CLEAN_PREBUILD=true npm run ios:build-and-install`
 - Clean the project: `rm -rf ios/ node_modules/ && npm install && npm run prebuild`
 - Update CocoaPods: `cd ios && pod update`
 - Check Xcode version compatibility
@@ -91,6 +105,8 @@ npx eas build --platform ios --profile production
 ```bash
 npm run ios:device:xcode  # Uses existing build-ios-device.sh
 ```
+
+For regular iOS testing, prefer the existing native project. Only use prebuild when native config or Expo plugins change.
 
 ## Environment Variables
 

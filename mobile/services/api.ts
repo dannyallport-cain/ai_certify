@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import type {
   MobileCertificateEditorRecord,
   UpdateMobileCertificateInput,
@@ -33,15 +34,48 @@ const configuredAiWorkerUrl =
 
 const AI_WORKER_URL = configuredAiWorkerUrl.replace(/\/+$/, '');
 
+function getWebTokenStorage(): Storage | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export async function saveToken(token: string) {
+  if (Platform.OS === 'web') {
+    const storage = getWebTokenStorage();
+    if (storage) {
+      storage.setItem(TOKEN_KEY, token);
+    }
+    return;
+  }
+
   await SecureStore.setItemAsync(TOKEN_KEY, token);
 }
 
 export async function getToken(): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    const storage = getWebTokenStorage();
+    return storage ? storage.getItem(TOKEN_KEY) : null;
+  }
+
   return SecureStore.getItemAsync(TOKEN_KEY);
 }
 
 export async function deleteToken() {
+  if (Platform.OS === 'web') {
+    const storage = getWebTokenStorage();
+    if (storage) {
+      storage.removeItem(TOKEN_KEY);
+    }
+    return;
+  }
+
   await SecureStore.deleteItemAsync(TOKEN_KEY);
 }
 
