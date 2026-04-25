@@ -56,7 +56,7 @@ export default function NewCustomerPage() {
         <CardHeader>
           <CardTitle>Customer Information</CardTitle>
           <CardDescription>
-            Enter the customer details below. All fields are optional except the company name.
+            Enter the customer details below. All fields are optional except the customer name.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -68,11 +68,11 @@ export default function NewCustomerPage() {
             )}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="name">Company Name *</Label>
+                <Label htmlFor="name">Customer Name *</Label>
                 <Input
                   id="name"
                   name="name"
-                  placeholder="Enter company name"
+                  placeholder="Enter customer or individual name"
                   required
                 />
               </div>

@@ -70,20 +70,38 @@ function finishOAuthResponse(
         var payload = ${JSON.stringify(payload)};
         var redirectUrl = ${JSON.stringify(redirectUrl)};
 
-        try {
-          if (window.opener && !window.opener.closed) {
-            window.opener.postMessage(payload, window.location.origin);
-            window.close();
-            setTimeout(function () {
-              window.location.replace(redirectUrl);
-            }, 300);
-            return;
+        function notifyOpener() {
+          if (!window.opener || window.opener.closed) {
+            return false;
           }
-        } catch (error) {
-          console.error('Failed to notify opener window', error);
+
+          window.opener.postMessage(payload, window.location.origin);
+
+          try {
+            window.opener.location.replace(redirectUrl);
+          } catch (error) {
+            console.error('Failed to redirect opener window', error);
+          }
+
+          try {
+            window.opener.focus();
+          } catch (error) {
+            console.error('Failed to focus opener window', error);
+          }
+
+          return true;
         }
 
-        window.location.replace(redirectUrl);
+        try {
+          if (!notifyOpener()) {
+            window.location.replace(redirectUrl);
+            return;
+          }
+
+          window.close();
+        } catch (error) {
+          console.error('Failed to finish popup callback', error);
+        }
       })();
     </script>
     <p>Completing ServiceM8 connection…</p>
@@ -150,13 +168,13 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
     console.warn('Could not fetch ServiceM8 company info:', e);
   }
 
-  const existing = await db
+  const existingByTeam = await db
     .select()
     .from(servicem8Connections)
-    .where(eq(servicem8Connections.userId, user.id))
+    .where(eq(servicem8Connections.teamId, teamId))
     .limit(1);
 
-  if (existing.length > 0) {
+  if (existingByTeam.length > 0) {
     await db
       .update(servicem8Connections)
       .set({
@@ -167,22 +185,49 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
         servicem8AccountUuid: accountUuid,
         isActive: true,
         updatedAt: new Date(),
+        userId: user.id,
       })
-      .where(eq(servicem8Connections.userId, user.id));
-  } else {
-    await db.insert(servicem8Connections).values({
-      teamId,
-      userId: user.id,
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token,
-      tokenExpiresAt: expiresAt,
-      servicem8CompanyName: companyName,
-      servicem8AccountUuid: accountUuid,
-      isActive: true,
-      syncEnabled: true,
-      syncDirection: 'bidirectional',
-    });
+      .where(eq(servicem8Connections.teamId, teamId));
+
+    return { ok: true as const };
   }
+
+  const existingByUser = await db
+    .select()
+    .from(servicem8Connections)
+    .where(eq(servicem8Connections.userId, user.id))
+    .limit(1);
+
+  if (existingByUser.length > 0) {
+    await db
+      .update(servicem8Connections)
+      .set({
+        teamId,
+        accessToken: tokenData.access_token,
+        refreshToken: tokenData.refresh_token,
+        tokenExpiresAt: expiresAt,
+        servicem8CompanyName: companyName,
+        servicem8AccountUuid: accountUuid,
+        isActive: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(servicem8Connections.id, existingByUser[0].id));
+
+    return { ok: true as const };
+  }
+
+  await db.insert(servicem8Connections).values({
+    teamId,
+    userId: user.id,
+    accessToken: tokenData.access_token,
+    refreshToken: tokenData.refresh_token,
+    tokenExpiresAt: expiresAt,
+    servicem8CompanyName: companyName,
+    servicem8AccountUuid: accountUuid,
+    isActive: true,
+    syncEnabled: true,
+    syncDirection: 'bidirectional',
+  });
 
   return { ok: true as const };
 }

@@ -35,7 +35,6 @@ export async function getUser() {
   try {
     sessionData = await verifyToken(sessionCookie.value);
   } catch {
-    cookieStore.delete('session');
     return null;
   }
 
@@ -44,13 +43,11 @@ export async function getUser() {
     !sessionData.user ||
     typeof sessionData.user.id !== 'number'
   ) {
-    cookieStore.delete('session');
     return null;
   }
 
   const expiresAt = new Date(sessionData.expires).getTime();
   if (!sessionData.expires || Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
-    cookieStore.delete('session');
     return null;
   }
 
