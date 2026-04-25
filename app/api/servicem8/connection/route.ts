@@ -46,7 +46,7 @@ export async function GET() {
         teamId: servicem8Connections.teamId,
       })
       .from(servicem8Connections)
-      .where(eq(servicem8Connections.userId, context.userId))
+      .where(eq(servicem8Connections.teamId, context.teamId))
       .limit(1);
 
     if (connections.length === 0) {
@@ -72,7 +72,7 @@ export async function DELETE() {
 
     await db
       .delete(servicem8Connections)
-      .where(eq(servicem8Connections.userId, context.userId));
+      .where(eq(servicem8Connections.teamId, context.teamId));
 
     return NextResponse.json({ success: true, message: 'ServiceM8 disconnected' });
   } catch (error) {
@@ -100,7 +100,7 @@ export async function PATCH(request: NextRequest) {
     await db
       .update(servicem8Connections)
       .set(updates)
-      .where(eq(servicem8Connections.userId, context.userId));
+      .where(eq(servicem8Connections.teamId, context.teamId));
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -2,24 +2,9 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Home,
-  LogOut,
-  Users,
-  Award,
-  Settings,
-  Shield,
-  Plug,
-  ArrowRightLeft
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
+import { AlertCircle, ArrowRightLeft, CheckCircle2, Loader2, Plug } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from '@/app/(login)/actions';
 import { usePathname, useRouter } from 'next/navigation';
@@ -31,6 +16,35 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 const ADMIN_VIEW_MODE_KEY = 'admin-dashboard-view-mode';
 
 type AdminViewMode = 'admin' | 'user';
+type TeamSummary = {
+  name: string;
+};
+
+type ServiceM8ConnectionPayload = {
+  connected: boolean;
+  connection?: {
+    id: number;
+    isActive: boolean | null;
+    servicem8CompanyName: string | null;
+    syncEnabled: boolean | null;
+    syncDirection: string | null;
+    lastSyncAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  };
+  error?: string;
+};
+
+const servicem8Fetcher = async (url: string): Promise<ServiceM8ConnectionPayload> => {
+  const res = await fetch(url, { credentials: 'include' });
+  const body = (await res.json().catch(() => ({}))) as ServiceM8ConnectionPayload;
+
+  if (!res.ok) {
+    throw new Error(body.error || 'Failed to load ServiceM8 connection');
+  }
+
+  return body;
+};
 
 function getInitialAdminViewMode(): AdminViewMode {
   if (typeof window === 'undefined') {
@@ -64,19 +78,11 @@ function AdminViewModeToggle({
   );
 }
 
-function UserMenu({ adminViewMode }: { adminViewMode: AdminViewMode }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+function UserMenu() {
   const { data, error } = useSWR<User>('/api/user', fetcher);
-  const router = useRouter();
-
-  async function handleSignOut() {
-    await signOut();
-    router.refresh();
-    router.push('/');
-  }
 
   if (error) {
-    return <div className="text-red-500 text-sm">Error loading user menu.</div>;
+    return <div className="text-sm text-red-500">Error loading user menu.</div>;
   }
 
   if (!data || !data.email) {
@@ -96,77 +102,29 @@ function UserMenu({ adminViewMode }: { adminViewMode: AdminViewMode }) {
   }
 
   const user = data;
-  const showAdminLink = isAdminRole(user.role) && adminViewMode === 'admin';
 
   return (
-    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-      <DropdownMenuTrigger>
-        <Avatar className="cursor-pointer size-9">
-          <AvatarImage
-            src={user.avatarUrl || undefined}
-            alt={user.name || user.email || ''}
-          />
-          <AvatarFallback>
-            {user.email ? user.email.split(' ').map((n) => n[0]).join('') : '?'}
-          </AvatarFallback>
-        </Avatar>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="flex flex-col gap-1">
-        <DropdownMenuItem className="cursor-pointer">
-          <Link href="/dashboard" className="flex w-full items-center">
-            <Home className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer">
-          <Link href="/certificates" className="flex w-full items-center">
-            <Award className="mr-2 h-4 w-4" />
-            <span>Certificates</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer">
-          <Link href="/customers" className="flex w-full items-center">
-            <Users className="mr-2 h-4 w-4" />
-            <span>Customers</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer">
-          <Link href="/dashboard/general" className="flex w-full items-center">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer">
-          <Link href="/dashboard/servicem8" className="flex w-full items-center">
-            <Plug className="mr-2 h-4 w-4" />
-            <span>ServiceM8</span>
-          </Link>
-        </DropdownMenuItem>
-        {showAdminLink && (
-          <DropdownMenuItem className="cursor-pointer">
-            <Link href="/admin" className="flex w-full items-center">
-              <Shield className="mr-2 h-4 w-4" />
-              <span>Admin</span>
-            </Link>
-          </DropdownMenuItem>
-        )}
-        <form action={handleSignOut} className="w-full">
-          <button type="submit" className="flex w-full">
-            <DropdownMenuItem className="w-full flex-1 cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign out</span>
-            </DropdownMenuItem>
-          </button>
-        </form>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Avatar className="size-9">
+      <AvatarImage src={user.avatarUrl || undefined} alt={user.name || user.email || ''} />
+      <AvatarFallback>
+        {user.email ? user.email.split(' ').map((n) => n[0]).join('') : '?'}
+      </AvatarFallback>
+    </Avatar>
   );
 }
 
 function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: team } = useSWR<TeamSummary>('/api/team', fetcher);
+  const {
+    data: serviceM8Connection,
+    error: serviceM8Error,
+    isLoading: serviceM8Loading,
+  } = useSWR<ServiceM8ConnectionPayload>('/api/servicem8/connection', servicem8Fetcher);
   const showAdminLink = isAdminRole(user?.role) && adminViewMode === 'admin';
+  const showLogoutButton = Boolean(user) && !(pathname?.startsWith('/dashboard') ?? false);
 
   async function handleLogout() {
     await signOut();
@@ -174,9 +132,28 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
     router.push('/');
   }
 
+  const displayUserName = user?.name?.trim() || user?.email || 'Account';
+  const displayTeamName = team?.name?.trim() || 'Team';
+  const serviceM8Status = serviceM8Error
+    ? 'error'
+    : serviceM8Loading
+      ? 'loading'
+      : serviceM8Connection?.connected
+        ? 'connected'
+        : 'disconnected';
+
+  const serviceM8Label =
+    serviceM8Status === 'connected'
+      ? 'ServiceM8 connected'
+      : serviceM8Status === 'error'
+        ? 'ServiceM8 connection failed'
+        : serviceM8Status === 'loading'
+          ? 'Checking ServiceM8'
+          : 'ServiceM8 not connected';
+
   return (
     <header className="border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center">
           <Image
             src="/screenshots/icon-512.png"
@@ -217,15 +194,46 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
             </Link>
           )}
         </div>
-        <div className="flex items-center space-x-4">
-          {user && (
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/servicem8"
+            aria-label={serviceM8Label}
+            title={serviceM8Label}
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              serviceM8Status === 'connected'
+                ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+                : serviceM8Status === 'error'
+                  ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                  : serviceM8Status === 'loading'
+                    ? 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {serviceM8Status === 'connected' ? (
+              <CheckCircle2 className="h-4 w-4" />
+            ) : serviceM8Status === 'error' ? (
+              <AlertCircle className="h-4 w-4" />
+            ) : serviceM8Status === 'loading' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plug className="h-4 w-4" />
+            )}
+            <span className="hidden sm:inline">ServiceM8</span>
+          </Link>
+          {showLogoutButton && (
             <Button variant="outline" onClick={handleLogout}>
               Logout
             </Button>
           )}
-          <Suspense fallback={<div className="h-9" />}>
-            <UserMenu adminViewMode={adminViewMode} />
-          </Suspense>
+          <div className="hidden min-w-0 flex-col items-end leading-tight sm:flex">
+            <span className="max-w-40 truncate text-sm font-medium text-gray-900">
+              {displayUserName}
+            </span>
+            <span className="max-w-40 truncate text-xs text-gray-500">
+              {displayTeamName}
+            </span>
+          </div>
+          <UserMenu />
         </div>
       </div>
     </header>

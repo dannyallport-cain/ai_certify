@@ -13,7 +13,7 @@ import { processServiceM8JobMapping } from '@/lib/servicem8/sync';
 
 // Customer schemas and actions
 const createCustomerSchema = z.object({
-  name: z.string().min(1, 'Company name is required').max(255),
+  name: z.string().min(1, 'Customer name is required').max(255),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
   phone: z.string().max(50).optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
@@ -50,7 +50,7 @@ export const createCustomer = validatedActionWithUser(
 
 const updateCustomerSchema = z.object({
   id: z.number(),
-  name: z.string().min(1, 'Company name is required').max(255),
+  name: z.string().min(1, 'Customer name is required').max(255),
   email: z.string().email('Invalid email address').optional().or(z.literal('')),
   phone: z.string().max(50).optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),

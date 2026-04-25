@@ -4,9 +4,9 @@
 
 const getBaseUrl = () => {
   return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.BASE_URL ||
     process.env.NEXTAUTH_URL ||
+    process.env.BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
     'http://localhost:4000'
   );
 };
