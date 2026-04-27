@@ -44,7 +44,9 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aicertify.field",
+      "buildNumber": "1",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "AI Certify uses your location to automatically fill in the installation address.",
         "NSCameraUsageDescription": "AI Certify needs camera access to photograph consumer units, circuit labels, and RoomPlan fire alarm scans.",
         "NSRoomPlanUsageDescription": "AI Certify uses Apple RoomPlan to capture room geometry and scaffold fire alarm device layout identification."
@@ -56,17 +58,21 @@
         "backgroundColor": "#BE0000"
       },
       "package": "com.aicertify.field",
+      "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "extra": {
+      "apiUrl": "https://ai-certificates.app",
+      "router": {},
       "eas": {
-        "projectId": "replace-with-your-eas-project-id"
-      },
-      "apiUrl": "https://ai-certificates.app"
-    }
+        "projectId": "cc3d753e-5a02-4ceb-8030-c6641b47113f"
+      }
+    },
+    "owner": "dannyallport77"
   }
 }

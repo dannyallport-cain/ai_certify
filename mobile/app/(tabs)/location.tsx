@@ -45,8 +45,7 @@ export default function LocationScreen() {
         type: 'SET_GPS',
         payload: { address, coords: { latitude: loc.coords.latitude, longitude: loc.coords.longitude } },
       });
-    } catch (error) {
-      // console.warn('Location detection failed', error); // Debug log disabled for production
+    } catch {
       Alert.alert('Location Error', 'Could not determine location. Please enter manually.');
     } finally {
       setLoading(false);

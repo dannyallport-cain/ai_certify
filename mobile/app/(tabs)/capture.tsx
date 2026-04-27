@@ -330,8 +330,7 @@ export default function CaptureScreen() {
       if (result) {
         Alert.alert("Analysis Complete", buildAnalysisMessage(result));
       }
-    } catch (error) {
-      // console.warn("Image analysis failed", error); // Debug log disabled for production
+    } catch {
       Alert.alert("Analysis Failed", "Image captured but AI analysis failed. Please retake the photo.");
     } finally {
       setAnalysing(false);
