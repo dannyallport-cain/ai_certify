@@ -1,61 +1,135 @@
-import { Header } from '@/components/landing/Header';
 import { Footer } from '@/components/landing/Footer';
+import { Header } from '@/components/landing/Header';
 
 export default function PrivacyPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-slate-950">
+    <div className="flex min-h-screen flex-col bg-white dark:bg-slate-950">
       <Header />
-      <main className="flex-grow container mx-auto px-4 py-20">
-        <div className="max-w-4xl mx-auto prose dark:prose-invert">
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-8">Privacy Policy</h1>
-          
-          <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
-            Last updated: November 26, 2025
+      <main className="container mx-auto flex-grow px-4 py-20">
+        <div className="prose prose-slate mx-auto max-w-4xl dark:prose-invert">
+          <h1 className="mb-4 text-4xl font-bold text-slate-900 dark:text-white">Privacy Policy</h1>
+          <p className="mb-8 text-lg text-slate-600 dark:text-slate-400">
+            ai-certificates.app
+            <br />
+            Last updated: 27 April 2026
           </p>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-4">1. Introduction</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              Welcome to AI-Certificates ("we," "our," or "us"). We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you as to how we look after your personal data when you visit our website and tell you about your privacy rights and how the law protects you.
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">1. Introduction</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              This Privacy Policy explains how ai-certificates.app (“we”, “us”, or “our”) collects, uses, stores,
+              and protects personal information when you use our website and mobile app. We respect your privacy and
+              aim to be clear about what data we process and why.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-4">2. Information We Collect</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              We may collect, use, store and transfer different kinds of personal data about you which we have grouped together follows:
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">2. Information we collect</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              Depending on how you use the app, we may collect the following types of information:
             </p>
-            <ul className="list-disc pl-6 text-slate-600 dark:text-slate-400 space-y-2">
-              <li><strong>Identity Data</strong> includes first name, last name, username or similar identifier.</li>
-              <li><strong>Contact Data</strong> includes email address and telephone number.</li>
-              <li><strong>Technical Data</strong> includes internet protocol (IP) address, your login data, browser type and version, time zone setting and location, browser plug-in types and versions, operating system and platform and other technology on the devices you use to access this website.</li>
-              <li><strong>Usage Data</strong> includes information about how you use our website, products and services.</li>
+            <ul className="list-disc space-y-2 pl-6 text-slate-600 dark:text-slate-400">
+              <li>
+                <strong>Account information</strong> such as your name, email address, and account identifiers.
+              </li>
+              <li>
+                <strong>Inspection content</strong> such as notes, forms, reports, certificates, and other content
+                you enter into the app.
+              </li>
+              <li>
+                <strong>Photos and videos</strong> that you capture or upload for inspections or reports.
+              </li>
+              <li>
+                <strong>Location data</strong> when you allow the app to access device location for field work or job
+                context.
+              </li>
+              <li>
+                <strong>Device and usage data</strong> such as app interactions, crash information, and technical
+                diagnostics.
+              </li>
+              <li>
+                <strong>Contact details</strong> if you submit them through forms, support requests, or customer
+                records.
+              </li>
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-4">3. How We Use Your Information</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              We will only use your personal data when the law allows us to. Most commonly, we will use your personal data in the following circumstances:
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">3. How we use your information</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              We use collected information to provide, maintain, and improve the app and related services. This
+              includes:
             </p>
-            <ul className="list-disc pl-6 text-slate-600 dark:text-slate-400 space-y-2">
-              <li>Where we need to perform the contract we are about to enter into or have entered into with you.</li>
-              <li>Where it is necessary for our legitimate interests (or those of a third party) and your interests and fundamental rights do not override those interests.</li>
-              <li>Where we need to comply with a legal or regulatory obligation.</li>
+            <ul className="list-disc space-y-2 pl-6 text-slate-600 dark:text-slate-400">
+              <li>Creating and managing user accounts</li>
+              <li>Saving and displaying inspection records</li>
+              <li>Generating certificates and reports</li>
+              <li>Supporting customer and job workflows</li>
+              <li>Synchronising data between connected services where enabled</li>
+              <li>Diagnosing bugs, crashes, and performance issues</li>
+              <li>Responding to support requests</li>
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-4">4. Data Security</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              We have put in place appropriate security measures to prevent your personal data from being accidentally lost, used or accessed in an unauthorized way, altered or disclosed. In addition, we limit access to your personal data to those employees, agents, contractors and other third parties who have a business need to know.
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">4. Sharing and disclosure</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              We do not sell your personal information. We may share data only when necessary to operate the app,
+              for example with service providers that help us host, sync, secure, or support the app. We may also
+              disclose information if required by law or to protect our rights, users, or systems.
             </p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-2xl font-semibold text-slate-900 dark:text-white mb-4">5. Contact Us</h2>
-            <p className="text-slate-600 dark:text-slate-400 mb-4">
-              If you have any questions about this privacy policy or our privacy practices, please contact us via our contact page.
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">5. Data retention</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              We keep personal information only for as long as necessary to provide the app, meet legal obligations,
+              resolve disputes, and enforce agreements. You can request deletion of your account or data by contacting
+              us using the details below.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">6. Security</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              We use reasonable technical and organisational safeguards to protect your information. No method of
+              transmission or storage is completely secure, so we cannot guarantee absolute security.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">7. Your rights and choices</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              Depending on your location, you may have rights to access, correct, delete, or restrict the use of your
+              personal information. You may also be able to withdraw permissions such as camera or location access
+              through your device settings.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">8. Children’s privacy</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              ai-certificates.app is not intended for children under 13, and we do not knowingly collect personal
+              information from children under 13.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">9. Changes to this policy</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              We may update this Privacy Policy from time to time. When we do, we will revise the date shown at the
+              top of this page.
+            </p>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="mb-4 text-2xl font-semibold text-slate-900 dark:text-white">10. Contact us</h2>
+            <p className="mb-4 text-slate-600 dark:text-slate-400">
+              If you have any questions about this Privacy Policy or your data, please use our{' '}
+              <a href="/contact" className="font-medium text-blue-600 underline dark:text-blue-400">
+                contact page
+              </a>
+              .
             </p>
           </section>
         </div>

@@ -1,7 +1,6 @@
-// filepath: app/(dashboard)/admin/users/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Table } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +17,8 @@ type User = {
   lastLoginAt: string | null;
 };
 
+type BulkAction = 'suspend' | 'activate' | 'delete';
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,8 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | User['status']>('all');
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
+  const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [submittingCreate, setSubmittingCreate] = useState(false);
   const [submittingPasswordChange, setSubmittingPasswordChange] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -41,13 +44,15 @@ export default function UsersPage() {
     newPassword: '',
     confirmPassword: '',
   });
+  const selectAllRef = useRef<HTMLInputElement>(null);
 
   const loadUsers = async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/users');
-      const data = await res.json();
+      const data = (await res.json()) as User[];
       setUsers(data);
+      setSelectedUserIds((prev) => prev.filter((id) => data.some((user) => user.id === id)));
     } catch (error) {
       console.error(error);
       alert('Failed to load users');
@@ -59,6 +64,107 @@ export default function UsersPage() {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  const filteredUsers = users.filter((user) => {
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      q.length === 0 ||
+      user.name?.toLowerCase().includes(q) ||
+      user.email?.toLowerCase().includes(q);
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  const filteredUserIds = filteredUsers.map((user) => user.id);
+  const selectedUserCount = selectedUserIds.length;
+  const selectedVisibleCount = filteredUsers.reduce(
+    (count, user) => count + (selectedUserIds.includes(user.id) ? 1 : 0),
+    0
+  );
+  const isAllVisibleSelected = filteredUsers.length > 0 && selectedVisibleCount === filteredUsers.length;
+  const isSomeVisibleSelected = selectedVisibleCount > 0 && selectedVisibleCount < filteredUsers.length;
+  const selectedExistingUsers = users.filter((user) => selectedUserIds.includes(user.id));
+  const bulkBusy = bulkAction !== null || busyUserId !== null;
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = isSomeVisibleSelected;
+    }
+  }, [isSomeVisibleSelected]);
+
+  const toggleUserSelection = (userId: number, checked: boolean) => {
+    setSelectedUserIds((prev) => {
+      if (checked) {
+        return prev.includes(userId) ? prev : [...prev, userId];
+      }
+      return prev.filter((id) => id !== userId);
+    });
+  };
+
+  const toggleVisibleSelection = (checked: boolean) => {
+    setSelectedUserIds((prev) => {
+      if (checked) {
+        return Array.from(new Set([...prev, ...filteredUserIds]));
+      }
+      return prev.filter((id) => !filteredUserIds.includes(id));
+    });
+  };
+
+  const handleBulkAction = async (action: BulkAction) => {
+    const targetUsers = selectedExistingUsers;
+    if (targetUsers.length === 0) {
+      alert('Select at least one user');
+      return;
+    }
+
+    const actionLabel =
+      action === 'suspend' ? 'suspend' : action === 'activate' ? 'activate' : 'delete';
+    const confirmed = window.confirm(
+      `Are you sure you want to ${actionLabel} ${targetUsers.length} selected user${targetUsers.length === 1 ? '' : 's'}?`
+    );
+    if (!confirmed) return;
+
+    setBulkAction(action);
+    try {
+      let successCount = 0;
+      let failureCount = 0;
+
+      for (const user of targetUsers) {
+        const res =
+          action === 'delete'
+            ? await fetch(`/api/admin/users/${user.id}`, { method: 'DELETE' })
+            : await fetch(`/api/admin/users/${user.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action }),
+              });
+
+        if (res.ok) {
+          successCount += 1;
+        } else {
+          failureCount += 1;
+        }
+      }
+
+      await loadUsers();
+
+      if (failureCount > 0) {
+        alert(`${successCount} user${successCount === 1 ? '' : 's'} updated. ${failureCount} failed.`);
+      } else {
+        const pastTense =
+          action === 'suspend' ? 'Suspended' : action === 'activate' ? 'Activated' : 'Deleted';
+        alert(`${pastTense} ${successCount} selected user${successCount === 1 ? '' : 's'}.`);
+      }
+
+      setSelectedUserIds([]);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to update selected users');
+    } finally {
+      setBulkAction(null);
+    }
+  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,6 +233,7 @@ export default function UsersPage() {
         alert(data?.error || 'Failed to delete user');
         return;
       }
+      setSelectedUserIds((prev) => prev.filter((selectedId) => selectedId !== id));
       await loadUsers();
     } finally {
       setBusyUserId(null);
@@ -136,9 +243,7 @@ export default function UsersPage() {
   const handleSuspendToggle = async (user: User) => {
     const action = user.status === 'suspended' ? 'activate' : 'suspend';
     const confirmed = window.confirm(
-      user.status === 'suspended'
-        ? 'Activate this user?'
-        : 'Suspend this user?'
+      user.status === 'suspended' ? 'Activate this user?' : 'Suspend this user?'
     );
     if (!confirmed) return;
 
@@ -234,28 +339,18 @@ export default function UsersPage() {
     return new Date(lastLoginAt).toLocaleDateString();
   };
 
-  const filteredUsers = users.filter((user) => {
-    const q = searchQuery.trim().toLowerCase();
-    const matchesSearch =
-      q.length === 0 ||
-      user.name?.toLowerCase().includes(q) ||
-      user.email?.toLowerCase().includes(q);
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
-  });
-
   return (
     <>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold">User Management</h2>
-        <Button onClick={() => setCreateModalOpen(true)}>
-          Create User
-        </Button>
+        <Button onClick={() => setCreateModalOpen(true)}>Create User</Button>
       </div>
+
       <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
         <div className="md:col-span-2">
-          <Label htmlFor="user-search" className="sr-only">Search users</Label>
+          <Label htmlFor="user-search" className="sr-only">
+            Search users
+          </Label>
           <Input
             id="user-search"
             value={searchQuery}
@@ -264,7 +359,9 @@ export default function UsersPage() {
           />
         </div>
         <div>
-          <Label htmlFor="role-filter" className="sr-only">Filter by role</Label>
+          <Label htmlFor="role-filter" className="sr-only">
+            Filter by role
+          </Label>
           <select
             id="role-filter"
             title="Filter by role"
@@ -274,12 +371,16 @@ export default function UsersPage() {
           >
             <option value="all">All roles</option>
             {USER_ROLES.map((role) => (
-              <option key={role} value={role}>{USER_ROLE_LABELS[role]}</option>
+              <option key={role} value={role}>
+                {USER_ROLE_LABELS[role]}
+              </option>
             ))}
           </select>
         </div>
         <div>
-          <Label htmlFor="status-filter" className="sr-only">Filter by status</Label>
+          <Label htmlFor="status-filter" className="sr-only">
+            Filter by status
+          </Label>
           <select
             id="status-filter"
             title="Filter by status"
@@ -295,13 +396,75 @@ export default function UsersPage() {
           </select>
         </div>
       </div>
-      <p className="mb-3 text-sm text-gray-600">Showing {filteredUsers.length} of {users.length} users</p>
+
+      <p className="mb-3 text-sm text-gray-600">
+        Showing {filteredUsers.length} of {users.length} users
+      </p>
+
+      {selectedUserCount > 0 && (
+        <div className="mb-4 flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 md:flex-row md:items-center md:justify-between">
+          <div className="text-sm text-gray-700">
+            <span className="font-semibold">{selectedUserCount}</span> selected
+            {selectedVisibleCount !== selectedUserCount && (
+              <span className="ml-2 text-gray-500">
+                ({selectedVisibleCount} visible in current filters)
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkBusy}
+              onClick={() => handleBulkAction('suspend')}
+            >
+              Suspend selected
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={bulkBusy}
+              onClick={() => handleBulkAction('activate')}
+            >
+              Activate selected
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={bulkBusy}
+              onClick={() => handleBulkAction('delete')}
+            >
+              Delete selected
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={bulkBusy}
+              onClick={() => setSelectedUserIds([])}
+            >
+              Clear selection
+            </Button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <p>Loading users...</p>
       ) : (
         <Table className="table-fixed text-sm">
           <thead>
             <tr>
+              <th className="w-12">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={isAllVisibleSelected}
+                  disabled={filteredUsers.length === 0 || bulkBusy}
+                  onChange={(e) => toggleVisibleSelection(e.target.checked)}
+                  aria-label="Select all visible users"
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+              </th>
               <th className="w-14">ID</th>
               <th className="w-36">Name</th>
               <th>Email</th>
@@ -313,48 +476,90 @@ export default function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((user) => (
-              <tr key={user.id}>
-                <td>{user.id}</td>
-                <td className="truncate font-medium" title={user.name}>{user.name}</td>
-                <td className="truncate" title={user.email}>{user.email}</td>
-                <td>{USER_ROLE_LABELS[user.role as UserRole] || user.role}</td>
-                <td>
-                  <span
-                    className={`rounded px-2 py-1 text-xs font-medium ${
-                      user.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : user.status === 'suspended'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {user.status}
-                  </span>
-                </td>
-                <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                <td>{formatLastLogin(user.lastLoginAt)}</td>
-                <td>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button size="sm" variant="outline" className="px-2" disabled={busyUserId === user.id} onClick={() => handleSuspendToggle(user)}>
-                      {user.status === 'suspended' ? 'Activate' : 'Suspend'}
-                    </Button>
-                    <Button size="sm" variant="outline" className="px-2" disabled={busyUserId === user.id} onClick={() => openChangePasswordModal(user)}>
-                      Password
-                    </Button>
-                    <Button size="sm" variant="outline" className="px-2" disabled={busyUserId === user.id} onClick={() => handleSendPasswordLink(user)}>
-                      Send Link
-                    </Button>
-                    <Button variant="destructive" size="sm" className="px-2" disabled={busyUserId === user.id} onClick={() => handleDelete(user.id)}>
-                      Delete
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filteredUsers.map((user) => {
+              const isSelected = selectedUserIds.includes(user.id);
+
+              return (
+                <tr key={user.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      disabled={bulkBusy}
+                      onChange={(e) => toggleUserSelection(user.id, e.target.checked)}
+                      aria-label={`Select user ${user.name || user.email}`}
+                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                  </td>
+                  <td>{user.id}</td>
+                  <td className="truncate font-medium" title={user.name}>
+                    {user.name}
+                  </td>
+                  <td className="truncate" title={user.email}>
+                    {user.email}
+                  </td>
+                  <td>{USER_ROLE_LABELS[user.role as UserRole] || user.role}</td>
+                  <td>
+                    <span
+                      className={`rounded px-2 py-1 text-xs font-medium ${
+                        user.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : user.status === 'suspended'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {user.status}
+                    </span>
+                  </td>
+                  <td>{new Date(user.createdAt).toLocaleDateString()}</td>
+                  <td>{formatLastLogin(user.lastLoginAt)}</td>
+                  <td>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="px-2"
+                        disabled={busyUserId === user.id || bulkBusy}
+                        onClick={() => handleSuspendToggle(user)}
+                      >
+                        {user.status === 'suspended' ? 'Activate' : 'Suspend'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="px-2"
+                        disabled={busyUserId === user.id || bulkBusy}
+                        onClick={() => openChangePasswordModal(user)}
+                      >
+                        Password
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="px-2"
+                        disabled={busyUserId === user.id || bulkBusy}
+                        onClick={() => handleSendPasswordLink(user)}
+                      >
+                        Send Link
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="px-2"
+                        disabled={busyUserId === user.id || bulkBusy}
+                        onClick={() => handleDelete(user.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-sm text-gray-500">
+                <td colSpan={9} className="px-4 py-6 text-center text-sm text-gray-500">
                   No users match your current filters.
                 </td>
               </tr>

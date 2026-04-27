@@ -21,9 +21,6 @@ type SupportState = FireAlarmRoomPlanSupportInfo;
 
 // Convert technical errors to user-friendly messages
 function getUserFriendlyErrorMessage(error: unknown, context: string): string {
-  const errorMessage = error instanceof Error ? error.message : String(error);
-  const errorLower = errorMessage.toLowerCase();
-
   switch (context) {
     case 'support-check':
       return 'Unable to check device compatibility. Please try again.';

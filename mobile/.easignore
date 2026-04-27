@@ -1,0 +1,13 @@
+# EAS Build ignore patterns
+# Keep the upload lean and avoid packaging local/generated artifacts.
+
+node_modules/
+/build/
+/.expo/
+/android/
+/ios/
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
