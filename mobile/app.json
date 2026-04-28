@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#BE0000"
+      "backgroundColor": "#173c98"
     },
     "plugins": [
       "expo-router",
@@ -55,7 +55,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#BE0000"
+        "backgroundColor": "#173c98"
       },
       "package": "com.aicertify.field",
       "versionCode": 1,

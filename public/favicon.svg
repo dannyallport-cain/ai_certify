@@ -1,5 +1,33 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#0ea5a4"/>
-  <text x="50%" y="50%" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="white" text-anchor="middle" dominant-baseline="central">AI</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#a6ecff"/>
+      <stop offset="0.45" stop-color="#4c7dff"/>
+      <stop offset="1" stop-color="#173c98"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(18 12) rotate(46) scale(30 26)">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.75"/>
+      <stop offset="0.35" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="glass" x1="16" y1="11" x2="48" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.14"/>
+    </linearGradient>
+    <linearGradient id="badge" x1="24" y1="26" x2="40" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e0f5ff"/>
+      <stop offset="0.6" stop-color="#78a9ff"/>
+      <stop offset="1" stop-color="#2357d6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <path d="M10 14C16 7 25 5 33 6C41 7 49 12 54 20C47 18 40 18 33 19C24 20 17 22 10 14Z" fill="url(#sheen)"/>
+  <rect x="14" y="10" width="36" height="44" rx="10" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1"/>
+  <rect x="18" y="15" width="28" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.32"/>
+  <rect x="18" y="21" width="22" height="2" rx="1" fill="#ffffff" fill-opacity="0.22"/>
+  <rect x="18" y="26" width="24" height="2" rx="1" fill="#ffffff" fill-opacity="0.18"/>
+  <circle cx="32" cy="37" r="10" fill="url(#badge)"/>
+  <circle cx="32" cy="37" r="7.5" fill="none" stroke="#ffffff" stroke-opacity="0.62" stroke-width="1.5"/>
+  <path d="M28.5 36.8L31 39.2L36 33.8" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

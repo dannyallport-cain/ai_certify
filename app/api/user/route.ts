@@ -36,6 +36,22 @@ function withoutPasswordHash<T extends { passwordHash?: string | null }>(user: T
   return userWithoutPassword;
 }
 
+function sanitizeApprovalSchemes(value: unknown): string[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const sanitized = Array.from(
+    new Set(
+      value
+        .map((scheme) => (typeof scheme === 'string' ? scheme.trim() : ''))
+        .filter((scheme) => Boolean(scheme))
+    )
+  );
+
+  return sanitized;
+}
+
 function sanitizeEicrProfileDefaults(value: unknown): EicrProfileDefaults | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
@@ -55,6 +71,11 @@ function sanitizeEicrProfileDefaults(value: unknown): EicrProfileDefaults | null
     if (typeof raw === 'string') {
       sanitized[key] = raw.trim();
     }
+  }
+
+  const approvalSchemes = sanitizeApprovalSchemes(source.approvalSchemes);
+  if (approvalSchemes !== null) {
+    sanitized.approvalSchemes = approvalSchemes;
   }
 
   return Object.keys(sanitized).length > 0 ? sanitized : {};
@@ -151,7 +172,17 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid EICR profile defaults payload' }, { status: 400 });
       }
 
-      updates.eicrProfileDefaults = defaults;
+      const existingDefaults =
+        (user as { eicrProfileDefaults?: EicrProfileDefaults | null }).eicrProfileDefaults &&
+        typeof (user as { eicrProfileDefaults?: EicrProfileDefaults | null }).eicrProfileDefaults === 'object' &&
+        !Array.isArray((user as { eicrProfileDefaults?: EicrProfileDefaults | null }).eicrProfileDefaults)
+          ? ((user as { eicrProfileDefaults?: EicrProfileDefaults | null }).eicrProfileDefaults as EicrProfileDefaults)
+          : {};
+
+      updates.eicrProfileDefaults = {
+        ...existingDefaults,
+        ...defaults,
+      };
       hasAnyUpdate = true;
     }
 

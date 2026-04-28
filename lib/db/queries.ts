@@ -24,6 +24,60 @@ import type { InferSelectModel } from 'drizzle-orm';
 
 type UserRecord = InferSelectModel<typeof users>;
 
+type AdminUserUpdateData = {
+  name?: string;
+  email?: string;
+  role?: UserRole;
+  status?: 'active' | 'suspended' | 'inactive';
+  teamId?: number | null;
+};
+
+function getFallbackTeamName(user: Pick<UserRecord, 'name' | 'email'>) {
+  const trimmedName = user.name?.trim();
+  if (trimmedName) {
+    return trimmedName;
+  }
+
+  const emailPrefix = user.email.split('@')[0]?.trim();
+  return emailPrefix || 'Team';
+}
+
+export async function ensureTeamForUser(user: Pick<UserRecord, 'id' | 'name' | 'email'>) {
+  const existingTeam = await db
+    .select(teamRuntimeSafeColumns)
+    .from(teamMembers)
+    .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+    .where(eq(teamMembers.userId, user.id))
+    .limit(1);
+
+  if (existingTeam[0]) {
+    return existingTeam[0];
+  }
+
+  const [createdTeam] = await db.transaction(async (tx) => {
+    const [team] = await tx
+      .insert(teams)
+      .values({
+        name: getFallbackTeamName(user),
+      })
+      .returning(teamRuntimeSafeColumns);
+
+    if (!team) {
+      throw new Error('TEAM_CREATE_FAILED');
+    }
+
+    await tx.insert(teamMembers).values({
+      userId: user.id,
+      teamId: team.id,
+      role: 'owner',
+    });
+
+    return [team];
+  });
+
+  return createdTeam ?? null;
+}
+
 export async function getUser() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('session');
@@ -87,7 +141,24 @@ export async function updateTeamSubscription(
     .update(teams)
     .set({
       ...subscriptionData,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+    })
+    .where(eq(teams.id, teamId));
+}
+
+export async function updateTeamSubscriptionBypass(
+  teamId: number,
+  enabled: boolean,
+  reason?: string | null
+) {
+  await db
+    .update(teams)
+    .set({
+      subscriptionBypass: enabled,
+      subscriptionBypassReason: enabled ? (reason?.trim() || null) : null,
+      subscriptionBypassSetAt: enabled ? new Date() : null,
+      subscriptionBypassRemovedAt: enabled ? null : new Date(),
+      updatedAt: new Date(),
     })
     .where(eq(teams.id, teamId));
 }
@@ -133,16 +204,7 @@ export async function getTeamForUser() {
     return null;
   }
 
-  const teamResult = await db
-    .select({
-      team: teamRuntimeSafeColumns,
-    })
-    .from(teamMembers)
-    .innerJoin(teams, eq(teamMembers.teamId, teams.id))
-    .where(eq(teamMembers.userId, user.id))
-    .limit(1);
-
-  const team = teamResult[0]?.team;
+  const team = await ensureTeamForUser(user);
   if (!team) {
     return null;
   }
@@ -423,6 +485,75 @@ export async function logActivity(
   await db.insert(activityLogs).values(newActivity);
 }
 
+export async function getAllTeams() {
+  return await db
+    .select({
+      id: teams.id,
+      name: teams.name,
+    })
+    .from(teams)
+    .orderBy(asc(teams.name));
+}
+
+export async function updateAdminUserById(userId: number, data: AdminUserUpdateData) {
+  return await db.transaction(async (tx) => {
+    const updateData: {
+      name?: string;
+      email?: string;
+      role?: UserRole;
+      teamId?: number | null;
+      status?: 'active' | 'suspended' | 'inactive';
+      deactivatedAt?: Date | null;
+      statusChangedAt?: Date;
+      updatedAt: Date;
+    } = {
+      updatedAt: new Date(),
+    };
+
+    if (data.name !== undefined) {
+      updateData.name = data.name;
+    }
+
+    if (data.email !== undefined) {
+      updateData.email = data.email;
+    }
+
+    if (data.role !== undefined) {
+      updateData.role = data.role;
+    }
+
+    if (data.teamId !== undefined) {
+      updateData.teamId = data.teamId;
+    }
+
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+      updateData.deactivatedAt = data.status === 'active' ? null : new Date();
+      updateData.statusChangedAt = new Date();
+    }
+
+    const [user] = await tx
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (data.teamId !== undefined) {
+      await tx.delete(teamMembers).where(eq(teamMembers.userId, userId));
+
+      if (data.teamId !== null) {
+        await tx.insert(teamMembers).values({
+          userId,
+          teamId: data.teamId,
+          role: 'member',
+        });
+      }
+    }
+
+    return user ?? null;
+  });
+}
+
 /**
  * Fetch all non-deleted users for administrative management
  */
@@ -436,8 +567,20 @@ export async function getAllUsers() {
       status: users.status,
       createdAt: users.createdAt,
       lastLoginAt: users.lastLoginAt,
+      team: {
+        id: teams.id,
+        name: teams.name,
+        planName: teams.planName,
+        subscriptionStatus: teams.subscriptionStatus,
+        subscriptionBypass: teams.subscriptionBypass,
+        subscriptionBypassReason: teams.subscriptionBypassReason,
+        subscriptionBypassSetAt: teams.subscriptionBypassSetAt,
+        subscriptionBypassRemovedAt: teams.subscriptionBypassRemovedAt,
+        trialEndDate: teams.trialEndDate,
+      },
     })
     .from(users)
+    .leftJoin(teams, eq(teams.id, users.teamId))
     .where(isNull(users.deletedAt));
 }
 
@@ -757,13 +900,17 @@ export async function getBillingHistoryForCurrentTeam() {
 
   const team = await getTeamForUser();
   if (!team) {
-    throw new Error('User not part of a team');
+    return [];
   }
 
   return listTeamBillingHistory(team.id);
 }
 
-export async function getTeamBillingHistory() {
+export async function getTeamBillingHistory(teamId?: number) {
+  if (typeof teamId === 'number') {
+    return listTeamBillingHistory(teamId);
+  }
+
   return getBillingHistoryForCurrentTeam();
 }
 

@@ -1,23 +1,58 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="grad-main" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3b82f6" />
-      <stop offset="100%" stop-color="#1e40af" />
+    <linearGradient id="bg" x1="72" y1="40" x2="456" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9ce7ff" />
+      <stop offset="0.42" stop-color="#4f7dff" />
+      <stop offset="1" stop-color="#143a96" />
     </linearGradient>
-    <linearGradient id="grad-core" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#60a5fa" />
-      <stop offset="100%" stop-color="#2563eb" />
+    <radialGradient id="sheen" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(140 104) rotate(48) scale(250 220)">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.8" />
+      <stop offset="0.38" stop-color="#ffffff" stop-opacity="0.28" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="glass" x1="130" y1="108" x2="382" y2="404" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.62" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.16" />
     </linearGradient>
+    <linearGradient id="glassStroke" x1="136" y1="116" x2="374" y2="396" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.82" />
+      <stop offset="1" stop-color="#dbeafe" stop-opacity="0.28" />
+    </linearGradient>
+    <linearGradient id="badge" x1="202" y1="228" x2="332" y2="384" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d9f2ff" />
+      <stop offset="0.55" stop-color="#77a8ff" />
+      <stop offset="1" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="badgeRing" x1="224" y1="246" x2="318" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="1" stop-color="#bfdbfe" stop-opacity="0.18" />
+    </linearGradient>
+    <filter id="shadow" x="92" y="76" width="328" height="372" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0f172a" flood-opacity="0.25" />
+    </filter>
   </defs>
-  <rect width="512" height="512" rx="112" fill="url(#grad-main)" />
-  <rect x="136" y="112" width="240" height="312" rx="18" fill="#ffffff" />
-  <rect x="176" y="152" width="50" height="10" rx="5" fill="#dbeafe" />
-  <rect x="236" y="152" width="100" height="10" rx="5" fill="#e2e8f0" />
-  <rect x="176" y="178" width="160" height="10" rx="5" fill="#e2e8f0" />
-  <rect x="176" y="204" width="160" height="10" rx="5" fill="#e2e8f0" />
-  <rect x="176" y="232" width="160" height="4" rx="2" fill="#e2e8f0" />
-  <circle cx="256" cy="304" r="64" fill="url(#grad-core)" />
-  <path d="M256 274 L281 289.5 L281 316 L256 332 L231 316 L231 289.5 Z" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-  <path d="M244 304 L253 313 L271 294" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
-  <circle cx="256" cy="304" r="82" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="6" />
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <path d="M88 110C132 52 214 24 292 34C366 43 428 92 460 156C420 138 368 130 314 134C223 140 153 171 88 110Z" fill="url(#sheen)" opacity="0.95" />
+  <circle cx="410" cy="116" r="52" fill="#ffffff" fill-opacity="0.14" />
+  <circle cx="126" cy="412" r="68" fill="#ffffff" fill-opacity="0.08" />
+
+  <g filter="url(#shadow)">
+    <rect x="124" y="96" width="264" height="320" rx="58" fill="url(#glass)" stroke="url(#glassStroke)" stroke-width="2" />
+    <rect x="140" y="112" width="232" height="18" rx="9" fill="#ffffff" fill-opacity="0.35" />
+    <rect x="146" y="142" width="220" height="6" rx="3" fill="#ffffff" fill-opacity="0.26" />
+    <rect x="146" y="160" width="170" height="6" rx="3" fill="#ffffff" fill-opacity="0.2" />
+    <rect x="146" y="178" width="194" height="6" rx="3" fill="#ffffff" fill-opacity="0.2" />
+    <rect x="146" y="196" width="142" height="6" rx="3" fill="#ffffff" fill-opacity="0.18" />
+
+    <rect x="166" y="224" width="180" height="148" rx="42" fill="url(#badge)" />
+    <circle cx="256" cy="298" r="54" fill="none" stroke="url(#badgeRing)" stroke-width="8" />
+    <path d="M256 268L280 282V308L256 324L232 308V282L256 268Z" stroke="#ffffff" stroke-width="10" stroke-linejoin="round" />
+    <path d="M242 298L251 307L271 286" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M192 240C222 230 282 230 320 244" stroke="#ffffff" stroke-opacity="0.28" stroke-width="10" stroke-linecap="round" />
+    <path d="M186 334C220 352 286 356 328 340" stroke="#ffffff" stroke-opacity="0.16" stroke-width="10" stroke-linecap="round" />
+  </g>
+
+  <path d="M150 126C177 109 219 100 258 100C300 100 337 110 361 127" stroke="#ffffff" stroke-opacity="0.55" stroke-width="10" stroke-linecap="round" />
+  <path d="M366 148C378 160 384 173 386 189" stroke="#ffffff" stroke-opacity="0.28" stroke-width="8" stroke-linecap="round" />
 </svg>

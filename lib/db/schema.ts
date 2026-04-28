@@ -22,6 +22,7 @@ export type EicrProfileDefaults = {
   registrationNumber?: string;
   companyTelephone?: string;
   companyEmail?: string;
+  approvalSchemes?: string[];
 };
 
 export type EicrInspectorHistoryEntry = {
@@ -54,6 +55,8 @@ export const users = pgTable('users', {
   signatureR2Key: text('signature_r2_key'),
   signatureUpdatedAt: timestamp('signature_updated_at'),
   signatureUrl: text('signature_url'),
+  eicrProfileDefaults: json('eicr_profile_defaults').$type<EicrProfileDefaults | null>(),
+  eicrInspectorHistory: json('eicr_inspector_history').$type<EicrInspectorHistoryEntry[] | null>(),
   statusChangedAt: timestamp('status_changed_at'),
 });
 

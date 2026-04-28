@@ -25,7 +25,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 import { hasSubscriptionAccess } from '@/lib/payments/subscription';
-import { getUser, getUserWithTeam } from '@/lib/db/queries';
+import { ensureTeamForUser, getUser, getUserWithTeam } from '@/lib/db/queries';
 import {
   validatedAction,
   validatedActionWithUser
@@ -104,7 +104,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
-  const { user: foundUser, teamId: foundTeamId } = userWithTeam[0];
+  const { user: foundUser } = userWithTeam[0];
 
   const isPasswordValid = await comparePasswords(
     password,
@@ -128,16 +128,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     };
   }
 
-  let foundTeam: Team | null = null;
-  if (foundTeamId !== null) {
-    const [team] = await db
-      .select(teamRuntimeSafeColumns)
-      .from(teams)
-      .where(eq(teams.id, foundTeamId))
-      .limit(1);
-
-    foundTeam = team ?? null;
-  }
+  const foundTeam = isAdminRole(foundUser.role) ? null : await ensureTeamForUser(foundUser);
 
   await Promise.all([
     setSession(foundUser),
@@ -559,17 +550,34 @@ export const deleteAccount = validatedActionWithUser(
 
 const updateAccountSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
-  email: z.string().email('Invalid email address')
+  email: z.string().email('Invalid email address'),
+  eicrProfileDefaults: z.string().optional().or(z.literal(''))
 });
 
 export const updateAccount = validatedActionWithUser(
   updateAccountSchema,
   async (data, _, user) => {
-    const { name, email } = data;
+    const { name, email, eicrProfileDefaults } = data;
     const userWithTeam = await getUserWithTeam(user.id);
 
+    const updates: Record<string, unknown> = {
+      name,
+      email,
+    };
+
+    if (typeof eicrProfileDefaults === 'string' && eicrProfileDefaults.trim()) {
+      try {
+        const parsedDefaults = JSON.parse(eicrProfileDefaults);
+        if (parsedDefaults && typeof parsedDefaults === 'object' && !Array.isArray(parsedDefaults)) {
+          updates.eicrProfileDefaults = parsedDefaults;
+        }
+      } catch (error) {
+        console.error('Invalid EICR profile defaults payload:', error);
+      }
+    }
+
     await Promise.all([
-      db.update(users).set({ name, email }).where(eq(users.id, user.id)),
+      db.update(users).set(updates).where(eq(users.id, user.id)),
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
 

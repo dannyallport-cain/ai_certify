@@ -232,6 +232,7 @@ export const createCertificate = validatedActionWithUser(
     // Collect all form fields into formData object
     const collectedFormData: Record<string, any> = {};
     const skipFields = ['customerId', 'customerName', 'certificateType', 'certificateNumber', 'siteName', 'siteAddress', 'inspectionDate', 'nextInspectionDate', 'inspectorName'];
+    const profileDefaults = user.eicrProfileDefaults ?? {};
     
     if (formData) {
       for (const [key, value] of formData.entries()) {
@@ -296,8 +297,11 @@ export const createCertificate = validatedActionWithUser(
       siteAddress: data.siteAddress || null,
       inspectionDate: data.inspectionDate || null, // Pass string directly
       nextInspectionDate: data.nextInspectionDate || null, // Pass string directly
-      inspectorName: data.inspectorName || null,
-      formData: collectedFormData,
+      inspectorName: data.inspectorName || user.name || null,
+      formData: {
+        ...profileDefaults,
+        ...collectedFormData,
+      },
       teamId: team.id,
       status: 'draft'
     };
