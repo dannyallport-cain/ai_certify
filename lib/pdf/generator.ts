@@ -1741,20 +1741,26 @@ function generateCP12PDF(certificate: CertificateData): Uint8Array {
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8.5);
-  const checkLabelWidth = 24;
   const checkColumnWidth = contentWidth / 2 - 6;
   const checkRowGap = 2;
-  const checkLineHeight = getLineHeight(8.5);
-  const checkEntries = checks.map(([label, value]) => ({
-    label,
-    valueLines: pdf.splitTextToSize(value, checkColumnWidth - checkLabelWidth).slice(0, 2),
-  }));
+  const checkTextLineHeight = getLineHeight(8.5);
+  const checkLabelValueGap = 1.4;
+  const checkEntries = checks.map(([label, value]) => {
+    const labelLines = pdf.splitTextToSize(`${label}:`, checkColumnWidth);
+    const valueLines = pdf.splitTextToSize(value, checkColumnWidth).slice(0, 3);
+
+    return {
+      labelLines,
+      valueLines: valueLines.length > 0 ? valueLines : [''],
+      entryHeight:
+        Math.max(labelLines.length, 1) * checkTextLineHeight +
+        checkLabelValueGap +
+        Math.max(valueLines.length, 1) * checkTextLineHeight,
+    };
+  });
   const checkRows = Array.from({ length: Math.ceil(checkEntries.length / 2) }, (_, rowIndex) => {
     const rowEntries = checkEntries.slice(rowIndex * 2, rowIndex * 2 + 2);
-    const rowHeight = Math.max(
-      6,
-      ...rowEntries.map((entry) => Math.max(entry.valueLines.length, 1) * checkLineHeight),
-    );
+    const rowHeight = Math.max(8, ...rowEntries.map((entry) => entry.entryHeight));
 
     return { rowEntries, rowHeight };
   });
@@ -1762,17 +1768,20 @@ function generateCP12PDF(certificate: CertificateData): Uint8Array {
     (total, row, index) => total + row.rowHeight + (index < checkRows.length - 1 ? checkRowGap : 0),
     0,
   );
-  const checksBoxHeight = Math.max(34, 13 + checksContentHeight + 4);
+  const checksBoxHeight = Math.max(38, 13 + checksContentHeight + 4);
 
   drawBox(margin, y, contentWidth, checksBoxHeight, 'Gas Safety Checks', soft);
   let currentCheckY = y + 13;
   checkRows.forEach((row) => {
     row.rowEntries.forEach((entry, column) => {
       const fieldX = margin + 3 + column * (contentWidth / 2);
+      const valueY =
+        currentCheckY + Math.max(entry.labelLines.length, 1) * checkTextLineHeight + checkLabelValueGap;
+
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`${entry.label}:`, fieldX, currentCheckY);
+      pdf.text(entry.labelLines, fieldX, currentCheckY);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(entry.valueLines, fieldX + checkLabelWidth, currentCheckY);
+      pdf.text(entry.valueLines, fieldX, valueY);
     });
     currentCheckY += row.rowHeight + checkRowGap;
   });

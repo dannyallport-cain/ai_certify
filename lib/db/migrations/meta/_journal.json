@@ -78,6 +78,13 @@
       "when": 1777000000001,
       "tag": "0012_backfill_user_teams",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777387760964,
+      "tag": "0011_spicy_next_avengers",
+      "breakpoints": true
     }
   ]
 }
