@@ -10,12 +10,7 @@ export async function GET() {
   }
 
   return Response.json({
-    id: team.id,
-    name: team.name,
-    logoDataUri: team.logoDataUri || null,
-  }, {
-    headers: {
-      'Cache-Control': 'no-store, no-cache, must-revalidate',
-    },
+    ...team,
+    logoDataUri: team.logoDataUri ?? null,
   });
 }

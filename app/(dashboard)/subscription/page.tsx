@@ -10,12 +10,8 @@ import {
 } from '@/components/ui/card';
 import { Table } from '@/components/ui/table';
 import { getTeamBillingHistory, getTeamForUser, getUser } from '@/lib/db/queries';
-import { checkoutAction, oneTimeCheckoutAction } from '@/lib/payments/actions';
-import {
-  getAdminStripeSubscriptionPlans,
-  getStripePrices,
-  getStripeProducts,
-} from '@/lib/payments/stripe';
+import { checkoutAction } from '@/lib/payments/actions';
+import { getAdminStripeSubscriptionPlans } from '@/lib/payments/stripe';
 import { Check, CreditCard, Receipt, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -114,13 +110,12 @@ export default async function BillingPage() {
     redirect('/sign-in');
   }
 
-  const [prices, products, billingHistory, subscriptionPlans, teamData] = await Promise.all([
-    getStripePrices(),
-    getStripeProducts(),
-    getTeamBillingHistory(),
+  const [subscriptionPlans, teamData] = await Promise.all([
     getAdminStripeSubscriptionPlans(),
     getTeamForUser(),
   ]);
+
+  const billingHistory = teamData ? await getTeamBillingHistory() : [];
 
   const teamBillingHistory: BillingHistoryItem[] = (billingHistory || []).map(
     ({ transaction }) => ({
@@ -138,19 +133,6 @@ export default async function BillingPage() {
     })
   );
 
-  const verificationPriceId =
-    process.env.STRIPE_VERIFICATION_PRICE_ID ||
-    process.env.STRIPE_TEMPLATE_CREATION_PRICE_ID ||
-    process.env.STRIPE_TEMPLATE_PRICE_ID;
-
-  const verificationPrice = verificationPriceId
-    ? prices.find((price) => price.id === verificationPriceId)
-    : undefined;
-
-  const verificationProduct = verificationPrice
-    ? products.find((product) => product.id === verificationPrice.productId)
-    : undefined;
-
   const activeSubscriptionPlans = subscriptionPlans.filter((plan) => plan.active);
 
   return (
@@ -167,7 +149,16 @@ export default async function BillingPage() {
         </Button>
       </div>
 
-      <ManageSubscription initialTeamData={teamData} />
+      {!teamData ? (
+        <Card className="border-dashed">
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            You’re signed in, but you’re not yet part of a team. Billing and subscriptions are
+            available once your account is added to a team.
+          </CardContent>
+        </Card>
+      ) : (
+        <ManageSubscription initialTeamData={teamData} />
+      )}
 
       <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <Card>
@@ -202,20 +193,12 @@ export default async function BillingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {verificationPrice ? (
-              <OneTimePurchaseCard
-                name={verificationProduct?.name || 'Template Creation Fee'}
-                description="Use the existing hosted Stripe checkout for one-time purchases without changing your recurring subscription."
-                price={verificationPrice.unitAmount || 1000}
-                currency={verificationPrice.currency || 'gbp'}
-                priceId={verificationPrice.id}
-                purchaseType="template_creation"
-              />
-            ) : (
-              <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-muted-foreground">
-                No one-time Stripe price is configured yet. Set a Stripe one-time price ID in the environment to enable purchases here.
-              </div>
-            )}
+            <OneTimePurchaseCard
+              name="Template Creation Fee"
+              description="Use the existing hosted Stripe checkout for one-time template creation without changing your recurring subscription."
+              price={500}
+              currency="gbp"
+            />
 
             <div className="rounded-lg border border-gray-200 bg-muted/20 p-4">
               <div className="flex items-start gap-3">
@@ -377,15 +360,11 @@ function OneTimePurchaseCard({
   description,
   price,
   currency,
-  priceId,
-  purchaseType,
 }: {
   name: string;
   description: string;
   price: number;
   currency: string;
-  priceId: string;
-  purchaseType: string;
 }) {
   const formattedPrice = new Intl.NumberFormat('en-GB', {
     style: 'currency',
@@ -404,10 +383,7 @@ function OneTimePurchaseCard({
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-lg font-semibold">{formattedPrice}</div>
-          <form action={oneTimeCheckoutAction} className="w-full sm:w-auto">
-            <input type="hidden" name="priceId" value={priceId} />
-            <input type="hidden" name="paymentType" value="one_time" />
-            <input type="hidden" name="purchaseType" value={purchaseType} />
+          <form action="/api/stripe/template-checkout" method="post" className="w-full sm:w-auto">
             <Button type="submit" className="w-full sm:w-auto">
               <CreditCard className="mr-2 h-4 w-4" />
               Buy now

@@ -5,8 +5,7 @@ import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
   title: 'AI-Certificates - Certification Management',
-  description: 'Comprehensive certification management system for BS5839-1, BS5839-6, BS5266, fire extinguisher, dry riser, gas safety, and electrical inspections.'
-  ,
+  description: 'Comprehensive certification management system for BS5839-1, BS5839-6, BS5266, fire extinguisher, dry riser, gas safety, and electrical inspections.',
   icons: {
     icon: '/favicon.svg',
     apple: '/apple-touch-icon.svg'

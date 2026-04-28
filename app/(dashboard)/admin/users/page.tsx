@@ -15,9 +15,32 @@ type User = {
   status: 'pending' | 'active' | 'inactive' | 'suspended';
   createdAt: string;
   lastLoginAt: string | null;
+  team: {
+    id: number;
+    name: string | null;
+    planName: string | null;
+    subscriptionStatus: string | null;
+    subscriptionBypass: boolean | null;
+    subscriptionBypassReason: string | null;
+    subscriptionBypassSetAt: string | null;
+    subscriptionBypassRemovedAt: string | null;
+    trialEndDate: string | null;
+  } | null;
 };
 
 type BulkAction = 'suspend' | 'activate' | 'delete';
+
+type TeamOption = {
+  id: number;
+  name: string;
+};
+
+type EditUserForm = {
+  name: string;
+  email: string;
+  role: UserRole;
+  teamId: string;
+};
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -28,9 +51,13 @@ export default function UsersPage() {
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
   const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [teams, setTeams] = useState<TeamOption[]>([]);
   const [submittingCreate, setSubmittingCreate] = useState(false);
+  const [submittingEdit, setSubmittingEdit] = useState(false);
   const [submittingPasswordChange, setSubmittingPasswordChange] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editTargetUser, setEditTargetUser] = useState<User | null>(null);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordTargetUser, setPasswordTargetUser] = useState<User | null>(null);
   const [createForm, setCreateForm] = useState({
@@ -39,6 +66,12 @@ export default function UsersPage() {
     role: 'user' as UserRole,
     customPassword: '',
     useCustomPassword: false,
+  });
+  const [editForm, setEditForm] = useState<EditUserForm>({
+    name: '',
+    email: '',
+    role: 'user',
+    teamId: '',
   });
   const [passwordForm, setPasswordForm] = useState({
     newPassword: '',
@@ -61,8 +94,24 @@ export default function UsersPage() {
     }
   };
 
+  const loadTeams = async () => {
+    try {
+      const res = await fetch('/api/admin/teams');
+      if (!res.ok) {
+        throw new Error('Failed to load teams');
+      }
+
+      const data = (await res.json()) as TeamOption[];
+      setTeams(data);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to load teams');
+    }
+  };
+
   useEffect(() => {
-    loadUsers();
+    void loadUsers();
+    void loadTeams();
   }, []);
 
   const filteredUsers = users.filter((user) => {
@@ -221,6 +270,59 @@ export default function UsersPage() {
     }
   };
 
+  const openEditModal = (user: User) => {
+    setEditTargetUser(user);
+    setEditForm({
+      name: user.name ?? '',
+      email: user.email ?? '',
+      role: USER_ROLES.includes(user.role as UserRole) ? (user.role as UserRole) : 'user',
+      teamId: user.team?.id ? String(user.team.id) : '',
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTargetUser) return;
+
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      alert('Name and email are required');
+      return;
+    }
+
+    setSubmittingEdit(true);
+    try {
+      const res = await fetch(`/api/admin/users/${editTargetUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update-user',
+          name: editForm.name.trim(),
+          email: editForm.email.trim(),
+          role: editForm.role,
+          teamId: editForm.teamId ? Number(editForm.teamId) : null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data?.error || 'Failed to update user');
+        return;
+      }
+
+      alert('User updated successfully');
+      setEditModalOpen(false);
+      setEditTargetUser(null);
+      await loadUsers();
+    } catch (error) {
+      console.error(error);
+      alert('Failed to update user');
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     const confirmed = window.confirm('Delete this user? This is a soft delete and hides them from active users.');
     if (!confirmed) return;
@@ -326,6 +428,45 @@ export default function UsersPage() {
       const link = data?.signInLink || `${window.location.origin}/sign-in`;
       const mailBody = `Hi ${user.name || 'there'},%0D%0A%0D%0AUse this link to sign in and update your password:%0D%0A${encodeURIComponent(link)}%0D%0A%0D%0AThanks`;
       window.location.href = `mailto:${user.email}?subject=Access%20Details&body=${mailBody}`;
+    } finally {
+      setBusyUserId(null);
+    }
+  };
+
+  const handleToggleSubscriptionBypass = async (user: User) => {
+    const currentlyEnabled = Boolean(user.team?.subscriptionBypass);
+    const nextEnabled = !currentlyEnabled;
+    const confirmed = nextEnabled
+      ? window.confirm(
+          `Enable subscription bypass for ${user.name || user.email}? This will let the user access billing-gated areas without an active subscription.`
+        )
+      : window.confirm(`Remove subscription bypass for ${user.name || user.email}?`);
+
+    if (!confirmed) return;
+
+    const bypassReason = nextEnabled
+      ? window.prompt('Optional bypass reason', user.team?.subscriptionBypassReason ?? '')?.trim() ?? ''
+      : '';
+
+    setBusyUserId(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle-subscription-bypass',
+          bypassEnabled: nextEnabled,
+          bypassReason: bypassReason.length > 0 ? bypassReason : undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data?.error || 'Failed to update subscription bypass');
+        return;
+      }
+
+      await loadUsers();
     } finally {
       setBusyUserId(null);
     }
@@ -469,6 +610,7 @@ export default function UsersPage() {
               <th className="w-36">Name</th>
               <th>Email</th>
               <th className="w-24">Role</th>
+              <th className="w-32">Team</th>
               <th className="w-24">Status</th>
               <th className="w-24">Created</th>
               <th className="w-24">Last login</th>
@@ -499,6 +641,9 @@ export default function UsersPage() {
                     {user.email}
                   </td>
                   <td>{USER_ROLE_LABELS[user.role as UserRole] || user.role}</td>
+                  <td className="truncate" title={user.team?.name || 'No team'}>
+                    {user.team?.name || 'No team'}
+                  </td>
                   <td>
                     <span
                       className={`rounded px-2 py-1 text-xs font-medium ${
@@ -515,7 +660,16 @@ export default function UsersPage() {
                   <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td>{formatLastLogin(user.lastLoginAt)}</td>
                   <td>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="px-2"
+                        disabled={busyUserId === user.id || bulkBusy}
+                        onClick={() => openEditModal(user)}
+                      >
+                        Edit
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -544,6 +698,15 @@ export default function UsersPage() {
                         Send Link
                       </Button>
                       <Button
+                        size="sm"
+                        variant="outline"
+                        className="px-2"
+                        disabled={busyUserId === user.id || bulkBusy}
+                        onClick={() => handleToggleSubscriptionBypass(user)}
+                      >
+                        {user.team?.subscriptionBypass ? 'Remove Bypass' : 'Enable Bypass'}
+                      </Button>
+                      <Button
                         variant="destructive"
                         size="sm"
                         className="px-2"
@@ -559,7 +722,7 @@ export default function UsersPage() {
             })}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-center text-sm text-gray-500">
+                <td colSpan={10} className="px-4 py-6 text-center text-sm text-gray-500">
                   No users match your current filters.
                 </td>
               </tr>
@@ -654,6 +817,83 @@ export default function UsersPage() {
                 </Button>
                 <Button type="submit" disabled={submittingCreate}>
                   {submittingCreate ? 'Creating...' : 'Create User'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editModalOpen && editTargetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold">Edit User</h3>
+            <form onSubmit={handleEditUser} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-name">Name</Label>
+                <Input
+                  id="edit-user-name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-email">Email</Label>
+                <Input
+                  id="edit-user-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-role">Role</Label>
+                <select
+                  id="edit-user-role"
+                  title="Select role"
+                  value={editForm.role}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, role: e.target.value as UserRole }))}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {USER_ROLES.map((roleOption) => (
+                    <option key={roleOption} value={roleOption}>
+                      {USER_ROLE_LABELS[roleOption]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-user-team">Team</Label>
+                <select
+                  id="edit-user-team"
+                  title="Select team"
+                  value={editForm.teamId}
+                  onChange={(e) => setEditForm((prev) => ({ ...prev, teamId: e.target.value }))}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">No team</option>
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditModalOpen(false);
+                    setEditTargetUser(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={submittingEdit}>
+                  {submittingEdit ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </form>

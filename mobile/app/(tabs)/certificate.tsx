@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useJob } from '@/components/JobStateContext';
 import {
@@ -21,7 +21,11 @@ const yesNoUnknownOptions = ['Yes', 'No', 'Unknown'] as const;
 
 export default function CertificateScreen() {
   const { state } = useJob();
-  const certificateId = state.createdCertificate?.id;
+  const params = useLocalSearchParams<{ certificateId?: string | string[] }>();
+  const routeCertificateId = Array.isArray(params.certificateId)
+    ? params.certificateId[0]
+    : params.certificateId;
+  const certificateId = routeCertificateId ? Number(routeCertificateId) : state.createdCertificate?.id;
 
   const [record, setRecord] = useState<MobileCertificateEditorRecord | null>(null);
   const [initialSnapshot, setInitialSnapshot] = useState<string>('');

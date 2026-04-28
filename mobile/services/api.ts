@@ -27,6 +27,10 @@ const configuredBaseUrl =
 
 const BASE_URL = configuredBaseUrl.replace(/\/+$/, '');
 
+export function getApiBaseUrl() {
+  return BASE_URL;
+}
+
 const configuredAiWorkerUrl =
   Constants.expoConfig?.extra?.aiWorkerUrl ??
   process.env.EXPO_PUBLIC_AI_WORKER_URL ??
@@ -661,6 +665,44 @@ export async function listServiceM8JobAttachments(
   return Array.isArray(data?.images) ? data.images : Array.isArray(data?.attachments) ? data.attachments : [];
 }
 
+export interface MobileAccountTeamOverview {
+  id: number;
+  name: string | null;
+  companyName: string | null;
+  planName: string | null;
+  subscriptionStatus: string | null;
+  subscriptionBypass: boolean | null;
+  discountPercentage: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface MobileAccountOverview {
+  user: {
+    id: number;
+    email: string;
+    name: string;
+    teamId: number;
+  } | null;
+  team: MobileAccountTeamOverview | null;
+  subscription: {
+    planName: string | null;
+    subscriptionStatus: string | null;
+    subscriptionBypass: boolean | null;
+    discountPercentage: number | null;
+  };
+}
+
+export async function getMobileAccountOverview(): Promise<MobileAccountOverview> {
+  const res = await authFetch('/api/mobile/account');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to load account details');
+  }
+
+  return res.json();
+}
+
 // ── Uploads ───────────────────────────────────────────────────────────────────
 
 export interface MobileUploadResult {
@@ -718,6 +760,69 @@ export async function uploadMobileImage(
   }
 
   return res.json();
+}
+
+export interface MobileCertificateListCustomer {
+  id: number | null;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+}
+
+export interface MobileCertificateListItem {
+  id: number;
+  certificateNumber: string;
+  status: string | null;
+  siteAddress: string | null;
+  inspectionDate: string | null;
+  createdAt: string | null;
+  customer: MobileCertificateListCustomer | null;
+}
+
+export async function listMobileCertificates(): Promise<MobileCertificateListItem[]> {
+  const res = await authFetch('/api/mobile/certificates');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to load certificates');
+  }
+
+  const data = await res.json();
+  return Array.isArray(data?.certificates) ? data.certificates : [];
+}
+
+export interface MobileCertificateListRecord {
+  id: number;
+  certificateNumber: string;
+  status: string;
+  siteAddress: string | null;
+  inspectionDate: string | null;
+  inspectorName: string | null;
+  customer: {
+    id: number | null;
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+  } | null;
+}
+
+export async function listCertificates(): Promise<MobileCertificateListRecord[]> {
+  const res = await authFetch('/api/mobile/certificates');
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Failed to fetch certificates');
+  }
+
+  const data = await res.json().catch(() => ({}));
+  const certificates = Array.isArray(data?.certificates)
+    ? data.certificates
+    : Array.isArray(data)
+      ? data
+      : [];
+
+  return certificates as MobileCertificateListRecord[];
 }
 
 // ── Certificates ──────────────────────────────────────────────────────────────
