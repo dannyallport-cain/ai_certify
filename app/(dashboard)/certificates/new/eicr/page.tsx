@@ -3299,6 +3299,78 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     }
   };
 
+  async function readImageAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error('Unable to read the selected image.'));
+      };
+
+      reader.onerror = () => {
+        reject(reader.error ?? new Error('Unable to read the selected image.'));
+      };
+
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function prepareImageForAnalysis(file: File): Promise<string> {
+    if (file.size <= 1_500_000 || typeof document === 'undefined' || typeof Image === 'undefined') {
+      return readImageAsDataUrl(file);
+    }
+
+    try {
+      const objectUrl = URL.createObjectURL(file);
+
+      try {
+        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const loadedImage = new Image();
+
+          loadedImage.onload = () => {
+            resolve(loadedImage);
+          };
+
+          loadedImage.onerror = () => {
+            reject(new Error('Unable to load the selected image.'));
+          };
+
+          loadedImage.src = objectUrl;
+        });
+
+        const sourceWidth = image.naturalWidth || image.width;
+        const sourceHeight = image.naturalHeight || image.height;
+        const maxDimension = 1600;
+        const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+
+        if (!Number.isFinite(scale) || scale >= 1) {
+          return readImageAsDataUrl(file);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+        canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+
+        const context = canvas.getContext('2d');
+        if (!context) {
+          return readImageAsDataUrl(file);
+        }
+
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.85);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    } catch {
+      return readImageAsDataUrl(file);
+    }
+  }
+
   const handleAiImageSelect = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -3315,24 +3387,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         fileName: file.name,
       }));
 
-      const imageBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => {
-          if (typeof reader.result === 'string') {
-            resolve(reader.result);
-            return;
-          }
-
-          reject(new Error('Unable to read the selected image.'));
-        };
-
-        reader.onerror = () => {
-          reject(reader.error ?? new Error('Unable to read the selected image.'));
-        };
-
-        reader.readAsDataURL(file);
-      });
+      const imageBase64 = await prepareImageForAnalysis(file);
 
       const response = await fetch('/api/ai/analyze-image', {
         method: 'POST',

@@ -1793,9 +1793,10 @@ function generateCP12PDF(certificate: CertificateData): Uint8Array {
     ss(fd.defectsRemedialAction) || 'No defects or remedial actions recorded.',
     contentWidth - 8,
   );
-  const defectsBoxHeight = Math.max(28, 14 + Math.max(defects.length, 1) * getLineHeight(9) + 4);
+  const defectsLines = pdf.splitTextToSize(defects, contentWidth - 6);
+  const defectsBoxHeight = Math.max(28, 14 + defectsLines.length * getLineHeight(9) + 4);
   drawBox(margin, y, contentWidth, defectsBoxHeight, 'Defects Identified / Remedial Action Required', softBlue);
-  pdf.text(defects, margin + 3, y + 14);
+  pdf.text(defectsLines, margin + 3, y + 14);
   y += defectsBoxHeight + sectionGap;
 
   pdf.setFont('helvetica', 'normal');
