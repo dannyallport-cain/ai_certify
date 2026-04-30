@@ -38,6 +38,13 @@ A Next.js 15 application for generating and managing electrical certificates and
    pnpm dev
    ```
 
+### AI worker setup
+
+The admin AI test route forwards to the Railway/FastAPI worker at `/analyze-image`.
+
+- `RAILWAY_AI_WORKER_URL` — Railway worker base URL for AI image analysis
+- In local development, this defaults to `http://localhost:8000` if the variable is unset
+
 ## Deployment Overview
 
 - Vercel hosts the Next.js app and cron trigger route

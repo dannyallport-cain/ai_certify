@@ -4,6 +4,7 @@ import { isAdmin } from '@/lib/auth/admin';
 import {
   analyzeImageWithRailwayWorker,
   type AnalyzeImageRequest,
+  type AnalyzeImageResponse,
 } from '@/lib/ai/railway-client';
 
 function isAnalyzeImageRequest(value: unknown): value is AnalyzeImageRequest {
@@ -70,6 +71,55 @@ function isAnalyzeImageRequest(value: unknown): value is AnalyzeImageRequest {
   return true;
 }
 
+function isWorkerConnectivityError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  if (error.message === 'fetch failed') {
+    return true;
+  }
+
+  const cause = error.cause as {
+    code?: string;
+    errors?: Array<{ code?: string }>;
+  } | undefined;
+
+  if (cause?.code === 'ECONNREFUSED') {
+    return true;
+  }
+
+  return cause?.errors?.some((item) => item.code === 'ECONNREFUSED') ?? false;
+}
+
+function shouldUseRailwayWorker(): boolean {
+  return process.env.NODE_ENV === 'production' && Boolean(process.env.RAILWAY_AI_WORKER_URL);
+}
+
+async function analyzeImageWithLocalRoute(
+  request: Request,
+  payload: AnalyzeImageRequest,
+): Promise<AnalyzeImageResponse> {
+  const response = await fetch(new URL('/api/ai/analyze-image', request.url), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  const data = (await response.json().catch(() => ({}))) as AnalyzeImageResponse & {
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(data.error || 'Local AI analysis failed.');
+  }
+
+  return data;
+}
+
 export async function POST(request: Request) {
   try {
     if (!(await isAdmin())) {
@@ -116,9 +166,24 @@ export async function POST(request: Request) {
       );
     }
 
-    const response = await analyzeImageWithRailwayWorker(body);
+    if (!shouldUseRailwayWorker()) {
+      console.warn('Using local analysis route because Railway worker is disabled in this environment.');
+      const response = await analyzeImageWithLocalRoute(request, body);
+      return NextResponse.json(response, { status: 200 });
+    }
 
-    return NextResponse.json(response, { status: 200 });
+    try {
+      const response = await analyzeImageWithRailwayWorker(body);
+      return NextResponse.json(response, { status: 200 });
+    } catch (error) {
+      if (!isWorkerConnectivityError(error)) {
+        throw error;
+      }
+
+      console.warn('Railway AI worker unreachable; falling back to local analysis route.');
+      const response = await analyzeImageWithLocalRoute(request, body);
+      return NextResponse.json(response, { status: 200 });
+    }
   } catch (error) {
     console.error('Error forwarding admin LLM test request:', error);
 

@@ -148,7 +148,9 @@ export interface AnalyzeImageResponse {
 }
 
 function getWorkerBaseUrl(): string {
-  const baseUrl = process.env.RAILWAY_AI_WORKER_URL;
+  const baseUrl =
+    process.env.RAILWAY_AI_WORKER_URL ??
+    (process.env.NODE_ENV === 'production' ? undefined : 'http://localhost:8000');
 
   if (!baseUrl) {
     throw new Error('RAILWAY_AI_WORKER_URL is not configured');

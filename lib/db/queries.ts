@@ -628,19 +628,36 @@ export async function createUser(data: {
   email: string;
   role: UserRole;
   passwordHash: string;
+  teamId?: number | null;
 }) {
-  const [user] = await db
-    .insert(users)
-    .values({
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      passwordHash: data.passwordHash,
-      status: 'active',
-      statusChangedAt: new Date(),
-    })
-    .returning();
-  return user;
+  return await db.transaction(async (tx) => {
+    const [user] = await tx
+      .insert(users)
+      .values({
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        passwordHash: data.passwordHash,
+        teamId: data.teamId ?? null,
+        status: 'active',
+        statusChangedAt: new Date(),
+      })
+      .returning();
+
+    if (!user) {
+      throw new Error('USER_CREATE_FAILED');
+    }
+
+    if (data.teamId) {
+      await tx.insert(teamMembers).values({
+        userId: user.id,
+        teamId: data.teamId,
+        role: data.role === 'admin' ? 'owner' : 'member',
+      });
+    }
+
+    return user;
+  });
 }
 
 /**

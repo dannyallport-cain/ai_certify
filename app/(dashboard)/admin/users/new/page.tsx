@@ -18,16 +18,27 @@ export default function NewUserPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const res = await fetch('/api/admin/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, role }),
-    });
-    setSaving(false);
-    if (res.ok) {
-      router.push('/admin/users');
-    } else {
+
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, role }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        router.push('/admin/users');
+        return;
+      }
+
+      alert(data?.error || 'Failed to create user');
+    } catch (error) {
+      console.error('Error creating user:', error);
       alert('Failed to create user');
+    } finally {
+      setSaving(false);
     }
   };
 

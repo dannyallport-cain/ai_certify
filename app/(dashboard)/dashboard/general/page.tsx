@@ -15,6 +15,11 @@ import { Suspense } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+type TeamProfile = {
+  name?: string;
+  logoDataUri: string | null;
+};
+
 const SCHEME_OPTIONS = [
   'Gas Safe',
   'NICEIC',
@@ -137,6 +142,7 @@ export default function GeneralPage() {
     updateAccount,
     {}
   );
+  const { data: team } = useSWR<TeamProfile>('/api/team', fetcher);
 
   return (
     <section className="flex-1 space-y-6 p-4 lg:p-8">
@@ -174,6 +180,42 @@ export default function GeneralPage() {
               )}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Company Logo</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            This logo is shared across the profile page and generated documents so users see the same branding everywhere.
+          </p>
+          {team === undefined ? (
+            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+              Loading company logo...
+            </div>
+          ) : team?.logoDataUri ? (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <img
+                  src={team.logoDataUri}
+                  alt={`${team.name || 'Team'} logo`}
+                  className="h-16 w-auto max-w-[240px] object-contain"
+                />
+                <div className="space-y-1">
+                  <p className="font-medium text-gray-900">{team.name || 'Team'} logo</p>
+                  <p className="text-sm text-gray-600">
+                    The current logo stored for your team. Update it in Company Branding if needed.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+              No company logo has been uploaded yet.
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -47,6 +47,11 @@ R2_SECRET_ACCESS_KEY=replace-with-r2-secret-access-key
 # Optional: custom public base URL for object delivery, e.g. https://cdn.ai-certificates.app
 R2_PUBLIC_BASE_URL=
 
+# AI worker integration
+# The Next.js app forwards /api/admin/llm-test to the Railway worker's /analyze-image endpoint.
+# In local development, point this at your local FastAPI worker (default http://localhost:8000).
+RAILWAY_AI_WORKER_URL=http://localhost:8000
+
 # Database backup trigger + worker integration
 # Vercel Cron calls /api/cron/db-backup, which forwards to the Railway worker.
 RAILWAY_BACKUP_WORKER_URL=https://your-railway-worker.up.railway.app
