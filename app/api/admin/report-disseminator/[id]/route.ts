@@ -13,10 +13,7 @@ const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
 const resolveTeamId = async () => {
   const team = await getTeamForUser();
-  if (team?.id) {
-    return team.id;
-  }
-  return 1;
+  return team?.id ?? null;
 };
 
 const stripPreviewValuesFromWizardData = (wizardData: Record<string, unknown> | null | undefined) => {
@@ -50,8 +47,14 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    if (!isAdminRole(user.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const teamId = await resolveTeamId();
+    if (!teamId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const resolvedParams = await params;
     const id = Number.parseInt(resolvedParams.id, 10);
@@ -111,8 +114,14 @@ export async function PUT(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    if (!isAdminRole(user.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const teamId = await resolveTeamId();
+    if (!teamId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const resolvedParams = await params;
     const id = Number.parseInt(resolvedParams.id, 10);
@@ -242,6 +251,13 @@ export async function PUT(
 
         return NextResponse.json(archived[0], { headers: NO_STORE_HEADERS });
       }
+    }
+
+    if (current.status === 'archived') {
+      return NextResponse.json(
+        { error: 'Archived templates are read-only. Clone to create a new editable version.' },
+        { status: 409 }
+      );
     }
 
     if (current.status === 'published') {

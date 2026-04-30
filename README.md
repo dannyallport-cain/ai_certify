@@ -45,6 +45,10 @@ A Next.js 15 application for generating and managing electrical certificates and
 - Railway Postgres stores application data
 - Cloudflare R2 stores uploaded files and database backups
 
+## Project Dataflow Diagram
+
+- [View the project dataflow diagram](docs/dataflow-diagram.md)
+
 ## Database Backup Architecture
 
 The old GitHub daily backup workflow has been removed.

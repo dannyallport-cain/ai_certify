@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/db/queries';
+import { isAdminRole } from '@/lib/auth/roles';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const apiKey = process.env.AI_GATEWAY_API_KEY;
   const model = process.env.AI_GATEWAY_MODEL || 'anthropic/claude-sonnet-4.6';

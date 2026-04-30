@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getUser } from '@/lib/db/queries';
+import { isAdminRole } from '@/lib/auth/roles';
 import { analyzeFieldDefinition } from '@/lib/report-disseminator/field-analysis';
 
 export const runtime = 'nodejs';
@@ -31,6 +32,7 @@ const responseSchema = z.object({
 export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const apiKey = process.env.AI_GATEWAY_API_KEY;
   const model = process.env.AI_GATEWAY_SEARCH_MODEL || 'openai/gpt-5.4';
@@ -175,7 +177,7 @@ function buildPrompt({
       : 'Keep options concise, deduplicated, and practically usable in a form builder.',
     `Return no more than ${maxOptions} options total.`,
     'Include 1 to 5 helpful sources when you found a meaningful option list.',
-    'Include a "suggestedDefault" field: the single most commonly applicable option from the list, or omit it if there is no clear common default.',,
+    'Include a "suggestedDefault" field: the single most commonly applicable option from the list, or omit it if there is no clear common default.',
     `Original field label: ${label}`,
     `Normalized field label: ${normalizedLabel}`,
     `Current field type: ${fieldType}`,

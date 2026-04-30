@@ -15,10 +15,7 @@ const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
 const resolveTeamId = async () => {
   const team = await getTeamForUser();
-  if (team?.id) {
-    return team.id;
-  }
-  return 1;
+  return team?.id ?? null;
 };
 
 const normalizeValues = (fields: ReportDisseminatorField[], values: Record<string, string>) => {
@@ -26,6 +23,13 @@ const normalizeValues = (fields: ReportDisseminatorField[], values: Record<strin
 
   for (const field of fields) {
     nextValues[field.id] = typeof values[field.id] === 'string' ? values[field.id] : '';
+
+    const compositePrefix = `${field.id}_`;
+    for (const [key, value] of Object.entries(values)) {
+      if (key.startsWith(compositePrefix) && typeof value === 'string') {
+        nextValues[key] = value;
+      }
+    }
   }
 
   return nextValues;
@@ -40,8 +44,14 @@ export async function GET(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    if (!isAdminRole(user.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const teamId = await resolveTeamId();
+    if (!teamId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const resolvedParams = await params;
     const id = Number.parseInt(resolvedParams.id, 10);
@@ -102,8 +112,14 @@ export async function PUT(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    if (!isAdminRole(user.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const teamId = await resolveTeamId();
+    if (!teamId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const resolvedParams = await params;
     const id = Number.parseInt(resolvedParams.id, 10);

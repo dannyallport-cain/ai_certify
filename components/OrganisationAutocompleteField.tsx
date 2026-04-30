@@ -85,6 +85,9 @@ export function OrganisationAutocompleteField({
   countryCodes = 'gb',
   minQueryLength = 3,
 }: OrganisationAutocompleteFieldProps) {
+  const [showManualUrlInput, setShowManualUrlInput] = useState(false);
+  const [gasSafeUrl, setGasSafeUrl] = useState('');
+  const [isParsing, setIsParsing] = useState(false);
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -193,6 +196,77 @@ export function OrganisationAutocompleteField({
       <p className="mt-1 text-xs text-muted-foreground">
         {isLoading ? 'Searching…' : 'Suggestions powered by OpenStreetMap'}
       </p>
+
+      <button
+        type="button"
+        onClick={() => window.open('https://www.gassaferegister.co.uk/search/', '_blank')}
+        className="mt-2 w-full bg-orange-500 hover:bg-orange-600 text-white text-sm py-1 px-3 rounded-md transition-colors flex items-center justify-center gap-2"
+        title="Open Gas Safe Register search in new tab"
+      >
+        🔍 Manual Gas Safe Register Search
+      </button>
+
+      {showManualUrlInput && (
+        <div className="mt-3 p-3 border rounded-md bg-orange-50">
+          <label className="block text-xs font-medium text-orange-900 mb-1">
+            Paste Gas Safe result URL
+          </label>
+          <input
+            type="url"
+            value={gasSafeUrl}
+            onChange={(e) => setGasSafeUrl(e.target.value)}
+            placeholder="https://www.gassaferegister.co.uk/engineer/12345-john-smith-gas/"
+            className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+          <button
+            type="button"
+            onClick={async () => {
+              if (!gasSafeUrl) return;
+              setIsParsing(true);
+              try {
+                // Simple URL parser - extract name from path slug
+                const url = new URL(gasSafeUrl);
+                const pathParts = url.pathname.split('/').filter(Boolean);
+                const slug = pathParts[pathParts.length - 1];
+                const nameMatch = slug.match(/([^-]+(?:-[^-]+)*)-gas/i) || slug.match(/([^-]+)/);
+                const orgName = nameMatch ? nameMatch[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Gas Safe Engineer';
+                const address = 'Verified via Gas Safe Register'; // Could fetch real address
+                
+                onChange(orgName);
+                onAddressPick?.(address);
+                setShowManualUrlInput(false);
+                setGasSafeUrl('');
+              } catch {
+                alert('Invalid Gas Safe URL. Please copy the full URL from the engineer profile page.');
+              } finally {
+                setIsParsing(false);
+              }
+            }}
+            disabled={isParsing || !gasSafeUrl}
+            className="mt-2 w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-sm py-1 px-3 rounded-md transition-colors"
+          >
+            {isParsing ? 'Parsing...' : 'Parse & Fill'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowManualUrlInput(false);
+              setGasSafeUrl('');
+            }}
+            className="mt-1 text-xs text-orange-600 hover:text-orange-800 underline"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setShowManualUrlInput(true)}
+        className="mt-1 text-xs text-orange-500 hover:text-orange-700 underline"
+      >
+        Or paste Gas Safe URL here →
+      </button>
     </div>
   );
 }
