@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument } from 'pdf-lib';
 import { getUser } from '@/lib/db/queries';
+import { isAdminRole } from '@/lib/auth/roles';
 import { extractAcroFormPlacements } from '@/lib/report-disseminator/pdf-acroform';
 
 export const runtime = 'nodejs';
@@ -14,6 +15,7 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isAdminRole(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   let formData: FormData;
   try {

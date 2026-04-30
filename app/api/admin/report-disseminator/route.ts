@@ -12,10 +12,7 @@ const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };
 
 const resolveTeamId = async () => {
   const team = await getTeamForUser();
-  if (team?.id) {
-    return team.id;
-  }
-  return 1;
+  return team?.id ?? null;
 };
 
 const stripPreviewValuesFromWizardData = (wizardData: Record<string, unknown> | null | undefined) => {
@@ -41,8 +38,14 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    if (!isAdminRole(user.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const teamId = await resolveTeamId();
+    if (!teamId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const templates = await db
       .select({
@@ -101,24 +104,14 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    // Non-admin users must pay £5 per template creation
     if (!isAdminRole(user.role)) {
-      const paymentSessionId = request.headers.get('x-payment-session-id');
-      if (!paymentSessionId) {
-        return NextResponse.json({ error: 'Payment required', code: 'PAYMENT_REQUIRED' }, { status: 402 });
-      }
-      const session = await stripe.checkout.sessions.retrieve(paymentSessionId);
-      if (
-        session.payment_status !== 'paid' ||
-        session.metadata?.type !== 'template_creation' ||
-        session.metadata?.userId !== user.id.toString()
-      ) {
-        return NextResponse.json({ error: 'Invalid or unpaid payment session' }, { status: 402 });
-      }
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const teamId = await resolveTeamId();
+    if (!teamId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const formData = await request.formData();
     const name = String(formData.get('name') || '').trim();
