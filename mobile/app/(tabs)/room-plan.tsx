@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import {
   FireAlarmRoomPlan,
   type FireAlarmDeviceDetection,
+  type FireAlarmDevicePoint,
   type FireAlarmDeviceType,
   type FireAlarmManufacturer,
   type FireAlarmRoomPlanDetectionEvent,
@@ -18,9 +19,9 @@ import { saveFireAlarmRoomCapture } from '@/services/api';
 import { saveRoomPlanSession } from '@/services/roomplan/session-store';
 
 type SupportState = FireAlarmRoomPlanSupportInfo;
+type Tone = 'blue' | 'emerald' | 'amber' | 'slate';
 
-// Convert technical errors to user-friendly messages
-function getUserFriendlyErrorMessage(error: unknown, context: string): string {
+function getUserFriendlyErrorMessage(_: unknown, context: string): string {
   switch (context) {
     case 'support-check':
       return 'Unable to check device compatibility. Please try again.';
@@ -98,13 +99,34 @@ function getManufacturerName(manufacturer: FireAlarmManufacturer | undefined) {
   return manufacturer.name?.trim() || 'Unknown';
 }
 
+function formatLocation(point?: FireAlarmDevicePoint | null) {
+  if (!point) {
+    return 'Not placed yet';
+  }
+
+  const parts = [`x ${point.x.toFixed(1)}m`, `y ${point.y.toFixed(1)}m`];
+  if (typeof point.z === 'number') {
+    parts.push(`z ${point.z.toFixed(1)}m`);
+  }
+
+  return parts.join(' · ');
+}
+
+function formatConfidence(confidence?: number | null) {
+  if (typeof confidence !== 'number' || Number.isNaN(confidence)) {
+    return 'Confidence unavailable';
+  }
+
+  return `${Math.round(confidence * 100)}% confidence`;
+}
+
 function formatSupportReason(supportState: SupportState | null) {
   if (!supportState) {
     return 'Checking current device capabilities and native module availability.';
   }
 
   if (supportState.isSupported) {
-    return 'This device can start the FireAlarmRoomPlan capture bridge. This flow now prioritises identifying fire alarm devices during capture and saving only those identified devices to the backend.';
+    return 'This device can start the RoomPlan capture bridge. The workflow prioritises identifying fire alarm devices, reviewing them, and saving only the identified devices to the backend.';
   }
 
   return (
@@ -126,6 +148,62 @@ function formatStatusLabel(
   }
 
   return 'idle';
+}
+
+function getToneClasses(tone: Tone) {
+  switch (tone) {
+    case 'emerald':
+      return 'bg-[#E8F5E9] text-[#15803D]';
+    case 'amber':
+      return 'bg-[#FFF4E6] text-[#B45309]';
+    case 'blue':
+      return 'bg-[#E3F2FD] text-[#0D47A1]';
+    case 'slate':
+    default:
+      return 'bg-[#EEF2F7] text-[#475569]';
+  }
+}
+
+function TonePill({ label, tone }: { label: string; tone: Tone }) {
+  return (
+    <View className={`rounded-full px-3 py-1.5 ${getToneClasses(tone)}`}>
+      <Text className="text-xs font-semibold uppercase tracking-[0.7px]">{label}</Text>
+    </View>
+  );
+}
+
+function SectionCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View className="mb-4 rounded-[28px] border border-[#E0E6ED] bg-[#FFFFFF] p-5">
+      <View className="mb-4">
+        <Text className="text-lg font-semibold text-[#1A202C]">{title}</Text>
+        {subtitle ? <Text className="mt-1 text-sm leading-6 text-[#718096]">{subtitle}</Text> : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+function ProgressBar({ progress }: { progress: number | null }) {
+  if (progress == null) {
+    return null;
+  }
+
+  const clamped = Math.max(0, Math.min(1, progress));
+
+  return (
+    <View className="mt-3 h-2 overflow-hidden rounded-full bg-[#E2E8F0]">
+      <View className="h-full rounded-full bg-[#0D47A1]" style={{ width: `${clamped * 100}%` }} />
+    </View>
+  );
 }
 
 function inferDeviceIdentification(device: FireAlarmDeviceDetection) {
@@ -159,7 +237,9 @@ function mergeDeviceLists(
   const merged = incomingDevices.map((incomingDevice) => {
     const existingDevice = existingById.get(incomingDevice.id);
     const identifiedByUser =
-      existingDevice?.identifiedByUser ?? incomingDevice.identifiedByUser ?? inferDeviceIdentification(incomingDevice);
+      existingDevice?.identifiedByUser ??
+      incomingDevice.identifiedByUser ??
+      inferDeviceIdentification(incomingDevice);
 
     if (!existingDevice) {
       return {
@@ -322,7 +402,7 @@ export default function RoomPlanScreen() {
   }, []);
 
   useEffect(() => {
-    checkSupport();
+    void checkSupport();
   }, [checkSupport]);
 
   useEffect(() => {
@@ -449,107 +529,142 @@ export default function RoomPlanScreen() {
   }, [capturedDevices, session]);
 
   const roomCount = currentSession?.floorplan?.rooms?.length ?? 0;
+  const wallCount = currentSession?.floorplan?.wallCount ?? 0;
   const currentStatus = formatStatusLabel(statusEvent, currentSession);
   const supportLabel = supportState?.isSupported ? 'Supported' : 'Not supported';
-  const progressPercent =
-    typeof progressEvent?.progress === 'number' ? Math.round(progressEvent.progress * 100) : null;
+  const statusTone: Tone =
+    currentStatus === 'completed'
+      ? 'emerald'
+      : currentStatus === 'error' || currentStatus === 'unsupported'
+        ? 'amber'
+        : currentStatus === 'starting' || currentStatus === 'scanning' || currentStatus === 'processing'
+          ? 'blue'
+          : 'slate';
+
+  const progressRatio =
+    typeof progressEvent?.progress === 'number' ? Math.max(0, Math.min(1, progressEvent.progress)) : null;
+
+  const progressPercent = progressRatio != null ? Math.round(progressRatio * 100) : null;
+  const supportTone: Tone = supportState?.isSupported ? 'emerald' : 'amber';
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 24 }}>
-      <View className="mb-6 flex-row items-center">
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-2xl bg-blue-100">
-          <Ionicons name="scan-outline" size={24} color="#0D47A1" />
-        </View>
-        <View className="flex-1">
-          <Text className="text-2xl font-bold text-gray-900">RoomPlan fire alarm capture</Text>
-          <Text className="mt-1 text-sm text-gray-700">
-            Capture room geometry, identify fire alarm devices as they appear, and save only the
-            identified fire alarm devices to the backend once the capture completes.
-          </Text>
-        </View>
-      </View>
-
-      <View className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-        <View className="flex-row items-start">
-          <Ionicons name="information-circle-outline" size={18} color="#2563eb" />
-          <View className="ml-2 flex-1">
-            <Text className="text-sm font-semibold text-blue-900">Capture behaviour</Text>
-            <Text className="mt-1 text-sm leading-5 text-blue-800">
-              Room geometry can still be captured locally, but backend persistence now ignores
-              general room contents. Only devices you identify as fire alarm equipment are saved to
-              the database.
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View className="mb-4 rounded-2xl border border-gray-300 bg-gray-50 p-4">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-base font-semibold text-gray-900">Platform support</Text>
-          {isCheckingSupport ? (
-            <ActivityIndicator size="small" color="#0f172a" />
-          ) : (
-            <View
-              className={`rounded-full px-3 py-1 ${supportState?.isSupported ? 'bg-emerald-100' : 'bg-amber-100'}`}
-            >
-              <Text
-                className={`text-xs font-semibold ${supportState?.isSupported ? 'text-emerald-700' : 'text-amber-700'}`}
-              >
-                {supportLabel}
+    <ScrollView
+      className="flex-1 bg-[#F5F7FA]"
+      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 132 }}
+    >
+      <View className="mb-4 rounded-[32px] border border-[#E0E6ED] bg-[#FFFFFF] p-5">
+        <View className="flex-row items-start justify-between">
+          <View className="mr-4 flex-1">
+            <View className="mb-3 self-start rounded-full bg-[#E3F2FD] px-3 py-1.5">
+              <Text className="text-xs font-semibold uppercase tracking-[1px] text-[#718096]">
+                Fire Alarm RoomPlan
               </Text>
             </View>
-          )}
+
+            <Text className="text-[28px] font-bold leading-8 text-[#1A202C]">
+              Capture, identify, and review fire alarm devices
+            </Text>
+
+            <Text className="mt-2 text-sm leading-6 text-[#718096]">
+              Scan the room geometry, tag visible devices, review the detected layout, and export a
+              reviewed session for downstream reporting or training.
+            </Text>
+
+            <View className="mt-4 flex-row flex-wrap gap-2">
+              <TonePill label={supportLabel} tone={supportTone} />
+              <TonePill label={currentStatus} tone={statusTone} />
+              <TonePill label={`${identifiedDevices.length} identified`} tone="blue" />
+            </View>
+          </View>
+
+          <View className="h-14 w-14 items-center justify-center rounded-[20px] bg-[#E3F2FD]">
+            <Ionicons
+              name={currentSession ? 'layers-outline' : 'scan-outline'}
+              size={26}
+              color="#0D47A1"
+            />
+          </View>
         </View>
 
-        <Text className="mt-3 text-sm leading-5 text-gray-700">{formatSupportReason(supportState)}</Text>
-
-        {errorMessage ? <Text className="mt-3 text-sm text-blue-600">{errorMessage}</Text> : null}
-        {saveMessage ? <Text className="mt-3 text-sm text-emerald-700">{saveMessage}</Text> : null}
-
-        <Pressable
-          className="mt-4 self-start rounded-xl bg-gray-900 px-4 py-3"
-          onPress={checkSupport}
-          disabled={isCheckingSupport}
-        >
-          <Text className="text-sm font-semibold text-white">Re-check support</Text>
-        </Pressable>
+        <Text className="mt-4 text-sm leading-6 text-[#718096]">
+          The workflow is review-first. Only devices you explicitly identify are sent to the
+          backend, while the full session can still be reviewed and exported locally.
+        </Text>
       </View>
 
-      <View className="mb-4 rounded-2xl border border-gray-300 bg-white p-4">
-        <Text className="text-base font-semibold text-gray-900">Capture workflow</Text>
-        <Text className="mt-2 text-sm leading-5 text-gray-700">
-          Start a scan, tap a detected device, mark what it is, then save the identified devices.
-          Unidentified room contents are ignored when the capture is persisted.
-        </Text>
+      <SectionCard
+        title="Capture status"
+        subtitle="Check support, monitor progress, and control the active RoomPlan scan."
+      >
+        <View className="rounded-[24px] bg-[#F8FAFC] p-4">
+          <View className="flex-row items-start justify-between">
+            <View className="mr-4 flex-1">
+              <Text className="text-xs font-semibold uppercase tracking-[0.8px] text-[#64748B]">
+                Current status
+              </Text>
+              <Text className="mt-2 text-base font-semibold text-[#1A202C]">{currentStatus}</Text>
+              <Text className="mt-2 text-sm leading-6 text-[#718096]">
+                {formatSupportReason(supportState)}
+              </Text>
+            </View>
 
-        <View className="mt-4 rounded-xl bg-gray-50 p-4">
-          <Text className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-            Current status
-          </Text>
-          <Text className="mt-2 text-base font-semibold text-gray-900">{currentStatus}</Text>
-          
-          
+            {isCheckingSupport ? (
+              <ActivityIndicator size="small" color="#0f172a" />
+            ) : (
+              <View className={`rounded-full px-3 py-1.5 ${getToneClasses(supportTone)}`}>
+                <Text className="text-xs font-semibold uppercase tracking-[0.7px]">
+                  {supportLabel}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <ProgressBar progress={progressRatio} />
+
           {progressPercent != null ? (
-            <Text className="mt-1 text-sm text-gray-700">Progress: {progressPercent}%</Text>
+            <Text className="mt-3 text-sm text-[#718096]">Progress: {progressPercent}%</Text>
           ) : null}
+
           {progressEvent?.message ? (
-            <Text className="mt-1 text-sm text-gray-700">{progressEvent.message}</Text>
+            <Text className="mt-1 text-sm leading-6 text-[#718096]">{progressEvent.message}</Text>
           ) : null}
-          <Text className="mt-2 text-sm text-gray-700">
-            Visible devices: {capturedDevices.length} · Identified fire alarm devices: {identifiedDevices.length}
-          </Text>
+
+          <View className="mt-4 flex-row flex-wrap gap-3">
+            <View className="flex-1 rounded-2xl border border-[#E0E6ED] bg-white p-3">
+              <Text className="text-xs font-semibold uppercase tracking-[0.7px] text-[#64748B]">
+                Visible detections
+              </Text>
+              <Text className="mt-1 text-xl font-bold text-[#1A202C]">{capturedDevices.length}</Text>
+            </View>
+
+            <View className="flex-1 rounded-2xl border border-[#E0E6ED] bg-white p-3">
+              <Text className="text-xs font-semibold uppercase tracking-[0.7px] text-[#64748B]">
+                Identified devices
+              </Text>
+              <Text className="mt-1 text-xl font-bold text-[#1A202C]">{identifiedDevices.length}</Text>
+            </View>
+          </View>
+
+          {errorMessage ? (
+            <Text className="mt-4 text-sm font-medium text-[#B91C1C]">{errorMessage}</Text>
+          ) : null}
+          {saveMessage ? (
+            <Text className="mt-4 text-sm font-medium text-[#15803D]">{saveMessage}</Text>
+          ) : null}
         </View>
 
         <View className="mt-4 flex-row gap-3">
           <Pressable
-            className={`flex-1 flex-row items-center justify-center rounded-xl px-4 py-3 ${isScanning ? 'bg-slate-300' : 'bg-blue-600'}`}
+            className={`flex-1 flex-row items-center justify-center rounded-2xl px-4 py-4 ${
+              isScanning ? 'bg-[#C9D7F2]' : 'bg-[#0D47A1]'
+            }`}
             onPress={handleStartScan}
             disabled={isScanning}
           >
             {isScanning ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Ionicons name="play-circle-outline" size={18} color="#ffffff" />
+              <Ionicons name="play-circle-outline" size={18} color="#FFFFFF" />
             )}
             <Text className="ml-2 text-sm font-semibold text-white">
               {isScanning ? 'Capturing...' : 'Start capture'}
@@ -557,42 +672,50 @@ export default function RoomPlanScreen() {
           </Pressable>
 
           <Pressable
-            className="flex-1 flex-row items-center justify-center rounded-xl bg-gray-900 px-4 py-3"
+            className="flex-1 flex-row items-center justify-center rounded-2xl bg-[#1A202C] px-4 py-4"
             onPress={handleStopScan}
           >
-            <Ionicons name="stop-circle-outline" size={18} color="#ffffff" />
+            <Ionicons name="stop-circle-outline" size={18} color="#FFFFFF" />
             <Text className="ml-2 text-sm font-semibold text-white">Stop capture</Text>
           </Pressable>
         </View>
 
         {currentSession ? (
           <Pressable
-            className={`mt-3 flex-row items-center justify-center rounded-xl px-4 py-3 ${isSavingCapture ? 'bg-slate-300' : 'bg-emerald-600'}`}
+            className={`mt-3 flex-row items-center justify-center rounded-2xl px-4 py-4 ${
+              isSavingCapture ? 'bg-[#C6E8D5]' : 'bg-[#15803D]'
+            }`}
             onPress={() => void persistCapture(currentSession, capturedDevices)}
             disabled={isSavingCapture}
           >
             {isSavingCapture ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Ionicons name="cloud-upload-outline" size={18} color="#ffffff" />
+              <Ionicons name="cloud-upload-outline" size={18} color="#FFFFFF" />
             )}
             <Text className="ml-2 text-sm font-semibold text-white">
               {isSavingCapture ? 'Saving capture...' : 'Save identified devices to database'}
             </Text>
           </Pressable>
         ) : null}
-      </View>
 
-      <View className="mb-4 rounded-2xl border border-gray-300 bg-white p-4">
-        <Text className="text-base font-semibold text-gray-900">Live detected devices</Text>
-        <Text className="mt-2 text-sm leading-5 text-gray-700">
-          Tap any detected item to classify it as a fire alarm device during the capture process.
-          Only rows marked identified are sent to the backend.
-        </Text>
+        <Pressable
+          className="mt-3 self-start rounded-2xl border border-[#E0E6ED] bg-white px-4 py-3"
+          onPress={checkSupport}
+          disabled={isCheckingSupport}
+        >
+          <Text className="text-sm font-semibold text-[#1A202C]">Re-check support</Text>
+        </Pressable>
+      </SectionCard>
 
-        {capturedDevices.length > 0 && capturedDevices.some((device) => device.identifiedByUser !== true) ? (
+      <SectionCard
+        title="Live detected devices"
+        subtitle="Select a detection to refine its type, manufacturer, and room placement before export."
+      >
+        {capturedDevices.length > 0 &&
+        capturedDevices.some((device) => device.identifiedByUser !== true) ? (
           <Pressable
-            className="mt-4 rounded-xl bg-blue-600 px-4 py-3"
+            className="mb-4 rounded-2xl bg-[#0D47A1] px-4 py-4"
             onPress={autoIdentifyDetectedDevices}
           >
             <Text className="text-center text-sm font-semibold text-white">
@@ -602,67 +725,92 @@ export default function RoomPlanScreen() {
         ) : null}
 
         {capturedDevices.length === 0 ? (
-          <View className="mt-4 rounded-xl border border-dashed border-gray-300 p-4">
-            <Text className="text-sm text-gray-600">
-              No device candidates are visible yet. Start capture and wait for device rows to
-              appear, then tap one to identify it.
+          <View className="rounded-[24px] border border-dashed border-[#CBD5E1] p-4">
+            <Text className="text-sm leading-6 text-[#718096]">
+              No device candidates are visible yet. Start capture and wait for rows to appear, then
+              tap one to identify it.
             </Text>
           </View>
         ) : (
-          <View className="mt-4 gap-3">
+          <View className="gap-3">
             {capturedDevices.map((device, index) => {
               const isSelected = device.id === selectedDeviceId;
+              const identified = device.identifiedByUser === true;
 
               return (
                 <Pressable
                   key={device.id ?? `${device.type ?? 'device'}-${index}`}
-                  className={`rounded-xl p-4 ${
-                    device.identifiedByUser
+                  className={`rounded-[24px] p-4 ${
+                    identified
                       ? isSelected
-                        ? 'border border-blue-600 bg-blue-50'
-                        : 'border border-blue-200 bg-blue-50'
+                        ? 'border border-[#0D47A1] bg-[#EAF1FF]'
+                        : 'border border-[#BFD7FF] bg-[#F3F8FF]'
                       : isSelected
-                        ? 'border border-blue-500 bg-blue-50'
-                        : 'bg-gray-50'
+                        ? 'border border-[#2563EB] bg-[#EAF1FF]'
+                        : 'border border-[#E0E6ED] bg-[#FAFBFC]'
                   }`}
                   onPress={() => setSelectedDeviceId(device.id)}
                 >
                   <View className="flex-row items-start justify-between">
                     <View className="flex-1 pr-3">
-                      <Text className="text-sm font-semibold text-gray-900">
+                      <Text className="text-sm font-semibold text-[#1A202C]">
                         {device.label?.trim() || formatDeviceType(device.type ?? 'unknown')}
                       </Text>
-                      <Text className="mt-1 text-sm text-gray-700">
-                        {formatDeviceType(device.type ?? 'unknown')} · {formatManufacturer(device.manufacturer)}
+                      <Text className="mt-1 text-sm text-[#718096]">
+                        {formatDeviceType(device.type ?? 'unknown')} ·{' '}
+                        {formatManufacturer(device.manufacturer)}
                       </Text>
+
+                      <Text className="mt-2 text-xs text-[#718096]">
+                        {formatLocation(device.location)}
+                      </Text>
+
+                      {device.roomId ? (
+                        <Text className="mt-1 text-xs text-[#718096]">Room: {device.roomId}</Text>
+                      ) : null}
+
+                      {device.wallSegmentId ? (
+                        <Text className="mt-1 text-xs text-[#718096]">
+                          Wall segment: {device.wallSegmentId}
+                        </Text>
+                      ) : null}
                     </View>
+
                     <View className="items-end">
                       <Ionicons
-                        name={device.identifiedByUser ? 'checkmark-circle' : 'hardware-chip-outline'}
+                        name={identified ? 'checkmark-circle' : 'hardware-chip-outline'}
                         size={18}
-                        color={device.identifiedByUser ? '#16a34a' : '#475569'}
+                        color={identified ? '#16a34a' : '#475569'}
                       />
                       <Text
-                        className={`mt-1 text-[11px] font-semibold ${device.identifiedByUser ? 'text-emerald-700' : 'text-gray-600'}`}
+                        className={`mt-1 text-[11px] font-semibold ${
+                          identified ? 'text-[#15803D]' : 'text-[#475569]'
+                        }`}
                       >
-                        {device.identifiedByUser ? 'Identified' : 'Needs ID'}
+                        {identified ? 'Identified' : 'Needs ID'}
                       </Text>
                     </View>
                   </View>
 
                   {device.confidence != null ? (
-                    <Text className="mt-2 text-xs text-gray-600">
-                      Confidence field: {Math.round(Number(device.confidence) * 100)}%
+                    <Text className="mt-3 text-xs text-[#64748B]">
+                      {formatConfidence(device.confidence)}
+                    </Text>
+                  ) : null}
+
+                  {device.evidenceFrames?.length ? (
+                    <Text className="mt-1 text-xs text-[#64748B]">
+                      Evidence frames: {device.evidenceFrames.length}
                     </Text>
                   ) : null}
 
                   {device.notes ? (
-                    <Text className="mt-2 text-xs text-gray-600">{device.notes}</Text>
+                    <Text className="mt-3 text-xs leading-5 text-[#64748B]">{device.notes}</Text>
                   ) : null}
 
                   {isSelected ? (
-                    <Text className="mt-3 text-xs font-semibold uppercase tracking-wide text-blue-700">
-                      Selected for identification
+                    <Text className="mt-3 text-xs font-semibold uppercase tracking-wide text-[#0D47A1]">
+                      Selected for editing
                     </Text>
                   ) : null}
                 </Pressable>
@@ -670,23 +818,20 @@ export default function RoomPlanScreen() {
             })}
           </View>
         )}
-      </View>
+      </SectionCard>
 
       {selectedDevice ? (
-        <View className="mb-4 rounded-2xl border border-gray-300 bg-white p-4">
-          <Text className="text-base font-semibold text-gray-900">Identify selected device</Text>
-          <Text className="mt-2 text-sm leading-5 text-gray-700">
-            Click the device type and manufacturer below for the currently selected detection. This
-            marks it as a fire alarm device that should be saved.
-          </Text>
-
-          <Text className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-600">
+        <SectionCard
+          title="Edit selected device"
+          subtitle="Adjust the selected detection so the exported session reflects the reviewed fire alarm layout."
+        >
+          <Text className="text-xs font-semibold uppercase tracking-[0.8px] text-[#64748B]">
             Device label
           </Text>
           <TextInput
-            className="mt-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900"
+            className="mt-2 rounded-2xl border border-[#E0E6ED] bg-white px-4 py-3 text-sm text-[#1A202C]"
             placeholder="Enter a label for this device"
-            placeholderTextColor="#94a3b8"
+            placeholderTextColor="#94A3B8"
             value={selectedDevice.label ?? ''}
             onChangeText={(label) =>
               updateSelectedDevice((currentDevice) => ({
@@ -700,7 +845,7 @@ export default function RoomPlanScreen() {
             }
           />
 
-          <Text className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-600">
+          <Text className="mt-4 text-xs font-semibold uppercase tracking-[0.8px] text-[#64748B]">
             Device type
           </Text>
           <View className="mt-2 flex-row flex-wrap gap-2">
@@ -710,7 +855,9 @@ export default function RoomPlanScreen() {
               return (
                 <Pressable
                   key={typeOption}
-                  className={`rounded-full border px-3 py-2 ${selected ? 'border-blue-600 bg-blue-50' : 'border-gray-300 bg-white'}`}
+                  className={`rounded-full border px-3 py-2 ${
+                    selected ? 'border-[#0D47A1] bg-[#EAF1FF]' : 'border-[#E0E6ED] bg-white'
+                  }`}
                   onPress={() =>
                     updateSelectedDevice((currentDevice) => ({
                       ...currentDevice,
@@ -724,7 +871,11 @@ export default function RoomPlanScreen() {
                     }))
                   }
                 >
-                  <Text className={`text-xs font-medium ${selected ? 'text-blue-700' : 'text-slate-700'}`}>
+                  <Text
+                    className={`text-xs font-medium ${
+                      selected ? 'text-[#0D47A1]' : 'text-[#334155]'
+                    }`}
+                  >
                     {formatDeviceType(typeOption)}
                   </Text>
                 </Pressable>
@@ -732,7 +883,7 @@ export default function RoomPlanScreen() {
             })}
           </View>
 
-          <Text className="mt-4 text-xs font-semibold uppercase tracking-wide text-gray-600">
+          <Text className="mt-4 text-xs font-semibold uppercase tracking-[0.8px] text-[#64748B]">
             Manufacturer
           </Text>
           <View className="mt-2 flex-row flex-wrap gap-2">
@@ -742,7 +893,9 @@ export default function RoomPlanScreen() {
               return (
                 <Pressable
                   key={option}
-                  className={`rounded-full border px-3 py-2 ${selected ? 'border-emerald-600 bg-emerald-50' : 'border-gray-300 bg-white'}`}
+                  className={`rounded-full border px-3 py-2 ${
+                    selected ? 'border-[#15803D] bg-[#E8F5E9]' : 'border-[#E0E6ED] bg-white'
+                  }`}
                   onPress={() =>
                     updateSelectedDevice((currentDevice) => ({
                       ...currentDevice,
@@ -755,7 +908,11 @@ export default function RoomPlanScreen() {
                     }))
                   }
                 >
-                  <Text className={`text-xs font-medium ${selected ? 'text-emerald-700' : 'text-slate-700'}`}>
+                  <Text
+                    className={`text-xs font-medium ${
+                      selected ? 'text-[#15803D]' : 'text-[#334155]'
+                    }`}
+                  >
                     {option}
                   </Text>
                 </Pressable>
@@ -763,9 +920,107 @@ export default function RoomPlanScreen() {
             })}
           </View>
 
+          <Text className="mt-4 text-xs font-semibold uppercase tracking-[0.8px] text-[#64748B]">
+            Notes
+          </Text>
+          <TextInput
+            className="mt-2 min-h-[96px] rounded-2xl border border-[#E0E6ED] bg-white px-4 py-3 text-sm text-[#1A202C]"
+            placeholder="Add review notes, mounting hints, or uncertainty comments"
+            placeholderTextColor="#94A3B8"
+            multiline
+            textAlignVertical="top"
+            value={selectedDevice.notes ?? ''}
+            onChangeText={(value) =>
+              updateSelectedDevice((currentDevice) => ({
+                ...currentDevice,
+                notes: value,
+                metadata: {
+                  ...(currentDevice.metadata ?? {}),
+                  identifiedByUser: currentDevice.identifiedByUser ?? false,
+                },
+              }))
+            }
+          />
+
+          <Text className="mt-4 text-xs font-semibold uppercase tracking-[0.8px] text-[#64748B]">
+            Approximate location
+          </Text>
+          <View className="mt-2 flex-row gap-3">
+            <View className="flex-1">
+              <Text className="mb-1 text-xs text-[#718096]">X</Text>
+              <TextInput
+                value={String(selectedDevice.location?.x ?? 0)}
+                keyboardType="decimal-pad"
+                onChangeText={(value) =>
+                  updateSelectedDevice((currentDevice) => ({
+                    ...currentDevice,
+                    location: {
+                      x: Number(value) || 0,
+                      y: currentDevice.location?.y ?? 0,
+                      z: currentDevice.location?.z ?? 0,
+                    },
+                    metadata: {
+                      ...(currentDevice.metadata ?? {}),
+                      identifiedByUser: currentDevice.identifiedByUser ?? false,
+                    },
+                  }))
+                }
+                className="rounded-2xl border border-[#E0E6ED] bg-white px-4 py-3 text-sm text-[#1A202C]"
+              />
+            </View>
+
+            <View className="flex-1">
+              <Text className="mb-1 text-xs text-[#718096]">Y</Text>
+              <TextInput
+                value={String(selectedDevice.location?.y ?? 0)}
+                keyboardType="decimal-pad"
+                onChangeText={(value) =>
+                  updateSelectedDevice((currentDevice) => ({
+                    ...currentDevice,
+                    location: {
+                      x: currentDevice.location?.x ?? 0,
+                      y: Number(value) || 0,
+                      z: currentDevice.location?.z ?? 0,
+                    },
+                    metadata: {
+                      ...(currentDevice.metadata ?? {}),
+                      identifiedByUser: currentDevice.identifiedByUser ?? false,
+                    },
+                  }))
+                }
+                className="rounded-2xl border border-[#E0E6ED] bg-white px-4 py-3 text-sm text-[#1A202C]"
+              />
+            </View>
+
+            <View className="flex-1">
+              <Text className="mb-1 text-xs text-[#718096]">Z</Text>
+              <TextInput
+                value={String(selectedDevice.location?.z ?? 0)}
+                keyboardType="decimal-pad"
+                onChangeText={(value) =>
+                  updateSelectedDevice((currentDevice) => ({
+                    ...currentDevice,
+                    location: {
+                      x: currentDevice.location?.x ?? 0,
+                      y: currentDevice.location?.y ?? 0,
+                      z: Number(value) || 0,
+                    },
+                    metadata: {
+                      ...(currentDevice.metadata ?? {}),
+                      identifiedByUser: currentDevice.identifiedByUser ?? false,
+                    },
+                  }))
+                }
+                className="rounded-2xl border border-[#E0E6ED] bg-white px-4 py-3 text-sm text-[#1A202C]"
+              />
+            </View>
+          </View>
+
           <View className="mt-4 flex-row gap-3">
             <Pressable
-              className={`flex-1 rounded-xl px-4 py-3 ${selectedDevice.identifiedByUser ? 'bg-emerald-600' : 'bg-gray-900'}`}
+              className={`flex-1 rounded-2xl px-4 py-4 ${
+                selectedDevice.identifiedByUser ? 'bg-[#15803D]' : 'bg-[#1A202C]'
+              }`}
               onPress={() =>
                 updateSelectedDevice((currentDevice) => ({
                   ...currentDevice,
@@ -783,7 +1038,7 @@ export default function RoomPlanScreen() {
             </Pressable>
 
             <Pressable
-              className="flex-1 rounded-xl bg-gray-200 px-4 py-3"
+              className="flex-1 rounded-2xl bg-[#EEF2F7] px-4 py-4"
               onPress={() =>
                 updateSelectedDevice((currentDevice) => ({
                   ...currentDevice,
@@ -796,121 +1051,135 @@ export default function RoomPlanScreen() {
                 }))
               }
             >
-              <Text className="text-center text-sm font-semibold text-gray-900">
-                Ignore this item
-              </Text>
+              <Text className="text-center text-sm font-semibold text-[#1A202C]">Ignore this item</Text>
             </Pressable>
           </View>
-        </View>
+        </SectionCard>
       ) : null}
 
-      <View className="mb-4 rounded-2xl border border-gray-300 bg-white p-4">
-        <Text className="text-base font-semibold text-gray-900">Session summary</Text>
-        <Text className="mt-2 text-sm leading-5 text-gray-700">
-          The working session below reflects the current identified-device state, not just the raw
-          RoomPlan output.
-        </Text>
-
+      <SectionCard
+        title="Session summary"
+        subtitle="Review the captured session state before opening the review or export screens."
+      >
         {currentSession ? (
-          <View className="mt-4 gap-3">
-            <View className="rounded-xl bg-gray-50 p-4">
-              <Text className="text-sm font-semibold text-gray-900">Latest session</Text>
-              
-              <Text className="mt-1 text-sm text-gray-700">Status: {currentSession.status ?? 'unknown'}</Text>
-              <Text className="mt-1 text-sm text-gray-700">Rooms captured: {roomCount}</Text>
-              <Text className="mt-1 text-sm text-gray-700">Visible devices: {capturedDevices.length}</Text>
-              <Text className="mt-1 text-sm text-gray-700">
+          <View className="gap-3">
+            <View className="rounded-[24px] bg-[#F8FAFC] p-4">
+              <Text className="text-sm font-semibold text-[#1A202C]">Latest session</Text>
+              <Text className="mt-1 text-sm text-[#718096]">Session ID: {currentSession.id}</Text>
+              <Text className="mt-1 text-sm text-[#718096]">
+                Status: {currentSession.status ?? 'unknown'}
+              </Text>
+              <Text className="mt-1 text-sm text-[#718096]">Rooms captured: {roomCount}</Text>
+              <Text className="mt-1 text-sm text-[#718096]">Wall count: {wallCount}</Text>
+              <Text className="mt-1 text-sm text-[#718096]">Visible devices: {capturedDevices.length}</Text>
+              <Text className="mt-1 text-sm text-[#718096]">
                 Identified fire alarm devices: {identifiedDevices.length}
               </Text>
-              <Text className="mt-1 text-sm text-gray-700">
+              <Text className="mt-1 text-sm text-[#718096]">
                 Units: {currentSession.floorplan?.units ?? 'Unavailable'}
               </Text>
-              <Text className="mt-1 text-sm text-gray-700">
+              <Text className="mt-1 text-sm text-[#718096]">
                 Started: {currentSession.metadata?.startedAt ?? 'Unavailable'}
               </Text>
-              
             </View>
 
             <View className="gap-3">
               <Pressable
-                className="rounded-xl bg-blue-600 px-4 py-3"
-                onPress={() => router.push(`/room-plan/session/${encodeURIComponent(currentSession.id)}` as never)}
+                className="rounded-2xl bg-[#0D47A1] px-4 py-4"
+                onPress={() =>
+                  router.push({
+                    pathname: '/room-plan/session/[id]',
+                    params: { id: currentSession.id },
+                  })
+                }
               >
                 <Text className="text-sm font-semibold text-white">Open session summary</Text>
               </Pressable>
 
               <Pressable
-                className="rounded-xl bg-emerald-600 px-4 py-3"
-                onPress={() => router.push(`/room-plan/review?sessionId=${encodeURIComponent(currentSession.id)}` as never)}
+                className="rounded-2xl bg-[#15803D] px-4 py-4"
+                onPress={() =>
+                  router.push({
+                    pathname: '/room-plan/review',
+                    params: { sessionId: currentSession.id },
+                  })
+                }
               >
                 <Text className="text-sm font-semibold text-white">Review and edit session</Text>
               </Pressable>
 
               <Pressable
-                className="rounded-xl bg-gray-900 px-4 py-3"
-                onPress={() => router.push(`/room-plan/export?sessionId=${encodeURIComponent(currentSession.id)}` as never)}
+                className="rounded-2xl bg-[#1A202C] px-4 py-4"
+                onPress={() =>
+                  router.push({
+                    pathname: '/room-plan/export',
+                    params: { sessionId: currentSession.id },
+                  })
+                }
               >
                 <Text className="text-sm font-semibold text-white">Open export flow</Text>
               </Pressable>
 
               <Pressable
-                className="self-start rounded-xl bg-gray-200 px-4 py-3"
+                className="self-start rounded-2xl bg-[#EEF2F7] px-4 py-3"
                 onPress={handleExportSession}
               >
-                <Text className="text-sm font-semibold text-gray-900">Preview raw session JSON</Text>
+                <Text className="text-sm font-semibold text-[#1A202C]">Preview raw session JSON</Text>
               </Pressable>
             </View>
           </View>
         ) : (
-          <View className="mt-4 rounded-xl border border-dashed border-gray-300 p-4">
-            <Text className="text-sm text-gray-600">
+          <View className="rounded-[24px] border border-dashed border-[#CBD5E1] p-4">
+            <Text className="text-sm leading-6 text-[#718096]">
               No session returned yet. Start a capture to create the scan session that review and
               export screens will use.
             </Text>
           </View>
         )}
-      </View>
+      </SectionCard>
 
       {exportedSession ? (
-        <View className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-          <Text className="text-base font-semibold text-emerald-900">Raw export preview</Text>
-          <Text className="mt-2 text-sm leading-5 text-emerald-800">
-            This preview includes the current identified-device state and is ready for downstream
-            review or sharing.
+        <SectionCard
+          title="Raw export preview"
+          subtitle="This payload is ready for downstream review, sharing, or analysis."
+        >
+          <Text className="rounded-[24px] bg-[#0F172A] p-4 font-mono text-xs leading-5 text-[#E2E8F0]">
+            {exportedSession}
           </Text>
-          <Text className="mt-3 font-mono text-xs leading-5 text-emerald-900">{exportedSession}</Text>
-        </View>
+        </SectionCard>
       ) : null}
 
-      <View className="rounded-2xl border border-gray-300 bg-gray-50 p-4">
-        <Text className="text-base font-semibold text-gray-900">Workflow checklist</Text>
-        <View className="mt-3 gap-2">
+      <SectionCard
+        title="Workflow checklist"
+        subtitle="The RoomPlan flow is built to support review-first fire alarm surveys."
+      >
+        <View className="gap-2">
           <View className="flex-row items-start">
             <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-            <Text className="ml-2 flex-1 text-sm text-slate-700">
-              Live RoomPlan capture contract
+            <Text className="ml-2 flex-1 text-sm text-[#334155]">
+              Room capture is available through the Fire Alarm RoomPlan bridge
             </Text>
           </View>
           <View className="flex-row items-start">
             <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-            <Text className="ml-2 flex-1 text-sm text-slate-700">
-              Click-to-identify device workflow during capture
+            <Text className="ml-2 flex-1 text-sm text-[#334155]">
+              Detected devices can be identified during capture
             </Text>
           </View>
           <View className="flex-row items-start">
             <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-            <Text className="ml-2 flex-1 text-sm text-slate-700">
-              Backend persistence limited to identified fire alarm devices
+            <Text className="ml-2 flex-1 text-sm text-[#334155]">
+              Review and export screens are linked directly from the session summary
             </Text>
           </View>
           <View className="flex-row items-start">
             <Ionicons name="ellipse-outline" size={16} color="#64748b" />
-            <Text className="ml-2 flex-1 text-sm text-slate-700">
-              General room contents are not saved to the database
+            <Text className="ml-2 flex-1 text-sm text-[#334155]">
+              Only identified fire alarm devices are saved to the backend
             </Text>
           </View>
         </View>
-      </View>
+      </SectionCard>
     </ScrollView>
   );
 }

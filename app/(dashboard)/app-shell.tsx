@@ -120,7 +120,6 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
   const { data: team } = useSWR<TeamSummary>('/api/team', fetcher);
   const {
     data: serviceM8Connection,
-    error: serviceM8Error,
     isLoading: serviceM8Loading,
   } = useSWR<ServiceM8ConnectionPayload>('/api/servicem8/connection', servicem8Fetcher);
   const showAdminLink = isAdminRole(user?.role) && adminViewMode === 'admin';
@@ -134,22 +133,18 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
 
   const displayUserName = user?.name?.trim() || user?.email || 'Account';
   const displayTeamName = team?.name?.trim() || 'Team';
-  const serviceM8Status = serviceM8Error
-    ? 'error'
-    : serviceM8Loading
-      ? 'loading'
-      : serviceM8Connection?.connected
-        ? 'connected'
-        : 'disconnected';
+  const serviceM8Status = serviceM8Loading
+    ? 'loading'
+    : serviceM8Connection?.connected
+      ? 'connected'
+      : 'disconnected';
 
   const serviceM8Label =
     serviceM8Status === 'connected'
       ? 'ServiceM8 connected'
-      : serviceM8Status === 'error'
-        ? 'ServiceM8 connection failed'
-        : serviceM8Status === 'loading'
-          ? 'Checking ServiceM8'
-          : 'ServiceM8 not connected';
+      : serviceM8Status === 'loading'
+        ? 'Checking ServiceM8'
+        : 'ServiceM8 not connected';
 
   return (
     <header className="border-b border-gray-200">
@@ -202,17 +197,13 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               serviceM8Status === 'connected'
                 ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
-                : serviceM8Status === 'error'
-                  ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
-                  : serviceM8Status === 'loading'
-                    ? 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
-                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                : serviceM8Status === 'loading'
+                  ? 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
             {serviceM8Status === 'connected' ? (
               <CheckCircle2 className="h-4 w-4" />
-            ) : serviceM8Status === 'error' ? (
-              <AlertCircle className="h-4 w-4" />
             ) : serviceM8Status === 'loading' ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (

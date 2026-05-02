@@ -7,6 +7,5 @@ export function createFireAlarmRecognitionPipelineConfig(
   return {
     ...defaultFireAlarmRecognitionPipelineConfig,
     ...overrides,
-    metadata: overrides.metadata ?? defaultFireAlarmRecognitionPipelineConfig.metadata,
   };
 }

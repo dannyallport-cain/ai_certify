@@ -102,7 +102,7 @@ export default function FireExtinguisherCertificatePage() {
     setFormError('');
 
     try {
-      formData.append('certificateType', 'Fire Extinguisher');
+      formData.append('certificateType', 'FIRE_EXTINGUISHER');
 
       const result = await createCertificate({}, formData);
 
@@ -125,7 +125,7 @@ export default function FireExtinguisherCertificatePage() {
   const handleGuidedComplete = async (values: Record<string, string>) => {
     const formData = new FormData();
     Object.entries(values).forEach(([key, value]) => formData.append(key, value));
-    formData.append('certificateType', 'Fire Extinguisher');
+    formData.append('certificateType', 'FIRE_EXTINGUISHER');
     await handleSubmit(formData);
     setGuidedOpen(false);
   };
@@ -207,7 +207,7 @@ export default function FireExtinguisherCertificatePage() {
             </p>
           )}
 
-          <input type="hidden" name="certificateType" value="Fire Extinguisher" />
+          <input type="hidden" name="certificateType" value="FIRE_EXTINGUISHER" />
 
           <Card>
             <CardHeader>
@@ -219,7 +219,7 @@ export default function FireExtinguisherCertificatePage() {
                 <CertificateNumberField
                   value={certificateNumber}
                   onChange={setCertificateNumber}
-                  certificateType="Fire Extinguisher"
+                  certificateType="FIRE_EXTINGUISHER"
                   customerName={selectedCustomerName}
                   siteName={siteName}
                 />
@@ -454,6 +454,28 @@ export default function FireExtinguisherCertificatePage() {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Explanatory Notes & Service Guidance</CardTitle>
+              <CardDescription>
+                Short guidance to keep the workflow aligned with the annual servicing model used by
+                other certificates in the product.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-slate-700">
+              <p>
+                Use this certificate for portable extinguisher servicing, maintenance labels,
+                replacements, condemnations, and annual site inventories.
+              </p>
+              <ul className="list-disc space-y-2 pl-5 text-sm text-slate-700">
+                <li>Record the service level carried out and explain any extinguisher/blanket exceptions.</li>
+                <li>Note the overall risk category, signage condition, mounting condition, and access condition.</li>
+                <li>Use the defects and recommendations section to separate faults from work completed.</li>
+                <li>Where the site has mixed equipment, summarise the inventory by location to aid later visits.</li>
+              </ul>
             </CardContent>
           </Card>
 

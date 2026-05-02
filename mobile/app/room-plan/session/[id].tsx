@@ -6,39 +6,45 @@ import { Ionicons } from '@expo/vector-icons';
 import type { FireAlarmScanSession } from '@/modules/fire-alarm-roomplan';
 import { getRoomPlanSession, saveRoomPlanSession } from '@/services/roomplan/session-store';
 
-function parseSessionParam(value: string | string[] | undefined, id?: string | string[]) {
+function buildFallbackSession(id?: string): FireAlarmScanSession {
+  const now = new Date().toISOString();
+
+  return {
+    id: id ?? `session-${Date.now()}`,
+    status: 'completed',
+    metadata: {
+      startedAt: now,
+      endedAt: now,
+      platform: 'mobile',
+      scannerVersion: 'session-screen-m1',
+      sessionName: 'Session summary',
+    },
+    floorplan: {
+      units: 'meters',
+      rooms: [],
+      deviceCount: 0,
+      wallCount: 0,
+    },
+    devices: [],
+    rawPayload: null,
+  };
+}
+
+function parseSessionParam(
+  value: string | string[] | undefined,
+  id?: string | string[],
+): FireAlarmScanSession {
   const rawValue = Array.isArray(value) ? value[0] : value;
   const rawId = Array.isArray(id) ? id[0] : id;
 
   if (!rawValue) {
-    const now = new Date().toISOString();
-
-    return {
-      id: rawId ?? `session-${Date.now()}`,
-      status: 'completed',
-      metadata: {
-        startedAt: now,
-        endedAt: now,
-        platform: 'mobile',
-        scannerVersion: 'session-screen-m1',
-        sessionName: 'Session summary',
-      },
-      floorplan: {
-        units: 'meters',
-        rooms: [],
-        deviceCount: 0,
-        wallCount: 0,
-      },
-      devices: [],
-      rawPayload: null,
-    } satisfies FireAlarmScanSession;
+    return buildFallbackSession(rawId);
   }
 
   try {
     return JSON.parse(rawValue) as FireAlarmScanSession;
   } catch {
-    const fallback = parseSessionParam(undefined, rawId);
-    return fallback;
+    return buildFallbackSession(rawId);
   }
 }
 
