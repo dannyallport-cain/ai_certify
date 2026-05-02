@@ -2,10 +2,16 @@
 
 import { useActionState, useEffect } from 'react';
 import { useFormStatus } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Save } from 'lucide-react';
+import { Save, Trash2 } from 'lucide-react';
 
-import { updateStripePlanMetadata, type UpdateStripePlanState } from '@/app/(dashboard)/admin/subscriptions/actions';
+import {
+  deleteStripePlanMetadata,
+  updateStripePlanMetadata,
+  type DeleteStripePlanState,
+  type UpdateStripePlanState,
+} from '@/app/(dashboard)/admin/subscriptions/actions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,7 +20,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { AdminStripeSubscriptionPlan } from '@/lib/payments/stripe';
 
-const initialState: UpdateStripePlanState = {};
+const updateInitialState: UpdateStripePlanState = {};
+const deleteInitialState: DeleteStripePlanState = {};
 
 function SaveButton() {
   const { pending } = useFormStatus();
@@ -23,6 +30,22 @@ function SaveButton() {
     <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
       <Save className="h-4 w-4" />
       {pending ? 'Saving to Stripe...' : 'Save to Stripe'}
+    </Button>
+  );
+}
+
+function DeleteButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      type="submit"
+      variant="destructive"
+      className="w-full sm:w-auto"
+      disabled={pending}
+    >
+      <Trash2 className="h-4 w-4" />
+      {pending ? 'Deleting plan...' : 'Delete plan'}
     </Button>
   );
 }
@@ -36,22 +59,41 @@ export default function StripePlanEditor({
   plan,
   compact = false,
 }: StripePlanEditorProps) {
-  const [state, formAction] = useActionState(updateStripePlanMetadata, initialState);
+  const router = useRouter();
+  const [updateState, updateFormAction] = useActionState(
+    updateStripePlanMetadata,
+    updateInitialState,
+  );
+  const [deleteState, deleteFormAction] = useActionState(
+    deleteStripePlanMetadata,
+    deleteInitialState,
+  );
 
   useEffect(() => {
-    if (state?.success && state.message) {
-      toast.success(state.message);
+    if (updateState?.success && updateState.message) {
+      toast.success(updateState.message);
     }
 
-    if (state?.error) {
-      toast.error(state.error);
+    if (updateState?.error) {
+      toast.error(updateState.error);
     }
-  }, [state]);
+  }, [updateState]);
+
+  useEffect(() => {
+    if (deleteState?.success && deleteState.message) {
+      toast.success(deleteState.message);
+      router.refresh();
+    }
+
+    if (deleteState?.error) {
+      toast.error(deleteState.error);
+    }
+  }, [deleteState, router]);
 
   return (
     <Card className={compact ? 'border-dashed border-slate-300 shadow-none' : 'border-slate-200'}>
       <CardContent className={compact ? 'p-4' : 'p-6'}>
-        <form action={formAction} className="space-y-5">
+        <form action={updateFormAction} className="space-y-5">
           <input type="hidden" name="productId" value={plan.productId} />
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -196,17 +238,46 @@ export default function StripePlanEditor({
             />
           </div>
 
-          {state?.error ? (
-            <p className="text-sm font-medium text-red-600">{state.error}</p>
+          {updateState?.error ? (
+            <p className="text-sm font-medium text-red-600">{updateState.error}</p>
           ) : null}
 
-          {state?.success && state.message ? (
-            <p className="text-sm font-medium text-emerald-600">{state.message}</p>
+          {updateState?.success && updateState.message ? (
+            <p className="text-sm font-medium text-emerald-600">{updateState.message}</p>
           ) : null}
 
           <div className="flex justify-end">
             <SaveButton />
           </div>
+        </form>
+
+        <form
+          action={deleteFormAction}
+          className="mt-6 rounded-2xl border border-red-200 bg-red-50/60 p-4"
+          onSubmit={(event) => {
+            if (!window.confirm(`Delete the ${plan.name} plan from Stripe?`)) {
+              event.preventDefault();
+            }
+          }}
+        >
+          <input type="hidden" name="productId" value={plan.productId} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <h4 className="text-sm font-semibold text-red-900">Remove plan</h4>
+              <p className="text-sm text-red-800">
+                This deactivates the Stripe product and its active recurring prices.
+              </p>
+            </div>
+            <DeleteButton />
+          </div>
+
+          {deleteState?.error ? (
+            <p className="mt-3 text-sm font-medium text-red-700">{deleteState.error}</p>
+          ) : null}
+
+          {deleteState?.success && deleteState.message ? (
+            <p className="mt-3 text-sm font-medium text-emerald-700">{deleteState.message}</p>
+          ) : null}
         </form>
       </CardContent>
     </Card>

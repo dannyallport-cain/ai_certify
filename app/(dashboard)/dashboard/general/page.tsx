@@ -10,6 +10,7 @@ import { updateAccount } from '@/app/(login)/actions';
 import { User, type EicrProfileDefaults } from '@/lib/db/schema';
 import ProfileMediaSettings from '@/components/settings/ProfileMediaSettings';
 import TeamBrandingSettings from '@/components/settings/TeamBrandingSettings';
+import IntegrationTestCard from '@/components/integrations/IntegrationTestCard';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 
@@ -221,6 +222,63 @@ export default function GeneralPage() {
 
       <TeamBrandingSettings />
       <ProfileMediaSettings />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Integration diagnostics</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Run live connectivity checks against the services that support billing, storage, and AI-assisted workflows.
+          </p>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <IntegrationTestCard
+              title="R2 communication test"
+              description="Upload, verify, and delete a tiny object in Cloudflare R2 to confirm the storage bucket and credentials are working."
+              serviceLabel="R2"
+              endpointPath="/api/admin/r2/test"
+              tone="green"
+              buttonLabel="Test R2 connection"
+              successLabel="R2 round-trip verified successfully."
+              hint="This performs a real upload → head → delete cycle using the configured R2 credentials."
+            />
+
+            <IntegrationTestCard
+              title="Database communication test"
+              description="Execute a lightweight live query against the database to confirm the admin connection can read from the primary tables."
+              serviceLabel="Database"
+              endpointPath="/api/admin/database/test"
+              tone="slate"
+              buttonLabel="Test database connection"
+              successLabel="Database connectivity verified successfully."
+              hint="This performs a direct read against the users table to confirm the database is reachable."
+            />
+
+            <IntegrationTestCard
+              title="AI worker communication test"
+              description="Send a tiny test image to the protected AI workflow endpoint to confirm the worker can process requests end to end."
+              serviceLabel="AI Worker"
+              endpointPath="/api/admin/llm-test"
+              tone="purple"
+              buttonLabel="Test AI worker"
+              successLabel="AI worker connection verified successfully."
+              requestBody={{
+                imageBase64:
+                  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5pD0QAAAAASUVORK5CYII=',
+                reportType: 'integration-test',
+                inspectionType: 'connectivity-check',
+                requestedSections: ['summary', 'observations', 'reportSections'],
+                metadata: {
+                  source: 'dashboard-settings',
+                  testType: 'ai-worker',
+                },
+              }}
+              hint="This sends a small inline PNG through the admin AI endpoint so OCR, routing, and worker handling can be verified together."
+            />
+          </div>
+        </CardContent>
+      </Card>
     </section>
   );
 }
