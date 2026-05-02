@@ -466,26 +466,19 @@ function getApprovedPlanDefaults(planName: string) {
 export async function getAdminStripeSubscriptionPlans(): Promise<
   AdminStripeSubscriptionPlan[]
 > {
-  const [products, prices] = await Promise.all([
-    stripe.products.list({
-      active: true
-    }),
-    stripe.prices.list({
-      active: true,
-      type: 'recurring'
-    })
-  ]);
+  const prices = await stripe.prices.list({
+    expand: ['data.product'],
+    type: 'recurring',
+    limit: 100
+  });
 
-  const recurringMonthlyPrices = prices.data.filter(
-    (price) => price.recurring?.interval === 'month' && price.unit_amount !== null
-  );
-
-  const plans = recurringMonthlyPrices
+  const plans = prices.data
     .map((price): AdminStripeSubscriptionPlan | null => {
-      const product =
-        typeof price.product === 'string'
-          ? products.data.find((candidate) => candidate.id === price.product)
-          : price.product;
+      if (price.recurring?.interval !== 'month' || price.unit_amount === null) {
+        return null;
+      }
+
+      const product = typeof price.product === 'string' ? null : price.product;
 
       if (!product || product.deleted) {
         return null;
@@ -496,9 +489,7 @@ export async function getAdminStripeSubscriptionPlans(): Promise<
       );
 
       const defaults = getApprovedPlanDefaults(product.name);
-      const annualPrice = metadata.annualPrice
-        ? Number.parseFloat(metadata.annualPrice)
-        : null;
+      const annualPrice = metadata.annualPrice ? Number.parseFloat(metadata.annualPrice) : null;
       const isVerificationPlan =
         product.id === process.env.STRIPE_VERIFICATION_PRODUCT_ID ||
         price.id === process.env.STRIPE_VERIFICATION_PRICE_ID ||
@@ -534,32 +525,23 @@ export async function getAdminStripeSubscriptionPlans(): Promise<
         interval: price.recurring?.interval ?? null,
         trialPeriodDays:
           price.recurring?.trial_period_days ??
-          (metadata.trialPeriodDays
-            ? Number.parseInt(metadata.trialPeriodDays, 10)
-            : 14),
+          (metadata.trialPeriodDays ? Number.parseInt(metadata.trialPeriodDays, 10) : 14),
         metadata,
         allowances: {
-          certificates: metadata.certificates || defaults?.certificates || 'Unlimited certificates',
+          certificates:
+            metadata.certificates || defaults?.certificates || 'Unlimited certificates',
           teamSeats: metadata.teamSeats || defaults?.teamSeats || '1 user included',
           additionalSeatPrice:
             metadata.additionalSeatPrice || defaults?.additionalSeatPrice || null,
           targetUser: metadata.targetUser || defaults?.targetUser || 'Electrical contractors',
           badge: metadata.badge || defaults?.badge || null,
           savingsNote: metadata.savingsNote || defaults?.savingsNote || null,
-          competitorAnchor:
-            metadata.competitorAnchor || defaults?.competitorAnchor || null,
+          competitorAnchor: metadata.competitorAnchor || defaults?.competitorAnchor || null,
         },
-        features:
-          features.length > 0 ? features : [...(defaults?.features || [])]
+        features: features.length > 0 ? features : [...(defaults?.features || [])]
       };
     })
     .filter((plan): plan is AdminStripeSubscriptionPlan => plan !== null);
-
-  const existingPlanKeys = new Set(
-    plans
-      .map((plan) => getApprovedPlanKey(plan.name))
-      .filter((planKey): planKey is keyof typeof approvedPlanDefaults => planKey !== null)
-  );
 
   if (plans.length === 0) {
     return [];

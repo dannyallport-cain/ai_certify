@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"terminal.integrated.allowedLinkSchemes": [
+			"file",
+			"http",
+			"https",
+			"mailto",
+			"vscode",
+			"vscode-insiders",
+			"sixth"
+		],
+		"terminal.integrated.allowInUntrustedWorkspace": true,
+		"terminal.integrated.automationProfile.osx": {}
+	}
+}

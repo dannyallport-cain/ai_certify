@@ -1,5 +1,6 @@
 import { CreditCard, KeyRound, ShieldCheck } from 'lucide-react';
 import { AdminMutedNote, AdminPageHero, AdminSection } from '@/components/admin/AdminPageSection';
+import IntegrationTestCard from '@/components/integrations/IntegrationTestCard';
 import StripeSecretField from '@/components/admin/StripeSecretField';
 import { requireAdmin } from '@/lib/auth/admin';
 
@@ -91,6 +92,17 @@ export default async function StripeConfigPage() {
           These values remain read-only here so the page acts as a deployment verification screen rather than a credential editor.
         </AdminMutedNote>
       </AdminSection>
+
+      <IntegrationTestCard
+        title="Stripe connectivity test"
+        description="Run a live balance lookup against Stripe to confirm the admin secret can authenticate and return data from the account."
+        serviceLabel="Stripe"
+        endpointPath="/api/admin/stripe/test"
+        tone="blue"
+        buttonLabel="Test Stripe connection"
+        successLabel="Stripe connection verified successfully."
+        hint="This performs a real Stripe balance retrieval using the configured STRIPE_SECRET_KEY."
+      />
     </div>
   );
 }

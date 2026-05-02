@@ -1,6 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { ChevronDown, KeyRound, Link2, MoreHorizontal, ShieldCheck, ShieldOff, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Table } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -614,7 +622,7 @@ export default function UsersPage() {
               <th className="w-24">Status</th>
               <th className="w-24">Created</th>
               <th className="w-24">Last login</th>
-              <th className="w-36">Actions</th>
+              <th className="w-44">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -659,62 +667,58 @@ export default function UsersPage() {
                   </td>
                   <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                   <td>{formatLastLogin(user.lastLoginAt)}</td>
-                  <td>
-                    <div className="grid grid-cols-3 gap-2">
+                  <td className="align-top">
+                    <div className="flex items-center gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="px-2"
+                        className="h-8 px-3"
                         disabled={busyUserId === user.id || bulkBusy}
                         onClick={() => openEditModal(user)}
                       >
+                        <ChevronDown className="mr-1 h-3.5 w-3.5 rotate-90" />
                         Edit
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="px-2"
-                        disabled={busyUserId === user.id || bulkBusy}
-                        onClick={() => handleSuspendToggle(user)}
-                      >
-                        {user.status === 'suspended' ? 'Activate' : 'Suspend'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="px-2"
-                        disabled={busyUserId === user.id || bulkBusy}
-                        onClick={() => openChangePasswordModal(user)}
-                      >
-                        Password
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="px-2"
-                        disabled={busyUserId === user.id || bulkBusy}
-                        onClick={() => handleSendPasswordLink(user)}
-                      >
-                        Send Link
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="px-2"
-                        disabled={busyUserId === user.id || bulkBusy}
-                        onClick={() => handleToggleSubscriptionBypass(user)}
-                      >
-                        {user.team?.subscriptionBypass ? 'Remove Bypass' : 'Enable Bypass'}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="px-2"
-                        disabled={busyUserId === user.id || bulkBusy}
-                        onClick={() => handleDelete(user.id)}
-                      >
-                        Delete
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 shrink-0 p-0"
+                            disabled={busyUserId === user.id || bulkBusy}
+                            aria-label={`More actions for ${user.name || user.email}`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem onSelect={() => handleSuspendToggle(user)}>
+                            {user.status === 'suspended' ? (
+                              <ShieldCheck className="h-4 w-4" />
+                            ) : (
+                              <ShieldOff className="h-4 w-4" />
+                            )}
+                            {user.status === 'suspended' ? 'Activate user' : 'Suspend user'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => openChangePasswordModal(user)}>
+                            <KeyRound className="h-4 w-4" />
+                            Reset password
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleSendPasswordLink(user)}>
+                            <Link2 className="h-4 w-4" />
+                            Send sign-in link
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleToggleSubscriptionBypass(user)}>
+                            <ShieldCheck className="h-4 w-4" />
+                            {user.team?.subscriptionBypass ? 'Remove bypass' : 'Enable bypass'}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem variant="destructive" onSelect={() => handleDelete(user.id)}>
+                            <Trash2 className="h-4 w-4" />
+                            Delete user
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </tr>

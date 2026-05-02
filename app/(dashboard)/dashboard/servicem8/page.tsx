@@ -131,32 +131,7 @@ export default function ServiceM8Page() {
     setUrlMessage(null);
     setIsConnecting(true);
 
-    const width = 640;
-    const height = 760;
-    const left = Math.max(0, window.screenX + Math.round((window.outerWidth - width) / 2));
-    const top = Math.max(0, window.screenY + Math.round((window.outerHeight - height) / 2));
-
-    const popup = window.open(
-      '/api/servicem8/activate?popup=1',
-      'servicem8-oauth',
-      `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-    );
-
-    if (!popup) {
-      setIsConnecting(false);
-      window.location.href = '/api/servicem8/activate';
-      return;
-    }
-
-    popup.focus();
-    clearConnectPolling();
-    popupPollRef.current = window.setInterval(() => {
-      if (popup.closed) {
-        clearConnectPolling();
-        setIsConnecting(false);
-        mutate('/api/servicem8/connection');
-      }
-    }, 500);
+    window.location.href = '/api/servicem8/activate';
   }
 
   async function handleDisconnect() {
