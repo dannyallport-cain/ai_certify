@@ -43,12 +43,12 @@ type NativeFireAlarmRoomPlanModule = {
 
 const NATIVE_MODULE_NAME = 'FireAlarmRoomPlan';
 
-const nativeModule = requireOptionalNativeModule<NativeFireAlarmRoomPlanModule>(
-  NATIVE_MODULE_NAME,
-);
+const nativeModule = requireOptionalNativeModule(NATIVE_MODULE_NAME) as
+  | NativeFireAlarmRoomPlanModule
+  | null;
 
 const nativeEventEmitter =
-  nativeModule && Platform.OS !== 'web' ? new LegacyEventEmitter(nativeModule) : null;
+  nativeModule && Platform.OS !== 'web' ? new LegacyEventEmitter(nativeModule as never) : null;
 
 const statusListeners = new Set<(event: FireAlarmRoomPlanStatusEvent) => void>();
 const progressListeners = new Set<(event: FireAlarmRoomPlanProgressEvent) => void>();

@@ -32,8 +32,6 @@ export type {
   FireAlarmAnalysisJobStatus,
   FireAlarmAnalysisRequest,
   FireAlarmAnalysisResult,
-  FireAlarmBoundingBox,
-  FireAlarmCandidateSource,
   FireAlarmCapturePose,
   FireAlarmDeviceCandidate,
   FireAlarmManufacturerFinding,
@@ -53,6 +51,11 @@ export type {
   FireAlarmRoomSurface,
   FireAlarmRoomVertex,
 } from './pipeline';
+
+export type {
+  FireAlarmBoundingBox,
+  FireAlarmCandidateSource,
+} from './pipeline-types';
 
 export { createFireAlarmRecognitionPipelineConfig } from './config';
 

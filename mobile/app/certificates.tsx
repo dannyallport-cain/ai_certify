@@ -72,8 +72,8 @@ function CertificateCard({
           <Text className="mt-1 text-sm text-[#374151]">{formatDate(item.inspectionDate)}</Text>
         </View>
         <View className="mb-2">
-          <Text className="text-[11px] font-semibold uppercase tracking-[0.8px] text-[#8FA3B8]">Updated</Text>
-          <Text className="mt-1 text-sm text-[#374151]">{formatDate(item.updatedAt)}</Text>
+          <Text className="text-[11px] font-semibold uppercase tracking-[0.8px] text-[#8FA3B8]">Created</Text>
+          <Text className="mt-1 text-sm text-[#374151]">{formatDate(item.inspectionDate)}</Text>
         </View>
       </View>
 
