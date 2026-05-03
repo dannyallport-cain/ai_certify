@@ -1,0 +1,1 @@
+I’m in **Explore Mode**, which is read-only and designed for deep codebase investigation — not for writing or implementing code. To implement this, please switch to **Act Mode** using the mode selector at the bottom of the chat.

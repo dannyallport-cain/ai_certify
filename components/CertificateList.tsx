@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { duplicateCertificate } from '@/app/(dashboard)/actions';
 import { Button } from '@/components/ui/button';
+import IssueCertificateModal from '@/components/IssueCertificateModal';
 import {
   Search,
   Download,
@@ -30,6 +30,13 @@ type PaginatedCertificateResponse = {
   pageSize: number;
 };
 
+type IssueCertificateTarget = {
+  id: number;
+  certificateNumber: string;
+  certificateType: string;
+  customerEmail?: string | null;
+};
+
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
 
@@ -54,6 +61,7 @@ export default function CertificateList({
   const [dateTo, setDateTo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [issueTarget, setIssueTarget] = useState<IssueCertificateTarget | null>(null);
 
   useEffect(() => {
     setPage(1);
@@ -133,6 +141,17 @@ export default function CertificateList({
     setSortKey('inspectionDate');
     setSortDir('desc');
     setGroupBy('');
+  };
+
+  const handleOpenIssue = (row: CertRow) => {
+    const cert = row.certificate || row;
+
+    setIssueTarget({
+      id: cert.id,
+      certificateNumber: cert.certificateNumber || '—',
+      certificateType: cert.certificateType || '—',
+      customerEmail: row.customer?.email || null,
+    });
   };
 
   return (
@@ -333,16 +352,23 @@ export default function CertificateList({
                         <td className="px-4 py-4 align-top text-sm">
                           <div className="flex flex-wrap gap-2">
                             <Link href={`/certificates/${cert.id}`}>
-                              <Button variant="ghost" size="sm">View</Button>
-                            </Link>
-                            <form action={duplicateCertificate}>
-                              <input type="hidden" name="id" value={cert.id} />
-                              <Button type="submit" variant="outline" size="sm">
-                                copy/new
+                              <Button variant="ghost" size="sm">
+                                View
                               </Button>
-                            </form>
+                            </Link>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenIssue(row)}
+                            >
+                              New issue
+                            </Button>
                             <Button asChild variant="outline" size="sm">
-                              <a href={`/api/certificates/${cert.id}/pdf`} aria-label={`Download PDF for ${cert.certificateNumber || 'certificate'}`}>
+                              <a
+                                href={`/api/certificates/${cert.id}/pdf`}
+                                aria-label={`Download PDF for ${cert.certificateNumber || 'certificate'}`}
+                              >
                                 <Download className="h-4 w-4" />
                                 PDF
                               </a>
@@ -366,7 +392,10 @@ export default function CertificateList({
             Page size
             <select
               value={pageSize}
-              onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
               className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
             >
               {PAGE_SIZE_OPTIONS.map((size) => (
@@ -375,18 +404,39 @@ export default function CertificateList({
             </select>
           </label>
           <div className="flex items-center gap-2 text-sm">
-            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
               <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
             <span className="text-slate-600">Page {page} of {pageCount}</span>
-            <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= pageCount}
+              onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+            >
               Next
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </div>
+
+      {issueTarget ? (
+        <IssueCertificateModal
+          open={Boolean(issueTarget)}
+          certificateId={issueTarget.id}
+          certificateNumber={issueTarget.certificateNumber}
+          certificateType={issueTarget.certificateType}
+          defaultRecipientEmail={issueTarget.customerEmail}
+          onClose={() => setIssueTarget(null)}
+        />
+      ) : null}
     </div>
   );
 }
