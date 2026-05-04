@@ -51,6 +51,9 @@ interface SM8Job {
 
 interface SM8Client {
   uuid: string;
+  name?: string | null;
+  address?: string | null;
+  postcode?: string | null;
   company_name: string | null;
   first_name: string | null;
   last_name: string | null;
@@ -771,16 +774,18 @@ function ClientsTab() {
   const columns = useMemo<ColumnDef<SM8Client>[]>(
     () => [
       {
-        accessorKey: "company_name",
-        header: "Company",
-        cell: ({ row }) => <div className="font-medium">{row.original.company_name || "-"}</div>,
+        accessorKey: "name",
+        header: "Client",
+        cell: ({ row }) => (
+          <div className="font-medium">
+            {row.original.name || row.original.company_name || formatContactName(row.original.first_name, row.original.last_name)}
+          </div>
+        ),
       },
       {
         accessorKey: "first_name",
         header: "Contact",
-        cell: ({ row }) => (
-          <div>{formatContactName(row.original.first_name, row.original.last_name)}</div>
-        ),
+        cell: ({ row }) => <div>{formatContactName(row.original.first_name, row.original.last_name)}</div>,
       },
       {
         accessorKey: "email",
@@ -801,23 +806,24 @@ function ClientsTab() {
         ),
       },
       {
-        accessorKey: "billing_city",
-        header: "City",
-        cell: ({ row }) => <div className="text-muted-foreground">{row.original.billing_city || "-"}</div>,
+        accessorKey: "postcode",
+        header: "Postcode",
+        cell: ({ row }) => <div className="text-muted-foreground">{row.original.postcode || row.original.billing_postcode || "-"}</div>,
       },
       {
-        accessorKey: "billing_address",
+        accessorKey: "address",
         header: "Address",
         cell: ({ row }) => (
           <div className="max-w-[24rem] break-words text-muted-foreground">
-            {formatAddress([
-              row.original.billing_address,
-              row.original.billing_address2,
-              row.original.billing_city,
-              row.original.billing_state,
-              row.original.billing_postcode,
-              row.original.billing_country,
-            ])}
+            {row.original.address ||
+              formatAddress([
+                row.original.billing_address,
+                row.original.billing_address2,
+                row.original.billing_city,
+                row.original.billing_state,
+                row.original.billing_postcode,
+                row.original.billing_country,
+              ])}
           </div>
         ),
       },
@@ -867,6 +873,9 @@ function ClientsTab() {
         searchPlaceholder="Search company, contact, email, phone, or address..."
         getSearchText={(client) =>
           [
+            client.name,
+            client.address,
+            client.postcode,
             client.company_name,
             client.first_name,
             client.last_name,
