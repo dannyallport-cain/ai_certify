@@ -133,18 +133,30 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
 
   const displayUserName = user?.name?.trim() || user?.email || 'Account';
   const displayTeamName = team?.name?.trim() || 'Team';
+  const serviceM8CompanyName = serviceM8Connection?.connection?.servicem8CompanyName?.trim() || null;
+  const serviceM8SyncDirection =
+    serviceM8Connection?.connection?.syncDirection?.replaceAll('_', ' ') || 'bidirectional';
+  const serviceM8LastSyncAt = serviceM8Connection?.connection?.lastSyncAt
+    ? new Date(serviceM8Connection.connection.lastSyncAt).toLocaleDateString()
+    : null;
   const serviceM8Status = serviceM8Loading
     ? 'loading'
     : serviceM8Connection?.connected
       ? 'connected'
       : 'disconnected';
 
-  const serviceM8Label =
+  const serviceM8Summary =
     serviceM8Status === 'connected'
-      ? 'ServiceM8 connected'
+      ? serviceM8CompanyName || 'Connected'
       : serviceM8Status === 'loading'
-        ? 'Checking ServiceM8'
-        : 'ServiceM8 not connected';
+        ? 'Checking connection'
+        : 'Not connected';
+
+  const serviceM8Detail =
+    serviceM8Status === 'connected'
+      ? `${serviceM8Connection?.connection?.syncEnabled ? 'Sync on' : 'Sync paused'} · ${serviceM8SyncDirection}${serviceM8LastSyncAt ? ` · Last sync ${serviceM8LastSyncAt}` : ''}`
+      : 'Open ServiceM8 settings';
+  const serviceM8Label = `ServiceM8 ${serviceM8Summary}${serviceM8Detail ? ` — ${serviceM8Detail}` : ''}`;
 
   return (
     <header className="border-b border-gray-200">
@@ -194,7 +206,7 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
             href="/dashboard/servicem8"
             aria-label={serviceM8Label}
             title={serviceM8Label}
-            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`inline-flex min-w-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
               serviceM8Status === 'connected'
                 ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
                 : serviceM8Status === 'loading'
@@ -203,13 +215,21 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
             }`}
           >
             {serviceM8Status === 'connected' ? (
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
             ) : serviceM8Status === 'loading' ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" />
             ) : (
-              <Plug className="h-4 w-4" />
+              <Plug className="h-4 w-4 shrink-0" />
             )}
-            <span className="hidden sm:inline">ServiceM8</span>
+            <span className="flex min-w-0 flex-col leading-tight">
+              <span className="truncate">
+                <span className="sm:hidden">SM8</span>
+                <span className="hidden sm:inline">{serviceM8Summary}</span>
+              </span>
+              <span className="hidden lg:block truncate text-[11px] font-normal text-current/70">
+                {serviceM8Detail}
+              </span>
+            </span>
           </Link>
           {showLogoutButton && (
             <Button variant="outline" onClick={handleLogout}>

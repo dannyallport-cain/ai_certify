@@ -7,8 +7,8 @@
 
 import { SERVICEM8_CONFIG } from './config';
 import { db } from '@/lib/db/drizzle';
-import { servicem8Connections } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { servicem8Connections, teamMembers } from '@/lib/db/schema';
+import { desc, eq } from 'drizzle-orm';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -154,17 +154,41 @@ export class ServiceM8Client_API {
 
   /**
    * Create a ServiceM8 client from a user's stored connection
+   *
+   * Falls back to the user's team connection so any team member can use the
+   * integration once it has been connected by one member.
    */
   static async fromUserId(userId: number): Promise<ServiceM8Client_API | null> {
-    const connections = await db
+    const userConnections = await db
       .select()
       .from(servicem8Connections)
       .where(eq(servicem8Connections.userId, userId))
+      .orderBy(desc(servicem8Connections.updatedAt))
       .limit(1);
 
-    if (connections.length === 0) return null;
+    if (userConnections.length > 0) {
+      return ServiceM8Client_API.fromConnectionRow(userConnections[0]);
+    }
 
-    return ServiceM8Client_API.fromConnectionRow(connections[0]);
+    const teamMemberships = await db
+      .select({ teamId: teamMembers.teamId })
+      .from(teamMembers)
+      .where(eq(teamMembers.userId, userId))
+      .limit(1);
+
+    const teamId = teamMemberships[0]?.teamId;
+    if (!teamId) return null;
+
+    const teamConnections = await db
+      .select()
+      .from(servicem8Connections)
+      .where(eq(servicem8Connections.teamId, teamId))
+      .orderBy(desc(servicem8Connections.updatedAt))
+      .limit(1);
+
+    if (teamConnections.length === 0) return null;
+
+    return ServiceM8Client_API.fromConnectionRow(teamConnections[0]);
   }
 
   /**
@@ -177,6 +201,7 @@ export class ServiceM8Client_API {
       .select()
       .from(servicem8Connections)
       .where(eq(servicem8Connections.teamId, teamId))
+      .orderBy(desc(servicem8Connections.updatedAt))
       .limit(1);
 
     if (connections.length === 0) return null;
