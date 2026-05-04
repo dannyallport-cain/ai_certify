@@ -1,8 +1,56 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getCustomersForTeam } from '@/lib/db/queries';
-import { Plus, User, Phone, Mail, MapPin, FileText } from 'lucide-react';
+import { Plus, User, Phone, Mail, MapPin } from 'lucide-react';
 import Link from 'next/link';
+
+type CustomerRecord = Awaited<ReturnType<typeof getCustomersForTeam>>[number];
+
+function normalizeLegacyText(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (['undefined', 'null', 'nan'].includes(lower)) {
+    return null;
+  }
+
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  if (
+    tokens.length > 0 &&
+    tokens.every((token) => ['undefined', 'null', 'nan'].includes(token.toLowerCase()))
+  ) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function getCustomerDisplayName(customer: CustomerRecord) {
+  return (
+    normalizeLegacyText(customer.name) ||
+    normalizeLegacyText(customer.contactPerson) ||
+    'Unnamed Customer'
+  );
+}
+
+function getCustomerContactPerson(customer: CustomerRecord) {
+  return normalizeLegacyText(customer.contactPerson);
+}
+
+function getCustomerEmail(customer: CustomerRecord) {
+  return normalizeLegacyText(customer.email);
+}
+
+function getCustomerPhone(customer: CustomerRecord) {
+  return normalizeLegacyText(customer.phone);
+}
+
+function getCustomerAddress(customer: CustomerRecord) {
+  return normalizeLegacyText(customer.address);
+}
 
 export default async function CustomersPage() {
   const customers = await getCustomersForTeam();
@@ -42,49 +90,60 @@ export default async function CustomersPage() {
           </Link>
         </Card>
 
-        {customers.map((customer) => (
-          <Card key={customer.id} className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer">
-            <Link href={`/customers/${customer.id}`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  <span className="mr-2">🏢</span>
-                  {customer.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-xs text-muted-foreground">
-                  {customer.contactPerson && (
-                    <div className="flex items-center">
-                      <User className="mr-1 h-3 w-3" />
-                      {customer.contactPerson}
-                    </div>
-                  )}
-                  {customer.email && (
-                    <div className="flex items-center">
-                      <Mail className="mr-1 h-3 w-3" />
-                      {customer.email}
-                    </div>
-                  )}
-                  {customer.phone && (
-                    <div className="flex items-center">
-                      <Phone className="mr-1 h-3 w-3" />
-                      {customer.phone}
-                    </div>
-                  )}
-                  {customer.address && (
-                    <div className="flex items-center">
-                      <MapPin className="mr-1 h-3 w-3" />
-                      <span className="truncate">{customer.address}</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Link>
-          </Card>
-        ))}
+        {customers.map((customer) => {
+          const displayName = getCustomerDisplayName(customer);
+          const contactPerson = getCustomerContactPerson(customer);
+          const email = getCustomerEmail(customer);
+          const phone = getCustomerPhone(customer);
+          const address = getCustomerAddress(customer);
+
+          return (
+            <Card
+              key={customer.id}
+              className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer"
+            >
+              <Link href={`/customers/${customer.id}`}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    <span className="mr-2">🏢</span>
+                    {displayName}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-xs text-muted-foreground">
+                    {contactPerson ? (
+                      <div className="flex items-center">
+                        <User className="mr-1 h-3 w-3" />
+                        {contactPerson}
+                      </div>
+                    ) : null}
+                    {email ? (
+                      <div className="flex items-center">
+                        <Mail className="mr-1 h-3 w-3" />
+                        {email}
+                      </div>
+                    ) : null}
+                    {phone ? (
+                      <div className="flex items-center">
+                        <Phone className="mr-1 h-3 w-3" />
+                        {phone}
+                      </div>
+                    ) : null}
+                    {address ? (
+                      <div className="flex items-center">
+                        <MapPin className="mr-1 h-3 w-3" />
+                        <span className="truncate">{address}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Link>
+            </Card>
+          );
+        })}
       </div>
 
-      {customers.length === 0 && (
+      {customers.length === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -104,7 +163,7 @@ export default async function CustomersPage() {
             </Button>
           </CardContent>
         </Card>
-      )}
+      ) : null}
     </div>
   );
 }

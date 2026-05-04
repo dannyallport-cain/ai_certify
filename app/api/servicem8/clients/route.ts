@@ -6,11 +6,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ServiceM8Client_API } from '@/lib/servicem8/client';
+import { and, eq } from 'drizzle-orm';
+import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { db } from '@/lib/db/drizzle';
 import { servicem8ClientMappings, customers } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { ServiceM8Client_API } from '@/lib/servicem8/client';
+import { buildServiceM8Address, buildServiceM8DisplayName } from '@/app/api/mobile/servicem8/_shared';
 
 async function getServiceM8Context(): Promise<{ userId: number; teamId: number } | null> {
   const user = await getUser();
@@ -87,10 +88,22 @@ export async function POST(request: NextRequest) {
         }
 
         // Create local customer
-        const name = c.company_name || `${c.first_name} ${c.last_name}`.trim();
-        const address = [c.billing_address, c.billing_address2, c.billing_city, c.billing_state, c.billing_postcode]
-          .filter(Boolean)
-          .join(', ');
+        const name = buildServiceM8DisplayName({
+          companyName: c.company_name,
+          firstName: c.first_name,
+          lastName: c.last_name,
+        });
+
+        const address = buildServiceM8Address({
+          address: c.billing_address,
+          address2: c.billing_address2,
+          city: c.billing_city,
+          state: c.billing_state,
+          postcode: c.billing_postcode,
+          country: c.billing_country,
+        });
+
+        const contactPerson = [c.first_name?.trim(), c.last_name?.trim()].filter(Boolean).join(' ') || null;
 
         const [newCustomer] = await db.insert(customers).values({
           teamId: context.teamId,
@@ -99,7 +112,7 @@ export async function POST(request: NextRequest) {
           phone: c.phone || c.mobile || null,
           address: address || null,
           postcode: c.billing_postcode || null,
-          contactPerson: `${c.first_name} ${c.last_name}`.trim() || null,
+          contactPerson,
         }).returning();
 
         // Create mapping
