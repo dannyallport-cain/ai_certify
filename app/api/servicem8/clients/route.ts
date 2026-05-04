@@ -39,8 +39,25 @@ export async function GET() {
     }
 
     const clients = await client.getClients('active eq 1');
+    const enrichedClients = clients.map((serviceM8Client) => ({
+      ...serviceM8Client,
+      name: buildServiceM8DisplayName({
+        companyName: serviceM8Client.company_name,
+        firstName: serviceM8Client.first_name,
+        lastName: serviceM8Client.last_name,
+      }),
+      address: buildServiceM8Address({
+        address: serviceM8Client.billing_address,
+        address2: serviceM8Client.billing_address2,
+        city: serviceM8Client.billing_city,
+        state: serviceM8Client.billing_state,
+        postcode: serviceM8Client.billing_postcode,
+        country: serviceM8Client.billing_country,
+      }),
+      postcode: serviceM8Client.billing_postcode || null,
+    }));
 
-    return NextResponse.json({ clients });
+    return NextResponse.json({ clients: enrichedClients });
   } catch (error) {
     console.error('Error fetching ServiceM8 clients:', error);
     return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 });
