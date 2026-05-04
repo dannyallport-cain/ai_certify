@@ -42,18 +42,34 @@ export interface ServiceM8Job {
 
 export interface ServiceM8Client {
   uuid: string;
-  company_name: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone: string | null;
-  mobile: string | null;
+  name: string | null;
+  abn_number?: string | null;
+  address: string | null;
   billing_address: string | null;
-  billing_address2: string | null;
-  billing_city: string | null;
-  billing_state: string | null;
-  billing_postcode: string | null;
-  billing_country: string | null;
+  is_individual?: number | null;
+  parent_company_uuid?: string | null;
+  website?: string | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
+  address_postcode?: string | null;
+  address_country?: string | null;
+  fax_number?: string | null;
+  badges?: string | null;
+  tax_rate_uuid?: string | null;
+  billing_attention?: string | null;
+  payment_terms?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  company_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  billing_address2?: string | null;
+  billing_city?: string | null;
+  billing_state?: string | null;
+  billing_postcode?: string | null;
+  billing_country?: string | null;
   active: number;
   edit_date: string | null;
 }

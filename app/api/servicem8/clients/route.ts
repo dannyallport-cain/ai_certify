@@ -42,19 +42,21 @@ export async function GET() {
     const enrichedClients = clients.map((serviceM8Client) => ({
       ...serviceM8Client,
       name: buildServiceM8DisplayName({
+        name: serviceM8Client.name,
         companyName: serviceM8Client.company_name,
         firstName: serviceM8Client.first_name,
         lastName: serviceM8Client.last_name,
       }),
       address: buildServiceM8Address({
-        address: serviceM8Client.billing_address,
+        address: serviceM8Client.address,
+        street: serviceM8Client.address_street,
         address2: serviceM8Client.billing_address2,
-        city: serviceM8Client.billing_city,
-        state: serviceM8Client.billing_state,
-        postcode: serviceM8Client.billing_postcode,
-        country: serviceM8Client.billing_country,
+        city: serviceM8Client.address_city,
+        state: serviceM8Client.address_state,
+        postcode: serviceM8Client.address_postcode,
+        country: serviceM8Client.address_country,
       }),
-      postcode: serviceM8Client.billing_postcode || null,
+      postcode: serviceM8Client.address_postcode || serviceM8Client.billing_postcode || null,
     }));
 
     return NextResponse.json({ clients: enrichedClients });
@@ -106,18 +108,20 @@ export async function POST(request: NextRequest) {
 
         // Create local customer
         const name = buildServiceM8DisplayName({
+          name: c.name,
           companyName: c.company_name,
           firstName: c.first_name,
           lastName: c.last_name,
         });
 
         const address = buildServiceM8Address({
-          address: c.billing_address,
+          address: c.address,
+          street: c.address_street,
           address2: c.billing_address2,
-          city: c.billing_city,
-          state: c.billing_state,
-          postcode: c.billing_postcode,
-          country: c.billing_country,
+          city: c.address_city,
+          state: c.address_state,
+          postcode: c.address_postcode,
+          country: c.address_country,
         });
 
         const contactPerson = [c.first_name?.trim(), c.last_name?.trim()].filter(Boolean).join(' ') || null;
@@ -128,7 +132,7 @@ export async function POST(request: NextRequest) {
           email: c.email || null,
           phone: c.phone || c.mobile || null,
           address: address || null,
-          postcode: c.billing_postcode || null,
+          postcode: c.address_postcode || c.billing_postcode || null,
           contactPerson,
         }).returning();
 
@@ -220,13 +224,12 @@ export async function POST(request: NextRequest) {
 
       const c = customer[0];
       const result = await sm8Client.createClient({
-        company_name: c.name,
+        name: c.name,
+        address: c.address || '',
+        address_postcode: c.postcode || '',
         email: c.email || '',
         phone: c.phone || '',
-        billing_address: c.address || '',
-        billing_postcode: c.postcode || '',
-        first_name: c.contactPerson?.split(' ')[0] || '',
-        last_name: c.contactPerson?.split(' ').slice(1).join(' ') || '',
+        mobile: c.phone || '',
       });
 
       // Create mapping

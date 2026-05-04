@@ -97,10 +97,14 @@ export async function getMobileServiceM8Client(request: NextRequest) {
 }
 
 export function buildServiceM8DisplayName(input: {
+  name?: string | null;
   companyName?: string | null;
   firstName?: string | null;
   lastName?: string | null;
 }) {
+  const name = input.name?.trim();
+  if (name) return name;
+
   const companyName = input.companyName?.trim();
   if (companyName) return companyName;
 
@@ -114,14 +118,20 @@ export function buildServiceM8DisplayName(input: {
 
 export function buildServiceM8Address(input: {
   address?: string | null;
+  street?: string | null;
   address2?: string | null;
   city?: string | null;
   state?: string | null;
   postcode?: string | null;
   country?: string | null;
 }) {
+  const directAddress = input.address?.trim();
+  if (directAddress) {
+    return directAddress;
+  }
+
   const value = [
-    input.address?.trim(),
+    input.street?.trim(),
     input.address2?.trim(),
     input.city?.trim(),
     input.state?.trim(),
@@ -138,25 +148,27 @@ export function normalizeServiceM8Client(client: ServiceM8Client): ServiceM8Clie
   return {
     uuid: client.uuid,
     name: buildServiceM8DisplayName({
+      name: client.name,
       companyName: client.company_name,
       firstName: client.first_name,
       lastName: client.last_name,
     }),
-    companyName: client.company_name || null,
+    companyName: client.company_name ?? client.name ?? null,
     firstName: client.first_name || null,
     lastName: client.last_name || null,
     email: client.email || null,
     phone: client.phone || client.mobile || null,
     mobile: client.mobile || null,
     address: buildServiceM8Address({
-      address: client.billing_address,
+      address: client.address,
+      street: client.address_street,
       address2: client.billing_address2,
-      city: client.billing_city,
-      state: client.billing_state,
-      postcode: client.billing_postcode,
-      country: client.billing_country,
+      city: client.address_city,
+      state: client.address_state,
+      postcode: client.address_postcode,
+      country: client.address_country,
     }),
-    postcode: client.billing_postcode || null,
+    postcode: client.address_postcode || client.billing_postcode || null,
   };
 }
 
