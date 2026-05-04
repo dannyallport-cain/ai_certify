@@ -129,9 +129,17 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   }
 
   const foundTeam = isAdminRole(foundUser.role) ? null : await ensureTeamForUser(foundUser);
+  const loginAt = new Date();
 
   await Promise.all([
     setSession(foundUser),
+    db
+      .update(users)
+      .set({
+        lastLoginAt: loginAt,
+        updatedAt: loginAt,
+      })
+      .where(eq(users.id, foundUser.id)),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
 

@@ -44,7 +44,16 @@ export async function POST(request: NextRequest) {
       .where(eq(teamMembers.userId, user.id))
       .limit(1);
 
+    const loginAt = new Date();
     const token = await signMobileToken(user.id);
+
+    await db
+      .update(users)
+      .set({
+        lastLoginAt: loginAt,
+        updatedAt: loginAt,
+      })
+      .where(eq(users.id, user.id));
 
     const { passwordHash, ...safeUser } = user;
 
