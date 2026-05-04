@@ -88,6 +88,8 @@ export async function GET(request: NextRequest) {
       throw new Error('User is not associated with any team.');
     }
 
+    const loginAt = new Date();
+
     await db
       .update(teams)
       .set({
@@ -96,11 +98,20 @@ export async function GET(request: NextRequest) {
         stripeProductId: productId,
         planName: product.name,
         subscriptionStatus: subscription.status,
-        updatedAt: new Date()
+        updatedAt: loginAt
       })
       .where(eq(teams.id, userTeam[0].teamId));
 
-    await setSession(user[0]);
+    await Promise.all([
+      setSession(user[0]),
+      db
+        .update(users)
+        .set({
+          lastLoginAt: loginAt,
+          updatedAt: loginAt,
+        })
+        .where(eq(users.id, user[0].id)),
+    ]);
     return NextResponse.redirect(new URL('/dashboard', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);

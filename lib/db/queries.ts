@@ -558,7 +558,7 @@ export async function updateAdminUserById(userId: number, data: AdminUserUpdateD
  * Fetch all non-deleted users for administrative management
  */
 export async function getAllUsers() {
-  return await db
+  const usersWithTeams = await db
     .select({
       id: users.id,
       name: users.name,
@@ -582,6 +582,28 @@ export async function getAllUsers() {
     .from(users)
     .leftJoin(teams, eq(teams.id, users.teamId))
     .where(isNull(users.deletedAt));
+
+  const lastSignInRows = await db
+    .select({
+      userId: activityLogs.userId,
+      lastLoginAt: sql<Date | null>`max(${activityLogs.timestamp})`,
+    })
+    .from(activityLogs)
+    .where(eq(activityLogs.action, ActivityType.SIGN_IN))
+    .groupBy(activityLogs.userId);
+
+  const lastSignInByUserId = new Map<number, Date | null>();
+
+  for (const row of lastSignInRows) {
+    if (typeof row.userId === 'number') {
+      lastSignInByUserId.set(row.userId, row.lastLoginAt ?? null);
+    }
+  }
+
+  return usersWithTeams.map((user) => ({
+    ...user,
+    lastLoginAt: user.lastLoginAt ?? lastSignInByUserId.get(user.id) ?? null,
+  }));
 }
 
 /**

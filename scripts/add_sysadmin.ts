@@ -16,7 +16,7 @@ async function addSysAdmin() {
   if (!systemTeam) {
     [systemTeam] = await db.insert(teams).values({
       name: systemTeamName,
-      planName: 'system',
+      planName: null,
       subscriptionStatus: 'bypass',
     }).returning();
     console.log('System team created.');

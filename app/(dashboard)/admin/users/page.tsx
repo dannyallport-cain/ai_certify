@@ -90,7 +90,7 @@ export default function UsersPage() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/users');
+      const res = await fetch('/api/admin/users', { cache: 'no-store' });
       const data = (await res.json()) as User[];
       setUsers(data);
       setSelectedUserIds((prev) => prev.filter((id) => data.some((user) => user.id === id)));
@@ -120,6 +120,18 @@ export default function UsersPage() {
   useEffect(() => {
     void loadUsers();
     void loadTeams();
+
+    const refreshUsers = () => {
+      void loadUsers();
+    };
+
+    window.addEventListener('focus', refreshUsers);
+    document.addEventListener('visibilitychange', refreshUsers);
+
+    return () => {
+      window.removeEventListener('focus', refreshUsers);
+      document.removeEventListener('visibilitychange', refreshUsers);
+    };
   }, []);
 
   const filteredUsers = users.filter((user) => {
