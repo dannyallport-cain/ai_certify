@@ -16,6 +16,9 @@ export function Header() {
         </Link>
         
         <nav className="hidden md:flex items-center gap-8">
+          <Link href="/" className="text-sm font-medium text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors">
+            Home
+          </Link>
           <Link href="/features" className="text-sm font-medium text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 transition-colors">
             Features
           </Link>

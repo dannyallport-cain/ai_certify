@@ -55,6 +55,7 @@ The admin AI test route forwards to the Railway/FastAPI worker at `/analyze-imag
 ## Project Dataflow Diagram
 
 - [View the project dataflow diagram](docs/dataflow-diagram.md)
+- [View the housing void template pack](docs/housing-void-template-pack.md)
 
 ## Database Backup Architecture
 

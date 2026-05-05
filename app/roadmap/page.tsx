@@ -136,6 +136,13 @@ const sections: RoadmapSection[] = [
         icon: Smartphone,
       },
       {
+        title: 'Void Property Inspection Reports',
+        description:
+          'A mobile-first workflow for councils and housing associations to capture end-of-tenancy and void checks room by room, including photos, defect notes, meter readings, key handover details, and repair actions, then generate a clean PDF report from the inspection.',
+        icon: FileText,
+        tag: 'Planned',
+      },
+      {
         title: 'Certificate Expiry Notifications',
         description:
           'Automated reminders for you and your customers before certificates expire, helping you stay ahead of compliance deadlines without manual chasing.',

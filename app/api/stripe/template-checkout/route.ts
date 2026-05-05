@@ -1,59 +1,70 @@
+import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdminRole } from '@/lib/auth/roles';
-import { getUser, getTeamForUser } from '@/lib/db/queries';
-import { createOneTimeCheckoutSession, getBaseUrl } from '@/lib/payments/stripe';
 
-const TEMPLATE_PRICE_PENCE = 500; // £5.00 GBP
+import { getTeamForUser } from '@/lib/db/queries';
+import {
+  LOCAL_AUTHORITY_TEMPLATE_PACK_FEATURE_KEY,
+  getLocalAuthorityTemplatePackOffer,
+} from '@/lib/payments/addons';
+import { buildStripeMetadata, stripe, getBaseUrl } from '@/lib/payments/stripe';
 
 export async function POST(request: NextRequest) {
-  try {
-    const user = await getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const team = await getTeamForUser();
 
-    if (isAdminRole(user.role)) {
-      return NextResponse.json({ error: 'Admin users do not need to pay' }, { status: 400 });
-    }
-
-    const team = await getTeamForUser();
-    const body = await request.json();
-    const templateName =
-      typeof body.templateName === 'string' ? body.templateName.trim() : '';
-
-    const baseUrl = getBaseUrl();
-
-    const session = await createOneTimeCheckoutSession({
-      team,
-      userId: user.id,
-      successUrl: `${baseUrl}/admin/reports/disseminator?payment_success={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${baseUrl}/admin/reports/disseminator?payment_cancelled=1`,
-      purchaseType: 'template_creation',
-      featureId: 'report_disseminator_template',
-      lineItems: [
-        {
-          price_data: {
-            currency: 'gbp',
-            product_data: {
-              name: 'Template Creation Fee',
-              description: templateName
-                ? `Create template: ${templateName}`
-                : 'Create a new disseminator template'
-            },
-            unit_amount: TEMPLATE_PRICE_PENCE
-          },
-          quantity: 1
-        }
-      ],
-      metadata: {
-        type: 'template_creation',
-        templateName
-      }
-    });
-
-    return NextResponse.json({ url: session.url });
-  } catch (error) {
-    console.error('Error creating template checkout session:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  if (!team) {
+    return NextResponse.redirect(new URL('/sign-in', request.url));
   }
+
+  const offer = await getLocalAuthorityTemplatePackOffer();
+
+  if (!offer) {
+    return NextResponse.json(
+      { error: 'The template pack add-on is not available right now.' },
+      { status: 404 }
+    );
+  }
+
+  const baseUrl = getBaseUrl();
+  const successUrl = `${baseUrl}/subscription?success=true&addon=template-pack`;
+  const cancelUrl = `${baseUrl}/subscription?cancelled=true&addon=template-pack`;
+
+  const metadata = buildStripeMetadata({
+    paymentType: 'subscription',
+    purchaseType: 'addon_subscription',
+    featureId: LOCAL_AUTHORITY_TEMPLATE_PACK_FEATURE_KEY,
+    teamId: team.id.toString(),
+    userId: team.teamMembers[0]?.userId?.toString(),
+    addonName: offer.name,
+  });
+
+  const checkoutParams: Stripe.Checkout.SessionCreateParams = {
+    mode: 'subscription',
+    payment_method_types: ['card'],
+    customer: team.stripeCustomerId || undefined,
+    client_reference_id: team.teamMembers[0]?.userId?.toString() || undefined,
+    line_items: [
+      {
+        price: offer.priceId,
+        quantity: 1,
+      },
+    ],
+    allow_promotion_codes: true,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    metadata,
+    subscription_data: {
+      metadata,
+    },
+  };
+
+  const session = await stripe.checkout.sessions.create(checkoutParams);
+
+  if (!session.url) {
+    return NextResponse.json(
+      { error: 'Stripe checkout session could not be created.' },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.redirect(session.url, 303);
 }

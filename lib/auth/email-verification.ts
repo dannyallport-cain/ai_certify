@@ -18,6 +18,10 @@ function getBaseUrl() {
   );
 }
 
+function getEmailFromAddress() {
+  return process.env.EMAIL_FROM || process.env.NEXT_PUBLIC_APP_EMAIL_FROM || '';
+}
+
 function hashToken(token: string) {
   return createHash('sha256')
     .update(`${token}:${process.env.AUTH_SECRET || 'local-dev-secret'}`)
@@ -59,7 +63,13 @@ async function deliverVerificationEmail({
   verificationUrl: string;
 }) {
   const resendApiKey = process.env.RESEND_API_KEY;
-  const emailFrom = process.env.EMAIL_FROM;
+  const emailFrom = getEmailFromAddress();
+
+  if (resendApiKey && !emailFrom) {
+    throw new Error(
+      'EMAIL_FROM is required when RESEND_API_KEY is configured'
+    );
+  }
 
   if (resendApiKey && emailFrom) {
     const response = await fetch('https://api.resend.com/emails', {

@@ -10,6 +10,11 @@ import {
 } from '@/components/ui/card';
 import { Table } from '@/components/ui/table';
 import { getTeamBillingHistory, getTeamForUser, getUser } from '@/lib/db/queries';
+import {
+  LOCAL_AUTHORITY_TEMPLATE_PACK_NAME,
+  getLocalAuthorityTemplatePackOffer,
+  hasLocalAuthorityTemplatePackAccess,
+} from '@/lib/payments/addons';
 import { checkoutAction } from '@/lib/payments/actions';
 import { getAdminStripeSubscriptionPlans } from '@/lib/payments/stripe';
 import { Check, CreditCard, Receipt, ShieldCheck } from 'lucide-react';
@@ -18,7 +23,6 @@ import { redirect } from 'next/navigation';
 import { ManageSubscription } from '../dashboard/components/ManageSubscription';
 import { SubmitButton } from './submit-button';
 
-// Prices are fresh for one hour max
 export const revalidate = 3600;
 
 type BillingHistoryItem = {
@@ -34,6 +38,8 @@ type BillingHistoryItem = {
   purchaseType?: string | null;
   createdAt?: string | Date | null;
 };
+
+type AddonOffer = NonNullable<Awaited<ReturnType<typeof getLocalAuthorityTemplatePackOffer>>>;
 
 function formatCurrency(amount?: number | string | null, currency?: string | null) {
   const numericAmount =
@@ -81,7 +87,9 @@ function toTitleCase(value?: string | null) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function getStatusBadgeVariant(status?: string | null): 'default' | 'secondary' | 'destructive' | 'outline' {
+function getStatusBadgeVariant(
+  status?: string | null
+): 'default' | 'secondary' | 'destructive' | 'outline' {
   switch (status) {
     case 'paid':
     case 'active':
@@ -110,10 +118,15 @@ export default async function BillingPage() {
     redirect('/sign-in');
   }
 
-  const [subscriptionPlans, teamData] = await Promise.all([
+  const [subscriptionPlans, teamData, templatePackOffer] = await Promise.all([
     getAdminStripeSubscriptionPlans(),
     getTeamForUser(),
+    getLocalAuthorityTemplatePackOffer(),
   ]);
+
+  const hasTemplatePackAccess = teamData
+    ? await hasLocalAuthorityTemplatePackAccess(teamData.id)
+    : false;
 
   const billingHistory = teamData ? await getTeamBillingHistory() : [];
 
@@ -133,7 +146,9 @@ export default async function BillingPage() {
     })
   );
 
-  const activeSubscriptionPlans = subscriptionPlans.filter((plan) => plan.active);
+  const activeSubscriptionPlans = subscriptionPlans.filter(
+    (plan) => plan.active && plan.name !== LOCAL_AUTHORITY_TEMPLATE_PACK_NAME
+  );
 
   return (
     <main className="flex-1 space-y-6 p-4 pt-6 md:p-8">
@@ -141,7 +156,7 @@ export default async function BillingPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Billing</h1>
           <p className="text-muted-foreground">
-            Manage your Stripe subscription, review payment history, and purchase one-time items.
+            Manage your Stripe subscription, review payment history, and purchase add-ons.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -187,17 +202,17 @@ export default async function BillingPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>One-time purchases</CardTitle>
+            <CardTitle>Additional access</CardTitle>
             <CardDescription>
-              Pay once for template creation fees or future add-on items.
+              Purchase optional add-ons that unlock extra document packs and workflows.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <OneTimePurchaseCard
-              name="Template Creation Fee"
-              description="Use the existing hosted Stripe checkout for one-time template creation without changing your recurring subscription."
-              price={500}
-              currency="gbp"
+            <AddonPurchaseCard
+              name={LOCAL_AUTHORITY_TEMPLATE_PACK_NAME}
+              offer={templatePackOffer}
+              hasAccess={hasTemplatePackAccess}
+              description="A mobile-ready pack for void property inspections, end-of-tenancy reports, snagging, and housing association handovers."
             />
 
             <div className="rounded-lg border border-gray-200 bg-muted/20 p-4">
@@ -206,7 +221,8 @@ export default async function BillingPage() {
                 <div>
                   <p className="font-medium">Hosted securely by Stripe</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    One-time and recurring payments continue through Stripe Checkout so existing billing flows remain intact.
+                    Purchases continue through Stripe Checkout, and access is enabled automatically
+                    once payment completes.
                   </p>
                 </div>
               </div>
@@ -294,7 +310,8 @@ export default async function BillingPage() {
               <Receipt className="mx-auto h-10 w-10 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">No billing history yet</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Once your team completes a Stripe checkout or receives an invoice, those records will appear here.
+                Once your team completes a Stripe checkout or receives an invoice, those records
+                will appear here.
               </p>
             </div>
           )}
@@ -333,7 +350,9 @@ function PricingCard({
       <h2 className="text-2xl font-medium text-gray-900">{name}</h2>
       {description ? <p className="mt-2 text-sm text-gray-600">{description}</p> : null}
       <p className="mt-3 text-sm text-gray-600">
-        {trialDays > 0 ? `Includes a ${trialDays} day free trial` : 'Charged immediately after checkout'}
+        {trialDays > 0
+          ? `Includes a ${trialDays} day free trial`
+          : 'Charged immediately after checkout'}
       </p>
       <p className="mt-4 text-4xl font-medium text-gray-900">
         {formattedPrice}{' '}
@@ -355,21 +374,23 @@ function PricingCard({
   );
 }
 
-function OneTimePurchaseCard({
+function AddonPurchaseCard({
   name,
+  offer,
+  hasAccess,
   description,
-  price,
-  currency,
 }: {
   name: string;
+  offer: AddonOffer | null;
+  hasAccess: boolean;
   description: string;
-  price: number;
-  currency: string;
 }) {
-  const formattedPrice = new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  }).format(price / 100);
+  const formattedPrice = offer
+    ? new Intl.NumberFormat('en-GB', {
+        style: 'currency',
+        currency: offer.currency.toUpperCase(),
+      }).format(offer.monthlyPrice)
+    : null;
 
   return (
     <div className="rounded-xl border border-gray-200 p-4">
@@ -379,16 +400,57 @@ function OneTimePurchaseCard({
             <h3 className="font-semibold">{name}</h3>
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           </div>
-          <Badge variant="secondary">One-time</Badge>
+          {hasAccess ? (
+            <Badge>Enabled</Badge>
+          ) : offer ? (
+            <Badge variant="secondary">Custom price</Badge>
+          ) : (
+            <Badge variant="outline">Not configured</Badge>
+          )}
         </div>
+
+        <div className="rounded-lg border border-dashed border-gray-200 bg-muted/20 p-4">
+          {hasAccess ? (
+            <div className="space-y-1">
+              <p className="font-medium text-emerald-700">Access already enabled</p>
+              <p className="text-sm text-muted-foreground">
+                This team already has the template pack add-on active.
+              </p>
+            </div>
+          ) : offer ? (
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Admin-set monthly price</p>
+              <p className="text-2xl font-semibold">{formattedPrice}/month</p>
+              <p className="text-xs text-muted-foreground">
+                Sales can change this price in Stripe before activating the add-on.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <p className="font-medium">Not published yet</p>
+              <p className="text-sm text-muted-foreground">
+                A Stripe product named for the housing template pack must be active before
+                checkout becomes available.
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-lg font-semibold">{formattedPrice}</div>
-          <form action="/api/stripe/template-checkout" method="post" className="w-full sm:w-auto">
-            <Button type="submit" className="w-full sm:w-auto">
-              <CreditCard className="mr-2 h-4 w-4" />
-              Buy now
-            </Button>
-          </form>
+          <div className="text-sm text-muted-foreground">
+            {offer
+              ? 'Includes the housing void and asset/facilities template packs.'
+              : 'Once published, customers can purchase this add-on from here.'}
+          </div>
+
+          {!hasAccess && offer ? (
+            <form action="/api/stripe/template-checkout" method="post" className="w-full sm:w-auto">
+              <Button type="submit" className="w-full sm:w-auto">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Buy add-on
+              </Button>
+            </form>
+          ) : null}
         </div>
       </div>
     </div>
