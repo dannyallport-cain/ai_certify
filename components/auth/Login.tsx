@@ -12,7 +12,7 @@ import {
   resendVerificationEmail,
   signIn,
   signUp
-} from './actions';
+} from '@/app/(login)/actions';
 import { ActionState } from '@/lib/auth/middleware';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
