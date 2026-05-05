@@ -1,33 +1,42 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import IssueCertificateModal from '@/components/IssueCertificateModal';
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
-  Search,
+  Calendar,
   Download,
   FileText,
-  Calendar,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+  Search,
+  Users,
+} from "lucide-react";
 
-type CertRow = any;
+import IssueCertificateModal from "@/components/IssueCertificateModal";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  ServiceM8DataTable,
+  type TableOption,
+} from "@/components/servicem8-data-table";
 
-type CertificateListProps = {
-  initialCertificates: CertRow[];
-  initialTotal: number;
-  initialPage?: number;
-  initialPageSize?: number;
+type CertificateRecord = {
+  id: number;
+  certificateNumber: string | null;
+  certificateType: string | null;
+  siteName: string | null;
+  inspectionDate: string | Date | null;
+  createdAt: string | Date | null;
+  status: string | null;
 };
 
-type PaginatedCertificateResponse = {
-  items: CertRow[];
-  total: number;
-  page: number;
-  pageSize: number;
+type CertificateCustomer = {
+  name: string | null;
+  email: string | null;
+};
+
+type CertificateRow = {
+  certificate: CertificateRecord;
+  customer: CertificateCustomer | null;
 };
 
 type IssueCertificateTarget = {
@@ -37,395 +46,298 @@ type IssueCertificateTarget = {
   customerEmail?: string | null;
 };
 
-const DEFAULT_PAGE_SIZE = 20;
-const PAGE_SIZE_OPTIONS = [20, 50, 100];
+type CertificateListProps = {
+  certificates: CertificateRow[];
+};
 
-export default function CertificateList({
-  initialCertificates,
-  initialTotal,
-  initialPage = 1,
-  initialPageSize = DEFAULT_PAGE_SIZE,
-}: CertificateListProps) {
-  const [items, setItems] = useState(initialCertificates);
-  const [total, setTotal] = useState(initialTotal);
-  const [page, setPage] = useState(initialPage);
-  const [pageSize, setPageSize] = useState(initialPageSize);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [sortKey, setSortKey] = useState<'inspectionDate' | 'certificateNumber' | 'certificateType' | 'createdAt'>('inspectionDate');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [groupBy, setGroupBy] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+function formatText(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
+function formatDate(value: string | Date | null | undefined) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatDateTime(value: string | Date | null | undefined) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "—";
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function getCustomerDisplayName(row: CertificateRow) {
+  return formatText(row.customer?.name) || "Unknown customer";
+}
+
+function toTableOptions(values: string[]): TableOption[] {
+  return values.map((value) => ({ label: value, value }));
+}
+
+function getStatusBadgeVariant(status?: string | null) {
+  switch (status?.toLowerCase()) {
+    case "completed":
+    case "issued":
+      return "default" as const;
+    case "draft":
+    case "in_progress":
+      return "secondary" as const;
+    case "failed":
+    case "cancelled":
+    case "canceled":
+      return "destructive" as const;
+    default:
+      return "outline" as const;
+  }
+}
+
+export default function CertificateList({ certificates }: CertificateListProps) {
   const [issueTarget, setIssueTarget] = useState<IssueCertificateTarget | null>(null);
 
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, typeFilter, statusFilter, sortKey, sortDir, dateFrom, dateTo]);
+  const columns = useMemo<ColumnDef<CertificateRow>[]>(() => [
+    {
+      id: "certificateNumber",
+      accessorFn: (row) => row.certificate.certificateNumber || "",
+      header: "Certificate",
+      cell: ({ row }) => {
+        const cert = row.original.certificate;
 
-  useEffect(() => {
-    const controller = new AbortController();
+        return (
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 font-medium text-slate-900">
+              <FileText className="h-4 w-4 text-primary" />
+              <span>{cert.certificateNumber || "—"}</span>
+            </div>
+            <div className="text-xs text-slate-500">
+              {cert.siteName || "No site recorded"}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      id: "certificateType",
+      accessorFn: (row) => row.certificate.certificateType || "",
+      header: "Type",
+      cell: ({ row }) => row.original.certificate.certificateType || "—",
+    },
+    {
+      id: "customer",
+      accessorFn: (row) => getCustomerDisplayName(row),
+      header: "Customer",
+      cell: ({ row }) => (
+        <div className="space-y-1">
+          <div className="font-medium text-slate-900">
+            {getCustomerDisplayName(row.original)}
+          </div>
+          <div className="text-xs text-slate-500">
+            {row.original.customer?.email || "No email recorded"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "inspectionDate",
+      accessorFn: (row) => {
+        const value = row.certificate.inspectionDate;
+        const date = value ? new Date(value) : null;
+        return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
+      },
+      header: "Inspection date",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2 text-slate-600">
+          <Calendar className="h-4 w-4" />
+          <span>{formatDate(row.original.certificate.inspectionDate)}</span>
+        </div>
+      ),
+    },
+    {
+      id: "createdAt",
+      accessorFn: (row) => {
+        const value = row.certificate.createdAt;
+        const date = value ? new Date(value) : null;
+        return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
+      },
+      header: "Created",
+      cell: ({ row }) => (
+        <div className="space-y-0.5 text-slate-600">
+          <div>{formatDate(row.original.certificate.createdAt)}</div>
+          <div className="text-xs text-slate-500">
+            {formatDateTime(row.original.certificate.createdAt)}
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "status",
+      accessorFn: (row) => row.certificate.status || "",
+      header: "Status",
+      cell: ({ row }) => (
+        <Badge variant={getStatusBadgeVariant(row.original.certificate.status)} className="capitalize">
+          {row.original.certificate.status || "Unknown"}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      enableSorting: false,
+      cell: ({ row }) => {
+        const cert = row.original.certificate;
 
-    async function fetchPage() {
-      setIsLoading(true);
-      setError('');
+        return (
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="ghost" size="sm">
+              <Link href={`/certificates/${cert.id}`}>View</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setIssueTarget({
+                  id: cert.id,
+                  certificateNumber: cert.certificateNumber || "—",
+                  certificateType: cert.certificateType || "—",
+                  customerEmail: row.original.customer?.email || null,
+                })
+              }
+            >
+              Issue
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <a
+                href={`/api/certificates/${cert.id}/pdf`}
+                aria-label={`Download PDF for ${cert.certificateNumber || "certificate"}`}
+              >
+                <Download className="h-4 w-4" />
+                PDF
+              </a>
+            </Button>
+          </div>
+        );
+      },
+    },
+  ], []);
 
-      const params = new URLSearchParams();
-      if (searchTerm) params.set('search', searchTerm.trim());
-      if (typeFilter) params.set('type', typeFilter);
-      if (statusFilter) params.set('status', statusFilter);
-      if (dateFrom) params.set('from', dateFrom);
-      if (dateTo) params.set('to', dateTo);
-      params.set('sortKey', sortKey);
-      params.set('sortDir', sortDir);
-      params.set('page', String(page));
-      params.set('limit', String(pageSize));
+  const typeOptions = useMemo(() => {
+    const values = Array.from(
+      new Set(
+        certificates
+          .map((row) => formatText(row.certificate.certificateType))
+          .filter((value): value is string => Boolean(value))
+      )
+    );
 
-      try {
-        const response = await fetch(`/api/certificates?${params.toString()}`, {
-          cache: 'no-store',
-          signal: controller.signal,
-        });
+    return toTableOptions(values);
+  }, [certificates]);
 
-        if (!response.ok) {
-          const body = await response.json().catch(() => null);
-          throw new Error(body?.error || 'Failed to load certificates');
-        }
+  const statusOptions = useMemo(() => {
+    const values = Array.from(
+      new Set(
+        certificates
+          .map((row) => formatText(row.certificate.status))
+          .filter((value): value is string => Boolean(value))
+      )
+    );
 
-        const data = (await response.json()) as PaginatedCertificateResponse;
-        setItems(data.items);
-        setTotal(data.total);
-        setPage(data.page);
-        setPageSize(data.pageSize);
-      } catch (fetchError) {
-        if (!controller.signal.aborted) {
-          setError(fetchError instanceof Error ? fetchError.message : 'Failed to load certificates');
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    fetchPage();
-    return () => controller.abort();
-  }, [searchTerm, typeFilter, statusFilter, sortKey, sortDir, dateFrom, dateTo, page, pageSize]);
-
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-
-  const groups = useMemo(() => {
-    if (!groupBy) {
-      return { '': items };
-    }
-
-    return items.reduce((acc: Record<string, CertRow[]>, row: CertRow) => {
-      const cert = row.certificate || row;
-      const key = cert[groupBy] || 'Unspecified';
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(row);
-      return acc;
-    }, {});
-  }, [groupBy, items]);
-
-  const resetFilters = () => {
-    setSearchTerm('');
-    setTypeFilter('');
-    setStatusFilter('');
-    setDateFrom('');
-    setDateTo('');
-    setSortKey('inspectionDate');
-    setSortDir('desc');
-    setGroupBy('');
-  };
-
-  const handleOpenIssue = (row: CertRow) => {
-    const cert = row.certificate || row;
-
-    setIssueTarget({
-      id: cert.id,
-      certificateNumber: cert.certificateNumber || '—',
-      certificateType: cert.certificateType || '—',
-      customerEmail: row.customer?.email || null,
-    });
-  };
+    return toTableOptions(values);
+  }, [certificates]);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
-          <label htmlFor="certificate-search" className="sr-only">
-            Search certificates
-          </label>
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            id="certificate-search"
-            type="search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search address, cert no, customer..."
-            className="w-full border border-slate-300 bg-white py-2 pl-10 pr-3 text-sm shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-          />
-        </div>
-
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          aria-label="Filter by certificate type"
-          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-        >
-          <option value="">All types</option>
-          {Array.from(new Set(initialCertificates.map((row: any) => (row.certificate || row).certificateType))).map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          aria-label="Filter by status"
-          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-        >
-          <option value="">All statuses</option>
-          {Array.from(new Set(initialCertificates.map((row: any) => (row.certificate || row).status))).map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowAdvanced((current) => !current)}
-          aria-expanded={showAdvanced}
-          aria-controls="advanced-certificate-filters"
-        >
-          <ArrowUpDown className="h-4 w-4" />
-          Advanced
-        </Button>
+      <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+        <Search className="h-4 w-4" />
+        <span>
+          Search, sort, filter, group, and page through certificates in one table.
+        </span>
       </div>
 
-      {showAdvanced && (
-        <div id="advanced-certificate-filters" className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium">Inspection date from</span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium">Inspection date to</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium">Sort field</span>
-              <select
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as any)}
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              >
-                <option value="inspectionDate">Date</option>
-                <option value="certificateNumber">Certificate No</option>
-                <option value="certificateType">Type</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium">Sort direction</span>
-              <select
-                value={sortDir}
-                onChange={(e) => setSortDir(e.target.value as 'asc' | 'desc')}
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              >
-                <option value="desc">Desc</option>
-                <option value="asc">Asc</option>
-              </select>
-            </label>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-sm text-slate-700">
-              <span className="font-medium">Group by</span>
-              <select
-                value={groupBy}
-                onChange={(e) => setGroupBy(e.target.value)}
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              >
-                <option value="">No grouping</option>
-                <option value="certificateType">Type</option>
-                <option value="status">Status</option>
-              </select>
-            </div>
-            <Button variant="ghost" size="sm" onClick={resetFilters}>
-              Clear filters
-            </Button>
-          </div>
-        </div>
-      )}
+      <ServiceM8DataTable
+        data={certificates}
+        columns={columns}
+        searchPlaceholder="Search certificate number, site, customer, type, or status..."
+        getSearchText={(row) =>
+          [
+            row.certificate.certificateNumber,
+            row.certificate.siteName,
+            row.certificate.certificateType,
+            row.certificate.status,
+            row.customer?.name,
+            row.customer?.email,
+          ]
+            .filter(Boolean)
+            .join(" ")
+        }
+        filters={[
+          ...(typeOptions.length > 0
+            ? [
+                {
+                  columnId: "certificateType",
+                  label: "Type",
+                  options: typeOptions,
+                },
+              ]
+            : []),
+          ...(statusOptions.length > 0
+            ? [
+                {
+                  columnId: "status",
+                  label: "Status",
+                  options: statusOptions,
+                },
+              ]
+            : []),
+        ]}
+        groupOptions={[
+          { label: "Type", value: "certificateType" },
+          { label: "Status", value: "status" },
+          { label: "Customer", value: "customer" },
+        ]}
+        getGroupValue={(row, groupBy) => {
+          if (groupBy === "certificateType") {
+            return row.certificate.certificateType || "Unspecified";
+          }
 
-      {error ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {error}
-        </div>
-      ) : null}
+          if (groupBy === "status") {
+            return row.certificate.status || "Unknown";
+          }
 
-      <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
-        {isLoading ? (
-          <div className="p-6 text-sm text-slate-500">Loading certificates…</div>
-        ) : items.length === 0 ? (
-          <div className="p-6 text-sm text-slate-600">No certificates match your search and filters.</div>
-        ) : (
-          Object.entries(groups).map(([groupName, rows]) => (
-            <div key={groupName} className="border-b last:border-b-0">
-              {groupBy && (
-                <div className="rounded-t-3xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
-                  {groupName} ({rows.length})
-                </div>
-              )}
-              <table className="min-w-full border-collapse">
-                <caption className="sr-only">Certificate list</caption>
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
-                    <th className="px-4 py-3">Certificate</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Created</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row: any) => {
-                    const cert = row.certificate || row;
-                    return (
-                      <tr key={cert.id} className="border-b last:border-b-0 hover:bg-slate-50">
-                        <td className="px-4 py-4 align-top text-sm">
-                          <div className="flex items-center gap-2 font-medium text-slate-900">
-                            <FileText className="h-4 w-4 text-primary" />
-                            <span>{cert.certificateNumber || '—'}</span>
-                          </div>
-                          <div className="mt-1 text-xs text-slate-500">{cert.siteName || 'No site'}</div>
-                        </td>
-                        <td className="px-4 py-4 align-top text-sm">{cert.certificateType || '—'}</td>
-                        <td className="px-4 py-4 align-top text-sm">{(row.customer && row.customer.name) || '—'}</td>
-                        <td className="px-4 py-4 align-top text-sm text-slate-600">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            <span>{cert.inspectionDate ? new Date(cert.inspectionDate).toLocaleDateString() : '—'}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 align-top text-sm text-slate-600">
-                          {cert.createdAt ? (
-                            <div className="space-y-0.5">
-                              <div>{new Date(cert.createdAt).toLocaleDateString()}</div>
-                              <div className="text-xs text-slate-500">
-                                {new Date(cert.createdAt).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </div>
-                            </div>
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                        <td className="px-4 py-4 align-top text-sm">
-                          <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                            {cert.status || 'Unknown'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 align-top text-sm">
-                          <div className="flex flex-wrap gap-2">
-                            <Link href={`/certificates/${cert.id}`}>
-                              <Button variant="ghost" size="sm">
-                                View
-                              </Button>
-                            </Link>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenIssue(row)}
-                            >
-                              New issue
-                            </Button>
-                            <Button asChild variant="outline" size="sm">
-                              <a
-                                href={`/api/certificates/${cert.id}/pdf`}
-                                aria-label={`Download PDF for ${cert.certificateNumber || 'certificate'}`}
-                              >
-                                <Download className="h-4 w-4" />
-                                PDF
-                              </a>
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ))
-        )}
-      </div>
+          if (groupBy === "customer") {
+            return getCustomerDisplayName(row);
+          }
 
-      <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-slate-600">Showing {items.length} of {total} certificates</div>
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            Page size
-            <select
-              value={pageSize}
-              onChange={(event) => {
-                setPageSize(Number(event.target.value));
-                setPage(1);
-              }}
-              className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-            >
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
-          </label>
-          <div className="flex items-center gap-2 text-sm">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-            <span className="text-slate-600">Page {page} of {pageCount}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= pageCount}
-              onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
+          return "Unspecified";
+        }}
+        emptyMessage="No certificates found."
+        initialPageSize={20}
+        pageSizeOptions={[20, 50, 100]}
+      />
 
       {issueTarget ? (
         <IssueCertificateModal
