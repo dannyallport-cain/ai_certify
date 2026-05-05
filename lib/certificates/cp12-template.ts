@@ -38,7 +38,7 @@ export interface Cp12ApplianceRow {
   safetyDevicesCorrect: Cp12YesNoNa;
   ventilationSatisfactory: Cp12YesNoNa;
   flueConditionSatisfactory: Cp12YesNoNa;
-  fluePerformanceResult: Cp12YesNoNa;
+  fluePerformanceResult: Cp12YesNoNa | 'Pass' | 'Fail';
   applianceServiced: Cp12YesNo;
   applianceSafeToUse: Cp12SafeToUse;
   warningNoticeIssued: Cp12YesNo;

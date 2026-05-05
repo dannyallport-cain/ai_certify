@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { calculateMaxZs } from '../utils/calculate-zs';
+import { generateCp12TemplatePdf } from './cp12-template-pdf';
 
 export interface TemplateConfig {
   colors: {
@@ -1425,6 +1426,10 @@ function deriveEicrAssessment(fd: Record<string, any>, observations: Array<{ cod
 }
 
 function generateCP12PDF(certificate: CertificateData): Uint8Array {
+  return generateCp12TemplatePdf(certificate);
+}
+
+function generateCP12PDFLegacy(certificate: CertificateData): Uint8Array {
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
