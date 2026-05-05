@@ -165,16 +165,49 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   redirect('/dashboard');
 });
 
+function buildCompanyAddress(
+  addressLine1: string,
+  addressLine2: string,
+  postcode: string
+) {
+  return [addressLine1, addressLine2, postcode]
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
 const signUpSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  name: z.string().min(1, 'Name is required').max(100),
+  company: z.string().max(255).optional().or(z.literal('')),
+  email: z.string().email('Invalid email address').min(3).max(255),
+  addressLine1: z.string().min(1, 'Address line 1 is required').max(255),
+  addressLine2: z.string().max(255).optional().or(z.literal('')),
+  postcode: z.string().min(1, 'Postcode is required').max(20),
+  mobileNumber: z.string().min(1, 'Contact mobile number is required').max(50),
+  password: z.string().min(8).max(100),
   inviteId: z.string().optional()
 });
 
 export const signUp = validatedAction(signUpSchema, async (data, formData) => {
-  const { email, password, inviteId } = data;
+  const {
+    name,
+    company,
+    email,
+    addressLine1,
+    addressLine2,
+    postcode,
+    mobileNumber,
+    password,
+    inviteId
+  } = data;
 
   const normalizedEmail = email.trim().toLowerCase();
+  const trimmedName = name.trim();
+  const trimmedCompany = company?.trim() || '';
+  const trimmedAddressLine1 = addressLine1.trim();
+  const trimmedAddressLine2 = addressLine2?.trim() || '';
+  const trimmedPostcode = postcode.trim();
+  const trimmedMobileNumber = mobileNumber.trim();
   const parsedInviteId =
     inviteId && inviteId.trim() !== '' ? Number.parseInt(inviteId, 10) : null;
 
@@ -199,23 +232,10 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         throw new Error('EMAIL_IN_USE');
       }
 
-      const newUser: NewUser = {
-        email: normalizedEmail,
-        passwordHash,
-        role: 'user',
-        status: 'pending',
-        activatedAt: null,
-      };
-
-      const [insertedUser] = await tx.insert(users).values(newUser).returning();
-
-      if (!insertedUser) {
-        throw new Error('USER_CREATE_FAILED');
-      }
-
       let teamId: number | null = null;
       let userRole: string | null = null;
       let team: Team | null = null;
+      let teamAction: ActivityType | null = null;
 
       if (parsedInviteId) {
         const [invitation] = await tx
@@ -236,6 +256,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
         teamId = invitation.teamId;
         userRole = invitation.role;
+        teamAction = ActivityType.ACCEPT_INVITATION;
 
         await tx
           .update(invitations)
@@ -251,57 +272,77 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         if (!team) {
           throw new Error('TEAM_NOT_FOUND');
         }
-
-        await tx.insert(activityLogs).values({
-          teamId,
-          userId: insertedUser.id,
-          action: ActivityType.ACCEPT_INVITATION,
-          ipAddress: ''
-        });
       } else {
-        const newTeam: NewTeam = {
-          name: `${normalizedEmail}'s Team`
-        };
-
-        [team] = await tx
+        const [createdTeamRecord] = await tx
           .insert(teams)
-          .values(newTeam)
+          .values({
+            name: trimmedCompany || `${trimmedName}'s Team`
+          })
           .returning(teamRuntimeSafeColumns);
 
-        if (!team) {
+        if (!createdTeamRecord) {
           throw new Error('TEAM_CREATE_FAILED');
         }
 
+        team = createdTeamRecord;
         teamId = team.id;
         userRole = 'owner';
+        teamAction = ActivityType.CREATE_TEAM;
+      }
 
+      if (teamId === null || userRole === null || !team) {
+        throw new Error('TEAM_MEMBERSHIP_CREATE_FAILED');
+      }
+
+      const newUser: NewUser = {
+        name: trimmedName,
+        email: normalizedEmail,
+        passwordHash,
+        teamId,
+        role: 'user',
+        status: 'pending',
+        activatedAt: null,
+        eicrProfileDefaults: {
+          tradingTitle: trimmedCompany || trimmedName,
+          companyAddress: buildCompanyAddress(
+            trimmedAddressLine1,
+            trimmedAddressLine2,
+            trimmedPostcode
+          ),
+          companyTelephone: trimmedMobileNumber,
+          companyEmail: normalizedEmail,
+        }
+      };
+
+      [createdUser] = await tx.insert(users).values(newUser).returning();
+
+      if (!createdUser) {
+        throw new Error('USER_CREATE_FAILED');
+      }
+
+      await tx.insert(teamMembers).values({
+        userId: createdUser.id,
+        teamId,
+        role: userRole
+      });
+
+      if (teamAction) {
         await tx.insert(activityLogs).values({
           teamId,
-          userId: insertedUser.id,
-          action: ActivityType.CREATE_TEAM,
+          userId: createdUser.id,
+          action: teamAction,
           ipAddress: ''
         });
       }
 
-      if (teamId === null || userRole === null) {
-        throw new Error('TEAM_MEMBERSHIP_CREATE_FAILED');
-      }
-
-      const newTeamMember: NewTeamMember = {
-        userId: insertedUser.id,
-        teamId,
-        role: userRole
-      };
-
-      await tx.insert(teamMembers).values(newTeamMember);
       await tx.insert(activityLogs).values({
         teamId,
-        userId: insertedUser.id,
+        userId: createdUser.id,
         action: ActivityType.SIGN_UP,
         ipAddress: ''
       });
 
-      return { createdUser: insertedUser, createdTeam: team };
+      return { createdUser, createdTeam: team };
     });
 
     createdUser = result.createdUser;
