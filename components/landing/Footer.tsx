@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { Shield } from 'lucide-react';
 
 export function Footer() {
+  const year = new Date().getFullYear();
+
   return (
     <footer className="bg-slate-950 text-slate-400 py-12 border-t border-slate-800">
       <div className="container mx-auto px-4">
@@ -13,13 +15,13 @@ export function Footer() {
             </div>
             <p className="max-w-sm">
               The leading platform for professional certification management.
-              Operated by Cain Enabled Engineering Ltd.
+              Operated by Cain Enabled Ltd.
             </p>
           </div>
         </div>
         
         <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm">© 2025 AI-Certificates. All rights reserved.</p>
+          <p className="text-sm">© {year} AI-Certificates. All rights reserved.</p>
           <div className="flex flex-wrap gap-6 text-sm">
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
