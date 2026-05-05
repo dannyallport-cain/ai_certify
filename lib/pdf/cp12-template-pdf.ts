@@ -780,14 +780,16 @@ export function generateCp12TemplatePdf(certificate: CertificateData): Uint8Arra
     drawPanel(pdf, PAGE_M, combustionY, pageWidth - PAGE_M * 2, 46, 'Combustion / Final Reading Summary');
     drawCombustionReadings(pdf, PAGE_M + 2, combustionY + 8, pageWidth - PAGE_M * 2 - 4, combustionReadings);
 
-    const defectsY = combustionY + 48;
-    drawPanel(pdf, PAGE_M, defectsY, pageWidth - PAGE_M * 2, 20, 'Defects Identified / Remedial Action Taken');
-    const defectsLines = splitLines(pdf, ss(fd.defectsRemedialAction) || 'No defects or remedial actions recorded.', pageWidth - PAGE_M * 2 - 6, 5.8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(5.8);
-    pdf.text(defectsLines, PAGE_M + 2, defectsY + 10);
+  const defectsY = combustionY + 48;
+  drawPanel(pdf, PAGE_M, defectsY, pageWidth - PAGE_M * 2, 20, 'Defects Identified / Remedial Action Taken');
+  const defectsLines = splitLines(pdf, ss(fd.defectsRemedialAction) || 'No defects or remedial actions recorded.', pageWidth - PAGE_M * 2 - 6, 5.8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(5.8);
+  pdf.text(defectsLines, PAGE_M + 2, defectsY + 10);
 
-    const signY = defectsY + 22;
+  const receivedByName = ss(fd.receivedByName) || ss(fd.tenantName) || ss(fd.landlordName) || customerName || 'Not specified';
+
+  const signY = defectsY + 22;
     const leftSignWidth = (pageWidth - PAGE_M * 2 - GRID) / 2;
     drawSignatureBlock(
       pdf,

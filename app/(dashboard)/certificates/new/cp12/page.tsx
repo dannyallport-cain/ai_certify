@@ -36,6 +36,7 @@ import {
   createEmptyCp12ApplianceRow,
   type Cp12ApplianceRow,
   type Cp12CombustionReading,
+  type Cp12InspectionType,
   type Cp12SafeToUse,
   type Cp12YesNo,
   type Cp12YesNoNa,
