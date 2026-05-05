@@ -44,20 +44,20 @@ export default function LandingPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                 </span>
-                New: AI-powered PDF template builder
+                New: AI-powered certification and reporting workflows
               </div>
 
               <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight tracking-tight">
-                Turn any PDF report into a<br />
+                Turn inspections and reports into<br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400">
-                  smart, auto-filled workflow
+                  smart, auto-filled documents
                 </span>
               </h1>
 
               <p className="text-xl text-slate-400 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                Upload your existing certificate or report template, detect blank fields with AI,
-                place fields visually, replace logos and text, and generate polished documents with
-                live ServiceM8 job, customer, and company data.
+                Create automatic document templates from your existing PDFs, generate certification
+                and reporting outputs, build fire alarm floorplans, scan jobs on your mobile device,
+                and turn real site data into finished results with less manual work.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
@@ -106,8 +106,8 @@ export default function LandingPage() {
                         <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">Template mapped & ready</p>
-                        <p className="text-xs text-slate-500">Live ServiceM8 fields connected</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">Certification ready</p>
+                        <p className="text-xs text-slate-500">Reports generated from your template</p>
                       </div>
                     </div>
                   </div>
@@ -118,8 +118,8 @@ export default function LandingPage() {
                         <Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">AI fields detected</p>
-                        <p className="text-xs text-slate-500">Blank inputs found automatically</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">Mobile scan captured</p>
+                        <p className="text-xs text-slate-500">Real results generated from site data</p>
                       </div>
                     </div>
                   </div>
@@ -134,7 +134,7 @@ export default function LandingPage() {
       <section className="py-10 border-y border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
         <div className="container mx-auto px-4">
           <p className="text-center text-sm font-semibold text-slate-500 uppercase tracking-wider mb-8">
-            Trusted by industry leaders
+            Built for certification and reporting teams
           </p>
           <div className="flex flex-wrap justify-center items-center gap-12 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
             {['Acme Corp', 'GlobalSafety', 'FireTech', 'SecureBuild', 'UrbanGuard'].map((brand) => (
@@ -151,11 +151,11 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
-              Everything you need to turn static PDFs into reusable report templates
+              Everything you need to build certification, reporting, and field-ready document workflows
             </h2>
             <p className="text-lg text-slate-600 dark:text-slate-400">
-              From upload to generation, every step is built to help your team personalise reports faster,
-              stay on-brand, and merge the right data into every document.
+              From template creation to final output, every step helps your team turn PDFs into usable
+              workflows, capture evidence on mobile, and generate accurate results faster.
             </p>
           </div>
 
@@ -163,43 +163,43 @@ export default function LandingPage() {
             {[
               {
                 icon: FileCheck,
-                title: 'Upload Existing PDF Templates',
-                desc: 'Start with the reports you already use. Upload existing PDF certificates, forms, and inspection templates instead of rebuilding documents from scratch.',
+                title: 'Certification & Reporting',
+                desc: 'Turn inspection PDFs into reusable certificate and reporting templates that produce consistent, professional results every time.',
                 color: 'text-blue-500',
                 bg: 'bg-blue-50 dark:bg-blue-900/20'
               },
               {
                 icon: Zap,
-                title: 'AI Blank-Field Detection',
-                desc: 'Let AI scan your PDF and identify likely fillable areas automatically, so your team can map templates faster with less repetitive setup.',
+                title: 'Automatic Template Creation',
+                desc: 'Let AI detect fields, layout hints, and structure so you can create document templates much faster from the PDFs you already use.',
                 color: 'text-amber-500',
                 bg: 'bg-amber-50 dark:bg-amber-900/20'
               },
               {
                 icon: Layers,
-                title: 'Visual Field Placement',
-                desc: 'Fine-tune every template with click-to-place, drag-to-draw, resize, and reposition controls for total layout accuracy where AI needs a hand.',
+                title: 'Fire Alarm Floorplans',
+                desc: 'Build and refine floorplans for fire alarm documentation, with visual tools for accurate placement and layout control.',
                 color: 'text-cyan-500',
                 bg: 'bg-cyan-50 dark:bg-cyan-900/20'
               },
               {
                 icon: Edit3,
-                title: 'Text & Branding Editor',
-                desc: 'White-out and replace logos, headers, footers, and text so every output matches your brand and your customer-facing report style.',
+                title: 'Mobile Scan Capture',
+                desc: 'Scan on your mobile device, capture现场 evidence, and turn real-world observations into structured document outputs.',
                 color: 'text-purple-500',
                 bg: 'bg-purple-50 dark:bg-purple-900/20'
               },
               {
                 icon: Shield,
-                title: 'Health & Safety',
-                desc: 'Site-ready RAMS in minutes.',
+                title: 'Compliance Ready',
+                desc: 'Keep outputs consistent, auditable, and ready for customer delivery, internal review, or certification workflows.',
                 color: 'text-indigo-500',
                 bg: 'bg-indigo-50 dark:bg-indigo-900/20'
               },
               {
                 icon: Lock,
-                title: 'Risk assessments for any job type',
-                desc: 'Method statements with sequences. Site-specific hazard identification. PDF export ready for site induction.',
+                title: 'Secure Real Results',
+                desc: 'Generate finished documents from live site data and store the results safely for reuse, export, and delivery.',
                 color: 'text-emerald-500',
                 bg: 'bg-emerald-50 dark:bg-emerald-900/20'
               }
@@ -228,7 +228,7 @@ export default function LandingPage() {
               How it works
             </h2>
             <p className="text-lg text-slate-600 dark:text-slate-400">
-              Go from static PDF to live, branded report workflow in three simple steps
+              Go from a static PDF to a real-world certification workflow in three simple steps
             </p>
           </div>
 
@@ -240,17 +240,17 @@ export default function LandingPage() {
               {
                 step: '01',
                 title: 'Upload & Analyse Your PDF',
-                desc: 'Import an existing report template and let AI detect blank fields and likely entry areas so setup starts with the structure already on the page.'
+                desc: 'Import your existing certificate, report, or floorplan template and let AI detect structure, fields, and likely entry areas automatically.'
               },
               {
                 step: '02',
-                title: 'Map, Edit & Brand',
-                desc: 'Place or adjust fields manually, resize and reposition elements, replace logos or text, and add {{handlebars}} tokens tied to ServiceM8 data.'
+                title: 'Map, Edit & Capture',
+                desc: 'Adjust the layout, place fields, add labels or branding, and scan with your mobile device when you need real site data or field evidence.'
               },
               {
                 step: '03',
-                title: 'Generate, Store & Reuse',
-                desc: 'Create finished reports with live job, customer, and company data merged in automatically, then store templates and outputs securely in the cloud.'
+                title: 'Generate Real Results',
+                desc: 'Create polished, accurate outputs for certification and reporting, then reuse the template whenever you need the same workflow again.'
               }
             ].map((item, i) => (
               <div key={i} className="relative flex flex-col items-center text-center">
@@ -270,10 +270,10 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-800 opacity-10" />
         <div className="container relative mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-            Ready to modernise your PDF reporting workflow?
+            Ready to modernise your certification workflow?
           </h2>
           <p className="text-xl text-blue-100 mb-10 max-w-2xl mx-auto">
-            Build reusable templates, merge live ServiceM8 data, and deliver polished branded reports without manual rework.
+            Build reusable templates, create fire alarm floorplans, scan on mobile, and deliver real results without manual rework.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link href="/sign-up">

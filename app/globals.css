@@ -113,6 +113,42 @@
   .animate-pulse-slow {
     animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
+  .animate-scan-line {
+    animation: scan-line 4.5s ease-in-out infinite;
+  }
+
+  .animate-travel-bar {
+    animation: travel-bar 6s ease-in-out infinite;
+  }
+
+  .animate-document-settle {
+    animation: document-settle 6s ease-in-out infinite;
+  }
+
+  .animate-logo-slide {
+    animation: logo-slide 5.5s ease-in-out infinite;
+  }
+
+  .animate-field-drag {
+    animation: field-drag 5.5s ease-in-out infinite;
+  }
+
+  .animate-stamp-pop {
+    animation: stamp-pop 4.5s ease-in-out infinite;
+  }
+
+  .animate-logo-rise {
+    animation: logo-rise 5.5s ease-in-out infinite;
+  }
+
+  .animate-signature-expand {
+    animation: signature-expand 5.5s ease-in-out infinite;
+  }
+
+  .animate-grid-snap {
+    animation: grid-snap 6s ease-in-out infinite;
+  }
 }
 
 @keyframes float {
@@ -124,6 +160,163 @@
   }
   100% {
     transform: translateY(0px);
+  }
+}
+
+@keyframes scan-line {
+  0% {
+    top: -12%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  50% {
+    top: 54%;
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 112%;
+    opacity: 0;
+  }
+}
+
+@keyframes travel-bar {
+  0% {
+    left: 0%;
+    opacity: 0.35;
+  }
+  50% {
+    left: 67%;
+    opacity: 1;
+  }
+  100% {
+    left: 0%;
+    opacity: 0.35;
+  }
+}
+
+@keyframes document-settle {
+  0% {
+    transform: translateY(10px) rotate(-2deg) scale(0.98);
+  }
+  45% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  75% {
+    transform: translateY(-2px) rotate(0.3deg) scale(1);
+  }
+  100% {
+    transform: translateY(10px) rotate(-2deg) scale(0.98);
+  }
+}
+
+@keyframes logo-slide {
+  0% {
+    transform: translateX(0) translateY(0) scale(1);
+  }
+  35% {
+    transform: translateX(16px) translateY(-4px) scale(1.05);
+  }
+  65% {
+    transform: translateX(6px) translateY(0) scale(1.02);
+  }
+  100% {
+    transform: translateX(0) translateY(0) scale(1);
+  }
+}
+
+@keyframes field-drag {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  40% {
+    transform: translate(16px, -10px) rotate(1.5deg);
+  }
+  70% {
+    transform: translate(8px, 2px) rotate(-0.8deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes stamp-pop {
+  0% {
+    transform: scale(0.92) rotate(-10deg);
+    opacity: 0.7;
+  }
+  40% {
+    transform: scale(1.04) rotate(-2deg);
+    opacity: 1;
+  }
+  65% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.92) rotate(-10deg);
+    opacity: 0.7;
+  }
+}
+
+@keyframes logo-rise {
+  0% {
+    transform: translateY(14px) scale(0.92);
+    opacity: 0.55;
+  }
+  40% {
+    transform: translateY(0px) scale(1);
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(-4px) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(14px) scale(0.92);
+    opacity: 0.55;
+  }
+}
+
+@keyframes signature-expand {
+  0% {
+    transform: scaleX(0.82);
+    opacity: 0.65;
+  }
+  45% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  70% {
+    transform: scaleX(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(0.82);
+    opacity: 0.65;
+  }
+}
+
+@keyframes grid-snap {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0.7;
+  }
+  35% {
+    transform: translate(10px, -8px);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.7;
   }
 }
 
