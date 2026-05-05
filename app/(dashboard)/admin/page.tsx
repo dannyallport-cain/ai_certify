@@ -2,10 +2,9 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { requireAdmin } from '@/lib/auth/admin';
-import { ADMIN_ROLES } from '@/lib/auth/roles';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, customers } from '@/lib/db/schema';
-import { count, eq, inArray, sql } from 'drizzle-orm';
+import { count, eq, sql } from 'drizzle-orm';
 import {
   Users,
   Building2,
@@ -39,7 +38,7 @@ async function getSystemStats() {
       db.select({ count: count() }).from(users),
       db.select({ count: count() }).from(teams),
       db.select({ count: count() }).from(customers),
-      db.select({ count: count() }).from(users).where(inArray(users.role, [...ADMIN_ROLES])),
+      db.select({ count: count() }).from(users).where(sql`${users.role} IN ('admin', 'owner', 'manager', 'sysadmin')`),
       db.select({ count: count() }).from(teams).where(eq(teams.subscriptionStatus, 'active')),
       db.select({ count: count() }).from(teams).where(sql`subscription_status = 'active' OR subscription_status = 'trialing'`)
     ]);

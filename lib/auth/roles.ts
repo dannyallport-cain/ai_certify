@@ -5,6 +5,9 @@ export const USER_ROLES = [
 
 export const ADMIN_ROLES = [
   'admin',
+  'owner',
+  'manager',
+  'sysadmin',
 ] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
@@ -20,5 +23,5 @@ export function isUserRole(role: string): role is UserRole {
 }
 
 export function isAdminRole(role: string | null | undefined): role is AdminRole {
-  return role === 'admin';
+  return role != null && (ADMIN_ROLES as readonly string[]).includes(role);
 }

@@ -179,12 +179,14 @@ These are present in the wider web/dashboard product but not in the mobile exper
 2. Determine whether calculators, billing, and admin remain web-only
 3. Decide whether ServiceM8 needs a fuller mobile control surface
 4. Review specialist certificate catalogue priority for mobile support
+5. Evaluate a dedicated void property / end-of-tenancy inspection workflow for councils and housing associations, including room-by-room capture, defects, photos, meter readings, key handover details, and report generation
 
 ### P4 — later phase
 1. Add ML-backed RoomPlan inference
 2. Add correction feedback loops
 3. Add richer offline and resume support
 4. Expand helper tools only after the core workflows are stable
+5. If demand is proven, productise void inspection reporting as a reusable mobile module for housing teams
 
 ---
 

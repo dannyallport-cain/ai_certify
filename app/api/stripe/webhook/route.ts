@@ -99,7 +99,26 @@ async function recordCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     });
   }
 
-  if (teamId && paymentType === 'one_time') {
+  if (teamId && featureId) {
+    await upsertStripePurchaseEntitlement({
+      teamId,
+      userId,
+      paymentType:
+        paymentType ||
+        (session.mode === 'subscription' ? 'subscription' : 'one_time'),
+      purchaseType: purchaseType || legacyType || 'addon_subscription',
+      featureId,
+      stripeCheckoutSessionId: session.id,
+      stripePaymentIntentId:
+        typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id,
+      stripeCustomerId:
+        typeof session.customer === 'string' ? session.customer : session.customer?.id,
+      status: 'active',
+      metadata: session.metadata ?? {}
+    });
+  } else if (teamId && paymentType === 'one_time') {
     await upsertStripePurchaseEntitlement({
       teamId,
       userId,

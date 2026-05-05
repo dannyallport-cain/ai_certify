@@ -56,7 +56,7 @@ export default function LandingPage() {
 
               <p className="text-xl text-slate-400 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
                 Create automatic document templates from your existing PDFs, generate certification
-                and reporting outputs, build fire alarm floorplans, scan jobs on your mobile device,
+                and reporting outputs, build fire alarm floorplans, capture jobs on your mobile device,
                 and turn real site data into finished results with less manual work.
               </p>
 
@@ -67,11 +67,16 @@ export default function LandingPage() {
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-                <Link href="/contact" className="w-full sm:w-auto">
-                  <Button size="lg" variant="outline" className="w-full h-14 px-8 text-lg border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white rounded-full">
-                    Book Demo
+                <Link href="/housing-associations" className="w-full sm:w-auto">
+                  <Button size="lg" variant="outline" className="w-full h-14 px-8 text-lg border-cyan-500/40 text-cyan-200 hover:bg-cyan-500/10 hover:text-white rounded-full">
+                    Housing teams
                   </Button>
                 </Link>
+                <Button asChild size="lg" variant="outline" className="w-full h-14 px-8 text-lg border-slate-300 text-slate-900 hover:bg-slate-100 hover:text-slate-950 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800 rounded-full">
+                  <Link href="/contact" className="w-full sm:w-auto">
+                    Book Demo
+                  </Link>
+                </Button>
               </div>
 
               <div className="pt-8 flex items-center justify-center lg:justify-start gap-8 text-slate-500 text-sm font-medium">
@@ -142,6 +147,88 @@ export default function LandingPage() {
                 {brand}
               </span>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Mobile & AI Spotlight */}
+      <section className="py-24 bg-slate-50 dark:bg-slate-900">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+              Built for the field and powered by AI
+            </h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400">
+              Give your office and field teams the same workflow: capture evidence on mobile, let AI help structure the template, and generate polished outputs without rework.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="group p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300">
+              <div className="inline-flex p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 mb-6">
+                <Edit3 className="h-8 w-8 text-purple-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+                Mobile capture that keeps work moving
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                Use the mobile app to capture site notes, inspection evidence, and field observations where the work happens, then flow that information directly into your certification and reporting workflow.
+              </p>
+              <ul className="space-y-3 text-slate-700 dark:text-slate-300">
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span>Capture jobs, photos, and field notes on mobile</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span>Keep office and site teams aligned in one workflow</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span>Reduce retyping and missing information between teams</span>
+                </li>
+              </ul>
+              <div className="mt-8">
+                <Link href="/mobile-capture">
+                  <Button variant="outline" className="border-slate-300 dark:border-slate-700">
+                    Explore mobile workflows
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            <div className="group p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300">
+              <div className="inline-flex p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 mb-6">
+                <Zap className="h-8 w-8 text-amber-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+                AI that accelerates setup and output
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                Let AI help detect template structure, map likely input areas, and speed up the move from static PDFs to reusable document workflows for certification and reporting.
+              </p>
+              <ul className="space-y-3 text-slate-700 dark:text-slate-300">
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span>AI-assisted template creation from existing PDFs</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span>Automated field detection and layout guidance</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span>Faster outputs with less manual document prep</span>
+                </li>
+              </ul>
+              <div className="mt-8">
+                <Link href="/ai-analysis">
+                  <Button variant="outline" className="border-slate-300 dark:border-slate-700">
+                    See AI workflows
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -281,11 +368,11 @@ export default function LandingPage() {
                 Get Started Now
               </Button>
             </Link>
-            <Link href="/contact">
-              <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-blue-400 text-white hover:bg-blue-700">
+            <Button asChild size="lg" className="h-14 px-8 text-lg bg-white text-blue-600 hover:bg-blue-50 shadow-xl">
+              <Link href="/contact" className="w-full sm:w-auto">
                 Contact Sales
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

@@ -29,8 +29,76 @@ export default function FeaturesPage() {
             </span>
           </h1>
           <p className="text-xl text-slate-400 max-w-3xl mx-auto">
-            Upload the report templates you already use, turn them into reusable digital workflows, and generate polished outputs with AI-assisted setup, dynamic data merge, and secure cloud storage.
+            Upload the report templates you already use, turn them into reusable digital workflows, and generate polished outputs with AI-assisted setup, mobile capture, dynamic data merge, and secure cloud storage.
           </p>
+        </div>
+      </section>
+
+      {/* Mobile & AI Overview */}
+      <section className="py-20 bg-slate-50 dark:bg-slate-900">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4">
+              Built for the office, the field, and AI-assisted setup
+            </h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400">
+              Bring mobile evidence capture and AI template detection into one workflow so your team can move from site visit to finished report with less friction.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm">
+              <div className="inline-flex p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 mb-6">
+                <Edit3 className="h-8 w-8 text-purple-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+                Mobile application for field capture
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                Use the mobile app to record site notes, capture photos, and collect inspection evidence where the work happens. Keep everything connected to the same certification and reporting workflow your office team already uses.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700 dark:text-slate-300">Capture jobs, notes, and photos in the field</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700 dark:text-slate-300">Reduce retyping between site and office teams</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700 dark:text-slate-300">Keep evidence tied to the right job and report</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-sm">
+              <div className="inline-flex p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 mb-6">
+                <Zap className="h-8 w-8 text-amber-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
+                AI that accelerates template creation
+              </h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+                Let AI help detect document structure, identify likely input areas, and speed up setup from static PDFs to reusable workflow templates for certification and reporting.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700 dark:text-slate-300">AI-assisted blank-field and layout detection</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700 dark:text-slate-300">Faster setup from the PDFs you already use</span>
+                </li>
+                <li className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  <span className="text-slate-700 dark:text-slate-300">Less manual prep and fewer missing fields</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
