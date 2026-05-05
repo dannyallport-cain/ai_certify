@@ -284,6 +284,10 @@ export async function getCertificatesForTeam() {
     throw new Error('User not part of a team');
   }
 
+  return getCertificatesForTeamId(team.id);
+}
+
+export async function getCertificatesForTeamId(teamId: number) {
   return await db
     .select({
       certificate: certificates,
@@ -291,7 +295,7 @@ export async function getCertificatesForTeam() {
     })
     .from(certificates)
     .leftJoin(customers, eq(certificates.customerId, customers.id))
-    .where(eq(certificates.teamId, team.id))
+    .where(eq(certificates.teamId, teamId))
     .orderBy(desc(certificates.createdAt));
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, KeyRound, Link2, MoreHorizontal, ShieldCheck, ShieldOff, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, KeyRound, Link2, MoreHorizontal, ShieldCheck, ShieldOff, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { USER_ROLES, USER_ROLE_LABELS, type UserRole } from '@/lib/auth/roles';
+import UserCertificatesPanel from '@/components/admin/UserCertificatesPanel';
 
 type User = {
   id: number;
@@ -68,6 +69,7 @@ export default function UsersPage() {
   const [editTargetUser, setEditTargetUser] = useState<User | null>(null);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [passwordTargetUser, setPasswordTargetUser] = useState<User | null>(null);
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
   const [createForm, setCreateForm] = useState({
     name: '',
     email: '',
@@ -641,7 +643,7 @@ export default function UsersPage() {
             {filteredUsers.map((user) => {
               const isSelected = selectedUserIds.includes(user.id);
 
-              return (
+              return [
                 <tr key={user.id}>
                   <td>
                     <input
@@ -681,6 +683,26 @@ export default function UsersPage() {
                   <td>{formatLastLogin(user.lastLoginAt)}</td>
                   <td className="align-top">
                     <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0 p-0"
+                        disabled={busyUserId === user.id || bulkBusy}
+                        onClick={() =>
+                          setExpandedUserId((current) => (current === user.id ? null : user.id))
+                        }
+                        aria-label={
+                          expandedUserId === user.id
+                            ? `Collapse certificates for ${user.name || user.email}`
+                            : `Expand certificates for ${user.name || user.email}`
+                        }
+                      >
+                        {expandedUserId === user.id ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -733,16 +755,23 @@ export default function UsersPage() {
                       </DropdownMenu>
                     </div>
                   </td>
-                </tr>
-              );
+                </tr>,
+                expandedUserId === user.id ? (
+                  <tr key={`expanded-${user.id}`}>
+                    <td colSpan={10} className="bg-slate-50 px-4 py-4">
+                      <UserCertificatesPanel userId={user.id} />
+                    </td>
+                  </tr>
+                ) : null,
+              ];
             })}
-            {filteredUsers.length === 0 && (
+            {filteredUsers.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-4 py-6 text-center text-sm text-gray-500">
                   No users match your current filters.
                 </td>
               </tr>
-            )}
+            ) : null}
           </tbody>
         </Table>
       )}

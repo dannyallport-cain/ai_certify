@@ -1,12 +1,12 @@
-import { getCertificatesForTeamPage } from '@/lib/db/queries';
+import { getCertificatesForTeam } from '@/lib/db/queries';
 import Link from 'next/link';
 import CertificateList from '@/components/CertificateList';
 
 export default async function CertificatesPage() {
-  const result = await getCertificatesForTeamPage({ limit: 20, offset: 0 });
+  const certificates = await getCertificatesForTeam();
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
       <div className="flex items-center justify-between space-y-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Certificates</h2>
@@ -17,12 +17,7 @@ export default async function CertificatesPage() {
         </div>
       </div>
 
-      <CertificateList
-        initialCertificates={result.items}
-        initialTotal={result.total}
-        initialPage={1}
-        initialPageSize={20}
-      />
+      <CertificateList certificates={certificates} />
     </div>
   );
 }

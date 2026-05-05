@@ -1789,25 +1789,22 @@ function generateCP12PDF(certificate: CertificateData): Uint8Array {
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
-  const defects = pdf.splitTextToSize(
-    ss(fd.defectsRemedialAction) || 'No defects or remedial actions recorded.',
-    contentWidth - 8,
-  );
-  const defectsLines = pdf.splitTextToSize(defects, contentWidth - 6);
-  const defectsBoxHeight = Math.max(28, 14 + defectsLines.length * getLineHeight(9) + 4);
+  const defectsValue = ss(fd.defectsRemedialAction) || 'No defects or remedial actions recorded.';
+  const defectsLines = pdf.splitTextToSize(defectsValue.replace(/\s+/g, ' ').trim() || ' ', contentWidth - 6);
+  const defectsTextTop = y + 12;
+  const defectsBoxHeight = Math.max(28, defectsTextTop - y + defectsLines.length * getLineHeight(9) + 5);
   drawBox(margin, y, contentWidth, defectsBoxHeight, 'Defects Identified / Remedial Action Required', softBlue);
-  pdf.text(defectsLines, margin + 3, y + 14);
+  pdf.text(defectsLines, margin + 3, defectsTextTop);
   y += defectsBoxHeight + sectionGap;
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8.5);
-  const declaration = pdf.splitTextToSize(
-    'I confirm that the appliances and flues listed above were checked on the date shown and that this record reflects the condition found at the time of inspection.',
-    contentWidth - 8,
-  );
-  const declarationBoxHeight = Math.max(24, 13 + Math.max(declaration.length, 1) * getLineHeight(8.5) + 4);
+  const declarationValue = 'I confirm that the appliances and flues listed above were checked on the date shown and that this record reflects the condition found at the time of inspection.';
+  const declarationLines = pdf.splitTextToSize(declarationValue, contentWidth - 6);
+  const declarationTextTop = y + 12;
+  const declarationBoxHeight = Math.max(24, declarationTextTop - y + declarationLines.length * getLineHeight(8.5) + 5);
   drawBox(margin, y, contentWidth, declarationBoxHeight, 'Declaration', soft);
-  pdf.text(declaration, margin + 3, y + 13);
+  pdf.text(declarationLines, margin + 3, declarationTextTop);
   y += declarationBoxHeight + sectionGap;
 
   const signWidth = (contentWidth - 4) / 2;
