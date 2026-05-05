@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   ServiceM8Client,
   ServiceM8Client_API,
+  ServiceM8CompanyContact,
   ServiceM8Job,
   ServiceM8JobAttachment,
 } from '@/lib/servicem8/client';
@@ -29,6 +30,14 @@ export interface ServiceM8ClientRecord {
   mobile: string | null;
   address: string | null;
   postcode: string | null;
+}
+
+export interface ServiceM8ContactDetails {
+  email: string | null;
+  phone: string | null;
+  mobile: string | null;
+  firstName: string | null;
+  lastName: string | null;
 }
 
 export interface ServiceM8JobRecord {
@@ -144,21 +153,72 @@ export function buildServiceM8Address(input: {
   return value || null;
 }
 
-export function normalizeServiceM8Client(client: ServiceM8Client): ServiceM8ClientRecord {
+function isPrimaryCompanyContact(contact: ServiceM8CompanyContact) {
+  const value = contact.is_primary_contact?.trim().toLowerCase();
+  return value === '1' || value === 'true' || value === 'yes';
+}
+
+export function selectPrimaryServiceM8Contact(contacts: ServiceM8CompanyContact[]) {
+  return (
+    contacts.find((contact) => isPrimaryCompanyContact(contact)) ??
+    contacts.find((contact) => contact.type?.trim().toUpperCase() === 'BILLING') ??
+    contacts.find((contact) => contact.type?.trim().toUpperCase() === 'JOB') ??
+    contacts[0] ??
+    null
+  );
+}
+
+export function extractServiceM8ContactDetails(
+  contact: ServiceM8CompanyContact | null,
+): ServiceM8ContactDetails {
+  return {
+    email: contact?.email || null,
+    phone: contact?.phone || contact?.mobile || null,
+    mobile: contact?.mobile || null,
+    firstName: contact?.first || null,
+    lastName: contact?.last || null,
+  };
+}
+
+export async function loadServiceM8ContactDetails(
+  serviceM8Client: ServiceM8Client_API,
+  companyUuid: string,
+): Promise<ServiceM8ContactDetails> {
+  try {
+    const contacts = await serviceM8Client.getCompanyContacts(
+      `company_uuid eq '${companyUuid}' and active eq 1`,
+    );
+    return extractServiceM8ContactDetails(selectPrimaryServiceM8Contact(contacts));
+  } catch (error) {
+    console.warn('Failed to load ServiceM8 company contacts', error);
+    return {
+      email: null,
+      phone: null,
+      mobile: null,
+      firstName: null,
+      lastName: null,
+    };
+  }
+}
+
+export function normalizeServiceM8Client(
+  client: ServiceM8Client,
+  contactDetails?: ServiceM8ContactDetails,
+): ServiceM8ClientRecord {
   return {
     uuid: client.uuid,
     name: buildServiceM8DisplayName({
       name: client.name,
       companyName: client.company_name,
-      firstName: client.first_name,
-      lastName: client.last_name,
+      firstName: contactDetails?.firstName ?? client.first_name,
+      lastName: contactDetails?.lastName ?? client.last_name,
     }),
     companyName: client.company_name ?? client.name ?? null,
-    firstName: client.first_name || null,
-    lastName: client.last_name || null,
-    email: client.email || null,
-    phone: client.phone || client.mobile || null,
-    mobile: client.mobile || null,
+    firstName: contactDetails?.firstName ?? client.first_name ?? null,
+    lastName: contactDetails?.lastName ?? client.last_name ?? null,
+    email: contactDetails?.email ?? client.email ?? null,
+    phone: contactDetails?.phone ?? client.phone ?? client.mobile ?? null,
+    mobile: contactDetails?.mobile ?? client.mobile ?? null,
     address: buildServiceM8Address({
       address: client.address,
       street: client.address_street,
