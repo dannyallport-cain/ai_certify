@@ -1,4 +1,9 @@
 import { getCertificatePdfBytes, getCertificatePdfData } from '@/lib/certificates/pdf';
+import {
+  getBrevoApiKey,
+  getBrevoSender,
+  sendBrevoTransactionalEmail,
+} from '@/lib/email/brevo';
 
 export type SendCertificateEmailInput = {
   certificateId: number;
@@ -14,14 +19,6 @@ export type SendCertificateEmailResult = {
   recipientEmail: string;
   subject: string;
 };
-
-function getEmailFromAddress() {
-  return process.env.EMAIL_FROM || process.env.NEXT_PUBLIC_APP_EMAIL_FROM || '';
-}
-
-function getResendApiKey() {
-  return process.env.RESEND_API_KEY || '';
-}
 
 export async function sendCertificateEmail(
   input: SendCertificateEmailInput
@@ -49,10 +46,14 @@ export async function sendCertificateEmail(
     throw new Error('Failed to generate PDF');
   }
 
-  const resendApiKey = getResendApiKey();
-  const emailFrom = getEmailFromAddress();
+  const brevoApiKey = getBrevoApiKey();
+  const sender = getBrevoSender();
 
-  if (!resendApiKey || !emailFrom) {
+  if (brevoApiKey && !sender) {
+    throw new Error('EMAIL_FROM is required when BREVO_API_KEY is configured');
+  }
+
+  if (!brevoApiKey || !sender) {
     console.log(
       `[certificate-email] Preview only for ${recipientEmail}: ${subject}\n${message}\nCertificate: ${certificateData.certificateNumber}`
     );
@@ -65,36 +66,24 @@ export async function sendCertificateEmail(
     };
   }
 
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: emailFrom,
-      to: [recipientEmail],
-      subject,
-      html: `
+  await sendBrevoTransactionalEmail({
+    sender,
+    to: [{ email: recipientEmail }],
+    subject,
+    htmlContent: `
         <p>${message}</p>
         <p>Certificate number: <strong>${certificateData.certificateNumber}</strong></p>
         <p>Inspection date: <strong>${certificateData.inspectionDate || 'Not specified'}</strong></p>
         <p>The PDF certificate is attached to this email.</p>
       `,
-      text: `${message}\n\nCertificate number: ${certificateData.certificateNumber}\nInspection date: ${certificateData.inspectionDate || 'Not specified'}\n\nThe PDF certificate is attached to this email.`,
-      attachments: [
-        {
-          filename: `certificate-${certificateData.certificateNumber}.pdf`,
-          content: Buffer.from(pdfBytes).toString('base64'),
-        },
-      ],
-    }),
+    textContent: `${message}\n\nCertificate number: ${certificateData.certificateNumber}\nInspection date: ${certificateData.inspectionDate || 'Not specified'}\n\nThe PDF certificate is attached to this email.`,
+    attachment: [
+      {
+        name: `certificate-${certificateData.certificateNumber}.pdf`,
+        content: Buffer.from(pdfBytes).toString('base64'),
+      },
+    ],
   });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Failed to send certificate email: ${body}`);
-  }
 
   return {
     delivered: true,

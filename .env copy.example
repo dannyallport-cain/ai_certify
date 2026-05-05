@@ -21,8 +21,9 @@ STRIPE_WEBHOOK_SECRET=whsec_replace_with_your_secret
 STRIPE_VERIFICATION_PRICE_ID=price_replace_with_your_verification_price
 
 # Transactional email / verification emails
-RESEND_API_KEY=re_replace_with_your_resend_key
+BREVO_API_KEY=bre_replace_with_your_brevo_key
 EMAIL_FROM=AI Certificates <no-reply@your-domain.example>
+# EMAIL_FROM must use a Brevo-verified sender, for example: Danny Allport <dannyallport77@gmail.com>
 
 # Vercel AI Gateway / AI providers
 AI_GATEWAY_API_KEY=vck_replace_with_your_key

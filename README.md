@@ -45,6 +45,13 @@ The admin AI test route forwards to the Railway/FastAPI worker at `/analyze-imag
 - `RAILWAY_AI_WORKER_URL` — Railway worker base URL for AI image analysis
 - In local development, this defaults to `http://localhost:8000` if the variable is unset
 
+### Transactional email setup
+
+The app sends verification emails and certificate emails through Brevo.
+
+- `BREVO_API_KEY` — Brevo transactional email API key
+- `EMAIL_FROM` — verified Brevo sender, for example `AI Certificates <dannyallport77@gmail.com>`
+
 ## Deployment Overview
 
 - Vercel hosts the Next.js app and cron trigger route
