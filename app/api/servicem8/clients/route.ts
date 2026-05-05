@@ -11,7 +11,10 @@ import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { db } from '@/lib/db/drizzle';
 import { servicem8ClientMappings, customers } from '@/lib/db/schema';
 import { ServiceM8Client_API } from '@/lib/servicem8/client';
-import { buildServiceM8Address, buildServiceM8DisplayName } from '@/app/api/mobile/servicem8/_shared';
+import {
+  loadServiceM8ContactDetails,
+  normalizeServiceM8Client,
+} from '@/app/api/mobile/servicem8/_shared';
 
 async function getServiceM8Context(): Promise<{ userId: number; teamId: number } | null> {
   const user = await getUser();
@@ -39,25 +42,12 @@ export async function GET() {
     }
 
     const clients = await client.getClients('active eq 1');
-    const enrichedClients = clients.map((serviceM8Client) => ({
-      ...serviceM8Client,
-      name: buildServiceM8DisplayName({
-        name: serviceM8Client.name,
-        companyName: serviceM8Client.company_name,
-        firstName: serviceM8Client.first_name,
-        lastName: serviceM8Client.last_name,
+    const enrichedClients = await Promise.all(
+      clients.map(async (serviceM8Client) => {
+        const contactDetails = await loadServiceM8ContactDetails(client, serviceM8Client.uuid);
+        return normalizeServiceM8Client(serviceM8Client, contactDetails);
       }),
-      address: buildServiceM8Address({
-        address: serviceM8Client.address,
-        street: serviceM8Client.address_street,
-        address2: serviceM8Client.billing_address2,
-        city: serviceM8Client.address_city,
-        state: serviceM8Client.address_state,
-        postcode: serviceM8Client.address_postcode,
-        country: serviceM8Client.address_country,
-      }),
-      postcode: serviceM8Client.address_postcode || serviceM8Client.billing_postcode || null,
-    }));
+    );
 
     return NextResponse.json({ clients: enrichedClients });
   } catch (error) {
@@ -106,33 +96,19 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Create local customer
-        const name = buildServiceM8DisplayName({
-          name: c.name,
-          companyName: c.company_name,
-          firstName: c.first_name,
-          lastName: c.last_name,
-        });
-
-        const address = buildServiceM8Address({
-          address: c.address,
-          street: c.address_street,
-          address2: c.billing_address2,
-          city: c.address_city,
-          state: c.address_state,
-          postcode: c.address_postcode,
-          country: c.address_country,
-        });
-
-        const contactPerson = [c.first_name?.trim(), c.last_name?.trim()].filter(Boolean).join(' ') || null;
+        const contactDetails = await loadServiceM8ContactDetails(sm8Client, c.uuid);
+        const normalizedClient = normalizeServiceM8Client(c, contactDetails);
+        const contactPerson =
+          [normalizedClient.firstName, normalizedClient.lastName].filter(Boolean).join(' ') ||
+          null;
 
         const [newCustomer] = await db.insert(customers).values({
           teamId: context.teamId,
-          name: name || 'Unnamed Client',
-          email: c.email || null,
-          phone: c.phone || c.mobile || null,
-          address: address || null,
-          postcode: c.address_postcode || c.billing_postcode || null,
+          name: normalizedClient.name || 'Unnamed Client',
+          email: normalizedClient.email || null,
+          phone: normalizedClient.phone || null,
+          address: normalizedClient.address || null,
+          postcode: normalizedClient.postcode || null,
           contactPerson,
         }).returning();
 

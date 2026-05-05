@@ -101,6 +101,20 @@ export interface ServiceM8JobCategory {
   active: number;
 }
 
+export interface ServiceM8CompanyContact {
+  uuid: string;
+  company_uuid: string;
+  first: string | null;
+  last: string | null;
+  phone: string | null;
+  mobile: string | null;
+  email: string | null;
+  type: string | null;
+  is_primary_contact: string | null;
+  active: number;
+  edit_date: string | null;
+}
+
 export interface ServiceM8JobMaterial {
   uuid: string;
   job_uuid: string;
@@ -427,6 +441,14 @@ export class ServiceM8Client_API {
 
   async getCompanyInfo(): Promise<ServiceM8Company> {
     return this.request<ServiceM8Company>('/companycontactinfo.json');
+  }
+
+  async getCompanyContacts(filter?: string): Promise<ServiceM8CompanyContact[]> {
+    return this.request<ServiceM8CompanyContact[]>(
+      '/companycontact.json',
+      {},
+      filter ? { query: { $filter: filter } } : {},
+    );
   }
 
   // ─── Job Categories ──────────────────────────────────────────────────────
