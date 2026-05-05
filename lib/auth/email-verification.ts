@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'crypto';
 import { and, eq, gt, lt } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
+import { getBrevoApiKey, getBrevoSender, sendBrevoTransactionalEmail } from '@/lib/email/brevo';
 import {
   emailVerificationTokens,
   teamMembers,
@@ -62,39 +63,25 @@ async function deliverVerificationEmail({
   email: string;
   verificationUrl: string;
 }) {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const emailFrom = getEmailFromAddress();
+  const brevoApiKey = getBrevoApiKey();
+  const sender = getBrevoSender();
 
-  if (resendApiKey && !emailFrom) {
-    throw new Error(
-      'EMAIL_FROM is required when RESEND_API_KEY is configured'
-    );
+  if (brevoApiKey && !sender) {
+    throw new Error('EMAIL_FROM is required when BREVO_API_KEY is configured');
   }
 
-  if (resendApiKey && emailFrom) {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: emailFrom,
-        to: [email],
-        subject: 'Verify your email address',
-        html: `
+  if (brevoApiKey && sender) {
+    await sendBrevoTransactionalEmail({
+      sender,
+      to: [{ email }],
+      subject: 'Verify your email address',
+      htmlContent: `
           <p>Verify your email address to activate your account.</p>
           <p><a href="${verificationUrl}">Verify email</a></p>
           <p>This link expires in 24 hours.</p>
         `,
-        text: `Verify your email address: ${verificationUrl}\n\nThis link expires in 24 hours.`,
-      }),
+      textContent: `Verify your email address: ${verificationUrl}\n\nThis link expires in 24 hours.`,
     });
-
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Failed to send verification email: ${body}`);
-    }
 
     return;
   }
