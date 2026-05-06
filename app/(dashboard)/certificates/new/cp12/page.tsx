@@ -10,6 +10,7 @@ import { createCertificate } from '../../../actions';
 import { AddressAutocompleteField } from '@/components/AddressAutocompleteField';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
 import GuidedModeModal from '@/components/GuidedModeModal';
+import ServiceM8JobPickerModal, { type ServiceM8JobPickerItem } from '@/components/servicem8/ServiceM8JobPickerModal';
 import { DateDropdownField } from '@/components/DateDropdownField';
 import { NextVisitField } from '@/components/NextVisitField';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,6 @@ import { Badge } from '@/components/ui/badge';
 import { GasSafeRegisterLogo } from '@/components/GasSafeRegisterLogo';
 import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
 import { isAdminRole } from '@/lib/auth/roles';
-import { cn } from '@/lib/utils';
 import {
   CP12_APPLIANCE_COUNT,
   CP12_FLUE_TYPE_OPTIONS,
@@ -60,6 +60,8 @@ type CustomerRecord = {
   contactPerson?: string | null;
 };
 
+type ServiceM8JobOption = ServiceM8JobPickerItem;
+
 const yesNoOptions = CP12_YES_NO_OPTIONS;
 const yesNoNaOptions = CP12_YES_NO_NA_OPTIONS;
 const safeToUseOptions = CP12_SAFE_TO_USE_OPTIONS;
@@ -89,6 +91,38 @@ function buildApplianceLabel(index: number, appliance: Cp12ApplianceRow) {
   const name = appliance.applianceType.trim() || 'Appliance';
   const location = appliance.location.trim() || 'Location not set';
   return `${index + 1}. ${name} — ${location}`;
+}
+
+function buildServiceM8JobCustomerName(job: ServiceM8JobOption | null) {
+  if (!job) {
+    return '';
+  }
+
+  return job.billingContactName?.trim() || job.customerName?.trim() || job.companyName?.trim() || '';
+}
+
+function buildServiceM8JobBillingAddress(job: ServiceM8JobOption | null) {
+  if (!job) {
+    return '';
+  }
+
+  return job.billingAddress?.trim() || '';
+}
+
+function buildServiceM8JobSitePrefill(job: ServiceM8JobOption | null) {
+  if (!job) {
+    return '';
+  }
+
+  return job.workAddress?.trim() || job.address?.trim() || '';
+}
+
+function buildServiceM8JobLabel(job: ServiceM8JobOption) {
+  const generatedId = job.generated_job_id?.trim();
+  const description = job.job_description?.trim();
+  const address = job.workAddress?.trim() || job.address?.trim();
+
+  return [generatedId, description, address].filter(Boolean).join(' · ');
 }
 
 function ApplianceRowCard({
@@ -384,6 +418,10 @@ export default function CP12CertificatePage() {
   const [guidedOpen, setGuidedOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [selectedServiceM8JobUuid, setSelectedServiceM8JobUuid] = useState('');
+  const [selectedServiceM8Job, setSelectedServiceM8Job] = useState<ServiceM8JobPickerItem | null>(null);
+  const [serviceM8JobPickerOpen, setServiceM8JobPickerOpen] = useState(false);
+  const [serviceM8JobMode, setServiceM8JobMode] = useState<'none' | 'existing' | 'create'>('none');
   const [customerSiteSynced, setCustomerSiteSynced] = useState(false);
   const [certificateNumber, setCertificateNumber] = useState('');
   const [landlordName, setLandlordName] = useState('');
@@ -426,6 +464,8 @@ export default function CP12CertificatePage() {
   const { data: customersData } = useSWR('/api/customers', fetcher);
   const { data: currentUser } = useSWR<{ role?: string }>('/api/user', fetcher);
   const customers = Array.isArray(customersData) ? (customersData as CustomerRecord[]) : [];
+  const selectedServiceM8JobCustomerName = buildServiceM8JobCustomerName(selectedServiceM8Job);
+  const selectedServiceM8JobLabel = selectedServiceM8Job ? buildServiceM8JobLabel(selectedServiceM8Job) : '';
   const canUseSampleFill = isAdminRole(currentUser?.role);
 
   const guidedSteps = useMemo(() => createCp12GuidedSteps(), []);
@@ -441,6 +481,50 @@ export default function CP12CertificatePage() {
   useEffect(() => {
     setNextInspectionDate(getNextYearDate(inspectionDate));
   }, [inspectionDate]);
+
+  useEffect(() => {
+    if (!selectedServiceM8Job) {
+      return;
+    }
+
+    const nextSiteName = buildServiceM8JobSitePrefill(selectedServiceM8Job);
+    const nextSiteAddress = selectedServiceM8Job.workAddress?.trim() || selectedServiceM8Job.address?.trim() || '';
+    const nextLandlordName = buildServiceM8JobCustomerName(selectedServiceM8Job);
+    const nextLandlordAddress = buildServiceM8JobBillingAddress(selectedServiceM8Job);
+    const nextLandlordPostcode = selectedServiceM8Job.billingPostcode?.trim() || '';
+
+    if (!siteName && nextSiteName) {
+      setSiteName(nextSiteName);
+    }
+
+    if (!siteAddress && nextSiteAddress) {
+      setSiteAddress(nextSiteAddress);
+    }
+
+    if (!landlordName && nextLandlordName) {
+      setLandlordName(nextLandlordName);
+    }
+
+    if (!landlordAddress && nextLandlordAddress) {
+      setLandlordAddress(nextLandlordAddress);
+    }
+
+    if (!landlordPostcode && nextLandlordPostcode) {
+      setLandlordPostcode(nextLandlordPostcode);
+    }
+
+    if (!selectedCustomerName && nextLandlordName) {
+      setSelectedCustomerName(nextLandlordName);
+    }
+  }, [
+    landlordAddress,
+    landlordName,
+    landlordPostcode,
+    selectedCustomerName,
+    selectedServiceM8Job,
+    siteAddress,
+    siteName,
+  ]);
 
   useEffect(() => {
     const customer = customers.find((item) => String(item.id) === selectedCustomer) ?? null;
@@ -468,6 +552,13 @@ export default function CP12CertificatePage() {
     setCustomerSiteSynced(true);
   }, [customers, customerSiteSynced, selectedCustomer, siteAddress, siteName, sitePostcode, siteTelephone]);
 
+  const handleServiceM8JobSelected = (job: ServiceM8JobPickerItem) => {
+    setSelectedServiceM8Job(job);
+    setSelectedServiceM8JobUuid(job.uuid);
+    setServiceM8JobMode('existing');
+    setCustomerSiteSynced(false);
+  };
+
   const updateAppliance = (rowIndex: number, key: keyof Cp12ApplianceRow, nextValue: Cp12ApplianceRow[keyof Cp12ApplianceRow]) => {
     setAppliances((prev) => prev.map((row, index) => (index === rowIndex ? { ...row, [key]: nextValue } : row)));
   };
@@ -492,6 +583,8 @@ export default function CP12CertificatePage() {
       formData.set('siteAddress', siteAddress);
       formData.set('sitePostcode', sitePostcode);
       formData.set('siteTelephone', siteTelephone);
+      formData.set('servicem8JobMode', serviceM8JobMode);
+      formData.set('servicem8JobUuid', serviceM8JobMode === 'existing' ? selectedServiceM8JobUuid : '');
       formData.set('businessName', businessName);
       formData.set('businessAddress', businessAddress);
       formData.set('businessPostcode', businessPostcode);
@@ -554,6 +647,8 @@ export default function CP12CertificatePage() {
     setCertificateNumber('CP12-2026-001');
     setSelectedCustomer(matchedCustomer ? String(matchedCustomer.id) : '');
     setSelectedCustomerName(matchedCustomer?.name || 'Highfield Hall Community Centre');
+    setSelectedServiceM8JobUuid('');
+    setServiceM8JobMode('none');
     setCustomerSiteSynced(false);
     setLandlordName('Rosebank Property Ltd');
     setLandlordAddress('Rosebank House, 18 Market Street, Bolton');
@@ -793,6 +888,113 @@ export default function CP12CertificatePage() {
                   ))}
                 </datalist>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Building2 className="mr-2 h-5 w-5 text-slate-600" />
+                ServiceM8 Job Diary
+              </CardTitle>
+              <CardDescription>
+                Optionally link an existing ServiceM8 job or create one when saving this certificate.
+                Use the picker to search and page through jobs without loading the full list.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <input type="hidden" name="servicem8JobMode" value={serviceM8JobMode} />
+              <input type="hidden" name="servicem8JobUuid" value={selectedServiceM8JobUuid} />
+
+              <div className="space-y-2">
+                <Label htmlFor="serviceM8JobMode">Job handling</Label>
+                <Select
+                  value={serviceM8JobMode}
+                  onValueChange={(value) => {
+                    if (value === 'existing' || value === 'create' || value === 'none') {
+                      setServiceM8JobMode(value);
+                      if (value !== 'existing') {
+                        setSelectedServiceM8JobUuid('');
+                        setSelectedServiceM8Job(null);
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger id="serviceM8JobMode">
+                    <SelectValue placeholder="No ServiceM8 job" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No ServiceM8 job</SelectItem>
+                    <SelectItem value="existing">Link existing ServiceM8 job</SelectItem>
+                    <SelectItem value="create">Create new ServiceM8 job on save</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">
+                  Choose an existing job if the certificate already belongs to one, or create a new one when the report is saved.
+                </p>
+              </div>
+
+              {serviceM8JobMode === 'existing' ? (
+                <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">Selected ServiceM8 job</p>
+                      <p className="text-xs text-slate-600">
+                        {selectedServiceM8JobLabel || 'No job selected yet'}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="secondary" onClick={() => setServiceM8JobPickerOpen(true)}>
+                        {selectedServiceM8Job ? 'Change job' : 'Choose job'}
+                      </Button>
+                      {selectedServiceM8JobUuid ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedServiceM8JobUuid('');
+                            setSelectedServiceM8Job(null);
+                          }}
+                        >
+                          Clear
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {selectedServiceM8Job ? (
+                    <div className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                      <p className="font-medium">
+                        Linked job: {selectedServiceM8Job.generated_job_id || selectedServiceM8Job.uuid}
+                        {selectedServiceM8Job.status ? ` (${selectedServiceM8Job.status})` : ''}
+                      </p>
+                      {selectedServiceM8Job.job_description ? (
+                        <p className="mt-1">{selectedServiceM8Job.job_description}</p>
+                      ) : null}
+                      {selectedServiceM8Job.workAddress ? (
+                        <p className="mt-1">Work: {selectedServiceM8Job.workAddress}</p>
+                      ) : null}
+                      {selectedServiceM8Job.billingAddress ? (
+                        <p className="mt-1">Billing: {selectedServiceM8Job.billingAddress}</p>
+                      ) : null}
+                      {selectedServiceM8JobCustomerName ? (
+                        <p className="mt-1">Contact: {selectedServiceM8JobCustomerName}</p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="rounded border border-dashed border-slate-300 bg-white px-3 py-2 text-xs text-slate-500">
+                      Search and select a job from the modal. Results are sorted newest first by default.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  {serviceM8JobMode === 'create'
+                    ? 'A new ServiceM8 job will be created when the certificate is saved. The PDF will be uploaded once the certificate is completed.'
+                    : 'No ServiceM8 job will be linked to this certificate.'}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1229,6 +1431,13 @@ export default function CP12CertificatePage() {
           </div>
         </form>
       </div>
+
+      <ServiceM8JobPickerModal
+        open={serviceM8JobPickerOpen}
+        selectedJobUuid={selectedServiceM8JobUuid || null}
+        onClose={() => setServiceM8JobPickerOpen(false)}
+        onSelect={(job) => handleServiceM8JobSelected(job)}
+      />
 
       <GuidedModeModal
         open={guidedOpen}

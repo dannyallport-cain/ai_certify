@@ -30,6 +30,20 @@ export interface ServiceM8Job {
   completion_date: string | null;
   category_uuid: string | null;
   company_uuid: string | null;
+  company_name?: string | null;
+  address?: string | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
+  address_postcode?: string | null;
+  address_country?: string | null;
+  billing_address?: string | null;
+  billing_attention?: string | null;
+  billing_address2?: string | null;
+  billing_city?: string | null;
+  billing_state?: string | null;
+  billing_postcode?: string | null;
+  billing_country?: string | null;
   active: number;
   badge: string | null;
   total_invoice_amount: number | null;
@@ -385,11 +399,41 @@ export class ServiceM8Client_API {
     return this.request<ServiceM8Job[]>('/job.json', {}, filter ? { query: { $filter: filter } } : {});
   }
 
+  async getJobsPage(
+    filter?: string,
+    options: {
+      cursor?: string;
+      sort?: string;
+      order?: 'asc' | 'desc';
+    } = {},
+  ): Promise<{ jobs: ServiceM8Job[]; nextCursor: string | null }> {
+    const response = await this.request<Response>(
+      '/job.json',
+      {},
+      {
+        raw: true,
+        query: {
+          ...(filter ? { $filter: filter } : {}),
+          cursor: options.cursor ?? '-1',
+          ...(options.sort ? { $sort: `${options.sort} ${options.order ?? 'desc'}` } : {}),
+        },
+      },
+    );
+
+    const jobs = (await response.json()) as ServiceM8Job[];
+    const nextCursor = response.headers.get('x-next-cursor');
+
+    return {
+      jobs,
+      nextCursor,
+    };
+  }
+
   async getJob(uuid: string): Promise<ServiceM8Job> {
     return this.request<ServiceM8Job>(`/job/${uuid}.json`);
   }
 
-  async createJob(data: Partial<ServiceM8Job>): Promise<{ uuid: string }> {
+  async createJob(data: Partial<ServiceM8Job> & { company_name?: string | null }): Promise<{ uuid: string }> {
     return this.request<{ uuid: string }>('/job.json', {
       method: 'POST',
       body: JSON.stringify(data),

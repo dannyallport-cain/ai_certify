@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         return haystack.includes(search.toLowerCase());
       })
       .slice(0, limit)
-      .map(normalizeServiceM8Job);
+      .map((job) => normalizeServiceM8Job(job));
 
     return NextResponse.json({ jobs: filteredJobs });
   } catch (error) {

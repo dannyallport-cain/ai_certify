@@ -5,14 +5,40 @@
  * POST - Link or create a ServiceM8 job for a certificate, then process sync
  */
 
+import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, and } from 'drizzle-orm';
 
-import { ServiceM8Client_API } from '@/lib/servicem8/client';
-import { processServiceM8JobMapping } from '@/lib/servicem8/sync';
+import { certificates, servicem8JobMappings } from '@/lib/db/schema';
 import { db } from '@/lib/db/drizzle';
-import { servicem8JobMappings, certificates } from '@/lib/db/schema';
-import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { ServiceM8Client_API, type ServiceM8Job } from '@/lib/servicem8/client';
+import {
+  loadServiceM8ContactDetails,
+  normalizeServiceM8Client,
+  normalizeServiceM8Job,
+  type ServiceM8ClientRecord,
+  type ServiceM8JobRecord,
+} from '@/app/api/mobile/servicem8/_shared';
+import { processServiceM8JobMapping } from '@/lib/servicem8/sync';
+
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+const MAX_REMOTE_PAGES_PER_REQUEST = 10;
+const ALLOWED_SORT_FIELDS = new Set(['date', 'generated_job_id', 'job_description', 'status']);
+
+type JobsQuery = {
+  search: string;
+  status: string;
+  cursor: string;
+  sort: string;
+  order: 'asc' | 'desc';
+  limit: number;
+};
+
+type ServiceM8JobPickerRecord = ServiceM8Job &
+  ServiceM8JobRecord & {
+    customer_name: string | null;
+  };
 
 async function getServiceM8Context(): Promise<{ userId: number; teamId: number } | null> {
   const user = await getUser();
@@ -24,6 +50,162 @@ async function getServiceM8Context(): Promise<{ userId: number; teamId: number }
   return {
     userId: user.id,
     teamId: team.id,
+  };
+}
+
+function escapeFilterValue(value: string) {
+  return value.replace(/'/g, "''");
+}
+
+function parsePageSize(value: string | null) {
+  const parsed = Number(value ?? String(DEFAULT_PAGE_SIZE));
+
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_PAGE_SIZE;
+  }
+
+  return Math.max(1, Math.min(parsed, MAX_PAGE_SIZE));
+}
+
+function parseJobsQuery(request: NextRequest): JobsQuery {
+  const search = request.nextUrl.searchParams.get('search')?.trim() ?? '';
+  const status = request.nextUrl.searchParams.get('status')?.trim() ?? '';
+  const cursor = request.nextUrl.searchParams.get('cursor')?.trim() || '-1';
+  const requestedSort = request.nextUrl.searchParams.get('sort')?.trim() || 'date';
+  const sort = ALLOWED_SORT_FIELDS.has(requestedSort) ? requestedSort : 'date';
+  const order = request.nextUrl.searchParams.get('order') === 'asc' ? 'asc' : 'desc';
+  const limit = parsePageSize(request.nextUrl.searchParams.get('limit'));
+
+  return {
+    search,
+    status,
+    cursor,
+    sort,
+    order,
+    limit,
+  };
+}
+
+function matchesJobSearch(job: ServiceM8Job, search: string) {
+  const needle = search.trim().toLowerCase();
+  if (!needle) {
+    return true;
+  }
+
+  const haystack = [
+    job.uuid,
+    job.generated_job_id,
+    job.job_address,
+    job.job_description,
+    job.work_done_description,
+    job.first_name,
+    job.last_name,
+    job.status,
+    job.date,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return haystack.includes(needle);
+}
+
+function shouldUsePagedMode(request: NextRequest) {
+  const params = request.nextUrl.searchParams;
+  return (
+    params.has('paged') ||
+    params.has('cursor') ||
+    params.has('limit') ||
+    params.has('search') ||
+    params.has('status') ||
+    params.has('sort') ||
+    params.has('order')
+  );
+}
+
+async function enrichJobs(
+  client: ServiceM8Client_API,
+  jobs: ServiceM8Job[],
+): Promise<ServiceM8JobPickerRecord[]> {
+  const clientCache = new Map<string, ServiceM8ClientRecord | null>();
+
+  const getClientRecord = async (companyUuid: string | null | undefined) => {
+    if (!companyUuid) {
+      return null;
+    }
+
+    const cached = clientCache.get(companyUuid);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    try {
+      const rawClient = await client.getClient(companyUuid);
+      const contactDetails = await loadServiceM8ContactDetails(client, companyUuid);
+      const normalizedClient = normalizeServiceM8Client(rawClient, contactDetails);
+      clientCache.set(companyUuid, normalizedClient);
+      return normalizedClient;
+    } catch (error) {
+      console.warn(`Failed to load ServiceM8 client ${companyUuid} for jobs API`, error);
+      clientCache.set(companyUuid, null);
+      return null;
+    }
+  };
+
+  return Promise.all(
+    jobs.map(async (job) => {
+      const clientRecord = await getClientRecord(job.company_uuid);
+      const normalizedJob = normalizeServiceM8Job(job, clientRecord);
+
+      return {
+        ...job,
+        ...normalizedJob,
+        first_name: normalizedJob.firstName,
+        last_name: normalizedJob.lastName,
+        job_address: normalizedJob.workAddress ?? job.job_address ?? null,
+        customer_name: normalizedJob.billingContactName,
+      };
+    }),
+  );
+}
+
+async function fetchPagedJobs(
+  client: ServiceM8Client_API,
+  query: JobsQuery,
+): Promise<{ jobs: ServiceM8JobPickerRecord[]; nextCursor: string | null }> {
+  const filterParts = ['active eq 1'];
+
+  if (query.status) {
+    filterParts.push(`status eq '${escapeFilterValue(query.status)}'`);
+  }
+
+  const filter = filterParts.join(' and ');
+  const collectedJobs: ServiceM8Job[] = [];
+  let currentCursor = query.cursor || '-1';
+  let nextCursor: string | null = null;
+
+  for (let pageCount = 0; pageCount < MAX_REMOTE_PAGES_PER_REQUEST; pageCount += 1) {
+    const result = await client.getJobsPage(filter, {
+      cursor: currentCursor,
+      sort: query.sort,
+      order: query.order,
+    });
+
+    nextCursor = result.nextCursor;
+    const matches = query.search ? result.jobs.filter((job) => matchesJobSearch(job, query.search)) : result.jobs;
+
+    collectedJobs.push(...matches);
+
+    if (collectedJobs.length >= query.limit || !nextCursor) {
+      break;
+    }
+
+    currentCursor = nextCursor;
+  }
+
+  return {
+    jobs: await enrichJobs(client, collectedJobs.slice(0, query.limit)),
+    nextCursor,
   };
 }
 
@@ -39,15 +221,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'ServiceM8 not connected' }, { status: 400 });
     }
 
-    const status = request.nextUrl.searchParams.get('status');
-    let filter: string | undefined;
-    if (status) {
-      filter = `status eq '${status}'`;
+    if (!shouldUsePagedMode(request)) {
+      const jobs = await client.getJobs('active eq 1');
+      return NextResponse.json({ jobs: await enrichJobs(client, jobs) });
     }
 
-    const jobs = await client.getJobs(filter);
+    const query = parseJobsQuery(request);
+    const { jobs, nextCursor } = await fetchPagedJobs(client, query);
 
-    return NextResponse.json({ jobs });
+    return NextResponse.json({
+      jobs,
+      nextCursor,
+      pageSize: query.limit,
+      sort: query.sort,
+      order: query.order,
+    });
   } catch (error) {
     console.error('Error fetching ServiceM8 jobs:', error);
     return NextResponse.json({ error: 'Failed to fetch jobs' }, { status: 500 });
