@@ -91,7 +91,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "baseline-browser-mapping": "^2.10.25",
+    "baseline-browser-mapping": "^2.10.27",
     "tsx": "^4.21.0"
   }
 }

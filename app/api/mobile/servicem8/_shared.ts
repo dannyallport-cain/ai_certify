@@ -25,11 +25,14 @@ export interface ServiceM8ClientRecord {
   companyName: string | null;
   firstName: string | null;
   lastName: string | null;
+  billingContactName: string | null;
   email: string | null;
   phone: string | null;
   mobile: string | null;
   address: string | null;
+  billingAddress: string | null;
   postcode: string | null;
+  billingPostcode: string | null;
 }
 
 export interface ServiceM8ContactDetails {
@@ -45,15 +48,21 @@ export interface ServiceM8JobRecord {
   generatedJobId: string | null;
   status: string | null;
   address: string | null;
+  billingAddress: string | null;
+  workAddress: string | null;
+  postcode: string | null;
+  billingPostcode: string | null;
   description: string | null;
   workDoneDescription: string | null;
   date: string | null;
   completionDate: string | null;
   companyUuid: string | null;
+  companyName: string | null;
   categoryUuid: string | null;
   badge: string | null;
   firstName: string | null;
   lastName: string | null;
+  billingContactName: string | null;
   customerName: string | null;
   customerUuid: string | null;
 }
@@ -125,6 +134,10 @@ export function buildServiceM8DisplayName(input: {
   return personName || 'Unnamed ServiceM8 customer';
 }
 
+export function buildServiceM8ContactName(firstName?: string | null, lastName?: string | null) {
+  return [firstName?.trim(), lastName?.trim()].filter(Boolean).join(' ').trim() || null;
+}
+
 export function buildServiceM8Address(input: {
   address?: string | null;
   street?: string | null;
@@ -134,23 +147,16 @@ export function buildServiceM8Address(input: {
   postcode?: string | null;
   country?: string | null;
 }) {
-  const directAddress = input.address?.trim();
-  if (directAddress) {
-    return directAddress;
+  const line1 = [input.street?.trim(), input.address2?.trim()].filter(Boolean).join(' ').trim();
+  const cityOrState = input.city?.trim() || input.state?.trim() || '';
+  const postcode = input.postcode?.trim() || '';
+
+  const structuredAddress = [line1, cityOrState, postcode].filter(Boolean).join(', ');
+  if (structuredAddress) {
+    return structuredAddress;
   }
 
-  const value = [
-    input.street?.trim(),
-    input.address2?.trim(),
-    input.city?.trim(),
-    input.state?.trim(),
-    input.postcode?.trim(),
-    input.country?.trim(),
-  ]
-    .filter(Boolean)
-    .join(', ');
-
-  return value || null;
+  return input.address?.trim() || null;
 }
 
 function isPrimaryCompanyContact(contact: ServiceM8CompanyContact) {
@@ -205,55 +211,75 @@ export function normalizeServiceM8Client(
   client: ServiceM8Client,
   contactDetails?: ServiceM8ContactDetails,
 ): ServiceM8ClientRecord {
+  const firstName = contactDetails?.firstName ?? client.first_name ?? null;
+  const lastName = contactDetails?.lastName ?? client.last_name ?? null;
+  const billingContactName = buildServiceM8ContactName(firstName, lastName);
+
   return {
     uuid: client.uuid,
     name: buildServiceM8DisplayName({
       name: client.name,
       companyName: client.company_name,
-      firstName: contactDetails?.firstName ?? client.first_name,
-      lastName: contactDetails?.lastName ?? client.last_name,
+      firstName,
+      lastName,
     }),
     companyName: client.company_name ?? client.name ?? null,
-    firstName: contactDetails?.firstName ?? client.first_name ?? null,
-    lastName: contactDetails?.lastName ?? client.last_name ?? null,
+    firstName,
+    lastName,
+    billingContactName,
     email: contactDetails?.email ?? client.email ?? null,
     phone: contactDetails?.phone ?? client.phone ?? client.mobile ?? null,
     mobile: contactDetails?.mobile ?? client.mobile ?? null,
     address: buildServiceM8Address({
       address: client.address,
       street: client.address_street,
-      address2: client.billing_address2,
       city: client.address_city,
       state: client.address_state,
       postcode: client.address_postcode,
       country: client.address_country,
     }),
+    billingAddress: buildServiceM8Address({
+      address: client.billing_address,
+      street: client.billing_address2,
+      city: client.billing_city,
+      state: client.billing_state,
+      postcode: client.billing_postcode,
+      country: client.billing_country,
+    }),
     postcode: client.address_postcode || client.billing_postcode || null,
+    billingPostcode: client.billing_postcode || null,
   };
 }
 
-export function normalizeServiceM8Job(job: ServiceM8Job): ServiceM8JobRecord {
-  const customerName = buildServiceM8DisplayName({
-    companyName: null,
-    firstName: job.first_name,
-    lastName: job.last_name,
-  });
+export function normalizeServiceM8Job(job: ServiceM8Job, client: ServiceM8ClientRecord | null = null): ServiceM8JobRecord {
+  const billingContactName =
+    client?.billingContactName ||
+    buildServiceM8ContactName(client?.firstName ?? job.first_name ?? null, client?.lastName ?? job.last_name ?? null);
+
+  const workAddress = client?.address ?? job.job_address ?? null;
+  const billingAddress = client?.billingAddress ?? null;
 
   return {
     uuid: job.uuid,
     generatedJobId: job.generated_job_id || null,
     status: job.status || null,
-    address: job.job_address || null,
+    address: workAddress,
+    billingAddress,
+    workAddress,
+    postcode: client?.postcode ?? null,
+    billingPostcode: client?.billingPostcode ?? null,
     description: job.job_description || null,
     workDoneDescription: job.work_done_description || null,
     date: job.date || null,
     completionDate: job.completion_date || null,
     companyUuid: job.company_uuid || null,
+    companyName: client?.companyName ?? client?.name ?? null,
     categoryUuid: job.category_uuid || null,
     badge: job.badge || null,
-    firstName: job.first_name || null,
-    lastName: job.last_name || null,
-    customerName: customerName === 'Unnamed ServiceM8 customer' ? null : customerName,
+    firstName: client?.firstName ?? job.first_name ?? null,
+    lastName: client?.lastName ?? job.last_name ?? null,
+    billingContactName,
+    customerName: billingContactName,
     customerUuid: job.company_uuid || null,
   };
 }

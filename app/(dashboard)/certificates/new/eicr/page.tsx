@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ServiceM8JobPickerModal, { type ServiceM8JobPickerItem } from '@/components/servicem8/ServiceM8JobPickerModal';
 import { createCertificate, updateCertificate } from '../../../actions';
 import { useState, useEffect, useRef, type ChangeEvent, type DragEvent, type ReactNode, type InputHTMLAttributes } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -666,27 +667,22 @@ type EicrDraftState = {
   formValues: Record<string, string>;
 };
 
-type ServiceM8JobOption = {
-  uuid: string;
-  generated_job_id: string | null;
-  job_description: string | null;
-  job_address: string | null;
-  status: string | null;
-  date: string | null;
-  company_uuid?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-};
+type ServiceM8JobOption = ServiceM8JobPickerItem;
 
 function buildServiceM8JobCustomerName(job: ServiceM8JobOption | null): string {
   if (!job) {
     return '';
   }
 
-  return [job.first_name, job.last_name]
-    .map((value) => (typeof value === 'string' ? value.trim() : ''))
-    .filter(Boolean)
-    .join(' ');
+  return job.billingContactName?.trim() || job.customerName?.trim() || job.companyName?.trim() || '';
+}
+
+function buildServiceM8JobBillingAddress(job: ServiceM8JobOption | null): string {
+  if (!job) {
+    return '';
+  }
+
+  return job.billingAddress?.trim() || '';
 }
 
 function buildServiceM8JobSitePrefill(job: ServiceM8JobOption | null): string {
@@ -694,7 +690,7 @@ function buildServiceM8JobSitePrefill(job: ServiceM8JobOption | null): string {
     return '';
   }
 
-  return job.job_address?.trim() || job.job_description?.trim() || job.generated_job_id?.trim() || '';
+  return job.workAddress?.trim() || job.address?.trim() || '';
 }
 
 const EICR_DRAFT_STORAGE_PREFIX = 'eicr-form-draft';
@@ -1585,6 +1581,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
   const [selectedServiceM8JobUuid, setSelectedServiceM8JobUuid] = useState('');
+  const [serviceM8JobPickerOpen, setServiceM8JobPickerOpen] = useState(false);
   const { data: customersData } = useSWR('/api/customers', fetcher);
   const { data: servicem8JobsData } = useSWR<{ jobs?: ServiceM8JobOption[]; error?: string }>(
     '/api/servicem8/jobs',
@@ -1675,7 +1672,9 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     }
 
     const nextSiteName = buildServiceM8JobSitePrefill(selectedServiceM8Job);
-    const nextAddress = selectedServiceM8Job.job_address?.trim() || '';
+    const nextInstallationAddress = selectedServiceM8Job.workAddress?.trim() || selectedServiceM8Job.address?.trim() || '';
+    const nextClientAddress = buildServiceM8JobBillingAddress(selectedServiceM8Job);
+    const nextCustomerName = buildServiceM8JobCustomerName(selectedServiceM8Job);
 
     if (nextSiteName && (!siteName || isSiteNameAuto) && siteName !== nextSiteName) {
       setSiteName(nextSiteName);
@@ -1683,16 +1682,24 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
     }
 
     if (
-      nextAddress &&
+      nextClientAddress &&
       (!clientAddress || isClientAddressAuto || !clientAddressTouchedRef.current) &&
-      clientAddress !== nextAddress
+      clientAddress !== nextClientAddress
     ) {
-      setClientAddress(nextAddress);
+      setClientAddress(nextClientAddress);
       setIsClientAddressAuto(true);
     }
 
-    if (selectedServiceM8JobCustomerName && !selectedCustomerName && !selectedCustomer) {
-      const normalizedCustomerName = selectedServiceM8JobCustomerName.trim().toLowerCase();
+    if (
+      nextInstallationAddress &&
+      (!installationAddress || !installationAddressTouchedRef.current) &&
+      installationAddress !== nextInstallationAddress
+    ) {
+      setInstallationAddress(nextInstallationAddress);
+    }
+
+    if (nextCustomerName && !selectedCustomerName && !selectedCustomer) {
+      const normalizedCustomerName = nextCustomerName.trim().toLowerCase();
       const matchingCustomer = customers.find(
         (customer: any) => customer.name?.trim().toLowerCase() === normalizedCustomerName,
       );
@@ -1702,18 +1709,18 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         setSelectedCustomerName(matchingCustomer.name);
       } else {
         setSelectedCustomer('');
-        setSelectedCustomerName(selectedServiceM8JobCustomerName);
+        setSelectedCustomerName(nextCustomerName);
       }
     }
   }, [
     clientAddress,
     customers,
+    installationAddress,
     isClientAddressAuto,
     isSiteNameAuto,
     selectedCustomer,
     selectedCustomerName,
     selectedServiceM8Job,
-    selectedServiceM8JobCustomerName,
     siteName,
   ]);
 
@@ -3581,8 +3588,9 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const circuitHeaderGroups = getCircuitHeaderGroups(visibleCircuitColumns);
 
   return (
-    <div className="flex-1 bg-[#e8e1d6] p-4 pt-6 md:p-8">
-      <div className="mx-auto max-w-[1500px] space-y-4">
+    <>
+      <div className="flex-1 bg-[#e8e1d6] p-4 pt-6 md:p-8">
+        <div className="mx-auto max-w-[1500px] space-y-4">
         <div className="flex flex-col gap-3 border border-slate-300 bg-white px-4 py-3 shadow-sm md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">
@@ -3752,24 +3760,16 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
               <div className="space-y-2">
                 <Label htmlFor="servicem8JobUuid">ServiceM8 Job Link</Label>
                 <input type="hidden" name="servicem8JobUuid" value={selectedServiceM8JobUuid} />
-                <Select
-                  value={selectedServiceM8JobUuid || '__none'}
-                  onValueChange={(value) => setSelectedServiceM8JobUuid(value === '__none' ? '' : value)}
-                >
-                  <SelectTrigger id="servicem8JobUuid">
-                    <SelectValue placeholder="No linked ServiceM8 job" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">No linked ServiceM8 job</SelectItem>
-                    {servicem8Jobs.map((job) => (
-                      <SelectItem key={job.uuid} value={job.uuid}>
-                        {job.generated_job_id || 'Job'}
-                        {job.job_description ? ` — ${job.job_description}` : ''}
-                        {job.job_address ? ` — ${job.job_address}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" onClick={() => setServiceM8JobPickerOpen(true)}>
+                    {selectedServiceM8JobUuid ? 'Change ServiceM8 job' : 'Choose ServiceM8 job'}
+                  </Button>
+                  {selectedServiceM8JobUuid ? (
+                    <Button type="button" variant="outline" onClick={() => setSelectedServiceM8JobUuid('')}>
+                      Clear
+                    </Button>
+                  ) : null}
+                </div>
                 {selectedServiceM8Job ? (
                   <div className="rounded border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
                     <p className="font-medium">
@@ -3779,14 +3779,21 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                     {selectedServiceM8Job.job_description ? (
                       <p className="mt-1">{selectedServiceM8Job.job_description}</p>
                     ) : null}
-                    {selectedServiceM8Job.job_address ? (
-                      <p className="mt-1">{selectedServiceM8Job.job_address}</p>
+                    {selectedServiceM8Job.workAddress ? (
+                      <p className="mt-1">Work: {selectedServiceM8Job.workAddress}</p>
+                    ) : null}
+                    {selectedServiceM8Job.billingAddress ? (
+                      <p className="mt-1">Billing: {selectedServiceM8Job.billingAddress}</p>
                     ) : null}
                     {selectedServiceM8JobCustomerName ? (
                       <p className="mt-1">Contact: {selectedServiceM8JobCustomerName}</p>
                     ) : null}
                   </div>
-                ) : null}
+                ) : (
+                  <div className="rounded border border-dashed border-slate-300 bg-white px-3 py-2 text-xs text-slate-500">
+                    Search and select the correct ServiceM8 job from the modal table.
+                  </div>
+                )}
                 {servicem8JobsError ? (
                   <p className="text-xs text-red-600">{servicem8JobsError}</p>
                 ) : (
@@ -3804,52 +3811,6 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
           <CardHeader className={EDITOR_HEADER_CLASS}><CardTitle>Details of the Person Ordering the Report</CardTitle></CardHeader>
           <CardContent className={EDITOR_CONTENT_CLASS}>
             <div className={EDITOR_GRID_TWO_CLASS}>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="siteName">Client / Organisation *</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2 text-[10px]"
-                    onClick={() => {
-                      if (!selectedCustomerName) return;
-                      setSiteName(selectedCustomerName);
-                      setIsSiteNameAuto(true);
-                    }}
-                    disabled={!selectedCustomerName}
-                  >
-                    <Copy className="mr-1 h-3 w-3" />
-                    Copy from customer
-                  </Button>
-                </div>
-                <OrganisationAutocompleteField
-                  id="siteName"
-                  name="siteName"
-                  required
-                  placeholder="Highfield Hall Community Centre"
-                  value={siteName}
-                  onChange={(v) => {
-                    setSiteName(v);
-                    setIsSiteNameAuto(false);
-                  }}
-                  onAddressPick={(address) => {
-                    clientAddressTouchedRef.current = true;
-                    setClientAddress(address);
-                    setIsClientAddressAuto(true);
-                    if (!installationAddressTouchedRef.current && !installationAddress) {
-                      setInstallationAddress(address);
-                    }
-                  }}
-                  className={cn(EDITOR_NATIVE_INPUT_CLASS, isSiteNameAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : '')}
-                  title={isSiteNameAuto ? 'Auto-populated from selected customer details. Edit if needed.' : undefined}
-                />
-                {isSiteNameAuto && (
-                  <p className="text-xs text-amber-700" title="This value was auto-filled from the selected customer.">
-                    Auto-populated from customer details. Hover the field for details.
-                  </p>
-                )}
-              </div>
               <div className="space-y-2">
                 <Label htmlFor="clientAddress">Client Address *</Label>
                 <AddressAutocompleteField
@@ -5711,6 +5672,16 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
       </form>
     </div>
   </div>
+
+      <ServiceM8JobPickerModal
+        open={serviceM8JobPickerOpen}
+        selectedJobUuid={selectedServiceM8JobUuid || null}
+        onClose={() => setServiceM8JobPickerOpen(false)}
+        onSelect={(job) => {
+          setSelectedServiceM8JobUuid(job.uuid);
+        }}
+      />
+    </>
   );
 }
 

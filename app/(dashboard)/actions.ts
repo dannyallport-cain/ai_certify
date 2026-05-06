@@ -2,13 +2,23 @@
 
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { customers, certificates, certificateItems, teams, servicem8JobMappings, ActivityType, NewCertificate } from '@/lib/db/schema';
+import {
+  customers,
+  certificates,
+  certificateItems,
+  teams,
+  servicem8ClientMappings,
+  servicem8JobMappings,
+  ActivityType,
+  NewCertificate,
+} from '@/lib/db/schema';
 import { getUser, getTeamForUser } from '@/lib/db/queries'; // Keep other imports from @/lib/db/queries
 import { logActivity } from '../../lib/db/queries'; // Use relative path for logActivity
 import { redirect } from 'next/navigation';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { and, desc, eq } from 'drizzle-orm';
 import { generateCertificatePDF, CertificateData } from '@/lib/pdf/generator';
+import { ServiceM8Client_API, type ServiceM8Job } from '@/lib/servicem8/client';
 import { processServiceM8JobMapping } from '@/lib/servicem8/sync';
 
 // Customer schemas and actions
@@ -98,6 +108,8 @@ const createCertificateSchema = z.object({
   inspectionDate: z.string().optional().or(z.literal('')),
   nextInspectionDate: z.string().optional().or(z.literal('')),
   inspectorName: z.string().optional().or(z.literal('')),
+  servicem8JobMode: z.enum(['none', 'existing', 'create']).optional().or(z.literal('')),
+  servicem8JobUuid: z.string().optional().or(z.literal('')),
   formData: z.record(z.any()).optional()
 });
 
@@ -121,15 +133,89 @@ function generateCertificateNumber(certificateType: string) {
   return `${certTypeLetter}${certTypeNumber}${String(dayOfYear).padStart(3, '0')}${yearFirst}${twoRand}${yearLast}${randNum}`;
 }
 
-function extractServiceM8JobUuid(formValues?: Record<string, any>) {
-  const rawValue = formValues?.servicem8JobUuid;
+type ServiceM8JobSelection = {
+  mode: 'none' | 'existing' | 'create';
+  uuid: string | null;
+  hasSelection: boolean;
+};
 
-  if (typeof rawValue !== 'string') {
+function extractServiceM8JobSelection(input?: FormData | Record<string, any>): ServiceM8JobSelection {
+  const formDataInput = input instanceof FormData ? input : null;
+  const recordInput = !formDataInput && input && typeof input === 'object' ? input : null;
+
+  const readValue = (key: 'servicem8JobMode' | 'servicem8JobUuid') => {
+    if (formDataInput) {
+      return formDataInput.get(key);
+    }
+
+    if (recordInput) {
+      return recordInput[key as keyof typeof recordInput] ?? null;
+    }
+
+    return null;
+  };
+
+  const modeRaw = readValue('servicem8JobMode');
+  const uuidRaw = readValue('servicem8JobUuid');
+  const hasSelection = Boolean(
+    (formDataInput && (formDataInput.has('servicem8JobMode') || formDataInput.has('servicem8JobUuid'))) ||
+      (recordInput && ('servicem8JobMode' in recordInput || 'servicem8JobUuid' in recordInput)),
+  );
+
+  const mode =
+    typeof modeRaw === 'string' && ['existing', 'create', 'none'].includes(modeRaw.trim())
+      ? (modeRaw.trim() as 'none' | 'existing' | 'create')
+      : 'none';
+
+  const uuid = typeof uuidRaw === 'string' && uuidRaw.trim().length > 0 ? uuidRaw.trim() : null;
+
+  return { mode, uuid, hasSelection };
+}
+
+async function resolveServiceM8CompanyUuidForCustomer(teamId: number, customerId: number) {
+  const mappings = await db
+    .select({ servicem8CompanyUuid: servicem8ClientMappings.servicem8CompanyUuid })
+    .from(servicem8ClientMappings)
+    .where(and(eq(servicem8ClientMappings.teamId, teamId), eq(servicem8ClientMappings.customerId, customerId)))
+    .limit(1);
+
+  return mappings[0]?.servicem8CompanyUuid ?? null;
+}
+
+async function createServiceM8JobForCertificate({
+  userId,
+  teamId,
+  customerId,
+  certificateType,
+  certificateNumber,
+  siteAddress,
+  inspectionDate,
+}: {
+  userId: number;
+  teamId: number;
+  customerId: number;
+  certificateType: string;
+  certificateNumber: string;
+  siteAddress: string | null;
+  inspectionDate: string | null;
+}) {
+  const client = await ServiceM8Client_API.fromUserId(userId);
+  if (!client) {
     return null;
   }
 
-  const trimmedValue = rawValue.trim();
-  return trimmedValue.length > 0 ? trimmedValue : null;
+  const companyUuid = await resolveServiceM8CompanyUuidForCustomer(teamId, customerId);
+
+  const jobData: Partial<ServiceM8Job> = {
+    status: 'Work Order',
+    job_address: siteAddress || '',
+    job_description: `${certificateType} ${certificateNumber}`,
+    date: inspectionDate || new Date().toISOString().split('T')[0],
+    company_uuid: companyUuid || null,
+  };
+
+  const createdJob = await client.createJob(jobData);
+  return createdJob.uuid;
 }
 
 async function syncCertificateServiceM8JobMapping({
@@ -221,6 +307,17 @@ async function processLatestServiceM8JobMapping({
   return processServiceM8JobMapping(mapping.id, { pdfBytes });
 }
 
+async function getExistingServiceM8JobUuidForCertificate(teamId: number, certificateId: number) {
+  const rows = await db
+    .select({ servicem8JobUuid: servicem8JobMappings.servicem8JobUuid })
+    .from(servicem8JobMappings)
+    .where(and(eq(servicem8JobMappings.teamId, teamId), eq(servicem8JobMappings.certificateId, certificateId)))
+    .orderBy(desc(servicem8JobMappings.updatedAt), desc(servicem8JobMappings.id))
+    .limit(1);
+
+  return rows[0]?.servicem8JobUuid ?? null;
+}
+
 export const createCertificate = validatedActionWithUser(
   createCertificateSchema,
   async (data, formData, user) => {
@@ -231,7 +328,19 @@ export const createCertificate = validatedActionWithUser(
 
     // Collect all form fields into formData object
     const collectedFormData: Record<string, any> = {};
-    const skipFields = ['customerId', 'customerName', 'certificateType', 'certificateNumber', 'siteName', 'siteAddress', 'inspectionDate', 'nextInspectionDate', 'inspectorName'];
+    const skipFields = [
+      'customerId',
+      'customerName',
+      'certificateType',
+      'certificateNumber',
+      'siteName',
+      'siteAddress',
+      'inspectionDate',
+      'nextInspectionDate',
+      'inspectorName',
+      'servicem8JobMode',
+      'servicem8JobUuid',
+    ];
     const profileDefaults = user.eicrProfileDefaults ?? {};
     
     if (formData) {
@@ -248,6 +357,9 @@ export const createCertificate = validatedActionWithUser(
     const rawCustomerName = (data.customerName || '').trim();
     const customerNameFromLegacyField = /^[0-9]+$/.test(rawCustomerId) ? '' : rawCustomerId;
     const resolvedCustomerName = rawCustomerName || customerNameFromLegacyField;
+    const serviceM8JobSelection = extractServiceM8JobSelection(formData ?? collectedFormData);
+    const requestedServiceM8JobUuid = serviceM8JobSelection.uuid;
+    const serviceM8JobMode = serviceM8JobSelection.mode;
 
     let resolvedCustomerId: number | null = null;
 
@@ -311,12 +423,36 @@ export const createCertificate = validatedActionWithUser(
       .values(newCertificateData)
       .returning();
 
-    await syncCertificateServiceM8JobMapping({
-      teamId: team.id,
-      servicem8ConnectionUserId: user.id,
-      certificateId: certificate.id,
-      servicem8JobUuid: extractServiceM8JobUuid(collectedFormData),
-    });
+    let resolvedServiceM8JobUuid = requestedServiceM8JobUuid;
+
+    if (serviceM8JobMode === 'create' && resolvedCustomerId) {
+      try {
+        const createdJobUuid = await createServiceM8JobForCertificate({
+          userId: user.id,
+          teamId: team.id,
+          customerId: resolvedCustomerId,
+          certificateType: data.certificateType,
+          certificateNumber: data.certificateNumber,
+          siteAddress: data.siteAddress || null,
+          inspectionDate: data.inspectionDate || null,
+        });
+
+        if (createdJobUuid) {
+          resolvedServiceM8JobUuid = createdJobUuid;
+        }
+      } catch (error) {
+        console.error('Error creating ServiceM8 job for certificate:', error);
+      }
+    }
+
+    if (serviceM8JobSelection.hasSelection || resolvedServiceM8JobUuid) {
+      await syncCertificateServiceM8JobMapping({
+        teamId: team.id,
+        servicem8ConnectionUserId: user.id,
+        certificateId: certificate.id,
+        servicem8JobUuid: serviceM8JobMode === 'existing' ? requestedServiceM8JobUuid : resolvedServiceM8JobUuid,
+      });
+    }
 
     try {
       await processLatestServiceM8JobMapping({
@@ -468,7 +604,9 @@ export const updateCertificate = validatedActionWithUser(
       'siteAddress',
       'inspectionDate',
       'nextInspectionDate',
-      'inspectorName'
+      'inspectorName',
+      'servicem8JobMode',
+      'servicem8JobUuid',
     ];
 
     if (formData) {
@@ -506,12 +644,22 @@ export const updateCertificate = validatedActionWithUser(
       })
       .where(eq(certificates.id, id));
 
-    await syncCertificateServiceM8JobMapping({
-      teamId: team.id,
-      servicem8ConnectionUserId: user.id,
-      certificateId: id,
-      servicem8JobUuid: extractServiceM8JobUuid(resolvedFormData),
-    });
+    const serviceM8JobSelection = extractServiceM8JobSelection(formData ?? resolvedFormData);
+
+    if (serviceM8JobSelection.hasSelection) {
+      const existingServiceM8JobUuid = await getExistingServiceM8JobUuidForCertificate(team.id, id);
+      const nextServiceM8JobUuid =
+        serviceM8JobSelection.mode === 'none'
+          ? null
+          : serviceM8JobSelection.uuid ?? existingServiceM8JobUuid;
+
+      await syncCertificateServiceM8JobMapping({
+        teamId: team.id,
+        servicem8ConnectionUserId: user.id,
+        certificateId: id,
+        servicem8JobUuid: nextServiceM8JobUuid,
+      });
+    }
 
     await db.delete(certificateItems).where(eq(certificateItems.certificateId, id));
 
