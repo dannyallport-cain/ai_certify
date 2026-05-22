@@ -67,27 +67,42 @@ function runCommand(
     env?: Record<string, string | undefined>;
   } = {}
 ) {
-  return new Promise<void>((resolve, reject) => {
-    const child = spawn(command, args, {
-      stdio: 'inherit',
-      shell: false,
-      cwd: options.cwd ?? projectRoot,
-      env: {
-        ...process.env,
-        ...options.env,
-      },
+  const cwd = options.cwd ?? projectRoot;
+  const env = {
+    ...process.env,
+    ...options.env,
+  };
+
+  const runWithShell = (shell: boolean) =>
+    new Promise<void>((resolve, reject) => {
+      const child = spawn(command, args, {
+        stdio: 'inherit',
+        shell,
+        cwd,
+        env,
+      });
+
+      child.on('error', reject);
+
+      child.on('close', code => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+
+        reject(new Error(`${command} ${args.join(' ')} exited with code ${code ?? 'unknown'}`));
+      });
     });
 
-    child.on('error', reject);
+  // On Windows, spawn(..., { shell:false }) often cannot resolve *.cmd shims like pnpm,
+  // which results in ENOENT. Retry once with shell enabled.
+  return runWithShell(false).catch(err => {
+    const e = err as NodeJS.ErrnoException;
+    if (process.platform === 'win32' && e?.code === 'ENOENT') {
+      return runWithShell(true);
+    }
 
-    child.on('close', code => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-
-      reject(new Error(`${command} ${args.join(' ')} exited with code ${code ?? 'unknown'}`));
-    });
+    throw err;
   });
 }
 
