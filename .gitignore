@@ -40,9 +40,6 @@ yarn-error.log*
 # local env files
 .env
 /backups/
-nul
-tmp/backups.json
-tmp/restore.json
 
 # vercel
 .vercel
