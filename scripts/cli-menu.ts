@@ -224,7 +224,15 @@ async function runGitCommitAndPush() {
     return;
   }
 
-  await runCommand('git', ['add', '-A']);
+  await runCommand('git', [
+    'add',
+    '-A',
+    '--',
+    '.',
+    ':(exclude)nul',
+    ':(exclude)tmp/backups.json',
+    ':(exclude)tmp/restore.json',
+  ]);
   await runCommand('git', ['commit', '-m', message]);
   await runCommand('git', ['push', 'origin', branch]);
 
