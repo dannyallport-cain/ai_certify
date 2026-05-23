@@ -91,6 +91,19 @@ function runCommand(
   });
 }
 
+async function runPackageScript(
+  scriptName: string,
+  options: {
+    cwd?: string;
+    extraArgs?: string[];
+  } = {}
+) {
+  const args = ['run', scriptName, ...(options.extraArgs ?? [])];
+
+  info(`Using npm to run ${scriptName}.`);
+  await runCommand('npm', args, { cwd: options.cwd });
+}
+
 async function runMobileBuildAndInstall(cleanPrebuild = false) {
   if (!existsSync(mobileDir)) {
     throw new Error('Expected mobile workspace at ./mobile but it was not found.');
@@ -129,10 +142,10 @@ async function runMobileBuildAndInstall(cleanPrebuild = false) {
 
 async function runWebAppRebuild() {
   console.log('');
-  info('Rebuilding the web app with pnpm build.');
+  info('Rebuilding the web app with npm run build.');
   info('Use Ctrl+C to stop the command if needed.');
 
-  await runCommand('pnpm', ['build']);
+  await runPackageScript('build');
 
   success('Web app rebuild completed.');
 }
@@ -147,7 +160,7 @@ async function runMobileExpoGo() {
   info('This will launch the Expo dev server and show a QR code for Expo Go.');
   info('Use Ctrl+C to stop the server and return to your terminal.');
 
-  await runCommand('pnpm', ['--dir', 'mobile', 'exec', 'expo', 'start', '--go']);
+  await runPackageScript('start', { cwd: mobileDir, extraArgs: ['--go'] });
 
   success('Expo Go command completed.');
 }
@@ -218,10 +231,10 @@ async function runGitCommitAndPush() {
 
 async function runWebAppLocally() {
   console.log('');
-  info('Starting the existing web app dev server: pnpm dev');
+  info('Starting the existing web app dev server: npm run dev');
   info('Use Ctrl+C to stop the server and return to your terminal.');
 
-  await runCommand('pnpm', ['dev']);
+  await runPackageScript('dev');
 
   success('Web app command completed.');
 }

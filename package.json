@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next dev --turbopack -H 0.0.0.0 -p 4000",
-    "build": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next build",
+    "build": "node -e \"const { spawnSync } = require('node:child_process'); const env = { ...process.env, BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA: 'true', BROWSERSLIST_IGNORE_OLD_DATA: 'true' }; const command = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm'; const result = spawnSync(command, ['exec', 'next', 'build'], { stdio: 'inherit', env, shell: false }); process.exit(result.status ?? 1);\"",
     "start": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true PORT=4000 next start -H 0.0.0.0",
     "menu": "pnpm exec tsx scripts/cli-menu.ts",
     "ios:build-and-install": "bash ./mobile/build-and-install.sh",
@@ -87,6 +87,7 @@
     "tesseract.js": "^7.0.0",
     "tw-animate-css": "^1.3.0",
     "typescript": "^5.8.3",
+    "vercel": "^54.3.0",
     "zod": "^3.24.4"
   },
   "devDependencies": {
