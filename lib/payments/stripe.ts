@@ -466,18 +466,11 @@ function getApprovedPlanDefaults(planName: string) {
 export async function getAdminStripeSubscriptionPlans(): Promise<
   AdminStripeSubscriptionPlan[]
 > {
-  let prices: Stripe.ApiList<Stripe.Price>;
-
-  try {
-    prices = await stripe.prices.list({
-      expand: ['data.product'],
-      type: 'recurring',
-      limit: 100
-    });
-  } catch (error) {
-    console.error('Failed to load Stripe subscription plans for pricing page:', error);
-    return [];
-  }
+  const prices = await stripe.prices.list({
+    expand: ['data.product'],
+    type: 'recurring',
+    limit: 100
+  });
 
   const plans = prices.data
     .map((price): AdminStripeSubscriptionPlan | null => {

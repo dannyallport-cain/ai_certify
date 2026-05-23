@@ -14,86 +14,6 @@ import { generateCertificatePDF, type CertificateData } from '@/lib/pdf/generato
 import { ServiceM8Client_API, type ServiceM8Job } from './client';
 import { SERVICEM8_CONFIG } from './config';
 
-export type ParsedServiceM8Address = {
-  raw: string;
-  cleaned: string;
-  displayText: string;
-  addressLine1: string;
-  addressLine2: string;
-  postcode: string;
-};
-
-const SERVICE_M8_ADDRESS_PREFIX_REGEX = /^(linked job|work|address|site|job)\s*:\s*/i;
-const SERVICE_M8_POSTCODE_REGEX = /\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i;
-
-function normalizeWhitespace(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
-function stripServiceM8Prefix(value: string): string {
-  return normalizeWhitespace(value.replace(SERVICE_M8_ADDRESS_PREFIX_REGEX, ''));
-}
-
-function getServiceM8AddressSource(input: string): string {
-  const lines = input
-    .split(/\r?\n/)
-    .map((line) => normalizeWhitespace(line))
-    .filter(Boolean);
-
-  if (lines.length === 0) {
-    return '';
-  }
-
-  const prefixedLine = [...lines].reverse().find((line) => SERVICE_M8_ADDRESS_PREFIX_REGEX.test(line));
-  if (prefixedLine) {
-    return stripServiceM8Prefix(prefixedLine);
-  }
-
-  const lastMeaningfulLine = [...lines].reverse().find((line) => !/^linked job\b/i.test(line));
-  return lastMeaningfulLine ? stripServiceM8Prefix(lastMeaningfulLine) : '';
-}
-
-export function parseServiceM8Address(input: string | null | undefined): ParsedServiceM8Address {
-  const raw = normalizeWhitespace(String(input ?? ''));
-  if (!raw) {
-    return {
-      raw: '',
-      cleaned: '',
-      displayText: '',
-      addressLine1: '',
-      addressLine2: '',
-      postcode: '',
-    };
-  }
-
-  const source = getServiceM8AddressSource(raw);
-  const postcodeMatch = source.match(SERVICE_M8_POSTCODE_REGEX);
-  const postcode = postcodeMatch?.[1] ? normalizeWhitespace(postcodeMatch[1]).toUpperCase() : '';
-
-  const cleaned = normalizeWhitespace(
-    postcodeMatch ? source.replace(postcodeMatch[0], '').replace(/[,\s]+$/u, '') : source,
-  );
-
-  const parts = cleaned.split(',').map((part) => normalizeWhitespace(part)).filter(Boolean);
-  const addressLine1 = parts[0] || '';
-  const addressLine2 = parts.slice(1).join(', ');
-
-  const displayText = [addressLine1, addressLine2, postcode].filter(Boolean).join(', ');
-
-  return {
-    raw,
-    cleaned,
-    displayText: displayText || cleaned || raw,
-    addressLine1,
-    addressLine2,
-    postcode,
-  };
-}
-
-export function formatServiceM8Address(input: string | null | undefined): string {
-  return parseServiceM8Address(input).displayText;
-}
-
 type ProcessServiceM8JobMappingResult = {
   mappingId: number;
   certificateId: number;
@@ -114,22 +34,6 @@ function normalizeDateString(value: string | null): string | null {
   }
 
   return trimmed.slice(0, 10);
-}
-
-function buildEicrAddressFormData(address: string | null | undefined): Record<string, string> {
-  const parsed = parseServiceM8Address(address);
-
-  return {
-    siteAddress: parsed.displayText,
-    installationAddress: parsed.displayText,
-    propertyAddress: parsed.displayText,
-    addressLine1: parsed.addressLine1,
-    addressLine2: parsed.addressLine2,
-    addressPostcode: parsed.postcode,
-    clientAddressLine1: parsed.addressLine1,
-    clientAddressLine2: parsed.addressLine2,
-    clientAddressPostcode: parsed.postcode,
-  };
 }
 
 function buildCertificateAttachmentFileName(certificateData: CertificateData) {
@@ -218,8 +122,7 @@ async function syncCertificateFieldsFromServiceM8Job(
   const patch: Partial<typeof certificates.$inferInsert> & { updatedAt?: Date } = {};
 
   if (!certificate.siteAddress && job.job_address) {
-    const addressFields = buildEicrAddressFormData(job.job_address);
-    patch.siteAddress = addressFields.siteAddress;
+    patch.siteAddress = job.job_address;
   }
 
   if (!certificate.inspectionDate) {
@@ -233,16 +136,13 @@ async function syncCertificateFieldsFromServiceM8Job(
     return;
   }
 
-    const updatePayload = {
+  await db
+    .update(certificates)
+    .set({
       ...patch,
-      ...(job.job_address ? buildEicrAddressFormData(job.job_address) : {}),
       updatedAt: new Date(),
-    };
-
-    await db
-      .update(certificates)
-      .set(updatePayload)
-      .where(eq(certificates.id, certificateId));
+    })
+    .where(eq(certificates.id, certificateId));
 }
 
 async function uploadCompletedCertificatePdfIfNeeded({

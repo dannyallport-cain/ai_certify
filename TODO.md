@@ -1,6 +1,13 @@
-- [x] Add dynamic rendering config to `app/pricing/page.tsx` to prevent static export-time Stripe calls
-- [x] Add defensive error handling around Stripe reads used by pricing page
-- [x] Run `pnpm run build` to verify deployment build succeeds
-- [x] Mark completed steps and summarize fix
-- [x] Make npm scripts cross-platform for env vars (`dev`, `build`, `start`)
-- [x] Install `cross-env` and verify script execution on Windows
+# Repair Plan — Report Disseminator
+
+- [x] Inspect disseminator API handlers
+- [x] Confirm UI-to-API contracts and lifecycle behavior
+- [x] Inspect auth role helpers for the repair plan
+- [x] Create the repair todo list
+- [x] Inspect all disseminator admin API routes for auth coverage
+- [x] Enforce admin authorization on all disseminator admin API routes
+- [x] Remove hard-coded team fallback and fail closed on missing team
+- [x] Block direct edits to archived templates
+- [x] Preserve composite report values such as auto_zs subkeys
+- [x] Verify the updated routes and contracts
+- [x] Run a focused validation pass on the disseminator routes

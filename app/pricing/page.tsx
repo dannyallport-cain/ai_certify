@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import type { ComponentType, ReactNode } from 'react';
 
-export const dynamic = 'force-dynamic';
-
 import { Footer } from '@/components/landing/Footer';
 import { Header } from '@/components/landing/Header';
 import { Button } from '@/components/ui/button';

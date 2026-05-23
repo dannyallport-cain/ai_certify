@@ -8,9 +8,9 @@
     "build-and-install": "./mobile/build-and-install.sh"
   },
   "scripts": {
-    "dev": "cross-env BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next dev --turbopack -H 0.0.0.0 -p 4000",
-    "build": "cross-env BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next build",
-    "start": "cross-env BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true PORT=4000 next start -H 0.0.0.0",
+    "dev": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next dev --turbopack -H 0.0.0.0 -p 4000",
+    "build": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next build",
+    "start": "BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true PORT=4000 next start -H 0.0.0.0",
     "menu": "pnpm exec tsx scripts/cli-menu.ts",
     "ios:build-and-install": "bash ./mobile/build-and-install.sh",
     "db:setup": "npx tsx lib/db/setup.ts",
@@ -92,7 +92,6 @@
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "baseline-browser-mapping": "^2.10.27",
-    "cross-env": "^7.0.3",
     "tsx": "^4.21.0"
   }
 }

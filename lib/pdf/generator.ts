@@ -1886,49 +1886,6 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   const preferredNextInspectionDate =
     ss(fd.nextInspectionDate) || ss(certificate.nextInspectionDate);
   const preferredInspectorName = ss(fd.inspectorName) || ss(certificate.inspectorName);
-
-  const parseAddressLines = (value: string) => {
-    const normalized = ss(value).replace(/\s+/g, ' ').trim();
-    if (!normalized) {
-      return { line1: '', line2: '', postcode: '' };
-    }
-
-    const withoutPrefix = normalized.replace(/^(linked job|work|address|site|job)\s*:\s*/i, '');
-    const postcodeMatch = withoutPrefix.match(/\b([A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2})\b/i);
-    const postcode = postcodeMatch?.[1] ? postcodeMatch[1].replace(/\s+/g, ' ').toUpperCase() : '';
-    const cleaned = postcodeMatch
-      ? withoutPrefix.replace(postcodeMatch[0], '').replace(/[,\s]+$/u, '')
-      : withoutPrefix;
-
-    const parts = cleaned
-      .split(/[\n,]+/)
-      .map((part) => part.trim())
-      .filter(Boolean);
-
-    const line1 = parts[0] || cleaned || normalized;
-    const line2 = parts.slice(1).join(', ');
-
-    return {
-      line1,
-      line2,
-      postcode,
-    };
-  };
-
-  const buildAddressRows = (value: string): string[][] => {
-    const parsed = parseAddressLines(value);
-    const rows: string[][] = [];
-
-    if (parsed.line1) rows.push(['Address Line 1:', parsed.line1]);
-    if (parsed.line2) rows.push(['Address Line 2:', parsed.line2]);
-    if (parsed.postcode) rows.push(['Postcode:', parsed.postcode]);
-
-    if (rows.length === 0) {
-      rows.push(['Address:', 'Not specified']);
-    }
-
-    return rows;
-  };
   
   // Safely parse inspection schedule data - handle both string and object formats
   let inspectionData: Record<string, { comment?: string; outcome?: string }> = {};
@@ -2245,7 +2202,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   // Section 1 – Details of the Person Ordering the Report
   sectionHeader('1', 'Details of the Person Ordering the Report');
   row('Client:', preferredClientName);
-  buildAddressRows(preferredClientAddress).forEach(([label, value]) => row(label, value));
+  row('Address:', preferredClientAddress);
   y += 1;
 
   // Section 2 – Reason for Producing This Report
@@ -2259,7 +2216,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
 
   // Section 3 – Details of the Installation
   sectionHeader('3', 'Details of the Installation Which Is the Subject of This Report');
-  buildAddressRows(preferredInstallationAddress).forEach(([label, value]) => row(label, value));
+  row('Installation Address:', preferredInstallationAddress);
   const wiringAge = ss(fd.estimatedAgeOfWiring);
   row('Estimated age of wiring system:', wiringAge ? `${wiringAge} years` : 'N/A');
   const hasAdditions = ss(fd.evidenceOfAdditions) || 'No';

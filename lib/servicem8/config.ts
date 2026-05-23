@@ -2,33 +2,11 @@
  * ServiceM8 Integration Configuration
  */
 
-const INVALID_HOST_PATTERNS = [/your-railway-host/i, /\.railway\.internal$/i];
-
-function parseSafeUrl(value: string | undefined): string | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  try {
-    const parsed = new URL(trimmed);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
-
-    const host = parsed.hostname.toLowerCase();
-    if (INVALID_HOST_PATTERNS.some((pattern) => pattern.test(host))) {
-      return null;
-    }
-
-    return parsed.origin;
-  } catch {
-    return null;
-  }
-}
-
 const getBaseUrl = () => {
   return (
-    parseSafeUrl(process.env.NEXTAUTH_URL) ||
-    parseSafeUrl(process.env.BASE_URL) ||
-    parseSafeUrl(process.env.NEXT_PUBLIC_APP_URL) ||
+    process.env.NEXTAUTH_URL ||
+    process.env.BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
     'http://localhost:4000'
   );
 };

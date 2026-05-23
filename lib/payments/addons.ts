@@ -52,19 +52,12 @@ function isTemplatePackProduct(product: Stripe.Product) {
 }
 
 export async function getLocalAuthorityTemplatePackOffer(): Promise<AddonOffer | null> {
-  let prices: Stripe.ApiList<Stripe.Price>;
-
-  try {
-    prices = await stripe.prices.list({
-      active: true,
-      expand: ['data.product'],
-      limit: 100,
-      type: 'recurring'
-    });
-  } catch (error) {
-    console.error('Failed to load Stripe add-on offer for pricing page:', error);
-    return null;
-  }
+  const prices = await stripe.prices.list({
+    active: true,
+    expand: ['data.product'],
+    limit: 100,
+    type: 'recurring'
+  });
 
   for (const price of prices.data) {
     if (
