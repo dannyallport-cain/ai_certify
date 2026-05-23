@@ -48,6 +48,22 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+function validateR2Credentials(accessKeyId: string, secretAccessKey: string): void {
+  if (accessKeyId.length !== 32) {
+    throw new Error(
+      `Invalid R2_ACCESS_KEY_ID length: expected 32 characters, received ${accessKeyId.length}. ` +
+      'Use a Cloudflare R2 API token access key, not another credential type.'
+    );
+  }
+
+  if (secretAccessKey.length !== 64) {
+    throw new Error(
+      `Invalid R2_SECRET_ACCESS_KEY length: expected 64 characters, received ${secretAccessKey.length}. ` +
+      'Use the matching Cloudflare R2 API token secret.'
+    );
+  }
+}
+
 function getOptionalEnv(name: string): string | null {
   const value = process.env[name];
 
@@ -63,6 +79,7 @@ function getR2Config(): R2Config {
   const accessKeyId = getRequiredEnv('R2_ACCESS_KEY_ID');
   const secretAccessKey = getRequiredEnv('R2_SECRET_ACCESS_KEY');
   const bucket = getRequiredEnv('R2_BUCKET');
+  validateR2Credentials(accessKeyId, secretAccessKey);
   const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
   const configuredPublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, '');
   const derivedPublicBaseUrl = `https://${bucket}.${accountId}.r2.cloudflarestorage.com`;
@@ -86,6 +103,8 @@ function getOptionalR2Config(): R2Config | null {
   if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
     return null;
   }
+
+  validateR2Credentials(accessKeyId, secretAccessKey);
 
   const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
   const configuredPublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, '');
