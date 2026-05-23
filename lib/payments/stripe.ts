@@ -42,32 +42,14 @@ export type CreateOneTimeCheckoutParams = {
   metadata?: Record<string, string | undefined>;
 };
 
-function createStripeClient() {
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 
-  if (!stripeSecretKey) {
-    throw new Error('STRIPE_SECRET_KEY is not set');
-  }
-
-  return new Stripe(stripeSecretKey, {
-    apiVersion: '2025-08-27.basil'
-  });
+if (!stripeSecretKey) {
+  throw new Error('STRIPE_SECRET_KEY is not set');
 }
 
-let stripeClient: Stripe | null = null;
-
-function getStripeClient() {
-  if (!stripeClient) {
-    stripeClient = createStripeClient();
-  }
-
-  return stripeClient;
-}
-
-export const stripe = new Proxy({} as Stripe, {
-  get(_target, property, receiver) {
-    return Reflect.get(getStripeClient(), property, receiver);
-  }
+export const stripe = new Stripe(stripeSecretKey, {
+  apiVersion: '2025-08-27.basil'
 });
 
 export function getBaseUrl() {
@@ -138,7 +120,7 @@ export async function createSubscriptionCheckoutSession({
 
   const baseUrl = getBaseUrl();
 
-  const session = await getStripeClient().checkout.sessions.create({
+  const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
       {
@@ -181,7 +163,7 @@ export async function createOneTimeCheckoutSession({
   const resolvedUserId =
     typeof userId === 'number' ? userId.toString() : userId || undefined;
 
-  const session = await getStripeClient().checkout.sessions.create({
+  const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: lineItems,
     mode: 'payment',
@@ -218,17 +200,17 @@ export async function createCustomerPortalSession(team: Team) {
   }
 
   let configuration: Stripe.BillingPortal.Configuration;
-  const configurations = await getStripeClient().billingPortal.configurations.list();
+  const configurations = await stripe.billingPortal.configurations.list();
 
   if (configurations.data.length > 0) {
     configuration = configurations.data[0];
   } else {
-    const product = await getStripeClient().products.retrieve(team.stripeProductId);
+    const product = await stripe.products.retrieve(team.stripeProductId);
     if (!product.active) {
       throw new Error("Team's product is not active in Stripe");
     }
 
-    const prices = await getStripeClient().prices.list({
+    const prices = await stripe.prices.list({
       product: product.id,
       active: true
     });
@@ -236,7 +218,7 @@ export async function createCustomerPortalSession(team: Team) {
       throw new Error("No active prices found for the team's product");
     }
 
-    configuration = await getStripeClient().billingPortal.configurations.create({
+    configuration = await stripe.billingPortal.configurations.create({
       business_profile: {
         headline: 'Manage your subscription'
       },
@@ -273,7 +255,7 @@ export async function createCustomerPortalSession(team: Team) {
     });
   }
 
-  return getStripeClient().billingPortal.sessions.create({
+  return stripe.billingPortal.sessions.create({
     customer: team.stripeCustomerId,
     return_url: `${getBaseUrl()}/dashboard`,
     configuration: configuration.id
@@ -332,7 +314,7 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
-  const prices = await getStripeClient().prices.list({
+  const prices = await stripe.prices.list({
     expand: ['data.product'],
     active: true,
     type: 'recurring'
@@ -484,11 +466,18 @@ function getApprovedPlanDefaults(planName: string) {
 export async function getAdminStripeSubscriptionPlans(): Promise<
   AdminStripeSubscriptionPlan[]
 > {
-  const prices = await getStripeClient().prices.list({
-    expand: ['data.product'],
-    type: 'recurring',
-    limit: 100
-  });
+  let prices: Stripe.ApiList<Stripe.Price>;
+
+  try {
+    prices = await stripe.prices.list({
+      expand: ['data.product'],
+      type: 'recurring',
+      limit: 100
+    });
+  } catch (error) {
+    console.error('Failed to load Stripe subscription plans for pricing page:', error);
+    return [];
+  }
 
   const plans = prices.data
     .map((price): AdminStripeSubscriptionPlan | null => {
@@ -569,7 +558,7 @@ export async function getAdminStripeSubscriptionPlans(): Promise<
 }
 
 export async function getStripeProducts() {
-  const products = await getStripeClient().products.list({
+  const products = await stripe.products.list({
     active: true,
     expand: ['data.default_price']
   });

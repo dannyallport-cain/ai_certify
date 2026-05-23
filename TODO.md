@@ -1,5 +1,6 @@
-- [x] Verify requested database management sectioning/copy against current implementation
-- [x] Identify source of runtime credential error message
-- [x] Add R2 credential format validation (access key length) with actionable error messaging
-- [ ] Surface clearer config error in admin database backup UI/API response path
-- [ ] Run quick targeted validation for touched files
+- [x] Add dynamic rendering config to `app/pricing/page.tsx` to prevent static export-time Stripe calls
+- [x] Add defensive error handling around Stripe reads used by pricing page
+- [x] Run `pnpm run build` to verify deployment build succeeds
+- [x] Mark completed steps and summarize fix
+- [x] Make npm scripts cross-platform for env vars (`dev`, `build`, `start`)
+- [x] Install `cross-env` and verify script execution on Windows
