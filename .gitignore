@@ -62,3 +62,4 @@ postgres_data/
 
 # Playwright CLI artifacts
 .playwright-cli/
+.env*
