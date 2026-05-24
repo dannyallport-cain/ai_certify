@@ -17,6 +17,8 @@ import {
 } from '@/lib/payments/stripe';
 import { getLocalAuthorityTemplatePackOffer } from '@/lib/payments/addons';
 
+export const dynamic = 'force-dynamic';
+
 function formatCurrency(value: number, currency: string) {
   return new Intl.NumberFormat('en-GB', {
     style: 'currency',
@@ -107,7 +109,7 @@ export default async function PricingPage() {
       <section className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white py-20 dark:border-slate-800 dark:from-slate-950 dark:to-slate-900">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-800 dark:border-cyan-900 dark:bg-cyan-950/40 dark:text-cyan-200">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-800 dark:border-cyan-900 dark:bg-cyan-950/40">
               <ShieldCheck className="h-4 w-4" />
               Pricing built for certification teams, field crews, and growing offices
             </div>
