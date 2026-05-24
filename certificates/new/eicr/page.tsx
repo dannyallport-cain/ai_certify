@@ -22,6 +22,7 @@ import { Copy, Plus, Trash2, ShieldCheck, SpellCheck, CheckCircle2, AlertCircle,
 import { isAdminRole } from '@/lib/auth/roles';
 import { calculateMaxZs } from '@/lib/utils/calculate-zs';
 import { cn } from '@/lib/utils';
+import { extractEicrCertificateDataFromPdf, type EicrPdfImportData } from '@/lib/eicr-pdf-import';
 import {
   InspectionScheduleSection,
   type InspCode,
@@ -232,6 +233,7 @@ function zsExceedsMax(row: Pick<CircuitRow, 'measuredZs' | 'maxZs'>): boolean {
 export default function EICRCertificatePage() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const pdfImportInputRef = useRef<HTMLInputElement>(null);
   const getTodayDate = () => new Date().toISOString().split('T')[0];
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState('');
@@ -255,6 +257,10 @@ export default function EICRCertificatePage() {
   const [supplyConductorCSA, setSupplyConductorCSA] = useState('25');
   const [observations, setObservations] = useState<Observation[]>([]);
   const [evidenceOfAdditions, setEvidenceOfAdditions] = useState('No');
+  const [reasonForReport, setReasonForReport] = useState('');
+  const [premisesType, setPremisesType] = useState('Commercial');
+  const [mainBondingCSA, setMainBondingCSA] = useState('');
+  const [bondingGas, setBondingGas] = useState('Yes');
   const [inspSchedule, setInspSchedule] = useState<InspScheduleValue>({ codes: {}, comments: {} });
   const [circuits, setCircuits] = useState<CircuitRow[]>(Array.from({ length: DEFAULT_CIRCUIT_ROW_COUNT }, (_, index) => createEmptyCircuitRow(index)));
   const [selectedCircuitRow, setSelectedCircuitRow] = useState<number>(0);
@@ -263,6 +269,8 @@ export default function EICRCertificatePage() {
   const { data: currentUser } = useSWR<{ role?: string }>('/api/user', fetcher);
   const [verifyResults, setVerifyResults] = useState<Array<{ type: 'error' | 'warning' | 'pass'; message: string }> | null>(null);
   const [spellCheckActive, setSpellCheckActive] = useState(false);
+  const [isImportingPdf, setIsImportingPdf] = useState(false);
+  const [importMessage, setImportMessage] = useState('Upload a previous EICR PDF to prefill the form.');
 
   useEffect(() => {
     const rand = Math.floor(Math.random() * 99999).toString().padStart(5, '0');
@@ -321,6 +329,61 @@ export default function EICRCertificatePage() {
   const removeCircuitRow = (rowIndex: number) => setCircuits((prev) => normalizeCircuitRows(prev.filter((_, idx) => idx !== rowIndex), isThreePhase));
   const nextInspectionPeriodMonths = REINSPECTION_PERIODS.find((period) => period.label === nextInspectionPeriod)?.months;
   const canUseSampleFill = isAdminRole(currentUser?.role);
+
+  const applyImportedPdfData = (imported: EicrPdfImportData) => {
+    const today = getTodayDate();
+    const importedObservations = imported.observations.map((observation, index) => ({
+      ...observation,
+      id: `${Date.now()}-${index}`,
+    }));
+
+    setFormError('');
+    setVerifyResults(null);
+    setImportMessage(imported.warnings.length > 0 ? `Imported with warnings: ${imported.warnings.join(' ')}` : 'Imported previous certificate data successfully.');
+    setSelectedCustomer('');
+    setSelectedCustomerName(imported.customerName || imported.siteName || '');
+    setCertificateNumber(imported.certificateNumber || certificateNumber);
+    setSiteName(imported.siteName || '');
+    setClientAddress(imported.clientAddress || imported.installationAddress || '');
+    setInstallationAddress(imported.installationAddress || imported.clientAddress || '');
+    setReasonForReport(imported.reasonForReport || '');
+    setInspectionDate(today);
+    setIsInspectionDateAuto(true);
+    setNextInspectionDate(imported.nextInspectionDate || '');
+    setOverallAssessment(imported.overallAssessment || (importedObservations.some((observation) => observation.code === 'C1' || observation.code === 'C2') ? 'UNSATISFACTORY' : 'SATISFACTORY'));
+    setEarthingArrangement(imported.earthingArrangement || 'TN-C-S');
+    setMeansOfEarthing(imported.meansOfEarthing || "Distributor's facility");
+    setSupplyConductorCSA(imported.supplyConductorCSA || '25');
+    setNatureOfSupply(imported.natureOfSupply || '1-phase (2 wire) ac');
+    setObservations(importedObservations);
+    setMainBondingCSA(imported.mainBondingCSA || '');
+    pdfImportInputRef.current?.focus();
+  };
+
+  const handlePdfImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setImportMessage('Please choose a PDF file.');
+      return;
+    }
+
+    setIsImportingPdf(true);
+    setImportMessage('Reading PDF and extracting certificate data...');
+
+    try {
+      const imported = await extractEicrCertificateDataFromPdf(file);
+      applyImportedPdfData(imported);
+    } catch (error) {
+      console.error('Failed to import EICR PDF:', error);
+      setImportMessage('Unable to read that PDF. Try a text-based EICR certificate PDF.');
+    } finally {
+      setIsImportingPdf(false);
+    }
+  };
 
   const handleVerify = () => {
     const results: Array<{ type: 'error' | 'warning' | 'pass'; message: string }> = [];
@@ -412,6 +475,35 @@ export default function EICRCertificatePage() {
 
           <Card className={EDITOR_CARD_CLASS}>
             <CardHeader className={EDITOR_HEADER_CLASS}>
+              <CardTitle>Import Previous Certificate PDF</CardTitle>
+              <CardDescription>Upload a previous EICR PDF to prefill the form. The inspection date resets to today so you can issue a fresh report.</CardDescription>
+            </CardHeader>
+            <CardContent className={EDITOR_CONTENT_CLASS}>
+              <div className={EDITOR_GRID_TWO_CLASS}>
+                <div className="space-y-2">
+                  <Label htmlFor="eicrImportPdf">Previous certificate PDF</Label>
+                  <Input
+                    ref={pdfImportInputRef}
+                    id="eicrImportPdf"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className={EDITOR_NATIVE_INPUT_CLASS}
+                    onChange={handlePdfImport}
+                    disabled={isImportingPdf}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Import status</Label>
+                  <div className="rounded-none border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-600">
+                    {isImportingPdf ? 'Importing PDF...' : importMessage}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={EDITOR_CARD_CLASS}>
+            <CardHeader className={EDITOR_HEADER_CLASS}>
               <CardTitle>Report Reference</CardTitle>
               <CardDescription>Certificate reference taken from the CE numbering series</CardDescription>
             </CardHeader>
@@ -455,7 +547,7 @@ export default function EICRCertificatePage() {
               <div className={EDITOR_GRID_TWO_CLASS}>
                 <div className="space-y-2">
                   <Label htmlFor="reasonForReport">Reason for Report</Label>
-                  <Textarea id="reasonForReport" name="reasonForReport" rows={3} className="min-h-[4.5rem]" />
+                  <Textarea id="reasonForReport" name="reasonForReport" rows={3} className="min-h-[4.5rem]" value={reasonForReport} onChange={(e) => setReasonForReport(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <DateDropdownField id="inspectionDate" name="inspectionDate" label="Date(s) of Inspection" value={inspectionDate} onChange={(newDate) => { setInspectionDate(newDate); setIsInspectionDateAuto(false); }} required isAutoPopulated={isInspectionDateAuto} autoTitle="Auto-populated with today's date. Edit if required." autoHelpText="Auto-populated with today's date. Hover the field for details." />
@@ -474,7 +566,7 @@ export default function EICRCertificatePage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="premisesType">Description of Premises</Label>
-                  <Select name="premisesType" defaultValue="Commercial">
+                  <Select name="premisesType" value={premisesType} onValueChange={setPremisesType}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Domestic">Domestic</SelectItem>
@@ -618,11 +710,11 @@ export default function EICRCertificatePage() {
               <CertificateGroup title="Main Protective Bonding" columns={3}>
                 <div className="space-y-2">
                   <Label htmlFor="mainBondingCSA">Main Bonding CSA (mm2)</Label>
-                  <Input id="mainBondingCSA" name="mainBondingCSA" placeholder="10" />
+                  <Input id="mainBondingCSA" name="mainBondingCSA" placeholder="10" value={mainBondingCSA} onChange={(e) => setMainBondingCSA(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="bondingGas">Bonding: Gas Pipes</Label>
-                  <Select name="bondingGas" defaultValue="Yes">
+                  <Select name="bondingGas" value={bondingGas} onValueChange={setBondingGas}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Yes">Yes</SelectItem>
