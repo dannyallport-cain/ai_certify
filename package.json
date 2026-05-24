@@ -92,6 +92,7 @@
   "devDependencies": {
     "@playwright/test": "^1.55.0",
     "baseline-browser-mapping": "^2.10.27",
+    "cross-env": "^10.1.0",
     "tsx": "^4.21.0"
   }
 }
