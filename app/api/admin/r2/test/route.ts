@@ -90,13 +90,24 @@ export async function POST() {
     }
 
     const message = error instanceof Error ? error.message : 'Failed to verify R2 connectivity';
-    const status = message.startsWith('Missing required R2 environment variable') ? 503 : 502;
+    const missingConfig =
+      message.startsWith('Missing required R2 environment variable') ||
+      message.includes('Expected one of: R2_ACCESS_KEY_ID, R2_ACCESS_KEY, AWS_ACCESS_KEY_ID') ||
+      message.includes('Expected one of: R2_SECRET_ACCESS_KEY, R2_SECRET_KEY, AWS_SECRET_ACCESS_KEY');
+    const status = missingConfig ? 503 : 502;
 
     return NextResponse.json(
       {
         success: false,
         service: 'r2',
         message,
+        hints: missingConfig
+          ? [
+              'Set R2_ACCOUNT_ID and R2_BUCKET.',
+              'Set access key via one of: R2_ACCESS_KEY_ID, R2_ACCESS_KEY, AWS_ACCESS_KEY_ID.',
+              'Set secret key via one of: R2_SECRET_ACCESS_KEY, R2_SECRET_KEY, AWS_SECRET_ACCESS_KEY.',
+            ]
+          : undefined,
       },
       { status }
     );

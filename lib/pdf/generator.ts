@@ -1,6 +1,11 @@
 import { jsPDF } from 'jspdf';
 import { calculateMaxZs } from '../utils/calculate-zs';
 import { generateCp12TemplatePdf } from './cp12-template-pdf';
+import {
+  getApprovalSchemeIds,
+  getApprovalSchemeInfo,
+  type ApprovalSchemeInfo,
+} from '@/lib/approval-schemes';
 
 export interface TemplateConfig {
   colors: {
@@ -94,6 +99,20 @@ function getJsPdfImageFormat(imageData: string): 'PNG' | 'JPEG' | 'WEBP' {
     default:
       return 'JPEG';
   }
+}
+
+function getSelectedApprovalSchemes(formData: Record<string, any>): ApprovalSchemeInfo[] {
+  const rawSchemes = formData.approvalSchemes;
+  const parsedSchemes =
+    Array.isArray(rawSchemes)
+      ? rawSchemes
+      : typeof rawSchemes === 'string'
+        ? parseJsonLike<unknown>(rawSchemes, [])
+        : [];
+
+  return getApprovalSchemeIds(parsedSchemes)
+    .map((schemeId) => getApprovalSchemeInfo(schemeId))
+    .filter((scheme): scheme is ApprovalSchemeInfo => Boolean(scheme));
 }
 
 const watermarkImageCache = new Map<string, string>();
@@ -1914,6 +1933,65 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   const W = pageWidth - 2 * margin;
   const companyName = ss(fd.tradingTitle);
   const companyEmail = ss(fd.companyEmail);
+  const selectedApprovalSchemes = getSelectedApprovalSchemes(fd);
+
+  const drawApprovalSchemeRibbon = (topY: number) => {
+    if (selectedApprovalSchemes.length === 0) {
+      return 0;
+    }
+
+    const headerHeight = 6;
+    const badgeWidth = 48;
+    const badgeHeight = 9;
+    const gap = 2;
+    const columns = Math.max(1, Math.min(5, Math.floor((W + gap) / (badgeWidth + gap))));
+    const rows = Math.ceil(selectedApprovalSchemes.length / columns);
+    const bodyHeight = rows * badgeHeight + Math.max(0, rows - 1) * gap;
+    const totalHeight = headerHeight + bodyHeight + 4;
+
+    checkPage(totalHeight);
+
+    pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(margin, topY, W, totalHeight, 'FD');
+
+    pdf.setFillColor(brandRed[0], brandRed[1], brandRed[2]);
+    pdf.rect(margin, topY, W, headerHeight, 'F');
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6.5);
+    text('Selected trade association logos', margin + 3, topY + 4.3);
+    pdf.setTextColor(0, 0, 0);
+
+    selectedApprovalSchemes.forEach((scheme, index) => {
+      const rowIndex = Math.floor(index / columns);
+      const colIndex = index % columns;
+      const x = margin + 2 + colIndex * (badgeWidth + gap);
+      const y0 = topY + headerHeight + 2 + rowIndex * (badgeHeight + gap);
+
+      const hex = scheme.accentColor.replace(/^#/, '');
+      const rgb = [
+        Number.parseInt(hex.slice(0, 2), 16),
+        Number.parseInt(hex.slice(2, 4), 16),
+        Number.parseInt(hex.slice(4, 6), 16),
+      ] as [number, number, number];
+
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setFillColor(rgb[0], rgb[1], rgb[2]);
+      pdf.rect(x, y0, badgeWidth, badgeHeight, 'FD');
+
+      const isLightText = scheme.textColor.toLowerCase() === '#ffffff';
+      pdf.setTextColor(isLightText ? 255 : 17, isLightText ? 255 : 17, isLightText ? 255 : 17);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(5.7);
+      pdf.text(scheme.symbol, x + 3, y0 + 5.9);
+      pdf.text(scheme.shortLabel, x + 12, y0 + 5.9);
+      pdf.setTextColor(0, 0, 0);
+    });
+
+    return totalHeight;
+  };
 
   // ── Helpers ──────────────────────────────────────────────
   const text = (t: string, x: number, yy: number, opts?: any) => {
@@ -2194,6 +2272,11 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   text('Requirements For Electrical Installations - BS 7671 IET Wiring Regulations', pageWidth / 2, y + 15, { align: 'center' });
   pdf.setTextColor(0, 0, 0);
   y += 18;
+
+  const approvalRibbonHeight = drawApprovalSchemeRibbon(y + 1);
+  if (approvalRibbonHeight > 0) {
+    y += approvalRibbonHeight + 1;
+  }
 
   // Report reference
   row('Report Reference:', ss(certificate.certificateNumber));

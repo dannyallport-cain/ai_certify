@@ -9,25 +9,31 @@ const restoreRequestSchema = z.object({
 });
 
 function getWorkerConfig() {
-  const workerBaseUrl = process.env.RAILWAY_BACKUP_WORKER_URL;
-  const backupSharedSecret = process.env.BACKUP_SHARED_SECRET;
+  const workerBaseUrl = process.env.RAILWAY_BACKUP_WORKER_URL?.trim();
+  const backupSharedSecret = process.env.BACKUP_SHARED_SECRET?.trim();
 
   if (!workerBaseUrl) {
     console.error('Missing RAILWAY_BACKUP_WORKER_URL');
     return {
-      error: NextResponse.json({ error: 'Backup worker URL is not configured' }, { status: 500 }),
+      error: NextResponse.json(
+        { error: 'Backup worker URL is not configured', code: 'MISSING_WORKER_URL' },
+        { status: 503 }
+      ),
     };
   }
 
   if (!backupSharedSecret) {
     console.error('Missing BACKUP_SHARED_SECRET');
     return {
-      error: NextResponse.json({ error: 'Backup shared secret is not configured' }, { status: 500 }),
+      error: NextResponse.json(
+        { error: 'Backup shared secret is not configured', code: 'MISSING_BACKUP_SHARED_SECRET' },
+        { status: 503 }
+      ),
     };
   }
 
   return {
-    workerBaseUrl,
+    workerBaseUrl: workerBaseUrl.replace(/\/+$/, ''),
     backupSharedSecret,
   };
 }
@@ -80,6 +86,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid restore request', details: error.flatten() }, { status: 400 });
     }
 
-    return NextResponse.json({ error: 'Failed to restore database backup' }, { status: 500 });
+    if (error instanceof TypeError) {
+      return NextResponse.json(
+        { error: 'Failed to reach backup worker service', code: 'WORKER_UNREACHABLE' },
+        { status: 502 }
+      );
+    }
+
+    const message = error instanceof Error ? error.message : 'Failed to restore database backup';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
