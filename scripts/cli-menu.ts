@@ -70,7 +70,7 @@ function runCommand(
   return new Promise<void>((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: 'inherit',
-      shell: false,
+      shell: process.platform === 'win32',
       cwd: options.cwd ?? projectRoot,
       env: {
         ...process.env,
@@ -157,7 +157,7 @@ async function getCurrentBranch() {
     const child = spawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
       cwd: projectRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: false,
+      shell: process.platform === 'win32',
     });
 
     let stdout = '';
