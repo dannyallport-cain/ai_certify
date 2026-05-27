@@ -1,13 +1,10 @@
-# Repair Plan — Report Disseminator
+# Repair Plan — R2 Login Credentials / DB Backups & Restore
 
-- [x] Inspect disseminator API handlers
-- [x] Confirm UI-to-API contracts and lifecycle behavior
-- [x] Inspect auth role helpers for the repair plan
-- [x] Create the repair todo list
-- [x] Inspect all disseminator admin API routes for auth coverage
-- [x] Enforce admin authorization on all disseminator admin API routes
-- [x] Remove hard-coded team fallback and fail closed on missing team
-- [x] Block direct edits to archived templates
-- [x] Preserve composite report values such as auto_zs subkeys
-- [x] Verify the updated routes and contracts
-- [x] Run a focused validation pass on the disseminator routes
+- [x] Inspect R2 storage and admin database backup/restore API routes
+- [x] Confirm root cause around strict env-var naming for R2 credentials
+- [x] Create repair todo list
+- [x] Update `lib/storage/r2.ts` to support fallback credential env names
+- [x] Improve error diagnostics in `app/api/admin/r2/test/route.ts`
+- [x] Improve error diagnostics in `app/api/admin/database/backups/route.ts`
+- [x] Harden restore config handling in `app/api/admin/database/restore/route.ts`
+- [x] Run focused validation (typecheck/lint) for touched files
