@@ -1,10 +1,7 @@
-# Repair Plan — R2 Login Credentials / DB Backups & Restore
+# TODO - Admin database restore metadata visibility
 
-- [x] Inspect R2 storage and admin database backup/restore API routes
-- [x] Confirm root cause around strict env-var naming for R2 credentials
-- [x] Create repair todo list
-- [x] Update `lib/storage/r2.ts` to support fallback credential env names
-- [x] Improve error diagnostics in `app/api/admin/r2/test/route.ts`
-- [x] Improve error diagnostics in `app/api/admin/database/backups/route.ts`
-- [x] Harden restore config handling in `app/api/admin/database/restore/route.ts`
-- [x] Run focused validation (typecheck/lint) for touched files
+- [ ] Update `components/admin/DatabaseManagementClient.tsx` to capture restore result metadata per backup key
+- [ ] Render restoration metadata in mobile backup cards after a restore action
+- [ ] Render restoration metadata in desktop backup rows after a restore action
+- [ ] Keep existing restore/delete/refresh behavior unchanged while adding metadata display
+- [ ] (Optional) Run a targeted typecheck/lint pass
