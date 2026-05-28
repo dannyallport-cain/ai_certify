@@ -35,6 +35,24 @@ type BackupsResponse = {
   error?: string;
 };
 
+type RestoreResponse = {
+  success?: boolean;
+  message?: string;
+  detail?: string;
+  restoredAt?: string;
+  restored_at?: string;
+  timestamp?: string;
+  restoreId?: string;
+  restore_id?: string;
+};
+
+type RestoreMetadata = {
+  status: 'success';
+  restoredAt?: string;
+  message?: string;
+  restoreId?: string;
+};
+
 const fetcher = async (url: string): Promise<BackupsResponse> => {
   const response = await fetch(url, {
     cache: 'no-store',
@@ -104,6 +122,7 @@ export default function DatabaseManagementClient() {
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [deletedKeys, setDeletedKeys] = useState<string[]>([]);
   const [visualStateByKey, setVisualStateByKey] = useState<Record<string, BackupVisualState>>({});
+  const [restoreMetadataByKey, setRestoreMetadataByKey] = useState<Record<string, RestoreMetadata>>({});
   const configError =
     error instanceof Error && error.message === 'Backup worker URL is not configured'
       ? error.message
@@ -250,7 +269,21 @@ export default function DatabaseManagementClient() {
         throw new Error(result?.error || result?.message || 'Restore failed');
       }
 
-      toast.success(result?.message || 'Database restore completed');
+      const restoredAt = result?.restoredAt || result?.restored_at || result?.timestamp;
+      const restoreMessage = result?.message || result?.detail || 'Database restore completed';
+      const restoreId = result?.restoreId || result?.restore_id;
+
+      setRestoreMetadataByKey((current) => ({
+        ...current,
+        [objectKey]: {
+          status: 'success',
+          restoredAt,
+          message: restoreMessage,
+          restoreId
+        }
+      }));
+
+      toast.success(restoreMessage);
       await mutate();
     } catch (restoreError) {
       const message =
@@ -387,6 +420,24 @@ export default function DatabaseManagementClient() {
                       <span className="truncate text-xs text-slate-500">{backup.objectKey}</span>
                     </div>
 
+                    {restoreMetadataByKey[backup.objectKey] ? (
+                      <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
+                            Restored
+                          </Badge>
+                          <span>
+                            {restoreMetadataByKey[backup.objectKey].restoredAt
+                              ? `Restored ${formatDateTime(restoreMetadataByKey[backup.objectKey].restoredAt)}`
+                              : 'Restored just now'}
+                          </span>
+                        </div>
+                        {restoreMetadataByKey[backup.objectKey].message ? (
+                          <p className="mt-1 line-clamp-2">{restoreMetadataByKey[backup.objectKey].message}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
+
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <Button
                         variant="outline"
@@ -467,8 +518,23 @@ export default function DatabaseManagementClient() {
                           {getBackupName(backup.objectKey)}
                         </p>
                         {backup.bucket ? <Badge variant="secondary">{backup.bucket}</Badge> : null}
+                        {restoreMetadataByKey[backup.objectKey] ? (
+                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">
+                            Restored
+                          </Badge>
+                        ) : null}
                       </div>
                       <p className="truncate text-xs text-slate-500">{backup.objectKey}</p>
+                      {restoreMetadataByKey[backup.objectKey] ? (
+                        <p className="mt-1 truncate text-xs text-emerald-700">
+                          {restoreMetadataByKey[backup.objectKey].restoredAt
+                            ? `Restored ${formatDateTime(restoreMetadataByKey[backup.objectKey].restoredAt)}`
+                            : 'Restored just now'}
+                          {restoreMetadataByKey[backup.objectKey].message
+                            ? ` · ${restoreMetadataByKey[backup.objectKey].message}`
+                            : ''}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="text-slate-600">{formatBytes(backup.size)}</div>
                     <div className="text-slate-600">{formatDateTime(backupTime)}</div>

@@ -85,13 +85,24 @@ export async function GET() {
     console.error('Error listing database backups:', error);
 
     const message = error instanceof Error ? error.message : 'Failed to list database backups';
+    const missingConfig =
+      message.startsWith('Missing required R2 environment variable') ||
+      message.includes('Expected one of: R2_ACCESS_KEY_ID, R2_ACCESS_KEY, AWS_ACCESS_KEY_ID') ||
+      message.includes('Expected one of: R2_SECRET_ACCESS_KEY, R2_SECRET_KEY, AWS_SECRET_ACCESS_KEY');
 
     return NextResponse.json(
       {
         success: false,
         error: message,
+        hints: missingConfig
+          ? [
+              'Set R2_ACCOUNT_ID and R2_BUCKET.',
+              'Set access key via one of: R2_ACCESS_KEY_ID, R2_ACCESS_KEY, AWS_ACCESS_KEY_ID.',
+              'Set secret key via one of: R2_SECRET_ACCESS_KEY, R2_SECRET_KEY, AWS_SECRET_ACCESS_KEY.',
+            ]
+          : undefined,
       },
-      { status: 500 }
+      { status: missingConfig ? 503 : 500 }
     );
   }
 }

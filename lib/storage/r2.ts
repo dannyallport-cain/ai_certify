@@ -38,17 +38,7 @@ type R2Config = {
   publicBaseUrl: string;
 };
 
-function getRequiredEnv(name: string): string {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Missing required R2 environment variable: ${name}`);
-  }
-
-  return value;
-}
-
-function getOptionalEnv(name: string): string | null {
+function readEnvValue(name: string): string | null {
   const value = process.env[name];
 
   if (!value || value.trim() === '') {
@@ -58,10 +48,56 @@ function getOptionalEnv(name: string): string | null {
   return value.trim();
 }
 
+function getRequiredEnv(name: string): string {
+  const value = readEnvValue(name);
+
+  if (!value) {
+    throw new Error(`Missing required R2 environment variable: ${name}`);
+  }
+
+  return value;
+}
+
+function getOptionalEnv(name: string): string | null {
+  return readEnvValue(name);
+}
+
+function getRequiredEnvFromAliases(aliases: string[], label: string): string {
+  for (const alias of aliases) {
+    const value = readEnvValue(alias);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  throw new Error(
+    `Missing required R2 environment variable for ${label}. Expected one of: ${aliases.join(', ')}`
+  );
+}
+
+function getOptionalEnvFromAliases(aliases: string[]): string | null {
+  for (const alias of aliases) {
+    const value = readEnvValue(alias);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
 function getR2Config(): R2Config {
   const accountId = getRequiredEnv('R2_ACCOUNT_ID');
-  const accessKeyId = getRequiredEnv('R2_ACCESS_KEY_ID');
-  const secretAccessKey = getRequiredEnv('R2_SECRET_ACCESS_KEY');
+  const accessKeyId = getRequiredEnvFromAliases(
+    ['R2_ACCESS_KEY_ID', 'R2_ACCESS_KEY', 'AWS_ACCESS_KEY_ID'],
+    'access key'
+  );
+  const secretAccessKey = getRequiredEnvFromAliases(
+    ['R2_SECRET_ACCESS_KEY', 'R2_SECRET_KEY', 'AWS_SECRET_ACCESS_KEY'],
+    'secret key'
+  );
   const bucket = getRequiredEnv('R2_BUCKET');
   const endpoint = `https://${accountId}.r2.cloudflarestorage.com`;
   const configuredPublicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/+$/, '');
@@ -79,8 +115,12 @@ function getR2Config(): R2Config {
 
 function getOptionalR2Config(): R2Config | null {
   const accountId = getOptionalEnv('R2_ACCOUNT_ID');
-  const accessKeyId = getOptionalEnv('R2_ACCESS_KEY_ID');
-  const secretAccessKey = getOptionalEnv('R2_SECRET_ACCESS_KEY');
+  const accessKeyId = getOptionalEnvFromAliases(['R2_ACCESS_KEY_ID', 'R2_ACCESS_KEY', 'AWS_ACCESS_KEY_ID']);
+  const secretAccessKey = getOptionalEnvFromAliases([
+    'R2_SECRET_ACCESS_KEY',
+    'R2_SECRET_KEY',
+    'AWS_SECRET_ACCESS_KEY',
+  ]);
   const bucket = getOptionalEnv('R2_BUCKET');
 
   if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {

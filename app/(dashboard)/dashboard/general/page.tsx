@@ -8,9 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { updateAccount } from '@/app/(login)/actions';
 import { User, type EicrProfileDefaults } from '@/lib/db/schema';
+import { ApprovalSchemeSelector } from '@/components/settings/ApprovalSchemeSelector';
 import ProfileMediaSettings from '@/components/settings/ProfileMediaSettings';
 import TeamBrandingSettings from '@/components/settings/TeamBrandingSettings';
 import IntegrationTestCard from '@/components/integrations/IntegrationTestCard';
+import { APPROVAL_SCHEMES, type ApprovalSchemeId } from '@/lib/approval-schemes';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 
@@ -21,15 +23,6 @@ type TeamProfile = {
   logoDataUri: string | null;
 };
 
-const SCHEME_OPTIONS = [
-  'Gas Safe',
-  'NICEIC',
-  'NAPIT',
-  'ELECSA',
-  'Stroma',
-  'SELECT',
-  'BAFE'
-] as const;
 
 type ActionState = {
   name?: string;
@@ -50,12 +43,19 @@ function AccountForm({
   emailValue = '',
   profileDefaults = null
 }: AccountFormProps) {
-  const [selectedSchemes, setSelectedSchemes] = useState<string[]>(
-    profileDefaults?.approvalSchemes ?? []
+  const [selectedSchemes, setSelectedSchemes] = useState<ApprovalSchemeId[]>(
+    (profileDefaults?.approvalSchemes ?? []).filter((scheme): scheme is ApprovalSchemeId =>
+      APPROVAL_SCHEMES.some((option) => option.id === scheme)
+    )
   );
 
   useEffect(() => {
-    setSelectedSchemes(profileDefaults?.approvalSchemes ?? []);
+    setSelectedSchemes(
+      (profileDefaults?.approvalSchemes ?? []).filter(
+        (scheme): scheme is ApprovalSchemeId =>
+          APPROVAL_SCHEMES.some((option) => option.id === scheme)
+      )
+    );
   }, [profileDefaults]);
 
   const mergedProfileDefaults = {
@@ -93,28 +93,10 @@ function AccountForm({
 
       <div className="space-y-3">
         <Label className="mb-2">Approval Schemes</Label>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {SCHEME_OPTIONS.map((scheme) => (
-            <label
-              key={scheme}
-              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700"
-            >
-              <input
-                type="checkbox"
-                checked={selectedSchemes.includes(scheme)}
-                onChange={() =>
-                  setSelectedSchemes((current) =>
-                    current.includes(scheme)
-                      ? current.filter((item) => item !== scheme)
-                      : [...current, scheme]
-                  )
-                }
-                className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-              />
-              <span>{scheme}</span>
-            </label>
-          ))}
-        </div>
+        <ApprovalSchemeSelector
+          selectedSchemes={selectedSchemes}
+          onChange={setSelectedSchemes}
+        />
       </div>
 
       <input
