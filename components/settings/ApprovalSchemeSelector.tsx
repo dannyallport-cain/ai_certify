@@ -53,12 +53,20 @@ export function ApprovalSchemeSelector({
             >
               <div
                 className={cn(
-                  'flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border-2 border-black text-lg font-black uppercase shadow-[2px_2px_0_0_rgba(0,0,0,1)]',
+                  'flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 border-black text-lg font-black uppercase shadow-[2px_2px_0_0_rgba(0,0,0,1)]',
                   isSelected ? 'bg-white text-black' : 'text-white',
                 )}
                 style={{ backgroundColor: isSelected ? '#ffffff' : scheme.accentColor }}
               >
-                {scheme.symbol}
+                {scheme.logoSrc ? (
+                  <img
+                    src={scheme.logoSrc}
+                    alt={scheme.logoAlt ?? `${scheme.label} logo`}
+                    className="h-full w-full object-contain p-1"
+                  />
+                ) : (
+                  scheme.symbol
+                )}
               </div>
 
               <div className="min-w-0 flex-1">

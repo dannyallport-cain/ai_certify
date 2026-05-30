@@ -15,6 +15,8 @@ export type ApprovalSchemeInfo = {
   accentColor: string;
   textColor: string;
   symbol: string;
+  logoSrc?: string;
+  logoAlt?: string;
 };
 
 export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
@@ -44,6 +46,8 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#15803d',
     textColor: '#ffffff',
     symbol: 'NP',
+    logoSrc: '/NAPIT-Member-Logo.webp',
+    logoAlt: 'NAPIT Member logo',
   },
   {
     id: 'ELECSA',
@@ -80,6 +84,8 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#b91c1c',
     textColor: '#ffffff',
     symbol: 'BF',
+    logoSrc: '/BAFE-Logo.webp',
+    logoAlt: 'BAFE logo',
   },
 ];
 

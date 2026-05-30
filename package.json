@@ -8,9 +8,9 @@
     "build-and-install": "./mobile/build-and-install.sh"
   },
   "scripts": {
-    "dev": "cross-env BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next dev --turbopack -H 0.0.0.0 -p 4000",
-    "build": "cross-env BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true next build",
-    "start": "cross-env BASELINE_BROWSER_MAPPING_IGNORE_OLD_DATA=true BROWSERSLIST_IGNORE_OLD_DATA=true PORT=4000 next start -H 0.0.0.0",
+    "dev": "cross-env BROWSERSLIST_IGNORE_OLD_DATA=true next dev --turbopack -H 0.0.0.0 -p 4000",
+    "build": "cross-env BROWSERSLIST_IGNORE_OLD_DATA=true next build",
+    "start": "cross-env BROWSERSLIST_IGNORE_OLD_DATA=true PORT=4000 next start -H 0.0.0.0",
     "menu": "pnpm exec tsx scripts/cli-menu.ts",
     "ios:build-and-install": "bash ./mobile/build-and-install.sh",
     "db:setup": "npx tsx lib/db/setup.ts",
@@ -21,7 +21,8 @@
     "db:clean-disseminator-preview-values": "npx tsx scripts/clean-disseminator-preview-values.ts",
     "backup:env": "bash scripts/backup-env.sh",
     "stripe:prepare-verification": "pnpm exec tsx scripts/prepare-stripe-verification-price.ts",
-    "stripe:verify-callback": "pnpm exec tsx scripts/verify-stripe-signup-callback.ts"
+    "stripe:verify-callback": "pnpm exec tsx scripts/verify-stripe-signup-callback.ts",
+    "update:baseline-browser-mapping": "pnpm add baseline-browser-mapping@latest -D"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1021.0",
@@ -91,9 +92,14 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "baseline-browser-mapping": "^2.10.27",
+    "baseline-browser-mapping": "^2.10.32",
     "cross-env": "^10.1.0",
     "tsx": "^4.21.0",
     "vercel": "^54.5.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "baseline-browser-mapping": "^2.10.32"
+    }
   }
 }

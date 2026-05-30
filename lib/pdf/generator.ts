@@ -6,6 +6,8 @@ import {
   getApprovalSchemeInfo,
   type ApprovalSchemeInfo,
 } from '@/lib/approval-schemes';
+import path from 'path';
+import fs from 'fs/promises';
 
 export interface TemplateConfig {
   colors: {
@@ -117,9 +119,43 @@ function getSelectedApprovalSchemes(formData: Record<string, any>): ApprovalSche
 
 const watermarkImageCache = new Map<string, string>();
 const printedReferenceStampImageCache = new Map<string, string>();
+const approvalSchemeLogoDataUriCache = new Map<string, string>();
 const printedReferenceStampFontPath = '/Users/admin/Library/Fonts/1952 RHEINMETALL.ttf';
 const printedReferenceStampFontFamily = '1952 RHEINMETALL';
 let printedReferenceStampFontRegistered = false;
+
+async function getApprovalSchemeLogoDataUri(logoSrc?: string): Promise<string | null> {
+  if (!logoSrc) return null;
+  if (logoSrc.startsWith('data:')) return logoSrc;
+  if (!logoSrc.startsWith('/')) return null;
+
+  const cached = approvalSchemeLogoDataUriCache.get(logoSrc);
+  if (cached) return cached;
+
+  const ext = path.extname(logoSrc).toLowerCase();
+  const mimeByExt: Record<string, string> = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+  };
+
+  const mimeType = mimeByExt[ext];
+  if (!mimeType) return null;
+
+  const absolutePath = path.join(process.cwd(), 'public', logoSrc.replace(/^\//, ''));
+
+  try {
+    const fileBuffer = await fs.readFile(absolutePath);
+    const dataUri = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+    approvalSchemeLogoDataUriCache.set(logoSrc, dataUri);
+    return dataUri;
+  } catch {
+    return null;
+  }
+}
 
 function buildWatermarkPayload(certificate: CertificateData): string {
   const serial = safeString(certificate.certificateNumber).trim() || `CERT-${certificate.id}`;
@@ -495,7 +531,7 @@ const CP12_GAS_SAFE_LOGO_DATA_URI =
   'aGJ0RKI1jdRnjrKNKPkrMAAAB9H9vlKVYliOqGl0yccE+HH7WO94P/E8Ylg++kqRVhYZ7wDuLCcYRjhYqpyw9tiHJtx5OdLxXtSWl2AHvKuq5MlcJ/zPQsZA' +
   'WseZ6P9RP1c9zl5Y61iAAAA';
 
-export function generateCertificatePDF(certificate: CertificateData): Uint8Array {
+export async function generateCertificatePDF(certificate: CertificateData): Promise<Uint8Array> {
   // Route EICR to a dedicated generator matching the BS 7671 form structure
   if (certificate.certificateType === 'EICR') {
     return generateEICRPDF(certificate);
@@ -1444,7 +1480,7 @@ function deriveEicrAssessment(fd: Record<string, any>, observations: Array<{ cod
     : 'SATISFACTORY';
 }
 
-function generateCP12PDF(certificate: CertificateData): Uint8Array {
+async function generateCP12PDF(certificate: CertificateData): Promise<Uint8Array> {
   return generateCp12TemplatePdf(certificate);
 }
 
@@ -1878,7 +1914,7 @@ function generateCP12PDFLegacy(certificate: CertificateData): Uint8Array {
 // ─── EICR (BS 7671) dedicated PDF generator ─────────────────────────────────
 // Generates a full 8-page report matching BS 7671:2018 Appendix 6 model form
 
-function generateEICRPDF(certificate: CertificateData): Uint8Array {
+async function generateEICRPDF(certificate: CertificateData): Promise<Uint8Array> {
   const totalPages = 8;
   const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -1935,7 +1971,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   const companyEmail = ss(fd.companyEmail);
   const selectedApprovalSchemes = getSelectedApprovalSchemes(fd);
 
-  const drawApprovalSchemeRibbon = (topY: number) => {
+  const drawApprovalSchemeRibbon = async (topY: number) => {
     if (selectedApprovalSchemes.length === 0) {
       return 0;
     }
@@ -1964,33 +2000,57 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
     text('Selected trade association logos', margin + 3, topY + 4.3);
     pdf.setTextColor(0, 0, 0);
 
-    selectedApprovalSchemes.forEach((scheme, index) => {
+    const placements = selectedApprovalSchemes.map((scheme, index) => {
       const rowIndex = Math.floor(index / columns);
       const colIndex = index % columns;
       const x = margin + 2 + colIndex * (badgeWidth + gap);
       const y0 = topY + headerHeight + 2 + rowIndex * (badgeHeight + gap);
-
-      const hex = scheme.accentColor.replace(/^#/, '');
-      const rgb = [
-        Number.parseInt(hex.slice(0, 2), 16),
-        Number.parseInt(hex.slice(2, 4), 16),
-        Number.parseInt(hex.slice(4, 6), 16),
-      ] as [number, number, number];
-
-      pdf.setDrawColor(0, 0, 0);
-      pdf.setFillColor(rgb[0], rgb[1], rgb[2]);
-      pdf.rect(x, y0, badgeWidth, badgeHeight, 'FD');
-
-      const isLightText = scheme.textColor.toLowerCase() === '#ffffff';
-      pdf.setTextColor(isLightText ? 255 : 17, isLightText ? 255 : 17, isLightText ? 255 : 17);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(5.7);
-      pdf.text(scheme.symbol, x + 3, y0 + 5.9);
-      pdf.text(scheme.shortLabel, x + 12, y0 + 5.9);
-      pdf.setTextColor(0, 0, 0);
+      return { scheme, x, y0 };
     });
 
-    return totalHeight;
+    return Promise.all(
+      placements.map(async ({ scheme, x, y0 }) => {
+        const hex = scheme.accentColor.replace(/^#/, '');
+        const rgb = [
+          Number.parseInt(hex.slice(0, 2), 16),
+          Number.parseInt(hex.slice(2, 4), 16),
+          Number.parseInt(hex.slice(4, 6), 16),
+        ] as [number, number, number];
+
+        pdf.setDrawColor(0, 0, 0);
+        pdf.setFillColor(rgb[0], rgb[1], rgb[2]);
+        pdf.rect(x, y0, badgeWidth, badgeHeight, 'FD');
+
+        const logoDataUri = await getApprovalSchemeLogoDataUri(scheme.logoSrc);
+        if (logoDataUri) {
+          try {
+            const logoFormat = getJsPdfImageFormat(logoDataUri);
+            const logoPadX = 1.5;
+            const logoPadY = 1.2;
+            pdf.addImage(
+              logoDataUri,
+              logoFormat,
+              x + logoPadX,
+              y0 + logoPadY,
+              badgeWidth - logoPadX * 2,
+              badgeHeight - logoPadY * 2
+            );
+            return;
+          } catch {
+            // Fall through to text fallback
+          }
+        }
+
+        const isLightText = scheme.textColor.toLowerCase() === '#ffffff';
+        pdf.setTextColor(isLightText ? 255 : 17, isLightText ? 255 : 17, isLightText ? 255 : 17);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(5.7);
+        pdf.text(scheme.symbol, x + 3, y0 + 5.9);
+        pdf.text(scheme.shortLabel, x + 12, y0 + 5.9);
+        pdf.setTextColor(0, 0, 0);
+      })
+    ).then(() => totalHeight);
+
   };
 
   // ── Helpers ──────────────────────────────────────────────
@@ -2273,7 +2333,7 @@ function generateEICRPDF(certificate: CertificateData): Uint8Array {
   pdf.setTextColor(0, 0, 0);
   y += 18;
 
-  const approvalRibbonHeight = drawApprovalSchemeRibbon(y + 1);
+  const approvalRibbonHeight = await drawApprovalSchemeRibbon(y + 1);
   if (approvalRibbonHeight > 0) {
     y += approvalRibbonHeight + 1;
   }

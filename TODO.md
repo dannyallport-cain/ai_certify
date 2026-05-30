@@ -1,10 +1,9 @@
-# Repair Plan — R2 Login Credentials / DB Backups & Restore
+# TODO
 
-- [x] Inspect R2 storage and admin database backup/restore API routes
-- [x] Confirm root cause around strict env-var naming for R2 credentials
-- [x] Create repair todo list
-- [x] Update `lib/storage/r2.ts` to support fallback credential env names
-- [x] Improve error diagnostics in `app/api/admin/r2/test/route.ts`
-- [x] Improve error diagnostics in `app/api/admin/database/backups/route.ts`
-- [x] Harden restore config handling in `app/api/admin/database/restore/route.ts`
-- [x] Run focused validation (typecheck/lint) for touched files
+- [ ] Update EICR PDF header ribbon to render trade association logo images (with fallback to text badges)
+- [ ] Add/confirm approval scheme logo asset mappings in `lib/approval-schemes.ts`
+- [ ] Run quick type check on touched files
+- [ ] Verify `/certificates/87` PDF preview shows logos in header
+- [ ] Update `components/settings/ProfileMediaSettings.tsx` to clamp timeout delay and handle immediate expiry safely
+- [ ] Run targeted type/lint check for the updated file
+- [ ] Mark TODOs complete and summarize fix

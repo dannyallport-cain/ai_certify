@@ -2,6 +2,7 @@ import { networkInterfaces } from 'node:os';
 import type { NextRequest } from 'next/server';
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
+const WILDCARD_HOSTNAMES = new Set(['0.0.0.0', '::']);
 
 function isPrivateIpv4(hostname: string) {
   return (
@@ -13,6 +14,10 @@ function isPrivateIpv4(hostname: string) {
 
 function isLoopbackHost(hostname: string) {
   return LOCAL_HOSTNAMES.has(hostname);
+}
+
+function isWildcardHost(hostname: string) {
+  return WILDCARD_HOSTNAMES.has(hostname);
 }
 
 function parseUrlCandidate(value: string | undefined) {
@@ -62,7 +67,7 @@ export function getReachableBaseUrl(request: NextRequest) {
     parseUrlCandidate(process.env.BASE_URL) ||
     parseUrlCandidate(process.env.NEXTAUTH_URL);
 
-  if (!isLoopbackHost(requestUrl.hostname)) {
+  if (!isLoopbackHost(requestUrl.hostname) && !isWildcardHost(requestUrl.hostname)) {
     return requestUrl.origin;
   }
 

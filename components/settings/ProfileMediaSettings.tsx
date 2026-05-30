@@ -151,11 +151,11 @@ export default function ProfileMediaSettings() {
 
     const expiresAt = new Date(activeCapture.expiresAt).getTime();
 
-    if (Number.isNaN(expiresAt)) {
+    if (!Number.isFinite(expiresAt)) {
       return;
     }
 
-    const timeout = window.setTimeout(() => {
+    const expireCapture = () => {
       if (captureCompletedRef.current) {
         return;
       }
@@ -164,7 +164,24 @@ export default function ProfileMediaSettings() {
       setActiveCapture(null);
       setSuccess(null);
       setError('The mobile capture link expired before an upload was detected. Generate a new one and try again.');
-    }, Math.max(expiresAt - Date.now(), 0) + 1000);
+    };
+
+    const now = Date.now();
+    const remainingMs = expiresAt - now;
+    const SAFETY_BUFFER_MS = 1000;
+    const MAX_TIMEOUT_MS = 2_147_483_647;
+
+    if (remainingMs <= 0) {
+      expireCapture();
+      return;
+    }
+
+    const safeDelay = Math.min(
+      Math.max(remainingMs + SAFETY_BUFFER_MS, 1),
+      MAX_TIMEOUT_MS
+    );
+
+    const timeout = window.setTimeout(expireCapture, safeDelay);
 
     return () => {
       window.clearTimeout(timeout);
