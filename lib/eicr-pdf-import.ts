@@ -1,5 +1,7 @@
 'use client';
 
+import { configurePdfJsWorker } from '@/lib/pdf/pdfjs-worker';
+
 export type EicrObservationCode = 'C1' | 'C2' | 'C3' | 'FI';
 
 export interface EicrImportedObservation {
@@ -73,20 +75,26 @@ function splitLines(text: string): string[] {
 }
 
 function joinPageText(items: PdfPageTextItem[] | undefined): string {
-  return normalizeText((items ?? []).map((item) => item.str ?? '').join(' '));
+  return (items ?? [])
+    .map((item) => `${item.str ?? ''}${item.hasEOL ? '\n' : ' '}`)
+    .join('')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 async function loadPdfJsModule(): Promise<{
   getDocument: (options: { data: Uint8Array; disableWorker?: boolean }) => { promise: Promise<PdfDocumentProxy> };
 }> {
-  const module = await import('pdfjs-dist/legacy/build/pdf.mjs');
-  return module as typeof import('pdfjs-dist/legacy/build/pdf.mjs');
+  return configurePdfJsWorker() as unknown as {
+    getDocument: (options: { data: Uint8Array; disableWorker?: boolean }) => { promise: Promise<PdfDocumentProxy> };
+  };
 }
 
 async function extractPdfText(file: File): Promise<string> {
   const pdfJs = await loadPdfJsModule();
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const documentTask = pdfJs.getDocument({ data: bytes, disableWorker: true });
+  const documentTask = pdfJs.getDocument({ data: bytes });
   const document = (await documentTask.promise) as PdfDocumentProxy;
 
   const pages: string[] = [];
@@ -200,6 +208,40 @@ function extractInspectionDate(text: string): string | undefined {
   return pickFirstMatch(text, regexes);
 }
 
+function extractNextInspectionPeriod(text: string): string | undefined {
+  const regexes = [
+    /Subject to the necessary remedial action being taken, I\/we recommend that the installation is further inspected and tested by:\s*([^\n]+)/i,
+    /further inspected and tested by:\s*([^\n]+)/i,
+    /Next Inspection Due:\s*([^\n]+)/i,
+  ];
+
+  return pickFirstMatch(text, regexes);
+}
+
+function deriveNextInspectionDateFromPeriod(
+  inspectionDate: string | undefined,
+  nextInspectionPeriod: string | undefined,
+): string | undefined {
+  if (!inspectionDate || !nextInspectionPeriod) return undefined;
+
+  const base = new Date(inspectionDate);
+  if (Number.isNaN(base.getTime())) return undefined;
+
+  const yearMatch = nextInspectionPeriod.match(/(\d+)\s*[Yy]ear/);
+  const monthMatch = nextInspectionPeriod.match(/(\d+)\s*[Mm]onth/);
+
+  const years = yearMatch ? Number.parseInt(yearMatch[1], 10) : 0;
+  const months = monthMatch ? Number.parseInt(monthMatch[1], 10) : 0;
+
+  if (years === 0 && months === 0) return undefined;
+
+  const nextDate = new Date(base);
+  nextDate.setFullYear(nextDate.getFullYear() + years);
+  nextDate.setMonth(nextDate.getMonth() + months);
+
+  return nextDate.toISOString().split('T')[0];
+}
+
 export async function extractEicrCertificateDataFromPdf(file: File): Promise<EicrPdfImportData> {
   const rawText = await extractPdfText(file);
   const lines = splitLines(rawText);
@@ -221,8 +263,11 @@ export async function extractEicrCertificateDataFromPdf(file: File): Promise<Eic
   const supplyConductorCSA = findTextValue(rawText, FIELD_LABELS.supplyConductorCSA);
   const mainBondingCSA = findTextValue(rawText, ['Main Bonding CSA', 'Main Bonding Conductor CSA']);
   const natureOfSupply = findTextValue(rawText, FIELD_LABELS.natureOfSupply);
-  const nextInspectionDate = findTextValue(rawText, FIELD_LABELS.nextInspectionDate);
   const inspectionDate = extractInspectionDate(rawText);
+  const nextInspectionPeriod = extractNextInspectionPeriod(rawText);
+  const nextInspectionDate =
+    findTextValue(rawText, FIELD_LABELS.nextInspectionDate) ||
+    deriveNextInspectionDateFromPeriod(inspectionDate, nextInspectionPeriod);
 
   const overallAssessment =
     /\bUNSATISFACTORY\b/i.test(rawText) ? 'UNSATISFACTORY' : /\bSATISFACTORY\b/i.test(rawText) ? 'SATISFACTORY' : undefined;

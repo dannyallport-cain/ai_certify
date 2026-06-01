@@ -29,7 +29,8 @@ function getArg(name: string) {
 }
 
 async function sleep(ms: number) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
+  const safeDelay = Math.max(0, Math.floor(ms));
+  await new Promise((resolve) => setTimeout(resolve, safeDelay));
 }
 
 async function loadState(email: string) {
@@ -79,7 +80,15 @@ async function main() {
     );
   }
 
-  const deadline = Date.now() + timeoutSeconds * 1000;
+  if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
+    throw new Error('--timeout must be a positive number of seconds');
+  }
+
+  if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
+    throw new Error('--interval must be a positive number of seconds');
+  }
+
+  const deadline = Date.now() + Math.floor(timeoutSeconds) * 1000;
 
   while (true) {
     const state = await loadState(email);

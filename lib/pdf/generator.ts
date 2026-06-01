@@ -124,15 +124,31 @@ const printedReferenceStampFontPath = '/Users/admin/Library/Fonts/1952 RHEINMETA
 const printedReferenceStampFontFamily = '1952 RHEINMETALL';
 let printedReferenceStampFontRegistered = false;
 
+async function rasterizeSvgToPngDataUri(svgSource: string): Promise<string | null> {
+  try {
+    const { createCanvas, loadImage } = require('canvas') as typeof import('canvas');
+    const svgDataUri = svgSource.startsWith('data:')
+      ? svgSource
+      : `data:image/svg+xml;base64,${Buffer.from(svgSource).toString('base64')}`;
+    const image = await loadImage(svgDataUri);
+    const width = Math.max(1, Math.ceil(image.width || 360));
+    const height = Math.max(1, Math.ceil(image.height || 120));
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL('image/png');
+  } catch {
+    return null;
+  }
+}
+
 async function getApprovalSchemeLogoDataUri(logoSrc?: string): Promise<string | null> {
   if (!logoSrc) return null;
   if (logoSrc.startsWith('data:')) return logoSrc;
-  if (!logoSrc.startsWith('/')) return null;
 
   const cached = approvalSchemeLogoDataUriCache.get(logoSrc);
   if (cached) return cached;
 
-  const ext = path.extname(logoSrc).toLowerCase();
   const mimeByExt: Record<string, string> = {
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
@@ -142,14 +158,60 @@ async function getApprovalSchemeLogoDataUri(logoSrc?: string): Promise<string | 
     '.svg': 'image/svg+xml',
   };
 
-  const mimeType = mimeByExt[ext];
-  if (!mimeType) return null;
+  if (logoSrc.startsWith('/')) {
+    const ext = path.extname(logoSrc).toLowerCase();
+    const mimeType = mimeByExt[ext];
+    if (!mimeType) return null;
 
-  const absolutePath = path.join(process.cwd(), 'public', logoSrc.replace(/^\//, ''));
+    const absolutePath = path.join(process.cwd(), 'public', logoSrc.replace(/^\//, ''));
+
+    try {
+      if (mimeType === 'image/svg+xml') {
+        const svgText = await fs.readFile(absolutePath, 'utf8');
+        const dataUri = await rasterizeSvgToPngDataUri(svgText);
+        if (!dataUri) return null;
+        approvalSchemeLogoDataUriCache.set(logoSrc, dataUri);
+        return dataUri;
+      }
+
+      const fileBuffer = await fs.readFile(absolutePath);
+      const dataUri = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+      approvalSchemeLogoDataUriCache.set(logoSrc, dataUri);
+      return dataUri;
+    } catch {
+      return null;
+    }
+  }
+
+  if (!/^https?:\/\//i.test(logoSrc)) {
+    return null;
+  }
 
   try {
-    const fileBuffer = await fs.readFile(absolutePath);
-    const dataUri = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+    const response = await fetch(logoSrc, {
+      headers: {
+        accept: 'image/avif,image/webp,image/png,image/svg+xml,image/*,*/*;q=0.8',
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+    const inferredMimeType = contentType && contentType.startsWith('image/') ? contentType : null;
+
+    if (inferredMimeType === 'image/svg+xml') {
+      const svgText = await response.text();
+      const dataUri = await rasterizeSvgToPngDataUri(svgText);
+      if (!dataUri) return null;
+      approvalSchemeLogoDataUriCache.set(logoSrc, dataUri);
+      return dataUri;
+    }
+
+    const mimeType = inferredMimeType ?? mimeByExt[path.extname(new URL(logoSrc).pathname).toLowerCase()] ?? 'image/png';
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const dataUri = `data:${mimeType};base64,${buffer.toString('base64')}`;
     approvalSchemeLogoDataUriCache.set(logoSrc, dataUri);
     return dataUri;
   } catch {

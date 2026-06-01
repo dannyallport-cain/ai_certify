@@ -44,6 +44,7 @@ import {
   SCHEDULE_GROUPS,
 } from '@/components/InspectionScheduleSection';
 import type { AnalyzeImageResponse, AnalyzeImageScheduleItem } from '@/lib/ai/railway-client';
+import { extractEicrCertificateDataFromPdf, type EicrPdfImportData } from '@/lib/eicr-pdf-import';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -1420,6 +1421,13 @@ function buildObservationDescription(item: AnalyzeImageScheduleItem) {
     .join(' — ');
 }
 
+function buildImportedPdfObservations(imported: EicrPdfImportData): Observation[] {
+  return imported.observations.map((observation, index) => ({
+    ...observation,
+    id: `${Date.now()}-${index}`,
+  }));
+}
+
 type ExpectedValueInfo = {
   label: string;
   average: string;
@@ -1646,6 +1654,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
   const [verifyResults, setVerifyResults] = useState<VerifyResult[] | null>(null);
   const [spellCheckActive, setSpellCheckActive] = useState(false);
   const aiUploadInputRef = useRef<HTMLInputElement>(null);
+  const aiPdfUploadInputRef = useRef<HTMLInputElement>(null);
   const [aiAnalysisState, setAiAnalysisState] = useState<{
     isSubmitting: boolean;
     fileName: string;
@@ -3410,6 +3419,7 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
             source: 'eicr-certificate-editor',
             fileName: file.name,
             capturedAt: new Date().toISOString(),
+            uploadKind: 'image',
           },
         }),
       });
@@ -3435,6 +3445,91 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         ...current,
         isSubmitting: false,
         error: error instanceof Error ? error.message : 'Unable to analyze the selected image.',
+      }));
+    }
+  };
+
+  const handleAiPdfSelect = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setAiAnalysisState((current) => ({
+        ...current,
+        isSubmitting: false,
+        error: 'Please select a PDF file.',
+        fileName: file.name,
+      }));
+      return;
+    }
+
+    try {
+      setAiAnalysisState((current) => ({
+        ...current,
+        isSubmitting: true,
+        error: '',
+        fileName: file.name,
+      }));
+
+      const imported = await extractEicrCertificateDataFromPdf(file);
+      const importedObservations = buildImportedPdfObservations(imported);
+      const importedCustomerName = (imported.customerName || imported.siteName || '').trim();
+      const normalizedCustomerName = importedCustomerName.toLowerCase();
+      const matchingCustomer = customers.find(
+        (customer: any) => customer.name?.trim().toLowerCase() === normalizedCustomerName,
+      );
+
+      setFormError('');
+      setVerifyResults(null);
+
+      if (matchingCustomer) {
+        setSelectedCustomer(String(matchingCustomer.id));
+      } else {
+        setSelectedCustomer('');
+      }
+
+      setSelectedCustomerName(importedCustomerName);
+      setCertificateNumber(imported.certificateNumber || certificateNumber);
+      setSiteName(imported.siteName || importedCustomerName);
+      setIsSiteNameAuto(false);
+      setClientAddress(imported.clientAddress || imported.installationAddress || '');
+      setIsClientAddressAuto(false);
+      setInstallationAddress(imported.installationAddress || imported.clientAddress || '');
+      setInspectionDate(imported.inspectionDate || getTodayDate());
+      setIsInspectionDateAuto(!Boolean(imported.inspectionDate));
+      setNextInspectionDate(imported.nextInspectionDate || '');
+      setOverallAssessment(
+        imported.overallAssessment ||
+          (importedObservations.some((observation) => observation.code === 'C1' || observation.code === 'C2')
+            ? 'UNSATISFACTORY'
+            : 'SATISFACTORY'),
+      );
+      setEarthingArrangement(imported.earthingArrangement || 'TN-C-S');
+      setMeansOfEarthing(imported.meansOfEarthing || "Distributor's facility");
+      setSupplyConductorCSA(imported.supplyConductorCSA || '25');
+      setNatureOfSupply(imported.natureOfSupply || '1-phase (2 wire) ac');
+      setObservations(importedObservations);
+      setPersistedFieldValue('reasonForReport', imported.reasonForReport || '');
+      setPersistedFieldValue('mainBondingCSA', imported.mainBondingCSA || '');
+
+      setAiAnalysisState((current) => ({
+        ...current,
+        isSubmitting: false,
+        error: '',
+        summary:
+          imported.warnings.length > 0
+            ? `PDF imported with warnings: ${imported.warnings.join(' ')}`
+            : 'PDF imported successfully with matching form fields populated.',
+      }));
+    } catch (error) {
+      setAiAnalysisState((current) => ({
+        ...current,
+        isSubmitting: false,
+        error: error instanceof Error ? error.message : 'Unable to analyze the selected PDF.',
       }));
     }
   };
@@ -3669,10 +3764,23 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                   ) : (
                     <Upload className="mr-2 h-4 w-4" />
                   )}
-                  {aiAnalysisState.isSubmitting ? 'Analyzing image...' : 'Upload image for AI prefill'}
+                  {aiAnalysisState.isSubmitting ? 'Analyzing upload...' : 'Upload image for AI prefill'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => aiPdfUploadInputRef.current?.click()}
+                  disabled={aiAnalysisState.isSubmitting}
+                >
+                  {aiAnalysisState.isSubmitting ? (
+                    <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
+                  {aiAnalysisState.isSubmitting ? 'Analyzing upload...' : 'Upload PDF'}
                 </Button>
                 {aiAnalysisState.fileName ? (
-                  <span className="text-xs text-slate-600">Selected image: {aiAnalysisState.fileName}</span>
+                  <span className="text-xs text-slate-600">Selected file: {aiAnalysisState.fileName}</span>
                 ) : null}
               </div>
 
@@ -3682,6 +3790,14 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
                 accept="image/*"
                 className="hidden"
                 onChange={handleAiImageSelect}
+              />
+
+              <input
+                ref={aiPdfUploadInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={handleAiPdfSelect}
               />
 
               {aiAnalysisState.summary ? (

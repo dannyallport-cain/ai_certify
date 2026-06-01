@@ -1,0 +1,19 @@
+app/(dashboard)/actions.ts(700,11): error TS2740: Type 'Promise<Uint8Array<ArrayBufferLike>>' is missing the following properties from type 'Uint8Array<ArrayBufferLike>': BYTES_PER_ELEMENT, buffer, byteLength, byteOffset, and 31 more.
+archive/root/test-scripts/test-eicr-gen.ts(305,27): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'Promise<Uint8Array<ArrayBufferLike>>' is not assignable to parameter of type 'WithImplicitCoercion<string | ArrayLike<number>>'.
+archive/root/test-scripts/test-pdf.ts(66,37): error TS2339: Property 'length' does not exist on type 'Promise<Uint8Array<ArrayBufferLike>>'.
+archive/root/test-scripts/test-pdf.ts(69,55): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'Promise<Uint8Array<ArrayBufferLike>>' is not assignable to parameter of type 'WithImplicitCoercion<string | ArrayLike<number>>'.
+lib/servicem8/sync.ts(193,17): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'Uint8Array<ArrayBufferLike> | Promise<Uint8Array<ArrayBufferLike>>' is not assignable to parameter of type 'WithImplicitCoercion<string | ArrayLike<number>>'.
+      Type 'Promise<Uint8Array<ArrayBufferLike>>' is not assignable to type 'WithImplicitCoercion<string | ArrayLike<number>>'.
+scripts/generate-blank-eicr.ts(44,41): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'Promise<Uint8Array<ArrayBufferLike>>' is not assignable to parameter of type 'WithImplicitCoercion<string | ArrayLike<number>>'.
+scripts/generate-blank-eicr.ts(46,38): error TS2339: Property 'length' does not exist on type 'Promise<Uint8Array<ArrayBufferLike>>'.
+scripts/generate-sample-eicr.ts(211,39): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Argument of type 'Promise<Uint8Array<ArrayBufferLike>>' is not assignable to parameter of type 'WithImplicitCoercion<string | ArrayLike<number>>'.
