@@ -60,15 +60,17 @@ const sampleCertificateData = {
 
 console.log('Testing PDF generation...');
 
-try {
-  const pdfBytes = generateCertificatePDF(sampleCertificateData);
-  console.log('PDF generated successfully!');
-  console.log('PDF size:', pdfBytes.length, 'bytes');
-  
-  // Save the PDF to test file
-  writeFileSync('./test-certificate.pdf', Buffer.from(pdfBytes));
-  console.log('Test PDF saved as test-certificate.pdf');
-  
-} catch (error) {
-  console.error('PDF generation failed:', error);
-}
+(async () => {
+  try {
+    const pdfBytes = await generateCertificatePDF(sampleCertificateData);
+    console.log('PDF generated successfully!');
+    console.log('PDF size:', pdfBytes.length, 'bytes');
+    
+    // Save the PDF to test file
+    writeFileSync('./test-certificate.pdf', Buffer.from(pdfBytes));
+    console.log('Test PDF saved as test-certificate.pdf');
+    
+  } catch (error) {
+    console.error('PDF generation failed:', error);
+  }
+})();

@@ -697,7 +697,7 @@ export const updateCertificate = validatedActionWithUser(
       try {
         const certificateData = await getCertificateForPDF(id);
         if (certificateData) {
-          completedPdfBytes = generateCertificatePDF(certificateData);
+          completedPdfBytes = await generateCertificatePDF(certificateData);
           await logActivity(team.id, user.id, ActivityType.EXPORT_CERTIFICATE);
         }
       } catch (error) {
@@ -843,7 +843,7 @@ export const exportCertificatePDF = validatedActionWithUser(
 
     try {
       // Generate PDF
-      const pdfBytes = generateCertificatePDF(certificateData);
+      const pdfBytes = await generateCertificatePDF(certificateData);
       
       // You can save the PDF to a file system or return it as needed
       // For now, we'll return a success message

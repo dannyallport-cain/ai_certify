@@ -300,13 +300,15 @@ const testCert: CertificateData = {
   items: [],
 };
 
-try {
-  const pdfBytes = generateCertificatePDF(testCert);
-  const buf = Buffer.from(pdfBytes);
-  fs.writeFileSync('test-results/eicr-test-output.pdf', buf);
-  console.log('EICR test PDF written to test-results/eicr-test-output.pdf');
-  console.log('File size:', buf.length, 'bytes');
-  console.log('SUCCESS');
-} catch(e) {
-  console.error('ERROR:', e);
-}
+(async () => {
+  try {
+    const pdfBytes = await generateCertificatePDF(testCert);
+    const buf = Buffer.from(pdfBytes);
+    fs.writeFileSync('test-results/eicr-test-output.pdf', buf);
+    console.log('EICR test PDF written to test-results/eicr-test-output.pdf');
+    console.log('File size:', buf.length, 'bytes');
+    console.log('SUCCESS');
+  } catch (e) {
+    console.error('ERROR:', e);
+  }
+})();

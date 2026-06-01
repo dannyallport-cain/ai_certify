@@ -7,7 +7,6 @@ import {
   type ApprovalSchemeInfo,
 } from '@/lib/approval-schemes';
 import path from 'path';
-import fs from 'fs/promises';
 
 export interface TemplateConfig {
   colors: {
@@ -166,6 +165,8 @@ async function getApprovalSchemeLogoDataUri(logoSrc?: string): Promise<string | 
     const absolutePath = path.join(process.cwd(), 'public', logoSrc.replace(/^\//, ''));
 
     try {
+      const fs = await import('node:fs/promises');
+
       if (mimeType === 'image/svg+xml') {
         const svgText = await fs.readFile(absolutePath, 'utf8');
         const dataUri = await rasterizeSvgToPngDataUri(svgText);
