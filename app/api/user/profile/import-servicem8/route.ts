@@ -4,7 +4,11 @@ import { eq } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
 import { teams, users, type EicrProfileDefaults } from '@/lib/db/schema';
-import { ServiceM8Client_API, type ServiceM8CompanyContact } from '@/lib/servicem8/client';
+import {
+  ServiceM8Client_API,
+  type ServiceM8CompanyContact,
+  type ServiceM8AttachmentDownloadInfo,
+} from '@/lib/servicem8/client';
 
 type EicrField =
   | 'tradingTitle'
@@ -101,6 +105,94 @@ function sanitizeExistingDefaults(value: unknown): EicrProfileDefaults {
 function isValidEmail(email: string): boolean {
   if (!email) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+function isSupportedLogoMimeType(mimeType: string | null): boolean {
+  if (!mimeType) return false;
+  const normalized = mimeType.toLowerCase();
+  return (
+    normalized === 'image/png' ||
+    normalized === 'image/jpeg' ||
+    normalized === 'image/jpg' ||
+    normalized === 'image/webp' ||
+    normalized === 'image/gif' ||
+    normalized === 'image/svg+xml'
+  );
+}
+
+function inferLogoMimeType(downloadInfo: ServiceM8AttachmentDownloadInfo): string | null {
+  const contentType = normalizeText(downloadInfo.mimeType).toLowerCase();
+  if (isSupportedLogoMimeType(contentType)) return contentType;
+
+  const fileName = normalizeText(downloadInfo.fileName).toLowerCase();
+  if (fileName.endsWith('.png')) return 'image/png';
+  if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) return 'image/jpeg';
+  if (fileName.endsWith('.webp')) return 'image/webp';
+  if (fileName.endsWith('.gif')) return 'image/gif';
+  if (fileName.endsWith('.svg')) return 'image/svg+xml';
+
+  return null;
+}
+
+async function fetchServiceM8CompanyLogoDataUri(
+  serviceM8Client: ServiceM8Client_API
+): Promise<{ dataUri: string } | { error: string }> {
+  let downloadInfo: ServiceM8AttachmentDownloadInfo;
+
+  try {
+    downloadInfo = await serviceM8Client.getCompanyLogoDownloadInfo();
+  } catch {
+    return { error: 'ServiceM8 company logo is not available for this account' };
+  }
+
+  if (!downloadInfo?.url) {
+    return { error: 'ServiceM8 company logo URL could not be resolved' };
+  }
+
+  const mimeType = inferLogoMimeType(downloadInfo);
+  if (!mimeType) {
+    return { error: 'ServiceM8 company logo type is unsupported' };
+  }
+
+  if (downloadInfo.contentLength && downloadInfo.contentLength > MAX_LOGO_BYTES) {
+    return { error: 'ServiceM8 company logo exceeds size limit (2MB)' };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(downloadInfo.url);
+  } catch {
+    return { error: 'Unable to download ServiceM8 company logo' };
+  }
+
+  if (!response.ok) {
+    return { error: `ServiceM8 company logo download failed (${response.status})` };
+  }
+
+  const actualContentType = normalizeText(response.headers.get('content-type'))
+    .split(';')[0]
+    .trim()
+    .toLowerCase();
+  const resolvedMimeType = isSupportedLogoMimeType(actualContentType) ? actualContentType : mimeType;
+
+  if (!isSupportedLogoMimeType(resolvedMimeType)) {
+    return { error: 'Downloaded ServiceM8 company logo has unsupported type' };
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (!buffer.length) {
+    return { error: 'Downloaded ServiceM8 company logo is empty' };
+  }
+
+  if (buffer.length > MAX_LOGO_BYTES) {
+    return { error: 'Downloaded ServiceM8 company logo exceeds size limit (2MB)' };
+  }
+
+  return {
+    dataUri: `data:${resolvedMimeType};base64,${buffer.toString('base64')}`,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -295,31 +387,45 @@ export async function POST(request: NextRequest) {
       reason: 'logo import not requested',
     };
 
-    if (applyTeamLogo) {
-      logoUpdate = {
-        attempted: true,
-        applied: false,
-        reason: 'ServiceM8 company logo endpoint is not currently available in this integration',
-      };
+    let teamLogoToApply: string | null = null;
 
+    if (applyTeamLogo) {
       if (!currentTeam) {
         logoUpdate = {
           attempted: true,
           applied: false,
           reason: 'user has no team context for logo import',
         };
-      } else if (currentTeam.logoDataUri && !overwriteTeamLogo && overwrite.teamLogo !== true) {
-        conflicts.push({
-          target: 'teamLogo',
-          field: 'teamLogo',
-          existingValue: 'existing team logo present',
-          incomingValue: 'servicem8 company logo',
-        });
-        logoUpdate = {
-          attempted: true,
-          applied: false,
-          reason: 'team logo already exists; overwriteTeamLogo=false',
-        };
+      } else {
+        const logoResult = await fetchServiceM8CompanyLogoDataUri(serviceM8Client);
+        if ('error' in logoResult) {
+          logoUpdate = {
+            attempted: true,
+            applied: false,
+            reason: logoResult.error,
+          };
+        } else if (currentTeam.logoDataUri && !overwriteTeamLogo && overwrite.teamLogo !== true) {
+          conflicts.push({
+            target: 'teamLogo',
+            field: 'teamLogo',
+            existingValue: 'existing team logo present',
+            incomingValue: 'servicem8 company logo',
+          });
+          logoUpdate = {
+            attempted: true,
+            applied: false,
+            reason: 'team logo already exists; overwriteTeamLogo=false',
+          };
+        } else {
+          teamLogoToApply = logoResult.dataUri;
+          logoUpdate = {
+            attempted: true,
+            applied: !dryRun,
+            reason: dryRun
+              ? 'team logo fetched and ready to apply'
+              : 'team logo imported from ServiceM8',
+          };
+        }
       }
     }
 
@@ -347,6 +453,7 @@ export async function POST(request: NextRequest) {
           userProfile: userToApply,
           teamProfile: teamToApply,
           eicrDefaults: eicrToApply,
+          ...(teamLogoToApply ? { teamLogo: 'servicem8 company logo' } : {}),
         },
         conflicts,
         skipped,
@@ -381,14 +488,23 @@ export async function POST(request: NextRequest) {
         .where(eq(users.id, user.id));
     }
 
-    if (currentTeam && Object.keys(teamToApply).length > 0) {
+    if (currentTeam && (Object.keys(teamToApply).length > 0 || teamLogoToApply)) {
       await db
         .update(teams)
         .set({
           ...teamToApply,
+          ...(teamLogoToApply ? { logoDataUri: teamLogoToApply } : {}),
           updatedAt: new Date(),
         })
         .where(eq(teams.id, currentTeam.id));
+
+      if (teamLogoToApply) {
+        logoUpdate = {
+          attempted: true,
+          applied: true,
+          reason: 'team logo imported from ServiceM8',
+        };
+      }
     }
 
     return NextResponse.json({

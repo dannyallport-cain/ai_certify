@@ -1,4 +1,4 @@
-- [x] Remove top-level fs/promises import from lib/pdf/generator.ts
-- [x] Add dynamic node:fs/promises import at usage points in getApprovalSchemeLogoDataUri
-- [ ] Run local vercel build to validate fix
-- [ ] Report test results and remaining coverage
+- [ ] Update `package.json` build script to set `NODE_OPTIONS=--max-old-space-size=8192`
+- [ ] Re-run `vercel build --yes` and capture result
+- [ ] If needed, run `pnpm exec next build --webpack` with same memory limit
+- [ ] Update TODO with final verification status

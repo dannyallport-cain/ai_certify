@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "cross-env BROWSERSLIST_IGNORE_OLD_DATA=true next dev --turbopack -H 0.0.0.0 -p 4000",
-    "build": "cross-env BROWSERSLIST_IGNORE_OLD_DATA=true next build",
+    "build": "cross-env BROWSERSLIST_IGNORE_OLD_DATA=true NODE_OPTIONS=--max-old-space-size=8192 next build",
     "start": "cross-env BROWSERSLIST_IGNORE_OLD_DATA=true PORT=4000 next start -H 0.0.0.0",
     "menu": "pnpm exec tsx scripts/cli-menu.ts",
     "ios:build-and-install": "bash ./mobile/build-and-install.sh",
@@ -92,7 +92,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
-    "baseline-browser-mapping": "^2.10.32",
+    "baseline-browser-mapping": "^2.10.33",
     "cross-env": "^10.1.0",
     "tsx": "^4.21.0",
     "vercel": "^54.5.0"

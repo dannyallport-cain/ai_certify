@@ -487,6 +487,21 @@ export class ServiceM8Client_API {
     return this.request<ServiceM8Company>('/companycontactinfo.json');
   }
 
+  async getCompanyLogoDownloadInfo(): Promise<ServiceM8AttachmentDownloadInfo> {
+    const response = await this.request<Response>(
+      '/companycontactinfo/logo.file',
+      {},
+      { raw: true },
+    );
+
+    return {
+      url: response.url,
+      mimeType: response.headers.get('content-type'),
+      contentLength: Number(response.headers.get('content-length') ?? '') || null,
+      fileName: this.extractFileNameFromHeaders(response.headers.get('content-disposition')),
+    };
+  }
+
   async getCompanyContacts(filter?: string): Promise<ServiceM8CompanyContact[]> {
     return this.request<ServiceM8CompanyContact[]>(
       '/companycontact.json',

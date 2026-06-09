@@ -6,7 +6,6 @@ import {
   getApprovalSchemeInfo,
   type ApprovalSchemeInfo,
 } from '@/lib/approval-schemes';
-import path from 'path';
 
 export interface TemplateConfig {
   colors: {
@@ -158,14 +157,19 @@ async function getApprovalSchemeLogoDataUri(logoSrc?: string): Promise<string | 
   };
 
   if (logoSrc.startsWith('/')) {
-    const ext = path.extname(logoSrc).toLowerCase();
-    const mimeType = mimeByExt[ext];
-    if (!mimeType) return null;
-
-    const absolutePath = path.join(process.cwd(), 'public', logoSrc.replace(/^\//, ''));
+    if (typeof window !== 'undefined') return null;
 
     try {
-      const fs = await import('node:fs/promises');
+      const [{ default: path }, fs] = await Promise.all([
+        import('node:path'),
+        import('node:fs/promises'),
+      ]);
+
+      const ext = path.extname(logoSrc).toLowerCase();
+      const mimeType = mimeByExt[ext];
+      if (!mimeType) return null;
+
+      const absolutePath = path.join(process.cwd(), 'public', logoSrc.replace(/^\//, ''));
 
       if (mimeType === 'image/svg+xml') {
         const svgText = await fs.readFile(absolutePath, 'utf8');
@@ -210,7 +214,16 @@ async function getApprovalSchemeLogoDataUri(logoSrc?: string): Promise<string | 
       return dataUri;
     }
 
-    const mimeType = inferredMimeType ?? mimeByExt[path.extname(new URL(logoSrc).pathname).toLowerCase()] ?? 'image/png';
+    let ext = '';
+    try {
+      const pathname = new URL(logoSrc).pathname;
+      const maybeExt = pathname.split('.').pop()?.toLowerCase();
+      ext = maybeExt ? `.${maybeExt}` : '';
+    } catch {
+      ext = '';
+    }
+
+    const mimeType = inferredMimeType ?? mimeByExt[ext] ?? 'image/png';
     const buffer = Buffer.from(await response.arrayBuffer());
     const dataUri = `data:${mimeType};base64,${buffer.toString('base64')}`;
     approvalSchemeLogoDataUriCache.set(logoSrc, dataUri);
