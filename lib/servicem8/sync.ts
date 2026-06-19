@@ -186,7 +186,7 @@ async function uploadCompletedCertificatePdfIfNeeded({
     };
   }
 
-  const bytesToUpload = pdfBytes ?? generateCertificatePDF(certificateData);
+  const bytesToUpload = pdfBytes ?? await generateCertificatePDF(certificateData);
 
   await serviceM8Client.uploadJobAttachment(
     servicem8JobUuid,
