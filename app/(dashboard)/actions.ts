@@ -338,8 +338,6 @@ export const createCertificate = validatedActionWithUser(
       'inspectionDate',
       'nextInspectionDate',
       'inspectorName',
-      'servicem8JobMode',
-      'servicem8JobUuid',
     ];
     const profileDefaults = user.eicrProfileDefaults ?? {};
     
@@ -645,22 +643,7 @@ export const updateCertificate = validatedActionWithUser(
       })
       .where(eq(certificates.id, id));
 
-    const serviceM8JobSelection = extractServiceM8JobSelection(formData ?? resolvedFormData);
-
-    if (serviceM8JobSelection.hasSelection) {
-      const existingServiceM8JobUuid = await getExistingServiceM8JobUuidForCertificate(team.id, id);
-      const nextServiceM8JobUuid =
-        serviceM8JobSelection.mode === 'none'
-          ? null
-          : serviceM8JobSelection.uuid ?? existingServiceM8JobUuid;
-
-      await syncCertificateServiceM8JobMapping({
-        teamId: team.id,
-        servicem8ConnectionUserId: user.id,
-        certificateId: id,
-        servicem8JobUuid: nextServiceM8JobUuid,
-      });
-    }
+    // ServiceM8 integration removed for editable certificates — no mapping updates performed
 
     await db.delete(certificateItems).where(eq(certificateItems.certificateId, id));
 
@@ -707,15 +690,7 @@ export const updateCertificate = validatedActionWithUser(
       }
     }
 
-    try {
-      await processLatestServiceM8JobMapping({
-        teamId: team.id,
-        certificateId: id,
-        pdfBytes: completedPdfBytes,
-      });
-    } catch (error) {
-      console.error('Error processing ServiceM8 mapping after certificate update:', error);
-    }
+    // ServiceM8 upload skipped — completed PDF is generated and stored locally if needed
 
     return { success: 'Certificate updated successfully' };
   }
