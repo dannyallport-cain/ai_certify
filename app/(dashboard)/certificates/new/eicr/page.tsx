@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DownloadPDFButton } from '@/components/DownloadPDFButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ServiceM8JobPickerModal, { type ServiceM8JobPickerItem } from '@/components/servicem8/ServiceM8JobPickerModal';
 import { createCertificate, updateCertificate } from '../../../actions';
@@ -5771,19 +5772,33 @@ export function EICRCertificatePage({ streamlined = false }: { streamlined?: boo
         </div>
 
         {/* ── Submit ── */}
-        <div className="flex gap-4 pb-8">
-          <Button type="submit" disabled={isSubmitting} className="flex-1">
-            {isSubmitting
-              ? isEditing
-                ? 'Updating EICR...'
-                : 'Creating EICR...'
-              : isEditing
-                ? 'Update EICR Certificate'
-                : 'Create EICR Certificate'}
-          </Button>
-          <Button type="button" variant="outline" asChild>
-            <Link href="/certificates">Cancel</Link>
-          </Button>
+        <div className="flex flex-col gap-2 pb-8 md:flex-row md:items-center">
+          <div className="flex-1">
+            <Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
+              {isSubmitting
+                ? isEditing
+                  ? 'Updating EICR...'
+                  : 'Creating EICR...'
+                : isEditing
+                  ? 'Update EICR Certificate'
+                  : 'Create EICR Certificate'}
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {isEditing && editId && (
+              <DownloadPDFButton
+                certificateId={Number(editId)}
+                certificateNumber={certificateNumber || 'certificate'}
+                variant="secondary"
+                size="sm"
+                showText={true}
+                buttonLabel="Regenerate PDF"
+              />
+            )}
+            <Button type="button" variant="outline" asChild>
+              <Link href="/certificates">Cancel</Link>
+            </Button>
+          </div>
         </div>
       </form>
     </div>

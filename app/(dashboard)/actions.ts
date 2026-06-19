@@ -629,6 +629,7 @@ export const updateCertificate = validatedActionWithUser(
 
     const wasCompleted = currentCertificate[0]?.status === 'completed';
     const isNowCompleted = updateData.status === 'completed';
+    const willBeCompleted = typeof updateData.status !== 'undefined' ? isNowCompleted : wasCompleted;
 
     await db
       .update(certificates)
@@ -692,8 +693,8 @@ export const updateCertificate = validatedActionWithUser(
 
     let completedPdfBytes: Uint8Array | null = null;
 
-    // Auto-generate PDF when certificate is completed for the first time
-    if (!wasCompleted && isNowCompleted) {
+    // Auto-generate PDF when a certificate is completed or updated while completed
+    if (willBeCompleted) {
       try {
         const certificateData = await getCertificateForPDF(id);
         if (certificateData) {

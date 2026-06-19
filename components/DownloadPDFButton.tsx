@@ -10,6 +10,7 @@ interface DownloadPDFButtonProps {
   variant?: 'default' | 'outline' | 'ghost' | 'link' | 'destructive' | 'secondary';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   showText?: boolean;
+  buttonLabel?: string;
   className?: string;
 }
 
@@ -19,6 +20,7 @@ export function DownloadPDFButton({
   variant = 'outline',
   size = 'sm',
   showText = true,
+  buttonLabel = 'Download PDF',
   className = ''
 }: DownloadPDFButtonProps) {
   const [isDownloading, setIsDownloading] = useState(false);
@@ -69,7 +71,7 @@ export function DownloadPDFButton({
       ) : (
         <>
           <Download className="mr-2 h-4 w-4" />
-          {showText && 'Download PDF'}
+          {showText && buttonLabel}
         </>
       )}
     </Button>
