@@ -204,9 +204,13 @@ const sampleCertificate = {
   ],
 };
 
-console.log('Generating sample EICR PDF...');
-const pdfBytes = generateCertificatePDF(sampleCertificate as any);
+async function main() {
+  console.log('Generating sample EICR PDF...');
+  const pdfBytes = await generateCertificatePDF(sampleCertificate as any);
 
-const outputPath = join(process.cwd(), 'test-results', 'sample-eicr-CE202695.pdf');
-writeFileSync(outputPath, Buffer.from(pdfBytes));
-console.log(`✅ PDF written to: ${outputPath}`);
+  const outputPath = join(process.cwd(), 'test-results', 'sample-eicr-CE202695.pdf');
+  writeFileSync(outputPath, Buffer.from(pdfBytes));
+  console.log(`✅ PDF written to: ${outputPath}`);
+}
+
+void main();

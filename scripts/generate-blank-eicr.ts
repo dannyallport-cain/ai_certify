@@ -39,13 +39,17 @@ if (!fs.existsSync(outDir)) {
 
 const outPath = path.join(outDir, 'blank-eicr-template.pdf');
 
-try {
-  const pdfBytes = generateCertificatePDF(blankCert);
-  fs.writeFileSync(outPath, Buffer.from(pdfBytes));
-  console.log(`Blank EICR template written to: ${outPath}`);
-  console.log(`File size: ${pdfBytes.length} bytes`);
-  console.log('SUCCESS');
-} catch (err) {
-  console.error('ERROR generating blank EICR PDF:', err);
-  process.exit(1);
+async function main() {
+  try {
+    const pdfBytes = await generateCertificatePDF(blankCert);
+    fs.writeFileSync(outPath, Buffer.from(pdfBytes));
+    console.log(`Blank EICR template written to: ${outPath}`);
+    console.log(`File size: ${pdfBytes.length} bytes`);
+    console.log('SUCCESS');
+  } catch (err) {
+    console.error('ERROR generating blank EICR PDF:', err);
+    process.exit(1);
+  }
 }
+
+void main();

@@ -1,4 +1,5 @@
-- [ ] Update `package.json` build script to set `NODE_OPTIONS=--max-old-space-size=8192`
-- [ ] Re-run `vercel build --yes` and capture result
-- [ ] If needed, run `pnpm exec next build --webpack` with same memory limit
-- [ ] Update TODO with final verification status
+# TODO
+
+- [x] Update `scripts/generate-sample-eicr.ts` to await async PDF generation
+- [x] Run local Vercel build check (`npx vercel build`) and capture errors/success
+- [x] Mark tasks complete after verification
