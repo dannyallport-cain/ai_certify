@@ -350,7 +350,7 @@ export const CERTIFICATE_TYPE_CATALOG: CertificateTypeCatalogEntry[] = [
       'The explanatory notes should help users avoid using the wrong certificate for larger electrical works.',
       'The PDF / preview should still feel formal and standard-aligned.',
     ],
-    implementationStatus: 'planned',
+    implementationStatus: 'implemented',
   },
   {
     key: 'electrical-installation-variation-record',
