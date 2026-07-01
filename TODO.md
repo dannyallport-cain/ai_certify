@@ -1,5 +1,5 @@
-# TODO
-
-- [x] Update `scripts/generate-sample-eicr.ts` to await async PDF generation
-- [x] Run local Vercel build check (`npx vercel build`) and capture errors/success
-- [x] Mark tasks complete after verification
+- [x] Update MEIWC page to support create + edit flow (editId load + update submit)
+- [x] Add local draft persistence (save/restore/discard + clear on success)
+- [x] Add lightweight verification checks and inline results
+- [x] Improve preview payload/hydration consistency for MEIWC
+- [ ] Run sanity check (typecheck/build) and confirm no regression

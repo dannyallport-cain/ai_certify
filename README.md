@@ -33,7 +33,15 @@ A Next.js 15 application for generating and managing electrical certificates and
    cp ".env copy.example" .env
    ```
 
-3. Start local development:
+3. Set required database variable:
+   - `POSTGRES_URL` — required for auth, dashboard, and all DB-backed routes/actions.
+   - Example format:
+     ```env
+     POSTGRES_URL=postgres://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require
+     ```
+   - If `POSTGRES_URL` is missing, database-backed features will fail with a runtime error.
+
+4. Start local development:
    ```bash
    pnpm dev
    ```

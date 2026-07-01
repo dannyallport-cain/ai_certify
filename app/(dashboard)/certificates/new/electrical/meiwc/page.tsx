@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import useSWR from 'swr';
 
-import { createCertificate } from '@/app/(dashboard)/actions';
+import { createCertificate, updateCertificate } from '@/app/(dashboard)/actions';
 import { AddressAutocompleteField } from '@/components/AddressAutocompleteField';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
 import { DateDropdownField } from '@/components/DateDropdownField';
@@ -43,6 +43,9 @@ const EARTHING_TYPES = ['TN-S', 'TN-C-S (PME)', 'TT', 'IT', 'TNC'] as const;
 
 export default function MinorElectricalInstallationWorksPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('editId');
+  const isEditing = Boolean(editId);
   const formRef = useRef<HTMLFormElement>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,13 +63,52 @@ export default function MinorElectricalInstallationWorksPage() {
   const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().split('T')[0]);
   const [isInspectionDateAuto, setIsInspectionDateAuto] = useState(true);
   const [formError, setFormError] = useState('');
+  const [verifyResults, setVerifyResults] = useState<Array<{ type: 'error' | 'warning' | 'pass'; message: string }> | null>(null);
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
+
+  const buildDraftStorageKey = () => 'meiwc-form-draft:new';
+
+  const collectFormValues = (form: HTMLFormElement | null) => {
+    if (!form) return {};
+    const values: Record<string, string> = {};
+    const fields = form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+      'input[name], textarea[name], select[name]',
+    );
+
+    fields.forEach((field) => {
+      const name = field.name?.trim();
+      if (!name) return;
+
+      if (field instanceof HTMLInputElement) {
+        const type = field.type?.toLowerCase();
+        if (type === 'radio') {
+          if (field.checked) values[name] = field.value;
+          return;
+        }
+        if (type === 'checkbox') {
+          values[name] = field.checked ? field.value || 'on' : '';
+          return;
+        }
+        if (type === 'file') return;
+      }
+
+      values[name] = field.value ?? '';
+    });
+
+    return values;
+  };
 
   useEffect(() => {
+    if (isEditing) return;
     const rand = Math.floor(Math.random() * 1000)
       .toString()
       .padStart(3, '0');
     setCertificateNumber(`MIWC-${new Date().getFullYear()}${rand}`);
-  }, []);
+
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(buildDraftStorageKey());
+    setHasSavedDraft(Boolean(raw));
+  }, [isEditing]);
 
   const guidedSteps: Step[] = [
     { name: 'certificateNumber', label: 'Certificate Number', type: 'text' },
@@ -81,6 +123,99 @@ export default function MinorElectricalInstallationWorksPage() {
     { name: 'recommendations', label: 'Recommendations', type: 'textarea' },
   ];
 
+  useEffect(() => {
+    const loadForEditing = async () => {
+      if (!isEditing || !editId) return;
+
+      try {
+        const response = await fetch(`/api/certificates/${editId}`);
+        if (!response.ok) return;
+
+        const certificateData = await response.json();
+        const formData = certificateData.formData || {};
+
+        setCertificateNumber(certificateData.certificateNumber || '');
+        setSelectedCustomer(certificateData.customer?.id ? String(certificateData.customer.id) : String(formData.customerId || ''));
+        setSelectedCustomerName(certificateData.customer?.name || String(formData.customerName || ''));
+        setSiteName(String(formData.siteName || certificateData.siteName || ''));
+        setSiteAddress(String(formData.siteAddress || certificateData.siteAddress || ''));
+        setInspectionDate(String(certificateData.inspectionDate || formData.inspectionDate || new Date().toISOString().split('T')[0]));
+      } catch (error) {
+        console.error('Error loading MEIWC certificate for editing:', error);
+      }
+    };
+
+    void loadForEditing();
+  }, [editId, isEditing]);
+
+  useEffect(() => {
+    if (isEditing || typeof window === 'undefined') return;
+    const payload = {
+      certificateNumber,
+      selectedCustomer,
+      selectedCustomerName,
+      siteName,
+      siteAddress,
+      inspectionDate,
+      formValues: collectFormValues(formRef.current),
+    };
+    window.localStorage.setItem(buildDraftStorageKey(), JSON.stringify(payload));
+  }, [certificateNumber, selectedCustomer, selectedCustomerName, siteName, siteAddress, inspectionDate, isEditing]);
+
+  const handleRestoreSavedDraft = () => {
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(buildDraftStorageKey());
+    if (!raw) {
+      setHasSavedDraft(false);
+      return;
+    }
+
+    try {
+      const draft = JSON.parse(raw) as {
+        certificateNumber?: string;
+        selectedCustomer?: string;
+        selectedCustomerName?: string;
+        siteName?: string;
+        siteAddress?: string;
+        inspectionDate?: string;
+      };
+
+      setCertificateNumber(draft.certificateNumber ?? certificateNumber);
+      setSelectedCustomer(draft.selectedCustomer ?? '');
+      setSelectedCustomerName(draft.selectedCustomerName ?? '');
+      setSiteName(draft.siteName ?? '');
+      setSiteAddress(draft.siteAddress ?? '');
+      setInspectionDate(draft.inspectionDate ?? inspectionDate);
+      setHasSavedDraft(false);
+    } catch (error) {
+      console.error('Unable to restore MEIWC draft:', error);
+    }
+  };
+
+  const handleDiscardSavedDraft = () => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.removeItem(buildDraftStorageKey());
+    setHasSavedDraft(false);
+  };
+
+  const handleVerify = () => {
+    const results: Array<{ type: 'error' | 'warning' | 'pass'; message: string }> = [];
+
+    if (!selectedCustomerName.trim()) results.push({ type: 'error', message: 'Customer is required.' });
+    else results.push({ type: 'pass', message: 'Customer selected.' });
+
+    if (!certificateNumber.trim()) results.push({ type: 'error', message: 'Certificate number is missing.' });
+    else results.push({ type: 'pass', message: 'Certificate number present.' });
+
+    if (!siteName.trim()) results.push({ type: 'warning', message: 'Site / Building Name is blank.' });
+    else results.push({ type: 'pass', message: 'Site / Building Name provided.' });
+
+    if (!siteAddress.trim()) results.push({ type: 'error', message: 'Site Address is required.' });
+    else results.push({ type: 'pass', message: 'Site Address provided.' });
+
+    setVerifyResults(results);
+  };
+
   const handleSubmit = async (formData: FormData) => {
     setIsSubmitting(true);
     setFormError('');
@@ -88,15 +223,37 @@ export default function MinorElectricalInstallationWorksPage() {
     try {
       formData.set('certificateType', 'MEIWC');
 
-      const result = await createCertificate({}, formData);
+      const result =
+        isEditing && editId
+          ? await updateCertificate(
+              {
+                id: Number(editId),
+                certificateNumber,
+                siteName,
+                siteAddress,
+                inspectionDate,
+              } as any,
+              formData,
+            )
+          : await createCertificate({}, formData);
 
-      if (result?.error) {
+      if ('error' in result && result.error) {
         if (isSessionExpiredError(result.error)) {
           router.push(getSignInRedirectPath('/certificates/new/electrical/meiwc'));
           return;
         }
 
         setFormError(result.error);
+        return;
+      }
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(buildDraftStorageKey());
+      }
+      setHasSavedDraft(false);
+
+      if (isEditing && editId) {
+        router.push(`/certificates/${editId}`);
       }
     } catch (error) {
       console.error('Error creating certificate:', error);
@@ -135,15 +292,17 @@ export default function MinorElectricalInstallationWorksPage() {
       inspectorName: String(formData.get('inspectorName') || ''),
       inspectorQualification: String(formData.get('designerName') || 'Qualified electrical contractor'),
       status: 'draft',
-      formData: {
+        formData: {
         workType: String(formData.get('workType') || ''),
         supplyType: String(formData.get('supplyType') || ''),
         earthingType: String(formData.get('earthingType') || ''),
         workDescription: String(formData.get('workDescription') || ''),
         existingCircuitRef: String(formData.get('existingCircuitRef') || ''),
         testNotes: String(formData.get('testNotes') || ''),
-        recommendations: String(formData.get('recommendations') || ''),
-        overallCondition: String(formData.get('overallCondition') || ''),
+          recommendations: String(formData.get('recommendations') || ''),
+          overallCondition: String(formData.get('overallCondition') || ''),
+          mainCircuitDevice: String(formData.get('mainCircuitDevice') || ''),
+          supplyNotes: String(formData.get('supplyNotes') || ''),
       },
       customer: {
         name: customer?.name || customerName || 'Not specified',
@@ -192,6 +351,25 @@ export default function MinorElectricalInstallationWorksPage() {
             <p className="rounded-md border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
               {formError}
             </p>
+          ) : null}
+
+          {!isEditing && hasSavedDraft ? (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-amber-900">Saved draft found</p>
+                  <p className="text-xs text-amber-800">Restore a previously saved minor works draft or discard it.</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={handleDiscardSavedDraft}>
+                    Discard saved draft
+                  </Button>
+                  <Button type="button" onClick={handleRestoreSavedDraft}>
+                    Restore saved draft
+                  </Button>
+                </div>
+              </div>
+            </div>
           ) : null}
 
           <input type="hidden" name="certificateType" value="MEIWC" />
@@ -499,16 +677,41 @@ export default function MinorElectricalInstallationWorksPage() {
             </CardContent>
           </Card>
 
+          {verifyResults ? (
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
+              <p className="mb-2 font-medium text-slate-800">Verification Results</p>
+              <ul className="space-y-1">
+                {verifyResults.map((item, index) => (
+                  <li
+                    key={`${item.type}-${index}`}
+                    className={
+                      item.type === 'error'
+                        ? 'text-red-700'
+                        : item.type === 'warning'
+                          ? 'text-amber-700'
+                          : 'text-emerald-700'
+                    }
+                  >
+                    {item.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-2 sm:flex-row">
             {previewData ? <PreviewModal data={previewData} /> : null}
+            <Button type="button" variant="outline" onClick={handleVerify}>
+              Verify
+            </Button>
             <Button type="button" variant="outline" onClick={handlePreviewOpen}>
               Preview
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating Certificate...' : 'Create Certificate'}
+              {isSubmitting ? (isEditing ? 'Updating Certificate...' : 'Creating Certificate...') : isEditing ? 'Update Certificate' : 'Create Certificate'}
             </Button>
             <Button type="button" variant="outline" asChild>
-              <Link href="/certificates/new">Cancel</Link>
+              <Link href={isEditing && editId ? `/certificates/${editId}` : '/certificates/new'}>Cancel</Link>
             </Button>
           </div>
         </form>
