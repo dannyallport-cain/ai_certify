@@ -213,6 +213,29 @@ export default function MinorElectricalInstallationWorksPage() {
     if (!siteAddress.trim()) results.push({ type: 'error', message: 'Site Address is required.' });
     else results.push({ type: 'pass', message: 'Site Address provided.' });
 
+    const form = formRef.current;
+    if (form) {
+      const get = (name: string) => String(new FormData(form).get(name) || '').trim();
+
+      if (!get('existingCircuitRef')) results.push({ type: 'error', message: 'Circuit designation / reference is required.' });
+      else results.push({ type: 'pass', message: 'Circuit designation / reference provided.' });
+
+      if (!get('protectiveDeviceType')) results.push({ type: 'warning', message: 'Protective device type is not recorded.' });
+      else results.push({ type: 'pass', message: 'Protective device type provided.' });
+
+      if (!get('protectiveDeviceRating')) results.push({ type: 'warning', message: 'Protective device rating (A) is not recorded.' });
+      else results.push({ type: 'pass', message: 'Protective device rating (A) provided.' });
+
+      if (!get('testZs')) results.push({ type: 'warning', message: 'Earth fault loop impedance (Zs) is not recorded.' });
+      else results.push({ type: 'pass', message: 'Earth fault loop impedance (Zs) provided.' });
+
+      if (!get('testInsulationResistance')) results.push({ type: 'warning', message: 'Insulation resistance result is not recorded.' });
+      else results.push({ type: 'pass', message: 'Insulation resistance result provided.' });
+
+      if (!get('testPolarity')) results.push({ type: 'warning', message: 'Polarity confirmation is not recorded.' });
+      else results.push({ type: 'pass', message: 'Polarity confirmation provided.' });
+    }
+
     setVerifyResults(results);
   };
 
@@ -292,17 +315,31 @@ export default function MinorElectricalInstallationWorksPage() {
       inspectorName: String(formData.get('inspectorName') || ''),
       inspectorQualification: String(formData.get('designerName') || 'Qualified electrical contractor'),
       status: 'draft',
-        formData: {
+      formData: {
         workType: String(formData.get('workType') || ''),
         supplyType: String(formData.get('supplyType') || ''),
         earthingType: String(formData.get('earthingType') || ''),
         workDescription: String(formData.get('workDescription') || ''),
+        workScopeStatement: String(formData.get('workScopeStatement') || ''),
         existingCircuitRef: String(formData.get('existingCircuitRef') || ''),
+        protectiveDeviceType: String(formData.get('protectiveDeviceType') || ''),
+        protectiveDeviceRating: String(formData.get('protectiveDeviceRating') || ''),
+        rcdType: String(formData.get('rcdType') || ''),
+        lineConductorSize: String(formData.get('lineConductorSize') || ''),
+        cpcSize: String(formData.get('cpcSize') || ''),
+        cableType: String(formData.get('cableType') || ''),
+        maxDemand: String(formData.get('maxDemand') || ''),
+        testContinuityR1R2: String(formData.get('testContinuityR1R2') || ''),
+        testInsulationResistance: String(formData.get('testInsulationResistance') || ''),
+        testPolarity: String(formData.get('testPolarity') || ''),
+        testZs: String(formData.get('testZs') || ''),
+        testPfc: String(formData.get('testPfc') || ''),
+        testRcd: String(formData.get('testRcd') || ''),
         testNotes: String(formData.get('testNotes') || ''),
-          recommendations: String(formData.get('recommendations') || ''),
-          overallCondition: String(formData.get('overallCondition') || ''),
-          mainCircuitDevice: String(formData.get('mainCircuitDevice') || ''),
-          supplyNotes: String(formData.get('supplyNotes') || ''),
+        recommendations: String(formData.get('recommendations') || ''),
+        overallCondition: String(formData.get('overallCondition') || ''),
+        mainCircuitDevice: String(formData.get('mainCircuitDevice') || ''),
+        supplyNotes: String(formData.get('supplyNotes') || ''),
       },
       customer: {
         name: customer?.name || customerName || 'Not specified',
@@ -502,11 +539,6 @@ export default function MinorElectricalInstallationWorksPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="existingCircuitRef">Existing Circuit Reference</Label>
-                  <Input id="existingCircuitRef" name="existingCircuitRef" placeholder="Circuit / board reference" />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="inspectionDate">Inspection Date</Label>
                   <DateDropdownField
                     id="inspectionDate"
@@ -586,9 +618,110 @@ export default function MinorElectricalInstallationWorksPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Circuit Details (Altered / Added Circuit)</CardTitle>
+              <CardDescription>
+                Record the specific circuit and protective details for the minor works carried out.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="existingCircuitRef">Circuit Designation / Reference</Label>
+                  <Input id="existingCircuitRef" name="existingCircuitRef" placeholder="e.g. Ring Final - GF Sockets" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="protectiveDeviceType">Protective Device Type</Label>
+                  <Input id="protectiveDeviceType" name="protectiveDeviceType" placeholder="e.g. B curve MCB / RCBO" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="protectiveDeviceRating">Protective Device Rating (A)</Label>
+                  <Input id="protectiveDeviceRating" name="protectiveDeviceRating" placeholder="e.g. 32" />
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="rcdType">RCD / RCBO Type</Label>
+                  <Input id="rcdType" name="rcdType" placeholder="e.g. Type A, 30mA" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lineConductorSize">Line Conductor Size (mm²)</Label>
+                  <Input id="lineConductorSize" name="lineConductorSize" placeholder="e.g. 2.5" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cpcSize">CPC Size (mm²)</Label>
+                  <Input id="cpcSize" name="cpcSize" placeholder="e.g. 1.5" />
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="cableType">Cable Type</Label>
+                  <Input id="cableType" name="cableType" placeholder="e.g. PVC/PVC twin & earth" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxDemand">Maximum Demand / Load (A)</Label>
+                  <Input id="maxDemand" name="maxDemand" placeholder="e.g. 18.2" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Required Test Results (Minor Works)</CardTitle>
+              <CardDescription>
+                Enter results relevant to the circuit altered or added in this minor works certificate.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="testContinuityR1R2">Continuity (R1+R2) (Ω)</Label>
+                  <Input id="testContinuityR1R2" name="testContinuityR1R2" placeholder="e.g. 0.72" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="testInsulationResistance">Insulation Resistance (MΩ)</Label>
+                  <Input id="testInsulationResistance" name="testInsulationResistance" placeholder="e.g. >200" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="testPolarity">Polarity</Label>
+                  <Input id="testPolarity" name="testPolarity" placeholder="e.g. Correct" />
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="testZs">Earth Fault Loop Impedance (Zs) (Ω)</Label>
+                  <Input id="testZs" name="testZs" placeholder="e.g. 0.86" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="testPfc">Prospective Fault Current (kA)</Label>
+                  <Input id="testPfc" name="testPfc" placeholder="e.g. 1.5" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="testRcd">RCD / RCBO Test Result</Label>
+                  <Input id="testRcd" name="testRcd" placeholder="e.g. 25ms @ IΔn" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="testNotes">Additional Test Notes</Label>
+                <Textarea
+                  id="testNotes"
+                  name="testNotes"
+                  rows={3}
+                  placeholder="Any limitations, deviations, instrument notes, or supplementary results..."
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Inspection, Testing & Certification Summary</CardTitle>
               <CardDescription>
-                Capture a concise record of the limited works, notes, and testing performed.
+                Capture a concise record of the limited works, notes, and certification details.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -616,12 +749,12 @@ export default function MinorElectricalInstallationWorksPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="testNotes">Test Notes</Label>
+                  <Label htmlFor="workScopeStatement">Work Scope Statement</Label>
                   <Textarea
-                    id="testNotes"
-                    name="testNotes"
+                    id="workScopeStatement"
+                    name="workScopeStatement"
                     rows={3}
-                    placeholder="Continuity, polarity, insulation resistance, or other test notes..."
+                    placeholder="State the exact scope and extent of minor works certified..."
                   />
                 </div>
               </div>
