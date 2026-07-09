@@ -1,9 +1,9 @@
-import { generateCertificatePDF } from '../lib/pdf/generator';
+import { generateCertificatePDF, type CertificateData } from '../lib/pdf/generator';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { calculateMaxZs } from '../lib/utils/calculate-zs';
 
-const sampleCertificate: Record<string, unknown> = {
+const sampleCertificate: CertificateData = {
   id: 1,
   certificateNumber: 'CE202695',
   certificateType: 'EICR',
