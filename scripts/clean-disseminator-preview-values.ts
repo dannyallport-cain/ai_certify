@@ -3,7 +3,7 @@ import { db, client } from '../lib/db/drizzle';
 import { reportDisseminatorReports, reportDisseminatorTemplates } from '../lib/db/schema';
 import { enrichFieldsWithAcroFormPlacements } from '../lib/report-disseminator/pdf-acroform';
 import { sanitizeStoredPdfBase64 } from '../lib/report-disseminator/pdf-sanitize';
-import type { ReportDisseminatorField } from '../lib/report-disseminator/types';
+import type { ReportDisseminatorField } from '../lib/report-disseminator/schema';
 
 type WizardData = Record<string, unknown> | null | undefined;
 
