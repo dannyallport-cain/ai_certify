@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import useSWR from 'swr';
 
 import { createCertificate } from '@/app/(dashboard)/actions';
@@ -23,6 +23,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
+import { usePersistentFormDraft } from '@/lib/use-persistent-form-draft';
 
 const fetcher = (url: string) =>
   fetch(url).then((res) => {
@@ -68,6 +69,7 @@ const DURATION_OPTIONS = ['1 hour', '3 hours', 'Other'] as const;
 
 export default function BS5266CertificatePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const formRef = useRef<HTMLFormElement>(null);
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -89,6 +91,11 @@ export default function BS5266CertificatePage() {
   const [nextInspectionDate, setNextInspectionDate] = useState('');
   const [inspectionType, setInspectionType] = useState<(typeof INSPECTION_TYPES)[number] | ''>('');
   const [formError, setFormError] = useState('');
+  const { clearDraft } = usePersistentFormDraft({
+    formRef,
+    pathname: pathname || '/certificates/new/bs5266',
+    templateId: 'BS5266',
+  });
 
   const generateCertificateNumber = () => {
     const date = new Date();
@@ -127,6 +134,10 @@ export default function BS5266CertificatePage() {
       formData.append('certificateType', 'BS5266');
 
       const result = await createCertificate({}, formData);
+
+      if (!result?.error) {
+        clearDraft();
+      }
 
       if (result?.error) {
         if (isSessionExpiredError(result.error)) {

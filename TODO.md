@@ -1,10 +1,12 @@
-# Lint Fix Plan TODO
+# TODO - Global Certificate Draft Persistence (Phase 1: local-first)
 
-- [x] Update ESLint ignore patterns to exclude generated/minified artifacts causing mass false-positive lint errors
-- [x] Fix `scripts/clean-disseminator-preview-values.ts` (`any` casts)
-- [x] Fix `scripts/delete_oldest_backup.js` (CommonJS require + no-undef)
-- [x] Fix `scripts/generate-blank-eicr.ts` (`__dirname` no-undef)
-- [x] Fix `scripts/generate-sample-eicr.ts` (`any` cast)
-- [x] Fix `scripts/seed-eicr-template.ts` (`any` usages)
-- [x] Fix `scripts/update-user220-gasco.ts` (empty catch block)
-- [ ] Run lint on scripts and then full lint validation
+- [ ] Inspect shared certificate create entrypoints/layouts to wire one reusable persistence hook
+- [ ] Add generic draft persistence utility in `lib/` (keying, save/load/clear, versioning-safe shape)
+- [ ] Add reusable React hook for form autosave/restore with debounce and hydration guard
+- [ ] Integrate hook into current certificate creation pages
+  - [ ] `certificates/new/eicr/page.tsx`
+  - [ ] `certificates/new/bs5266/page.tsx`
+  - [ ] `certificates/new/bs5839-1/page.tsx`
+  - [ ] `certificates/new/fire-extinguisher/page.tsx`
+- [ ] Clear draft after successful submit for each integrated page
+- [ ] Update TODO progress and run a quick sanity check

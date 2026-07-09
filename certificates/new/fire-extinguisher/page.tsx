@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import useSWR from 'swr';
 
 import { createCertificate } from '../../../actions';
@@ -20,6 +20,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
+import { usePersistentFormDraft } from '@/lib/use-persistent-form-draft';
 
 const fetcher = (url: string) =>
   fetch(url).then((res) => {
@@ -47,6 +48,7 @@ const AREA_RISK_OPTIONS = [
 
 export default function FireExtinguisherCertificatePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const formRef = useRef<HTMLFormElement>(null);
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -68,6 +70,11 @@ export default function FireExtinguisherCertificatePage() {
   const [nextServiceDate, setNextServiceDate] = useState('');
   const [serviceLevel, setServiceLevel] = useState<(typeof SERVICE_LEVELS)[number] | ''>('');
   const [formError, setFormError] = useState('');
+  const { clearDraft } = usePersistentFormDraft({
+    formRef,
+    pathname: pathname || '/certificates/new/fire-extinguisher',
+    templateId: 'FIRE_EXTINGUISHER',
+  });
 
   const generateCertificateNumber = () => {
     const date = new Date();
@@ -105,6 +112,10 @@ export default function FireExtinguisherCertificatePage() {
       formData.append('certificateType', 'Fire Extinguisher');
 
       const result = await createCertificate({}, formData);
+
+      if (!result?.error) {
+        clearDraft();
+      }
 
       if (result?.error) {
         if (isSessionExpiredError(result.error)) {
