@@ -11,6 +11,8 @@ import {
   paymentTransactions,
   purchaseEntitlements,
   servicem8JobMappings,
+  mainProtectiveDevice,
+  circuitProtectiveDevice,
   ActivityType,
   teamRuntimeSafeColumns,
   type NewActivityLog,
@@ -451,6 +453,22 @@ export async function getCertificateById(certificateId: number) {
     items,
     servicem8JobMapping: servicem8JobMapping ?? null,
   };
+}
+
+export async function getMainProtectiveDevices() {
+  return await db
+    .select()
+    .from(mainProtectiveDevice)
+    .where(eq(mainProtectiveDevice.isActive, true))
+    .orderBy(asc(mainProtectiveDevice.sortOrder), asc(mainProtectiveDevice.label));
+}
+
+export async function getCircuitProtectiveDevices() {
+  return await db
+    .select()
+    .from(circuitProtectiveDevice)
+    .where(eq(circuitProtectiveDevice.isActive, true))
+    .orderBy(asc(circuitProtectiveDevice.sortOrder), asc(circuitProtectiveDevice.label));
 }
 
 export async function getCertificatesByCustomer(customerId: number) {

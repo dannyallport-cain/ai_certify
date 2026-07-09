@@ -29,6 +29,19 @@ const fetcher = (url: string) =>
     return res.json();
   });
 
+type ProtectiveDeviceOption = {
+  id: number;
+  code: string;
+  label: string;
+  sortOrder: number;
+  isActive: boolean;
+};
+
+type ProtectiveDevicesResponse = {
+  mainProtectiveDevices: ProtectiveDeviceOption[];
+  circuitProtectiveDevices: ProtectiveDeviceOption[];
+};
+
 const WORK_TYPES = [
   'New socket outlet',
   'Lighting alteration',
@@ -53,6 +66,16 @@ export default function MinorElectricalInstallationWorksPage() {
   const [selectedCustomer, setSelectedCustomer] = useState('');
   const { data: customersData } = useSWR('/api/customers', fetcher);
   const customers = Array.isArray(customersData) ? customersData : [];
+  const { data: protectiveDevicesData } = useSWR<ProtectiveDevicesResponse>(
+    '/api/electrical/protective-devices',
+    fetcher,
+  );
+  const mainProtectiveDevices = Array.isArray(protectiveDevicesData?.mainProtectiveDevices)
+    ? protectiveDevicesData.mainProtectiveDevices
+    : [];
+  const circuitProtectiveDevices = Array.isArray(protectiveDevicesData?.circuitProtectiveDevices)
+    ? protectiveDevicesData.circuitProtectiveDevices
+    : [];
   const [guidedOpen, setGuidedOpen] = useState(false);
   const [certificateNumber, setCertificateNumber] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
@@ -600,7 +623,18 @@ export default function MinorElectricalInstallationWorksPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="mainCircuitDevice">Main Circuit Protective Device</Label>
-                  <Input id="mainCircuitDevice" name="mainCircuitDevice" placeholder="Fuse / MCB / RCBO etc." />
+                  <Select name="mainCircuitDevice">
+                    <SelectTrigger id="mainCircuitDevice">
+                      <SelectValue placeholder="Select main protective device" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {mainProtectiveDevices.map((option) => (
+                        <SelectItem key={option.id} value={option.label}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -630,8 +664,19 @@ export default function MinorElectricalInstallationWorksPage() {
                   <Input id="existingCircuitRef" name="existingCircuitRef" placeholder="e.g. Ring Final - GF Sockets" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="protectiveDeviceType">Protective Device Type</Label>
-                  <Input id="protectiveDeviceType" name="protectiveDeviceType" placeholder="e.g. B curve MCB / RCBO" />
+                  <Label htmlFor="protectiveDeviceType">Circuit Protective Device Type (EICR)</Label>
+                  <Select name="protectiveDeviceType">
+                    <SelectTrigger id="protectiveDeviceType">
+                      <SelectValue placeholder="Select circuit protective device" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {circuitProtectiveDevices.map((option) => (
+                        <SelectItem key={option.id} value={option.label}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="protectiveDeviceRating">Protective Device Rating (A)</Label>

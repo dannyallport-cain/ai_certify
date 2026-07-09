@@ -271,6 +271,26 @@ export const purchaseEntitlements = pgTable(
 );
 
 // Fire Safety Certificate Management Tables
+export const mainProtectiveDevice = pgTable('main_protective_device', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 100 }).notNull().unique(),
+  label: varchar('label', { length: 255 }).notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const circuitProtectiveDevice = pgTable('circuit_protective_device', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 100 }).notNull().unique(),
+  label: varchar('label', { length: 255 }).notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
@@ -778,6 +798,10 @@ export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
 export type NewPaymentTransaction = typeof paymentTransactions.$inferInsert;
 export type PurchaseEntitlement = typeof purchaseEntitlements.$inferSelect;
 export type NewPurchaseEntitlement = typeof purchaseEntitlements.$inferInsert;
+export type MainProtectiveDevice = typeof mainProtectiveDevice.$inferSelect;
+export type NewMainProtectiveDevice = typeof mainProtectiveDevice.$inferInsert;
+export type CircuitProtectiveDevice = typeof circuitProtectiveDevice.$inferSelect;
+export type NewCircuitProtectiveDevice = typeof circuitProtectiveDevice.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 export type Certificate = typeof certificates.$inferSelect;

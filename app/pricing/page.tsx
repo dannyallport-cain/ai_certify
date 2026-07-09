@@ -95,10 +95,22 @@ function MechanismStep({
 }
 
 export default async function PricingPage() {
-  const [plans, templatePackOffer] = await Promise.all([
-    getAdminStripeSubscriptionPlans(),
-    getLocalAuthorityTemplatePackOffer(),
-  ]);
+  let plans: Awaited<ReturnType<typeof getAdminStripeSubscriptionPlans>> = [];
+  let templatePackOffer: Awaited<ReturnType<typeof getLocalAuthorityTemplatePackOffer>> = null;
+  let pricingWarning: string | null = null;
+
+  try {
+    [plans, templatePackOffer] = await Promise.all([
+      getAdminStripeSubscriptionPlans(),
+      getLocalAuthorityTemplatePackOffer(),
+    ]);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    pricingWarning = message.includes('STRIPE_SECRET_KEY')
+      ? 'Pricing is temporarily unavailable because Stripe is not configured (missing STRIPE_SECRET_KEY).'
+      : 'Pricing data is temporarily unavailable. Please try again shortly.';
+    console.error('[pricing] failed to load pricing data:', error);
+  }
 
   const activePlans = plans.filter((plan) => plan.active);
 
@@ -146,6 +158,14 @@ export default async function PricingPage() {
           </div>
         </div>
       </section>
+
+      {pricingWarning ? (
+        <section className="border-b border-amber-200 bg-amber-50 py-4 dark:border-amber-900/40 dark:bg-amber-950/30">
+          <div className="mx-auto max-w-7xl px-4 text-sm font-medium text-amber-800 dark:text-amber-200 sm:px-6 lg:px-8">
+            {pricingWarning}
+          </div>
+        </section>
+      ) : null}
 
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

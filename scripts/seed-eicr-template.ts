@@ -235,6 +235,14 @@ const eicrTemplate = {
   },
 };
 
+type DbErrorWithCode = {
+  code?: string;
+};
+
+function hasCode(error: unknown): error is DbErrorWithCode {
+  return typeof error === 'object' && error !== null && 'code' in error;
+}
+
 async function seedEICRTemplate() {
   console.log('Seeding EICR template...');
   try {
@@ -244,14 +252,14 @@ async function seedEICRTemplate() {
       certificateType: 'EICR',
       isDefault: true,
       isActive: true,
-      template: eicrTemplate as any,
+      template: eicrTemplate as Record<string, unknown>,
       description: 'Electrical Installation Condition Report conforming to BS 7671 IET Wiring Regulations',
       version: 1,
       createdBy: 129,
     }).returning();
     console.log('✅ EICR template seeded successfully:', result[0]?.id);
-  } catch (err: any) {
-    if (err?.code === '23505') {
+  } catch (err: unknown) {
+    if (hasCode(err) && err.code === '23505') {
       console.log('ℹ️  EICR template already exists, skipping.');
     } else {
       console.error('❌ Failed to seed EICR template:', err);

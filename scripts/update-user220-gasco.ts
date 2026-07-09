@@ -61,6 +61,8 @@ main().catch(async (error) => {
   console.error(error);
   try {
     await client.end();
-  } catch {}
+  } catch {
+    // Ignore cleanup errors while preserving original failure path.
+  }
   process.exit(1);
 });

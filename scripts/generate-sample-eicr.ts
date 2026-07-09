@@ -3,7 +3,7 @@ import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { calculateMaxZs } from '../lib/utils/calculate-zs';
 
-const sampleCertificate = {
+const sampleCertificate: Record<string, unknown> = {
   id: 1,
   certificateNumber: 'CE202695',
   certificateType: 'EICR',
@@ -206,7 +206,7 @@ const sampleCertificate = {
 
 async function main() {
   console.log('Generating sample EICR PDF...');
-  const pdfBytes = await generateCertificatePDF(sampleCertificate as any);
+  const pdfBytes = await generateCertificatePDF(sampleCertificate);
 
   const outputPath = join(process.cwd(), 'test-results', 'sample-eicr-CE202695.pdf');
   writeFileSync(outputPath, Buffer.from(pdfBytes));
