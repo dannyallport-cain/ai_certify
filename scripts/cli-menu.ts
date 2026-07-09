@@ -4,7 +4,15 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
-type MenuAction = 'mobile' | 'webBuild' | 'expoGo' | 'git' | 'web' | 'exit';
+type MenuAction =
+  | 'mobile'
+  | 'webBuild'
+  | 'expoGo'
+  | 'git'
+  | 'web'
+  | 'vercelLocalBuild'
+  | 'vercelDeploy'
+  | 'exit';
 
 const rl = createInterface({ input, output });
 
@@ -40,7 +48,9 @@ function printMenu() {
   console.log('3) Launch mobile app in Expo Go');
   console.log('4) Commit and push to git');
   console.log('5) Run web app locally');
-  console.log('6) Exit');
+  console.log('6) Build locally with Vercel');
+  console.log('7) Push/deploy to Vercel (production)');
+  console.log('8) Exit');
   console.log('');
 }
 
@@ -226,6 +236,26 @@ async function runWebAppLocally() {
   success('Web app command completed.');
 }
 
+async function runVercelLocalBuild() {
+  console.log('');
+  info('Running local Vercel build: pnpm exec vercel build');
+  info('This generates the .vercel/output build artifacts locally.');
+
+  await runCommand('pnpm', ['exec', 'vercel', 'build']);
+
+  success('Local Vercel build completed.');
+}
+
+async function runVercelDeploy() {
+  console.log('');
+  info('Deploying to Vercel production: pnpm exec vercel --prod');
+  warning('Ensure you are authenticated with Vercel CLI and project is linked.');
+
+  await runCommand('pnpm', ['exec', 'vercel', '--prod']);
+
+  success('Vercel production deployment command completed.');
+}
+
 async function handleSelection(selection: string) {
   const actionMap: Record<string, MenuAction> = {
     '1': 'mobile',
@@ -233,13 +263,15 @@ async function handleSelection(selection: string) {
     '3': 'expoGo',
     '4': 'git',
     '5': 'web',
-    '6': 'exit',
+    '6': 'vercelLocalBuild',
+    '7': 'vercelDeploy',
+    '8': 'exit',
   };
 
   const action = actionMap[selection];
 
   if (!action) {
-    warning('Invalid selection. Choose 1, 2, 3, 4, 5, or 6.');
+    warning('Invalid selection. Choose 1, 2, 3, 4, 5, 6, 7, or 8.');
     return false;
   }
 
@@ -258,6 +290,10 @@ async function handleSelection(selection: string) {
       await runGitCommitAndPush();
     } else if (action === 'web') {
       await runWebAppLocally();
+    } else if (action === 'vercelLocalBuild') {
+      await runVercelLocalBuild();
+    } else if (action === 'vercelDeploy') {
+      await runVercelDeploy();
     }
   } catch (err) {
     error(err instanceof Error ? err.message : 'Unknown error');
