@@ -102,7 +102,7 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#0f4c81',
     textColor: '#ffffff',
     symbol: 'CH',
-    logoSrc: 'https://www.chas.co.uk/wp-content/uploads/2023/11/veriforce-chas-x.png',
+    logoSrc: '/logos/chas.png',
     logoAlt: 'Veriforce CHAS logo',
   },
   {
@@ -113,7 +113,7 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#006837',
     textColor: '#ffffff',
     symbol: 'SC',
-    logoSrc: 'https://www.safecontractor.com/wp-content/uploads/2023/09/safecontractor-1-81x80.png',
+    logoSrc: '/logos/safecontractor.png',
     logoAlt: 'SafeContractor logo',
   },
   {
@@ -124,7 +124,7 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#111827',
     textColor: '#ffffff',
     symbol: 'QMS',
-    logoSrc: '/logos/iso-9001.svg',
+    logoSrc: '/logos/iso-9001.png',
     logoAlt: 'ISO 9001 badge',
   },
   {
@@ -135,7 +135,7 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#14532d',
     textColor: '#ffffff',
     symbol: 'EMS',
-    logoSrc: '/logos/iso-14001.svg',
+    logoSrc: '/logos/iso-14001.png',
     logoAlt: 'ISO 14001 badge',
   },
   {
@@ -146,7 +146,7 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#7f1d1d',
     textColor: '#ffffff',
     symbol: 'OHS',
-    logoSrc: '/logos/iso-45001.svg',
+    logoSrc: '/logos/iso-45001.png',
     logoAlt: 'ISO 45001 badge',
   },
 ];
