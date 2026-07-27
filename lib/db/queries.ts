@@ -13,6 +13,9 @@ import {
   servicem8JobMappings,
   mainProtectiveDevice,
   circuitProtectiveDevice,
+  cableType,
+  rcdRcboType,
+  protectiveDeviceRating,
   ActivityType,
   teamRuntimeSafeColumns,
   type NewActivityLog,
@@ -469,6 +472,30 @@ export async function getCircuitProtectiveDevices() {
     .from(circuitProtectiveDevice)
     .where(eq(circuitProtectiveDevice.isActive, true))
     .orderBy(asc(circuitProtectiveDevice.sortOrder), asc(circuitProtectiveDevice.label));
+}
+
+export async function getCableTypes() {
+  return await db
+    .select()
+    .from(cableType)
+    .where(eq(cableType.isActive, true))
+    .orderBy(asc(cableType.sortOrder), asc(cableType.label));
+}
+
+export async function getRcdRcboTypes() {
+  return await db
+    .select()
+    .from(rcdRcboType)
+    .where(eq(rcdRcboType.isActive, true))
+    .orderBy(asc(rcdRcboType.sortOrder), asc(rcdRcboType.label));
+}
+
+export async function getProtectiveDeviceRatings() {
+  return await db
+    .select()
+    .from(protectiveDeviceRating)
+    .where(eq(protectiveDeviceRating.isActive, true))
+    .orderBy(asc(protectiveDeviceRating.sortOrder), asc(protectiveDeviceRating.label));
 }
 
 export async function getCertificatesByCustomer(customerId: number) {

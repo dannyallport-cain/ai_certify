@@ -1,8 +1,9 @@
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/drizzle';
-import { certificates, certificateItems, certificateTemplates, customers } from '@/lib/db/schema';
+import { certificates, certificateItems, certificateTemplates, customers, teams, users } from '@/lib/db/schema';
 import { generateCertificatePDF, type CertificateData, type TemplateConfig } from '@/lib/pdf/generator';
+import { getApprovalSchemeIds } from '@/lib/approval-schemes';
 
 export async function getCertificatePdfData(
   certificateId: number,
@@ -17,9 +18,17 @@ export async function getCertificatePdfData(
     .select({
       certificate: certificates,
       customer: customers,
+      user: {
+        eicrProfileDefaults: users.eicrProfileDefaults,
+      },
+      team: {
+        logoDataUri: teams.logoDataUri,
+      },
     })
     .from(certificates)
     .leftJoin(customers, eq(certificates.customerId, customers.id))
+    .leftJoin(users, eq(certificates.teamId, users.teamId))
+    .leftJoin(teams, eq(certificates.teamId, teams.id))
     .where(and(...conditions))
     .limit(1);
 
@@ -27,7 +36,7 @@ export async function getCertificatePdfData(
     return null;
   }
 
-  const { certificate, customer } = certificateWithDetails[0];
+  const { certificate, customer, user, team } = certificateWithDetails[0];
 
   if (!customer) {
     return null;
@@ -67,6 +76,12 @@ export async function getCertificatePdfData(
     console.warn('Could not load template config for PDF:', error);
   }
 
+  const profileDefaultsApprovalSchemes = getApprovalSchemeIds(
+    user?.eicrProfileDefaults?.approvalSchemes
+  );
+
+  const certificateFormData = (certificate.formData as Record<string, any> | undefined) ?? {};
+
   return {
     id: certificate.id,
     certificateNumber: certificate.certificateNumber,
@@ -77,8 +92,12 @@ export async function getCertificatePdfData(
     nextInspectionDate: certificate.nextInspectionDate,
     inspectorName: certificate.inspectorName,
     status: certificate.status,
-    formData: certificate.formData as Record<string, any> | undefined,
+    formData: {
+      ...certificateFormData,
+      approvalSchemes: profileDefaultsApprovalSchemes,
+    },
     templateConfig,
+    teamLogo: team?.logoDataUri ?? null,
     customer: {
       name: customer.name,
       email: customer.email,

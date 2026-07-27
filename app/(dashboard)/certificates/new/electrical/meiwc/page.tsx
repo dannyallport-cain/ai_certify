@@ -15,8 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
 
@@ -40,6 +40,14 @@ type ProtectiveDeviceOption = {
 type ProtectiveDevicesResponse = {
   mainProtectiveDevices: ProtectiveDeviceOption[];
   circuitProtectiveDevices: ProtectiveDeviceOption[];
+};
+
+type LookupOption = {
+  id: number;
+  code: string;
+  label: string;
+  sortOrder: number;
+  isActive: boolean;
 };
 
 const WORK_TYPES = [
@@ -70,19 +78,31 @@ export default function MinorElectricalInstallationWorksPage() {
     '/api/electrical/protective-devices',
     fetcher,
   );
+  const { data: cableTypesData } = useSWR<LookupOption[]>('/api/electrical/cable-types', fetcher);
+  const { data: rcdRcboTypesData } = useSWR<LookupOption[]>('/api/electrical/rcd-rcbo-types', fetcher);
+  const { data: protectiveDeviceRatingsData } = useSWR<LookupOption[]>(
+    '/api/electrical/protective-device-ratings',
+    fetcher,
+  );
+
   const mainProtectiveDevices = Array.isArray(protectiveDevicesData?.mainProtectiveDevices)
     ? protectiveDevicesData.mainProtectiveDevices
     : [];
   const circuitProtectiveDevices = Array.isArray(protectiveDevicesData?.circuitProtectiveDevices)
     ? protectiveDevicesData.circuitProtectiveDevices
     : [];
+  const cableTypes = Array.isArray(cableTypesData) ? cableTypesData : [];
+  const rcdRcboTypes = Array.isArray(rcdRcboTypesData) ? rcdRcboTypesData : [];
+  const protectiveDeviceRatings = Array.isArray(protectiveDeviceRatingsData) ? protectiveDeviceRatingsData : [];
   const [guidedOpen, setGuidedOpen] = useState(false);
   const [certificateNumber, setCertificateNumber] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
   const [siteName, setSiteName] = useState('');
-  const [siteAddress, setSiteAddress] = useState('');
+  const [workSiteAddress, setWorkSiteAddress] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
   const [isSiteNameAuto, setIsSiteNameAuto] = useState(false);
-  const [isSiteAddressAuto, setIsSiteAddressAuto] = useState(false);
+  const [isWorkSiteAddressAuto, setIsWorkSiteAddressAuto] = useState(false);
+  const [isCustomerAddressAuto, setIsCustomerAddressAuto] = useState(false);
   const [inspectionDate, setInspectionDate] = useState(new Date().toISOString().split('T')[0]);
   const [isInspectionDateAuto, setIsInspectionDateAuto] = useState(true);
   const [formError, setFormError] = useState('');
@@ -137,7 +157,8 @@ export default function MinorElectricalInstallationWorksPage() {
     { name: 'certificateNumber', label: 'Certificate Number', type: 'text' },
     { name: 'customerId', label: 'Customer', type: 'text' },
     { name: 'siteName', label: 'Site / Building Name', type: 'text' },
-    { name: 'siteAddress', label: 'Site Address', type: 'textarea' },
+    { name: 'workSiteAddress', label: 'Site Address (Works Carried Out)', type: 'textarea' },
+    { name: 'customerAddress', label: 'Customer Address (Person Ordering Work)', type: 'textarea' },
     { name: 'workType', label: 'Work Type', type: 'text' },
     { name: 'inspectionDate', label: 'Inspection Date', type: 'text' },
     { name: 'designerName', label: 'Designer / Contractor', type: 'text' },
@@ -161,7 +182,8 @@ export default function MinorElectricalInstallationWorksPage() {
         setSelectedCustomer(certificateData.customer?.id ? String(certificateData.customer.id) : String(formData.customerId || ''));
         setSelectedCustomerName(certificateData.customer?.name || String(formData.customerName || ''));
         setSiteName(String(formData.siteName || certificateData.siteName || ''));
-        setSiteAddress(String(formData.siteAddress || certificateData.siteAddress || ''));
+        setWorkSiteAddress(String(formData.workSiteAddress || formData.siteAddress || certificateData.siteAddress || ''));
+        setCustomerAddress(String(formData.customerAddress || certificateData.customer?.address || ''));
         setInspectionDate(String(certificateData.inspectionDate || formData.inspectionDate || new Date().toISOString().split('T')[0]));
       } catch (error) {
         console.error('Error loading MEIWC certificate for editing:', error);
@@ -178,12 +200,13 @@ export default function MinorElectricalInstallationWorksPage() {
       selectedCustomer,
       selectedCustomerName,
       siteName,
-      siteAddress,
+      workSiteAddress,
+      customerAddress,
       inspectionDate,
       formValues: collectFormValues(formRef.current),
     };
     window.localStorage.setItem(buildDraftStorageKey(), JSON.stringify(payload));
-  }, [certificateNumber, selectedCustomer, selectedCustomerName, siteName, siteAddress, inspectionDate, isEditing]);
+  }, [certificateNumber, selectedCustomer, selectedCustomerName, siteName, workSiteAddress, customerAddress, inspectionDate, isEditing]);
 
   const handleRestoreSavedDraft = () => {
     if (typeof window === 'undefined') return;
@@ -199,7 +222,8 @@ export default function MinorElectricalInstallationWorksPage() {
         selectedCustomer?: string;
         selectedCustomerName?: string;
         siteName?: string;
-        siteAddress?: string;
+        workSiteAddress?: string;
+        customerAddress?: string;
         inspectionDate?: string;
       };
 
@@ -207,7 +231,8 @@ export default function MinorElectricalInstallationWorksPage() {
       setSelectedCustomer(draft.selectedCustomer ?? '');
       setSelectedCustomerName(draft.selectedCustomerName ?? '');
       setSiteName(draft.siteName ?? '');
-      setSiteAddress(draft.siteAddress ?? '');
+      setWorkSiteAddress(draft.workSiteAddress ?? '');
+      setCustomerAddress(draft.customerAddress ?? '');
       setInspectionDate(draft.inspectionDate ?? inspectionDate);
       setHasSavedDraft(false);
     } catch (error) {
@@ -233,8 +258,11 @@ export default function MinorElectricalInstallationWorksPage() {
     if (!siteName.trim()) results.push({ type: 'warning', message: 'Site / Building Name is blank.' });
     else results.push({ type: 'pass', message: 'Site / Building Name provided.' });
 
-    if (!siteAddress.trim()) results.push({ type: 'error', message: 'Site Address is required.' });
-    else results.push({ type: 'pass', message: 'Site Address provided.' });
+    if (!workSiteAddress.trim()) results.push({ type: 'error', message: 'Site address where electrical works were carried out is required.' });
+    else results.push({ type: 'pass', message: 'Work site address provided.' });
+
+    if (!customerAddress.trim()) results.push({ type: 'error', message: 'Customer address is required.' });
+    else results.push({ type: 'pass', message: 'Customer address provided.' });
 
     const form = formRef.current;
     if (form) {
@@ -276,7 +304,7 @@ export default function MinorElectricalInstallationWorksPage() {
                 id: Number(editId),
                 certificateNumber,
                 siteName,
-                siteAddress,
+                siteAddress: workSiteAddress,
                 inspectionDate,
               } as any,
               formData,
@@ -332,7 +360,7 @@ export default function MinorElectricalInstallationWorksPage() {
       certificateNumber: String(formData.get('certificateNumber') || ''),
       certificateType: 'MEIWC',
       siteName: String(formData.get('siteName') || ''),
-      siteAddress: String(formData.get('siteAddress') || ''),
+      siteAddress: String(formData.get('workSiteAddress') || ''),
       inspectionDate: String(formData.get('inspectionDate') || ''),
       nextInspectionDate: '',
       inspectorName: String(formData.get('inspectorName') || ''),
@@ -344,6 +372,8 @@ export default function MinorElectricalInstallationWorksPage() {
         earthingType: String(formData.get('earthingType') || ''),
         workDescription: String(formData.get('workDescription') || ''),
         workScopeStatement: String(formData.get('workScopeStatement') || ''),
+        workSiteAddress: String(formData.get('workSiteAddress') || ''),
+        customerAddress: String(formData.get('customerAddress') || ''),
         existingCircuitRef: String(formData.get('existingCircuitRef') || ''),
         protectiveDeviceType: String(formData.get('protectiveDeviceType') || ''),
         protectiveDeviceRating: String(formData.get('protectiveDeviceRating') || ''),
@@ -479,9 +509,14 @@ export default function MinorElectricalInstallationWorksPage() {
                       setIsSiteNameAuto(true);
                     }
 
-                    if (customer && !siteAddress && customer.address) {
-                      setSiteAddress(customer.address);
-                      setIsSiteAddressAuto(true);
+                    if (customer && !workSiteAddress && customer.address) {
+                      setWorkSiteAddress(customer.address);
+                      setIsWorkSiteAddressAuto(true);
+                    }
+
+                    if (customer && !customerAddress && customer.address) {
+                      setCustomerAddress(customer.address);
+                      setIsCustomerAddressAuto(true);
                     }
                   }}
                   required
@@ -524,21 +559,21 @@ export default function MinorElectricalInstallationWorksPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="siteAddress">Site Address</Label>
+                  <Label htmlFor="workSiteAddress">Site Address</Label>
                   <AddressAutocompleteField
-                    id="siteAddress"
-                    name="siteAddress"
+                    id="workSiteAddress"
+                    name="workSiteAddress"
                     placeholder="Full site address"
-                    value={siteAddress}
+                    value={workSiteAddress}
                     onChange={(value) => {
-                      setSiteAddress(value);
-                      setIsSiteAddressAuto(false);
+                      setWorkSiteAddress(value);
+                      setIsWorkSiteAddressAuto(false);
                     }}
-                    className={isSiteAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
-                    title={isSiteAddressAuto ? 'Auto-populated from selected customer address. Edit if needed.' : undefined}
+                    className={isWorkSiteAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                    title={isWorkSiteAddressAuto ? 'Auto-populated from selected customer address. Edit if needed.' : undefined}
                     required
                   />
-                  {isSiteAddressAuto ? (
+                  {isWorkSiteAddressAuto ? (
                     <p className="text-xs text-amber-700">Auto-populated from customer address. Hover the field for details.</p>
                   ) : null}
                 </div>

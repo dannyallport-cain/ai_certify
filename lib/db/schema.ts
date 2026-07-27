@@ -291,6 +291,36 @@ export const circuitProtectiveDevice = pgTable('circuit_protective_device', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+export const cableType = pgTable('cable_type', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 100 }).notNull().unique(),
+  label: varchar('label', { length: 255 }).notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const rcdRcboType = pgTable('rcd_rcbo_type', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 100 }).notNull().unique(),
+  label: varchar('label', { length: 255 }).notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const protectiveDeviceRating = pgTable('protective_device_rating', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 100 }).notNull().unique(),
+  label: varchar('label', { length: 255 }).notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
@@ -802,6 +832,12 @@ export type MainProtectiveDevice = typeof mainProtectiveDevice.$inferSelect;
 export type NewMainProtectiveDevice = typeof mainProtectiveDevice.$inferInsert;
 export type CircuitProtectiveDevice = typeof circuitProtectiveDevice.$inferSelect;
 export type NewCircuitProtectiveDevice = typeof circuitProtectiveDevice.$inferInsert;
+export type CableType = typeof cableType.$inferSelect;
+export type NewCableType = typeof cableType.$inferInsert;
+export type RcdRcboType = typeof rcdRcboType.$inferSelect;
+export type NewRcdRcboType = typeof rcdRcboType.$inferInsert;
+export type ProtectiveDeviceRating = typeof protectiveDeviceRating.$inferSelect;
+export type NewProtectiveDeviceRating = typeof protectiveDeviceRating.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 export type Certificate = typeof certificates.$inferSelect;

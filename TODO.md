@@ -1,12 +1,11 @@
-# TODO - Global Certificate Draft Persistence (Phase 1: local-first)
+# PDF Logo Rendering Fix (EICR)
 
-- [ ] Inspect shared certificate create entrypoints/layouts to wire one reusable persistence hook
-- [ ] Add generic draft persistence utility in `lib/` (keying, save/load/clear, versioning-safe shape)
-- [ ] Add reusable React hook for form autosave/restore with debounce and hydration guard
-- [ ] Integrate hook into current certificate creation pages
-  - [ ] `certificates/new/eicr/page.tsx`
-  - [ ] `certificates/new/bs5266/page.tsx`
-  - [ ] `certificates/new/bs5839-1/page.tsx`
-  - [ ] `certificates/new/fire-extinguisher/page.tsx`
-- [ ] Clear draft after successful submit for each integrated page
-- [ ] Update TODO progress and run a quick sanity check
+- [x] Inspect current logo source flow (team logos + approval scheme logos), including Cloudflare R2 retrieval path.
+- [x] Update certificate PDF data mapping to reliably pass team logo source into PDF generator.
+- [ ] Add robust image normalization in `lib/pdf/generator.ts`:
+  - [ ] Resolve logo source from data URI / local asset / remote URL (R2 included)
+  - [ ] Convert unsupported formats (especially WEBP/SVG) to PNG data URI for jsPDF compatibility
+  - [ ] Cache normalized results to avoid repeated fetch/transform overhead
+- [ ] Ensure EICR approval-scheme logo drawing uses normalized image data before `addImage`.
+- [ ] Add fallback behavior for failed logo fetch/render (no colored placeholder boxes for logos).
+- [ ] Validate via targeted checks (typecheck/build or lint subset) and summarize changes.
