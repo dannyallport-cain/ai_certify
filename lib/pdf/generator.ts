@@ -102,6 +102,41 @@ function getJsPdfImageFormat(imageData: string): 'PNG' | 'JPEG' | 'WEBP' {
 }
 
 function getSelectedApprovalSchemes(formData: Record<string, any>): ApprovalSchemeInfo[] {
+  const details = Array.isArray(formData.approvalSchemeDetails)
+    ? formData.approvalSchemeDetails
+    : typeof formData.approvalSchemeDetails === 'string'
+      ? parseJsonLike<unknown>(formData.approvalSchemeDetails, [])
+      : [];
+
+  const normalizedDetails: ApprovalSchemeInfo[] = Array.isArray(details)
+    ? details
+        .map((detail): ApprovalSchemeInfo | null => {
+          if (!detail || typeof detail !== 'object') return null;
+          const candidate = detail as Partial<ApprovalSchemeInfo> & { label?: string };
+          if (!candidate.label || typeof candidate.label !== 'string') return null;
+          return {
+            id: typeof candidate.id === 'string' ? candidate.id : candidate.label,
+            ...(typeof candidate.code === 'string' ? { code: candidate.code } : {}),
+            label: candidate.label,
+            shortLabel: typeof candidate.shortLabel === 'string' ? candidate.shortLabel : candidate.label,
+            description: typeof candidate.description === 'string' ? candidate.description : '',
+            accentColor: typeof candidate.accentColor === 'string' ? candidate.accentColor : '#1d4ed8',
+            textColor: typeof candidate.textColor === 'string' ? candidate.textColor : '#ffffff',
+            symbol:
+              typeof candidate.symbol === 'string' && candidate.symbol.trim()
+                ? candidate.symbol
+                : candidate.label.slice(0, 2).toUpperCase(),
+            ...(typeof candidate.logoSrc === 'string' ? { logoSrc: candidate.logoSrc } : {}),
+            ...(typeof candidate.logoAlt === 'string' ? { logoAlt: candidate.logoAlt } : {}),
+          };
+        })
+        .filter((scheme): scheme is ApprovalSchemeInfo => scheme !== null)
+    : [];
+
+  if (normalizedDetails.length > 0) {
+    return normalizedDetails;
+  }
+
   const rawSchemes = formData.approvalSchemes;
   const parsedSchemes =
     Array.isArray(rawSchemes)

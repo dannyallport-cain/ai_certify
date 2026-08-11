@@ -16,6 +16,7 @@ import {
   cableType,
   rcdRcboType,
   protectiveDeviceRating,
+  approvalSchemeTypes,
   ActivityType,
   teamRuntimeSafeColumns,
   type NewActivityLog,
@@ -496,6 +497,92 @@ export async function getProtectiveDeviceRatings() {
     .from(protectiveDeviceRating)
     .where(eq(protectiveDeviceRating.isActive, true))
     .orderBy(asc(protectiveDeviceRating.sortOrder), asc(protectiveDeviceRating.label));
+}
+
+export async function getApprovalSchemeTypes() {
+  return await db
+    .select()
+    .from(approvalSchemeTypes)
+    .where(eq(approvalSchemeTypes.isActive, true))
+    .orderBy(asc(approvalSchemeTypes.sortOrder), asc(approvalSchemeTypes.label));
+}
+
+export async function getAdminApprovalSchemeTypes() {
+  return await db
+    .select()
+    .from(approvalSchemeTypes)
+    .orderBy(asc(approvalSchemeTypes.sortOrder), asc(approvalSchemeTypes.label));
+}
+
+export async function createApprovalSchemeType(data: {
+  code: string;
+  label: string;
+  shortLabel: string;
+  description?: string | null;
+  accentColor?: string;
+  textColor?: string;
+  symbol?: string;
+  logoSrc?: string | null;
+  logoAlt?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const [created] = await db
+    .insert(approvalSchemeTypes)
+    .values({
+      code: data.code,
+      label: data.label,
+      shortLabel: data.shortLabel,
+      description: data.description ?? null,
+      accentColor: data.accentColor ?? '#1d4ed8',
+      textColor: data.textColor ?? '#ffffff',
+      symbol: data.symbol ?? '',
+      logoSrc: data.logoSrc ?? null,
+      logoAlt: data.logoAlt ?? null,
+      sortOrder: data.sortOrder ?? 0,
+      isActive: data.isActive ?? true,
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return created ?? null;
+}
+
+export async function updateApprovalSchemeTypeById(
+  id: number,
+  data: Partial<{
+    code: string;
+    label: string;
+    shortLabel: string;
+    description: string | null;
+    accentColor: string;
+    textColor: string;
+    symbol: string;
+    logoSrc: string | null;
+    logoAlt: string | null;
+    sortOrder: number;
+    isActive: boolean;
+  }>
+) {
+  const [updated] = await db
+    .update(approvalSchemeTypes)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(approvalSchemeTypes.id, id))
+    .returning();
+
+  return updated ?? null;
+}
+
+export async function deleteApprovalSchemeTypeById(id: number) {
+  const [deleted] = await db
+    .delete(approvalSchemeTypes)
+    .where(eq(approvalSchemeTypes.id, id))
+    .returning();
+
+  return deleted ?? null;
 }
 
 export async function getCertificatesByCustomer(customerId: number) {

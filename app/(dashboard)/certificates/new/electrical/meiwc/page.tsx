@@ -50,6 +50,21 @@ type LookupOption = {
   isActive: boolean;
 };
 
+type ApprovalSchemeOption = {
+  id: number;
+  code: string;
+  label: string;
+  shortLabel: string;
+  description: string | null;
+  accentColor: string;
+  textColor: string;
+  symbol: string;
+  logoSrc: string | null;
+  logoAlt: string | null;
+  sortOrder: number;
+  isActive: boolean;
+};
+
 const WORK_TYPES = [
   'New socket outlet',
   'Lighting alteration',
@@ -84,6 +99,7 @@ export default function MinorElectricalInstallationWorksPage() {
     '/api/electrical/protective-device-ratings',
     fetcher,
   );
+  const { data: approvalSchemesData } = useSWR<ApprovalSchemeOption[]>('/api/approval-schemes', fetcher);
 
   const mainProtectiveDevices = Array.isArray(protectiveDevicesData?.mainProtectiveDevices)
     ? protectiveDevicesData.mainProtectiveDevices
@@ -94,6 +110,7 @@ export default function MinorElectricalInstallationWorksPage() {
   const cableTypes = Array.isArray(cableTypesData) ? cableTypesData : [];
   const rcdRcboTypes = Array.isArray(rcdRcboTypesData) ? rcdRcboTypesData : [];
   const protectiveDeviceRatings = Array.isArray(protectiveDeviceRatingsData) ? protectiveDeviceRatingsData : [];
+  const approvalSchemes = Array.isArray(approvalSchemesData) ? approvalSchemesData : [];
   const [guidedOpen, setGuidedOpen] = useState(false);
   const [certificateNumber, setCertificateNumber] = useState('');
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
@@ -527,6 +544,27 @@ export default function MinorElectricalInstallationWorksPage() {
                     <option key={customer.id} value={customer.name} />
                   ))}
                 </datalist>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Approvals</CardTitle>
+              <CardDescription>Select all approval schemes to be shown in report/certificate headers.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {approvalSchemes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No approval schemes available.</p>
+                ) : (
+                  approvalSchemes.map((scheme) => (
+                    <label key={scheme.id} className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2">
+                      <input type="checkbox" name="approvalSchemes" value={scheme.label} />
+                      <span className="text-sm">{scheme.label}</span>
+                    </label>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

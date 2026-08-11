@@ -1,11 +1,21 @@
-# PDF Logo Rendering Fix (EICR)
+# Admin Approval Schemes + Universal Header Logo
 
-- [x] Inspect current logo source flow (team logos + approval scheme logos), including Cloudflare R2 retrieval path.
-- [x] Update certificate PDF data mapping to reliably pass team logo source into PDF generator.
-- [ ] Add robust image normalization in `lib/pdf/generator.ts`:
-  - [ ] Resolve logo source from data URI / local asset / remote URL (R2 included)
-  - [ ] Convert unsupported formats (especially WEBP/SVG) to PNG data URI for jsPDF compatibility
-  - [ ] Cache normalized results to avoid repeated fetch/transform overhead
-- [ ] Ensure EICR approval-scheme logo drawing uses normalized image data before `addImage`.
-- [ ] Add fallback behavior for failed logo fetch/render (no colored placeholder boxes for logos).
-- [ ] Validate via targeted checks (typecheck/build or lint subset) and summarize changes.
+- [x] Add DB table and migration for approval scheme types (`approval_scheme_types`)
+- [x] Add query helpers in `lib/db/queries.ts` for list/create/update/delete (hard delete)
+- [x] Add APIs:
+  - [x] `app/api/admin/approval-schemes/route.ts` (GET/POST)
+  - [x] `app/api/admin/approval-schemes/[id]/route.ts` (PATCH/DELETE)
+  - [x] `app/api/approval-schemes/route.ts` (GET active list)
+- [x] Refactor `lib/approval-schemes.ts` to DB-friendly types/helpers (remove hardcoded lock-in)
+- [x] Add admin page `app/(dashboard)/admin/approval-schemes/page.tsx` for add/edit/delete
+- [x] Add admin nav entry and overview quick action for Approval Schemes
+- [x] Update user form(s) to fetch approval schemes from API (starting MEIWC page)
+- [x] Update PDF data assembly in `lib/certificates/pdf.ts`:
+  - [x] prefer certificate-level selected approval schemes
+  - [x] fallback to user defaults
+  - [x] include approval scheme metadata needed for header rendering
+- [ ] Update `lib/pdf/generator.ts`:
+  - [ ] remove static dependency for approval scheme rendering
+  - [ ] render selected approval schemes from provided metadata in all relevant outputs
+  - [ ] ensure company logo is rendered universally in report/certificate headers
+- [ ] Run targeted validation and summarize changes

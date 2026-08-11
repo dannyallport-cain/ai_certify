@@ -321,6 +321,23 @@ export const protectiveDeviceRating = pgTable('protective_device_rating', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+export const approvalSchemeTypes = pgTable('approval_scheme_types', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 100 }).notNull().unique(),
+  label: varchar('label', { length: 255 }).notNull(),
+  shortLabel: varchar('short_label', { length: 100 }).notNull(),
+  description: text('description'),
+  accentColor: varchar('accent_color', { length: 20 }).notNull().default('#1d4ed8'),
+  textColor: varchar('text_color', { length: 20 }).notNull().default('#ffffff'),
+  symbol: varchar('symbol', { length: 20 }).notNull().default(''),
+  logoSrc: text('logo_src'),
+  logoAlt: text('logo_alt'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const customers = pgTable('customers', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
@@ -838,6 +855,8 @@ export type RcdRcboType = typeof rcdRcboType.$inferSelect;
 export type NewRcdRcboType = typeof rcdRcboType.$inferInsert;
 export type ProtectiveDeviceRating = typeof protectiveDeviceRating.$inferSelect;
 export type NewProtectiveDeviceRating = typeof protectiveDeviceRating.$inferInsert;
+export type ApprovalSchemeType = typeof approvalSchemeTypes.$inferSelect;
+export type NewApprovalSchemeType = typeof approvalSchemeTypes.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 export type Certificate = typeof certificates.$inferSelect;
