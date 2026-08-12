@@ -1,0 +1,9 @@
+envFile: .env.production
+host: nozomi.proxy.rlwy.net
+approval_scheme_types: MISSING
+cable_type: MISSING
+rcd_rcbo_type: MISSING
+protective_device_rating: MISSING
+main_protective_device: EXISTS
+circuit_protective_device: EXISTS
+servicem8_connections: EXISTS

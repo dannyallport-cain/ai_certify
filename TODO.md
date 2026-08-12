@@ -1,5 +1,21 @@
-# TODO
+# Admin Approval Schemes + Universal Header Logo
 
-- [x] Update `scripts/generate-sample-eicr.ts` to await async PDF generation
-- [x] Run local Vercel build check (`npx vercel build`) and capture errors/success
-- [x] Mark tasks complete after verification
+- [x] Add DB table and migration for approval scheme types (`approval_scheme_types`)
+- [x] Add query helpers in `lib/db/queries.ts` for list/create/update/delete (hard delete)
+- [x] Add APIs:
+  - [x] `app/api/admin/approval-schemes/route.ts` (GET/POST)
+  - [x] `app/api/admin/approval-schemes/[id]/route.ts` (PATCH/DELETE)
+  - [x] `app/api/approval-schemes/route.ts` (GET active list)
+- [x] Refactor `lib/approval-schemes.ts` to DB-friendly types/helpers (remove hardcoded lock-in)
+- [x] Add admin page `app/(dashboard)/admin/approval-schemes/page.tsx` for add/edit/delete
+- [x] Add admin nav entry and overview quick action for Approval Schemes
+- [x] Update user form(s) to fetch approval schemes from API (starting MEIWC page)
+- [x] Update PDF data assembly in `lib/certificates/pdf.ts`:
+  - [x] prefer certificate-level selected approval schemes
+  - [x] fallback to user defaults
+  - [x] include approval scheme metadata needed for header rendering
+- [ ] Update `lib/pdf/generator.ts`:
+  - [ ] remove static dependency for approval scheme rendering
+  - [ ] render selected approval schemes from provided metadata in all relevant outputs
+  - [ ] ensure company logo is rendered universally in report/certificate headers
+- [ ] Run targeted validation and summarize changes

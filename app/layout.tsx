@@ -29,11 +29,6 @@ export default function RootLayout({
       className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
       suppressHydrationWarning
     >
-      <head>
-        <link rel="icon" href="/favicon.svg" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.svg" />
-        <link rel="manifest" href="/site.webmanifest" />
-      </head>
       <body className="min-h-[100dvh] bg-gray-50" suppressHydrationWarning>
         <SWRConfig value={{}}>
           {children}

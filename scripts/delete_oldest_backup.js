@@ -1,4 +1,4 @@
-const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 const key = 'database-backups/2026/04/ai-certify-db-20260410-112529.sql.gz';
 const required = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'];

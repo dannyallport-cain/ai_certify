@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import useSWR from 'swr';
 
 import { createCertificate } from '../../../actions';
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { getSignInRedirectPath, isSessionExpiredError } from '@/lib/auth/errors';
+import { usePersistentFormDraft } from '@/lib/use-persistent-form-draft';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -33,6 +34,7 @@ const selectClassName =
 
 export default function BS5839_1CertificatePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const formRef = useRef<HTMLFormElement>(null);
 
   const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -56,6 +58,11 @@ export default function BS5839_1CertificatePage() {
     (typeof SERVICE_INTERVALS)[number]['label'] | ''
   >('');
   const [formError, setFormError] = useState('');
+  const { clearDraft } = usePersistentFormDraft({
+    formRef,
+    pathname: pathname || '/certificates/new/bs5839-1',
+    templateId: 'BS5839-1',
+  });
 
   const serviceIntervalMonths = SERVICE_INTERVALS.find(
     (interval) => interval.label === serviceInterval,
@@ -84,6 +91,10 @@ export default function BS5839_1CertificatePage() {
       formData.append('certificateType', 'BS5839-1');
 
       const result = await createCertificate({}, formData);
+
+      if (!result?.error) {
+        clearDraft();
+      }
 
       if (result?.error) {
         if (isSessionExpiredError(result.error)) {

@@ -11,6 +11,12 @@ import {
   paymentTransactions,
   purchaseEntitlements,
   servicem8JobMappings,
+  mainProtectiveDevice,
+  circuitProtectiveDevice,
+  cableType,
+  rcdRcboType,
+  protectiveDeviceRating,
+  approvalSchemeTypes,
   ActivityType,
   teamRuntimeSafeColumns,
   type NewActivityLog,
@@ -451,6 +457,132 @@ export async function getCertificateById(certificateId: number) {
     items,
     servicem8JobMapping: servicem8JobMapping ?? null,
   };
+}
+
+export async function getMainProtectiveDevices() {
+  return await db
+    .select()
+    .from(mainProtectiveDevice)
+    .where(eq(mainProtectiveDevice.isActive, true))
+    .orderBy(asc(mainProtectiveDevice.sortOrder), asc(mainProtectiveDevice.label));
+}
+
+export async function getCircuitProtectiveDevices() {
+  return await db
+    .select()
+    .from(circuitProtectiveDevice)
+    .where(eq(circuitProtectiveDevice.isActive, true))
+    .orderBy(asc(circuitProtectiveDevice.sortOrder), asc(circuitProtectiveDevice.label));
+}
+
+export async function getCableTypes() {
+  return await db
+    .select()
+    .from(cableType)
+    .where(eq(cableType.isActive, true))
+    .orderBy(asc(cableType.sortOrder), asc(cableType.label));
+}
+
+export async function getRcdRcboTypes() {
+  return await db
+    .select()
+    .from(rcdRcboType)
+    .where(eq(rcdRcboType.isActive, true))
+    .orderBy(asc(rcdRcboType.sortOrder), asc(rcdRcboType.label));
+}
+
+export async function getProtectiveDeviceRatings() {
+  return await db
+    .select()
+    .from(protectiveDeviceRating)
+    .where(eq(protectiveDeviceRating.isActive, true))
+    .orderBy(asc(protectiveDeviceRating.sortOrder), asc(protectiveDeviceRating.label));
+}
+
+export async function getApprovalSchemeTypes() {
+  return await db
+    .select()
+    .from(approvalSchemeTypes)
+    .where(eq(approvalSchemeTypes.isActive, true))
+    .orderBy(asc(approvalSchemeTypes.sortOrder), asc(approvalSchemeTypes.label));
+}
+
+export async function getAdminApprovalSchemeTypes() {
+  return await db
+    .select()
+    .from(approvalSchemeTypes)
+    .orderBy(asc(approvalSchemeTypes.sortOrder), asc(approvalSchemeTypes.label));
+}
+
+export async function createApprovalSchemeType(data: {
+  code: string;
+  label: string;
+  shortLabel: string;
+  description?: string | null;
+  accentColor?: string;
+  textColor?: string;
+  symbol?: string;
+  logoSrc?: string | null;
+  logoAlt?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  const [created] = await db
+    .insert(approvalSchemeTypes)
+    .values({
+      code: data.code,
+      label: data.label,
+      shortLabel: data.shortLabel,
+      description: data.description ?? null,
+      accentColor: data.accentColor ?? '#1d4ed8',
+      textColor: data.textColor ?? '#ffffff',
+      symbol: data.symbol ?? '',
+      logoSrc: data.logoSrc ?? null,
+      logoAlt: data.logoAlt ?? null,
+      sortOrder: data.sortOrder ?? 0,
+      isActive: data.isActive ?? true,
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return created ?? null;
+}
+
+export async function updateApprovalSchemeTypeById(
+  id: number,
+  data: Partial<{
+    code: string;
+    label: string;
+    shortLabel: string;
+    description: string | null;
+    accentColor: string;
+    textColor: string;
+    symbol: string;
+    logoSrc: string | null;
+    logoAlt: string | null;
+    sortOrder: number;
+    isActive: boolean;
+  }>
+) {
+  const [updated] = await db
+    .update(approvalSchemeTypes)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(approvalSchemeTypes.id, id))
+    .returning();
+
+  return updated ?? null;
+}
+
+export async function deleteApprovalSchemeTypeById(id: number) {
+  const [deleted] = await db
+    .delete(approvalSchemeTypes)
+    .where(eq(approvalSchemeTypes.id, id))
+    .returning();
+
+  return deleted ?? null;
 }
 
 export async function getCertificatesByCustomer(customerId: number) {

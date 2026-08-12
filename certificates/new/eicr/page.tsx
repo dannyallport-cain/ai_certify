@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { createCertificate } from '../../../actions';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { CertificateNumberField } from '@/components/CertificateNumberField';
@@ -23,6 +23,7 @@ import { isAdminRole } from '@/lib/auth/roles';
 import { calculateMaxZs } from '@/lib/utils/calculate-zs';
 import { cn } from '@/lib/utils';
 import { extractEicrCertificateDataFromPdf, type EicrPdfImportData } from '@/lib/eicr-pdf-import';
+import { usePersistentFormDraft } from '@/lib/use-persistent-form-draft';
 import {
   InspectionScheduleSection,
   type InspCode,
@@ -232,6 +233,7 @@ function zsExceedsMax(row: Pick<CircuitRow, 'measuredZs' | 'maxZs'>): boolean {
 
 export default function EICRCertificatePage() {
   const router = useRouter();
+  const pathname = usePathname();
   const formRef = useRef<HTMLFormElement>(null);
   const pdfImportInputRef = useRef<HTMLInputElement>(null);
   const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -271,6 +273,11 @@ export default function EICRCertificatePage() {
   const [spellCheckActive, setSpellCheckActive] = useState(false);
   const [isImportingPdf, setIsImportingPdf] = useState(false);
   const [importMessage, setImportMessage] = useState('Upload a previous EICR PDF to prefill the form.');
+  const { clearDraft } = usePersistentFormDraft({
+    formRef,
+    pathname: pathname || '/certificates/new/eicr',
+    templateId: 'EICR',
+  });
 
   useEffect(() => {
     const rand = Math.floor(Math.random() * 99999).toString().padStart(5, '0');
@@ -438,6 +445,9 @@ export default function EICRCertificatePage() {
       formData.set('inspectionSchedule', JSON.stringify(scheduleForPdf));
       formData.set('circuits', JSON.stringify(circuits));
       const result = await createCertificate({}, formData);
+      if (!result?.error) {
+        clearDraft();
+      }
       if (result?.error) {
         if (isSessionExpiredError(result.error)) {
           router.push(getSignInRedirectPath('/certificates/new/eicr'));

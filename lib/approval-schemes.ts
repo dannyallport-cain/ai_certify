@@ -1,19 +1,8 @@
-export type ApprovalSchemeId =
-  | 'Gas Safe'
-  | 'NICEIC'
-  | 'NAPIT'
-  | 'ELECSA'
-  | 'Stroma'
-  | 'SELECT'
-  | 'BAFE'
-  | 'CHAS'
-  | 'SafeContractor'
-  | 'ISO 9001'
-  | 'ISO 14001'
-  | 'ISO 45001';
+export type ApprovalSchemeId = string;
 
 export type ApprovalSchemeInfo = {
   id: ApprovalSchemeId;
+  code?: string;
   label: string;
   shortLabel: string;
   description: string;
@@ -27,26 +16,31 @@ export type ApprovalSchemeInfo = {
 export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
   {
     id: 'Gas Safe',
+    code: 'gas-safe',
     label: 'Gas Safe',
     shortLabel: 'Gas Safe',
     description: 'Gas safety registrations',
     accentColor: '#f59e0b',
     textColor: '#111827',
     symbol: 'GS',
-    logoSrc: '/gas-safe-vector-6231473.webp',
+    logoSrc: '/gas-safe-logo.png',
     logoAlt: 'Gas Safe Register logo',
   },
   {
     id: 'NICEIC',
+    code: 'niceic',
     label: 'NICEIC',
     shortLabel: 'NICEIC',
     description: 'Electrical contracting',
     accentColor: '#1d4ed8',
     textColor: '#ffffff',
     symbol: 'NC',
+    logoSrc: '/logos/niceic-logo.png',
+    logoAlt: 'NICEIC logo',
   },
   {
     id: 'NAPIT',
+    code: 'napit',
     label: 'NAPIT',
     shortLabel: 'NAPIT',
     description: 'Electrical and building',
@@ -58,6 +52,7 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
   },
   {
     id: 'ELECSA',
+    code: 'elecsa',
     label: 'ELECSA',
     shortLabel: 'ELECSA',
     description: 'Domestic electrical certification',
@@ -67,15 +62,19 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
   },
   {
     id: 'Stroma',
+    code: 'stroma',
     label: 'Stroma',
     shortLabel: 'Stroma',
     description: 'Inspection and compliance',
     accentColor: '#0f766e',
     textColor: '#ffffff',
     symbol: 'ST',
+    logoSrc: '/logos/stroma.png',
+    logoAlt: 'Stroma logo',
   },
   {
     id: 'SELECT',
+    code: 'select',
     label: 'SELECT',
     shortLabel: 'SELECT',
     description: 'Scottish electrical trade',
@@ -85,78 +84,98 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
   },
   {
     id: 'BAFE',
+    code: 'bafe',
     label: 'BAFE',
     shortLabel: 'BAFE',
     description: 'Fire safety certification',
     accentColor: '#b91c1c',
     textColor: '#ffffff',
     symbol: 'BF',
-    logoSrc: '/BAFE-Logo.webp',
+    logoSrc: '/logos/bafe-logo.png',
     logoAlt: 'BAFE logo',
   },
   {
     id: 'CHAS',
+    code: 'chas',
     label: 'CHAS',
     shortLabel: 'CHAS',
     description: 'Contractor health and safety compliance',
     accentColor: '#0f4c81',
     textColor: '#ffffff',
     symbol: 'CH',
-    logoSrc: 'https://www.chas.co.uk/wp-content/uploads/2023/11/veriforce-chas-x.png',
-    logoAlt: 'Veriforce CHAS logo',
   },
   {
     id: 'SafeContractor',
+    code: 'safecontractor',
     label: 'SafeContractor',
     shortLabel: 'SafeContractor',
     description: 'Health, safety and supply chain certification',
     accentColor: '#006837',
     textColor: '#ffffff',
     symbol: 'SC',
-    logoSrc: 'https://www.safecontractor.com/wp-content/uploads/2023/09/safecontractor-1-81x80.png',
-    logoAlt: 'SafeContractor logo',
   },
   {
     id: 'ISO 9001',
+    code: 'iso-9001',
     label: 'ISO 9001',
     shortLabel: 'ISO 9001',
     description: 'Quality management systems',
     accentColor: '#111827',
     textColor: '#ffffff',
     symbol: 'QMS',
-    logoSrc: '/logos/iso-9001.svg',
-    logoAlt: 'ISO 9001 badge',
   },
   {
     id: 'ISO 14001',
+    code: 'iso-14001',
     label: 'ISO 14001',
     shortLabel: 'ISO 14001',
     description: 'Environmental management systems',
     accentColor: '#14532d',
     textColor: '#ffffff',
     symbol: 'EMS',
-    logoSrc: '/logos/iso-14001.svg',
-    logoAlt: 'ISO 14001 badge',
   },
   {
     id: 'ISO 45001',
+    code: 'iso-45001',
     label: 'ISO 45001',
     shortLabel: 'ISO 45001',
     description: 'Occupational health and safety management',
     accentColor: '#7f1d1d',
     textColor: '#ffffff',
     symbol: 'OHS',
-    logoSrc: '/logos/iso-45001.svg',
-    logoAlt: 'ISO 45001 badge',
   },
 ];
 
-const approvalSchemeMap = new Map<ApprovalSchemeId, ApprovalSchemeInfo>(
-  APPROVAL_SCHEMES.map((scheme) => [scheme.id, scheme]),
-);
+export function normalizeApprovalSchemeInfo(input: Partial<ApprovalSchemeInfo> & { label: string }): ApprovalSchemeInfo {
+  return {
+    id: input.id ?? input.label,
+    code: input.code,
+    label: input.label,
+    shortLabel: input.shortLabel ?? input.label,
+    description: input.description ?? '',
+    accentColor: input.accentColor ?? '#1d4ed8',
+    textColor: input.textColor ?? '#ffffff',
+    symbol: input.symbol ?? input.label.slice(0, 2).toUpperCase(),
+    logoSrc: input.logoSrc,
+    logoAlt: input.logoAlt,
+  };
+}
 
-export function getApprovalSchemeInfo(id: string): ApprovalSchemeInfo | null {
-  return approvalSchemeMap.get(id as ApprovalSchemeId) ?? null;
+export function getApprovalSchemeInfo(id: string, availableSchemes?: ApprovalSchemeInfo[]): ApprovalSchemeInfo | null {
+  if (!id) {
+    return null;
+  }
+
+  const source = Array.isArray(availableSchemes) && availableSchemes.length > 0 ? availableSchemes : APPROVAL_SCHEMES;
+  const normalizedId = id.trim().toLowerCase();
+  const found = source.find((scheme) => {
+    const byId = scheme.id?.trim().toLowerCase() === normalizedId;
+    const byLabel = scheme.label?.trim().toLowerCase() === normalizedId;
+    const byCode = scheme.code?.trim().toLowerCase() === normalizedId;
+    return byId || byLabel || byCode;
+  });
+
+  return found ? normalizeApprovalSchemeInfo(found) : null;
 }
 
 export function getApprovalSchemeIds(values: unknown): ApprovalSchemeId[] {
@@ -164,6 +183,18 @@ export function getApprovalSchemeIds(values: unknown): ApprovalSchemeId[] {
     return [];
   }
 
-  const validIds = new Set<ApprovalSchemeId>(APPROVAL_SCHEMES.map((scheme) => scheme.id));
-  return values.filter((value): value is ApprovalSchemeId => typeof value === 'string' && validIds.has(value as ApprovalSchemeId));
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(trimmed);
+  }
+
+  return result;
 }

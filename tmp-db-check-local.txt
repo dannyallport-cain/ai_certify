@@ -1,0 +1,10 @@
+envFile: .env.local
+host: nozomi.proxy.rlwy.net
+approval_scheme_types: EXISTS
+cable_type: EXISTS
+rcd_rcbo_type: EXISTS
+protective_device_rating: EXISTS
+main_protective_device: EXISTS
+circuit_protective_device: EXISTS
+servicem8_connections: EXISTS
+schemes: [{"code":"gas-safe","logo_src":"/gas-safe-logo.png","is_active":true},{"code":"niceic","logo_src":"/logos/niceic-logo.png","is_active":true},{"code":"napit","logo_src":"/NAPIT-Member-Logo.webp","is_active":true},{"code":"elecsa","logo_src":null,"is_active":true},{"code":"stroma","logo_src":"/logos/stroma.png","is_active":true},{"code":"select","logo_src":null,"is_active":true},{"code":"bafe","logo_src":"/logos/bafe-logo.png","is_active":true},{"code":"chas","logo_src":null,"is_active":true},{"code":"safecontractor","logo_src":null,"is_active":true},{"code":"iso-9001","logo_src":null,"is_active":true},{"code":"iso-14001","logo_src":null,"is_active":true},{"code":"iso-45001","logo_src":null,"is_active":true}]

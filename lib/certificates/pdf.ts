@@ -1,8 +1,9 @@
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/drizzle';
-import { certificates, certificateItems, certificateTemplates, customers } from '@/lib/db/schema';
+import { certificates, certificateItems, certificateTemplates, customers, teams, users, approvalSchemeTypes } from '@/lib/db/schema';
 import { generateCertificatePDF, type CertificateData, type TemplateConfig } from '@/lib/pdf/generator';
+import { getApprovalSchemeIds, normalizeApprovalSchemeInfo } from '@/lib/approval-schemes';
 
 export async function getCertificatePdfData(
   certificateId: number,
@@ -17,9 +18,17 @@ export async function getCertificatePdfData(
     .select({
       certificate: certificates,
       customer: customers,
+      user: {
+        eicrProfileDefaults: users.eicrProfileDefaults,
+      },
+      team: {
+        logoDataUri: teams.logoDataUri,
+      },
     })
     .from(certificates)
     .leftJoin(customers, eq(certificates.customerId, customers.id))
+    .leftJoin(users, eq(certificates.teamId, users.teamId))
+    .leftJoin(teams, eq(certificates.teamId, teams.id))
     .where(and(...conditions))
     .limit(1);
 
@@ -27,7 +36,7 @@ export async function getCertificatePdfData(
     return null;
   }
 
-  const { certificate, customer } = certificateWithDetails[0];
+  const { certificate, customer, user, team } = certificateWithDetails[0];
 
   if (!customer) {
     return null;
@@ -67,6 +76,50 @@ export async function getCertificatePdfData(
     console.warn('Could not load template config for PDF:', error);
   }
 
+  const profileDefaultsApprovalSchemes = getApprovalSchemeIds(
+    user?.eicrProfileDefaults?.approvalSchemes
+  );
+
+  const certificateFormData = (certificate.formData as Record<string, any> | undefined) ?? {};
+  const certificateLevelApprovalSchemes = getApprovalSchemeIds(certificateFormData.approvalSchemes);
+
+  const selectedApprovalSchemes =
+    certificateLevelApprovalSchemes.length > 0 ? certificateLevelApprovalSchemes : profileDefaultsApprovalSchemes;
+
+  const schemeRecords =
+    selectedApprovalSchemes.length > 0
+      ? await db
+          .select()
+          .from(approvalSchemeTypes)
+          .where(eq(approvalSchemeTypes.isActive, true))
+      : [];
+
+  const selectedApprovalSchemeDetails = selectedApprovalSchemes
+    .map((selected) => {
+      const normalizedSelected = selected.trim().toLowerCase();
+      const found = schemeRecords.find((scheme) => {
+        const byLabel = scheme.label?.trim().toLowerCase() === normalizedSelected;
+        const byCode = scheme.code?.trim().toLowerCase() === normalizedSelected;
+        return byLabel || byCode;
+      });
+
+      if (!found) return null;
+
+      return normalizeApprovalSchemeInfo({
+        id: found.label,
+        code: found.code,
+        label: found.label,
+        shortLabel: found.shortLabel,
+        description: found.description ?? '',
+        accentColor: found.accentColor,
+        textColor: found.textColor,
+        symbol: found.symbol,
+        logoSrc: found.logoSrc ?? undefined,
+        logoAlt: found.logoAlt ?? undefined,
+      });
+    })
+    .filter((scheme): scheme is NonNullable<typeof scheme> => Boolean(scheme));
+
   return {
     id: certificate.id,
     certificateNumber: certificate.certificateNumber,
@@ -77,8 +130,13 @@ export async function getCertificatePdfData(
     nextInspectionDate: certificate.nextInspectionDate,
     inspectorName: certificate.inspectorName,
     status: certificate.status,
-    formData: certificate.formData as Record<string, any> | undefined,
+    formData: {
+      ...certificateFormData,
+      approvalSchemes: selectedApprovalSchemes,
+      approvalSchemeDetails: selectedApprovalSchemeDetails,
+    },
     templateConfig,
+    teamLogo: team?.logoDataUri ?? null,
     customer: {
       name: customer.name,
       email: customer.email,

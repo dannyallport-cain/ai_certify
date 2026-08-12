@@ -3,6 +3,7 @@ import { db, client } from '../lib/db/drizzle';
 import { reportDisseminatorReports, reportDisseminatorTemplates } from '../lib/db/schema';
 import { enrichFieldsWithAcroFormPlacements } from '../lib/report-disseminator/pdf-acroform';
 import { sanitizeStoredPdfBase64 } from '../lib/report-disseminator/pdf-sanitize';
+import type { ReportDisseminatorField } from '../lib/report-disseminator/schema';
 
 type WizardData = Record<string, unknown> | null | undefined;
 
@@ -51,7 +52,10 @@ async function main() {
   for (const template of templates) {
     const sanitized = stripPreviewValues(template.wizardData as WizardData);
     const sanitizedPdf = await sanitizeStoredPdfBase64(template.sourcePdfBase64);
-    const enrichedFields = await enrichFieldsWithAcroFormPlacements(template.fields as any, sanitizedPdf.base64);
+    const enrichedFields = await enrichFieldsWithAcroFormPlacements(
+      template.fields as ReportDisseminatorField[],
+      sanitizedPdf.base64,
+    );
     if (!sanitized.changed && !sanitizedPdf.changed && !enrichedFields.changed) continue;
 
     await db
@@ -70,7 +74,10 @@ async function main() {
 
   for (const report of reports) {
     const sanitizedPdf = await sanitizeStoredPdfBase64(report.sourcePdfBase64);
-    const enrichedFields = await enrichFieldsWithAcroFormPlacements(report.fields as any, sanitizedPdf.base64);
+    const enrichedFields = await enrichFieldsWithAcroFormPlacements(
+      report.fields as ReportDisseminatorField[],
+      sanitizedPdf.base64,
+    );
     if (!sanitizedPdf.changed && !enrichedFields.changed) continue;
 
     await db
