@@ -23,7 +23,7 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#f59e0b',
     textColor: '#111827',
     symbol: 'GS',
-    logoSrc: '/gas-safe-vector-6231473.webp',
+    logoSrc: '/gas-safe-logo.png',
     logoAlt: 'Gas Safe Register logo',
   },
   {
@@ -35,6 +35,8 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#1d4ed8',
     textColor: '#ffffff',
     symbol: 'NC',
+    logoSrc: '/logos/niceic-logo.png',
+    logoAlt: 'NICEIC logo',
   },
   {
     id: 'NAPIT',
@@ -67,6 +69,8 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#0f766e',
     textColor: '#ffffff',
     symbol: 'ST',
+    logoSrc: '/logos/stroma.png',
+    logoAlt: 'Stroma logo',
   },
   {
     id: 'SELECT',
@@ -87,7 +91,7 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#b91c1c',
     textColor: '#ffffff',
     symbol: 'BF',
-    logoSrc: '/BAFE-Logo.webp',
+    logoSrc: '/logos/bafe-logo.png',
     logoAlt: 'BAFE logo',
   },
   {
@@ -99,8 +103,6 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#0f4c81',
     textColor: '#ffffff',
     symbol: 'CH',
-    logoSrc: '/logos/chas.png',
-    logoAlt: 'Veriforce CHAS logo',
   },
   {
     id: 'SafeContractor',
@@ -111,8 +113,6 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#006837',
     textColor: '#ffffff',
     symbol: 'SC',
-    logoSrc: '/logos/safecontractor.png',
-    logoAlt: 'SafeContractor logo',
   },
   {
     id: 'ISO 9001',
@@ -123,8 +123,6 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#111827',
     textColor: '#ffffff',
     symbol: 'QMS',
-    logoSrc: '/logos/iso-9001.png',
-    logoAlt: 'ISO 9001 badge',
   },
   {
     id: 'ISO 14001',
@@ -135,8 +133,6 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#14532d',
     textColor: '#ffffff',
     symbol: 'EMS',
-    logoSrc: '/logos/iso-14001.png',
-    logoAlt: 'ISO 14001 badge',
   },
   {
     id: 'ISO 45001',
@@ -147,8 +143,6 @@ export const APPROVAL_SCHEMES: ApprovalSchemeInfo[] = [
     accentColor: '#7f1d1d',
     textColor: '#ffffff',
     symbol: 'OHS',
-    logoSrc: '/logos/iso-45001.png',
-    logoAlt: 'ISO 45001 badge',
   },
 ];
 

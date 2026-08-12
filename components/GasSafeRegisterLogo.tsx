@@ -23,7 +23,7 @@ export function GasSafeRegisterLogo({
       )}
     >
       <Image
-        src="/gas-safe-vector-6231473.webp"
+        src="/gas-safe-logo.png"
         alt="Gas Safe Register logo"
         fill
         sizes={sizes}

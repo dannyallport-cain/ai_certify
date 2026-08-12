@@ -29,16 +29,16 @@ INSERT INTO approval_scheme_types (
   is_active
 )
 VALUES
-  ('gas-safe', 'Gas Safe', 'Gas Safe', 'Gas safety registrations', '#f59e0b', '#111827', 'GS', '/gas-safe-vector-6231473.webp', 'Gas Safe Register logo', 10, true),
-  ('niceic', 'NICEIC', 'NICEIC', 'Electrical contracting', '#1d4ed8', '#ffffff', 'NC', NULL, NULL, 20, true),
+  ('gas-safe', 'Gas Safe', 'Gas Safe', 'Gas safety registrations', '#f59e0b', '#111827', 'GS', '/gas-safe-logo.png', 'Gas Safe Register logo', 10, true),
+  ('niceic', 'NICEIC', 'NICEIC', 'Electrical contracting', '#1d4ed8', '#ffffff', 'NC', '/logos/niceic-logo.png', 'NICEIC logo', 20, true),
   ('napit', 'NAPIT', 'NAPIT', 'Electrical and building', '#15803d', '#ffffff', 'NP', '/NAPIT-Member-Logo.webp', 'NAPIT Member logo', 30, true),
   ('elecsa', 'ELECSA', 'ELECSA', 'Domestic electrical certification', '#7c3aed', '#ffffff', 'EL', NULL, NULL, 40, true),
-  ('stroma', 'Stroma', 'Stroma', 'Inspection and compliance', '#0f766e', '#ffffff', 'ST', NULL, NULL, 50, true),
+  ('stroma', 'Stroma', 'Stroma', 'Inspection and compliance', '#0f766e', '#ffffff', 'ST', '/logos/stroma.png', 'Stroma logo', 50, true),
   ('select', 'SELECT', 'SELECT', 'Scottish electrical trade', '#0f172a', '#ffffff', 'SL', NULL, NULL, 60, true),
-  ('bafe', 'BAFE', 'BAFE', 'Fire safety certification', '#b91c1c', '#ffffff', 'BF', '/BAFE-Logo.webp', 'BAFE logo', 70, true),
-  ('chas', 'CHAS', 'CHAS', 'Contractor health and safety compliance', '#0f4c81', '#ffffff', 'CH', '/logos/chas.png', 'Veriforce CHAS logo', 80, true),
-  ('safecontractor', 'SafeContractor', 'SafeContractor', 'Health, safety and supply chain certification', '#006837', '#ffffff', 'SC', '/logos/safecontractor.png', 'SafeContractor logo', 90, true),
-  ('iso-9001', 'ISO 9001', 'ISO 9001', 'Quality management systems', '#111827', '#ffffff', 'QMS', '/logos/iso-9001.png', 'ISO 9001 badge', 100, true),
-  ('iso-14001', 'ISO 14001', 'ISO 14001', 'Environmental management systems', '#14532d', '#ffffff', 'EMS', '/logos/iso-14001.png', 'ISO 14001 badge', 110, true),
-  ('iso-45001', 'ISO 45001', 'ISO 45001', 'Occupational health and safety management', '#7f1d1d', '#ffffff', 'OHS', '/logos/iso-45001.png', 'ISO 45001 badge', 120, true)
+  ('bafe', 'BAFE', 'BAFE', 'Fire safety certification', '#b91c1c', '#ffffff', 'BF', '/logos/bafe-logo.png', 'BAFE logo', 70, true),
+  ('chas', 'CHAS', 'CHAS', 'Contractor health and safety compliance', '#0f4c81', '#ffffff', 'CH', NULL, NULL, 80, true),
+  ('safecontractor', 'SafeContractor', 'SafeContractor', 'Health, safety and supply chain certification', '#006837', '#ffffff', 'SC', NULL, NULL, 90, true),
+  ('iso-9001', 'ISO 9001', 'ISO 9001', 'Quality management systems', '#111827', '#ffffff', 'QMS', NULL, NULL, 100, true),
+  ('iso-14001', 'ISO 14001', 'ISO 14001', 'Environmental management systems', '#14532d', '#ffffff', 'EMS', NULL, NULL, 110, true),
+  ('iso-45001', 'ISO 45001', 'ISO 45001', 'Occupational health and safety management', '#7f1d1d', '#ffffff', 'OHS', NULL, NULL, 120, true)
 ON CONFLICT (code) DO NOTHING;

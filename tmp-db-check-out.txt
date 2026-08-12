@@ -1,0 +1,2 @@
+table: [{"tbl":null}]
+ERR: relation "approval_scheme_types" does not exist
