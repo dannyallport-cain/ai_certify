@@ -41,10 +41,11 @@ function normalizePatchPayload(payload: Record<string, unknown>) {
   return patch;
 }
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin();
-    const id = parseId(context.params);
+    const { id: rawId } = await context.params;
+    const id = parseId({ id: rawId });
     const payload = (await request.json()) as Record<string, unknown>;
     const patch = normalizePatchPayload(payload);
 
@@ -67,10 +68,11 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   }
 }
 
-export async function DELETE(_request: Request, context: { params: { id: string } }) {
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin();
-    const id = parseId(context.params);
+    const { id: rawId } = await context.params;
+    const id = parseId({ id: rawId });
     const deleted = await deleteApprovalSchemeTypeById(id);
 
     if (!deleted) {

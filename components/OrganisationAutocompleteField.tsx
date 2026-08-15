@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type NominatimResult = {
@@ -90,15 +91,14 @@ export function OrganisationAutocompleteField({
   const [isOpen, setIsOpen] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    const query = value.trim();
-    if (query.length < minQueryLength) {
-      setSuggestions([]);
-      setIsOpen(false);
-      return;
-    }
+  const searchOrganisations = useCallback(
+    async (query: string): Promise<NominatimResult[]> => {
+      if (query.trim().length < minQueryLength) {
+        setSuggestions([]);
+        setIsOpen(false);
+        return [];
+      }
 
-    const timeout = setTimeout(async () => {
       if (abortRef.current) abortRef.current.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -106,7 +106,7 @@ export function OrganisationAutocompleteField({
 
       try {
         const params = new URLSearchParams({
-          q: query,
+          q: query.trim(),
           format: 'jsonv2',
           addressdetails: '1',
           limit: '6',
@@ -121,22 +121,39 @@ export function OrganisationAutocompleteField({
         if (!response.ok) {
           setSuggestions([]);
           setIsOpen(false);
-          return;
+          return [];
         }
 
         const data = (await response.json()) as NominatimResult[];
-        setSuggestions(Array.isArray(data) ? data : []);
-        setIsOpen(Array.isArray(data) && data.length > 0);
+        const nextSuggestions = Array.isArray(data) ? data : [];
+        setSuggestions(nextSuggestions);
+        setIsOpen(nextSuggestions.length > 0);
+        return nextSuggestions;
       } catch {
         setSuggestions([]);
         setIsOpen(false);
+        return [];
       } finally {
         setIsLoading(false);
       }
+    },
+    [countryCodes, minQueryLength],
+  );
+
+  useEffect(() => {
+    const query = value.trim();
+    if (query.length < minQueryLength) {
+      setSuggestions([]);
+      setIsOpen(false);
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      void searchOrganisations(query);
     }, 350);
 
     return () => clearTimeout(timeout);
-  }, [value, countryCodes, minQueryLength]);
+  }, [minQueryLength, searchOrganisations, value]);
 
   const handlePick = (result: NominatimResult) => {
     const name = placeName(result);
@@ -144,6 +161,20 @@ export function OrganisationAutocompleteField({
     onChange(name);
     onAddressPick?.(address);
     setIsOpen(false);
+  };
+
+  const handleFind = async () => {
+    const query = value.trim();
+    if (query.length < minQueryLength || isLoading) {
+      return;
+    }
+
+    const results = await searchOrganisations(query);
+
+    // A single match is an unambiguous find — auto-fill the name + address.
+    if (results.length === 1) {
+      handlePick(results[0]);
+    }
   };
 
   const baseInputClass = cn(
@@ -168,6 +199,25 @@ export function OrganisationAutocompleteField({
         className={baseInputClass}
       />
 
+      <div className="mt-2">
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            // Keep focus on the input so the blur handler does not close the dropdown.
+            e.preventDefault();
+          }}
+          onClick={() => {
+            void handleFind();
+          }}
+          disabled={value.trim().length < minQueryLength || isLoading}
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Search address suggestions"
+        >
+          <Search className="h-4 w-4" />
+          {isLoading ? 'Searching...' : 'Find'}
+        </button>
+      </div>
+
       {isOpen && (
         <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-background shadow-lg">
           <ul className="max-h-64 overflow-auto py-1">
@@ -191,7 +241,7 @@ export function OrganisationAutocompleteField({
       )}
 
       <p className="mt-1 text-xs text-muted-foreground">
-        {isLoading ? 'Searching…' : 'Suggestions powered by OpenStreetMap'}
+        {isLoading ? 'Searching…' : 'Type a business name, then press Find to auto-fill the address from a match.'}
       </p>
     </div>
   );

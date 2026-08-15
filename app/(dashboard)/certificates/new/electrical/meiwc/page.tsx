@@ -550,6 +550,38 @@ export default function MinorElectricalInstallationWorksPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Customer / Client Details</CardTitle>
+              <CardDescription>
+                Client address for the person ordering the minor works certificate.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="customerAddress">Customer / Client Address *</Label>
+                <AddressAutocompleteField
+                  id="customerAddress"
+                  name="customerAddress"
+                  placeholder="Full client address"
+                  value={customerAddress}
+                  onChange={(value) => {
+                    setCustomerAddress(value);
+                    setIsCustomerAddressAuto(false);
+                  }}
+                  className={isCustomerAddressAuto ? 'border-amber-300 bg-amber-50 focus-visible:ring-amber-200' : ''}
+                  title={isCustomerAddressAuto ? 'Auto-populated from selected customer address. Edit if needed.' : undefined}
+                  required
+                />
+                {isCustomerAddressAuto ? (
+                  <p className="text-xs text-amber-700">
+                    Auto-populated from customer address. Hover the field for details.
+                  </p>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Approvals</CardTitle>
               <CardDescription>Select all approval schemes to be shown in report/certificate headers.</CardDescription>
             </CardHeader>
