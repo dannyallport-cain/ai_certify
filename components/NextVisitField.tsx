@@ -172,21 +172,9 @@ export function NextVisitField({
               weekend: "text-muted-foreground bg-muted/30",
               bankHoliday: "text-destructive font-bold underline bg-destructive/5"
             }}
-            classNames={{
-              day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-muted/50",
-              day_selected: "bg-muted text-foreground hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground",
-              day_today: "bg-muted/50 text-foreground",
-              day_outside: "text-muted-foreground opacity-50",
-              day_disabled: "text-muted-foreground opacity-50",
-              day_range_middle: "aria-selected:bg-muted/50 aria-selected:text-foreground",
-              day_hidden: "invisible",
-              nav_button: "hover:bg-muted/50",
-              nav_button_previous: "hover:bg-muted/50",
-              nav_button_next: "hover:bg-muted/50",
-              head_cell: "text-muted-foreground",
-              cell: "hover:bg-muted/50",
-            }}
           />
+
+
         </PopoverContent>
       </Popover>
         {isAutoPopulated && (
