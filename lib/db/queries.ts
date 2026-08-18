@@ -270,14 +270,22 @@ export async function getLatestFireAlarmRoomCaptureForTeam() {
     throw new Error('User not part of a team');
   }
 
-  const result = await db
-    .select()
-    .from(fireAlarmRoomCaptures)
-    .where(eq(fireAlarmRoomCaptures.teamId, team.id))
-    .orderBy(desc(fireAlarmRoomCaptures.updatedAt))
-    .limit(1);
+  try {
+    const result = await db
+      .select()
+      .from(fireAlarmRoomCaptures)
+      .where(eq(fireAlarmRoomCaptures.teamId, team.id))
+      .orderBy(desc(fireAlarmRoomCaptures.updatedAt))
+      .limit(1);
 
-  return result[0] ?? null;
+    return result[0] ?? null;
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === '42P01') {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export async function getCustomerById(customerId: number) {
