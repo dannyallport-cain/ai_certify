@@ -17,6 +17,7 @@ import {
   rcdRcboType,
   protectiveDeviceRating,
   approvalSchemeTypes,
+  fireAlarmRoomCaptures,
   ActivityType,
   teamRuntimeSafeColumns,
   type NewActivityLog,
@@ -256,6 +257,27 @@ export async function getCustomersForTeam() {
     .from(customers)
     .where(eq(customers.teamId, team.id))
     .orderBy(desc(customers.createdAt));
+}
+
+export async function getLatestFireAlarmRoomCaptureForTeam() {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const team = await getTeamForUser();
+  if (!team) {
+    throw new Error('User not part of a team');
+  }
+
+  const result = await db
+    .select()
+    .from(fireAlarmRoomCaptures)
+    .where(eq(fireAlarmRoomCaptures.teamId, team.id))
+    .orderBy(desc(fireAlarmRoomCaptures.updatedAt))
+    .limit(1);
+
+  return result[0] ?? null;
 }
 
 export async function getCustomerById(customerId: number) {

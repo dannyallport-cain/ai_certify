@@ -1,11 +1,16 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GasSafeRegisterLogo } from '@/components/GasSafeRegisterLogo';
-import { AlertTriangle, Award, FileText, Users } from 'lucide-react';
+import { AlertTriangle, Award, FileText, Flame, Map, Users } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { DashboardClient } from './components/DashboardClient';
-import { getCertificatesForTeam, getCustomersForTeam, getUser } from '@/lib/db/queries';
+import {
+  getCertificatesForTeam,
+  getCustomersForTeam,
+  getLatestFireAlarmRoomCaptureForTeam,
+  getUser
+} from '@/lib/db/queries';
 
 export default async function DashboardPage() {
   const user = await getUser();
@@ -13,10 +18,20 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
-  const [certificates, customers] = await Promise.all([
+  const [certificates, customers, latestFirePlan] = await Promise.all([
     getCertificatesForTeam(),
-    getCustomersForTeam()
+    getCustomersForTeam(),
+    getLatestFireAlarmRoomCaptureForTeam()
   ]);
+
+  const firePlanMetadata =
+    latestFirePlan?.metadata && typeof latestFirePlan.metadata === 'object'
+      ? (latestFirePlan.metadata as { roomCount?: unknown; wallCount?: unknown })
+      : null;
+  const firePlanRoomCount =
+    typeof firePlanMetadata?.roomCount === 'number' ? firePlanMetadata.roomCount : null;
+  const firePlanWallCount =
+    typeof firePlanMetadata?.wallCount === 'number' ? firePlanMetadata.wallCount : null;
 
   const recentCertificates = certificates.slice(0, 5);
   const draftCertificates = certificates.filter(
@@ -106,6 +121,66 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="border-orange-200 bg-orange-50/60 md:col-span-2 lg:col-span-3">
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Map className="h-5 w-5 text-orange-600" />
+                Fire Floor Plan
+              </CardTitle>
+              <CardDescription>
+                Capture and review fire alarm device layouts from your mobile survey workflow.
+              </CardDescription>
+            </div>
+            <Flame className="h-8 w-8 shrink-0 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            {latestFirePlan ? (
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Latest capture
+                  </p>
+                  <p className="mt-1 font-semibold capitalize">{latestFirePlan.captureStatus}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {latestFirePlan.sessionName || latestFirePlan.externalSessionId}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Identified devices
+                  </p>
+                  <p className="mt-1 text-2xl font-bold">{latestFirePlan.deviceCount}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Layout detail
+                  </p>
+                  <p className="mt-1 font-semibold">
+                    {firePlanRoomCount ?? 0} rooms{firePlanWallCount !== null ? `, ${firePlanWallCount} walls` : ''}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{latestFirePlan.units || 'Units not specified'}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium">No fire floor plan captured yet</p>
+                  <p className="text-sm text-muted-foreground">
+                    Start a RoomPlan survey on the mobile app to add your first layout.
+                  </p>
+                </div>
+                <Button asChild variant="outline" className="border-orange-300 bg-white">
+                  <Link href="/mobile-capture">
+                    <Flame className="mr-2 h-4 w-4" />
+                    Start mobile capture
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="bg-card-mid hover:shadow-md transition-shadow cursor-pointer">
           <Link href="/certificates/new/bs5839-1">
             <CardHeader>
