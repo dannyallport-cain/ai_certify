@@ -6,6 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Loader2 } from 'lucide-react';
 import useSWR from 'swr';
+import {
+  COMPANY_LOGO_ACCEPT_ATTRIBUTE,
+  normaliseCompanyLogoFile,
+} from '@/lib/pdf/logo-upload';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -22,13 +26,6 @@ export default function TeamBrandingSettings() {
 
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
-      return;
-    }
-
-    // Validate file size (1MB limit)
     if (file.size > 1024 * 1024) {
       setError('Image is too large (max 1MB)');
       return;
@@ -39,45 +36,29 @@ export default function TeamBrandingSettings() {
       setError('');
       setSuccess('');
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        if (typeof reader.result !== 'string') {
-          setError('Failed to read image');
-          setIsUploading(false);
-          return;
-        }
+      // Converts formats the PDF engine cannot embed (e.g. SVG) into PNG.
+      const logoDataUri = await normaliseCompanyLogoFile(file);
 
-        try {
-          const response = await fetch('/api/team/logo', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ logoDataUri: reader.result }),
-          });
+      if (new Blob([logoDataUri]).size > 1024 * 1024) {
+        throw new Error('Image is too large once encoded (max 1MB) - try a smaller logo');
+      }
 
-          if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.error || 'Failed to upload logo');
-          }
+      const response = await fetch('/api/team/logo', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logoDataUri }),
+      });
 
-          setSuccess('Logo uploaded successfully');
-          mutate(); // Refresh team data
-        } catch (err) {
-          setError(
-            err instanceof Error ? err.message : 'Failed to upload logo'
-          );
-        } finally {
-          setIsUploading(false);
-        }
-      };
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to upload logo');
+      }
 
-      reader.onerror = () => {
-        setError('Failed to read image');
-        setIsUploading(false);
-      };
-
-      reader.readAsDataURL(file);
+      setSuccess('Logo uploaded successfully');
+      mutate(); // Refresh team data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload logo');
+    } finally {
       setIsUploading(false);
     }
   };
@@ -117,7 +98,8 @@ export default function TeamBrandingSettings() {
         <div>
           <Label className="mb-2 block">Company Logo</Label>
           <p className="text-sm text-gray-600 mb-3">
-            Upload a logo to display in the header of generated reports (PNG, JPG, or GIF - max 1MB)
+            Upload a logo to display on generated certificates and reports (PNG, JPG, WEBP, GIF, BMP
+            or SVG - max 1MB)
           </p>
 
           {team?.logoDataUri && (
@@ -169,7 +151,7 @@ export default function TeamBrandingSettings() {
           <input
             ref={logoInputRef}
             type="file"
-            accept="image/*"
+            accept={COMPANY_LOGO_ACCEPT_ATTRIBUTE}
             className="hidden"
             onChange={handleLogoSelect}
           />

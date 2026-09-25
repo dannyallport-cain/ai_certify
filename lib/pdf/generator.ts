@@ -83,7 +83,6 @@ function hashString(input: string): number {
   return hash >>> 0;
 }
 
-const watermarkImageCache = new Map<string, string>();
 const printedReferenceStampImageCache = new Map<string, string>();
 const printedReferenceStampFontPath = '/Users/admin/Library/Fonts/1952 RHEINMETALL.ttf';
 const printedReferenceStampFontFamily = '1952 RHEINMETALL';
@@ -290,79 +289,91 @@ function drawPrintedReferenceStamp(
   }
 }
 
-function buildHiddenWatermarkImageDataUrl(
-  watermarkPayload: string,
-  pageWidth: number,
-  pageHeight: number,
-): string {
-  const payload = safeString(watermarkPayload).replace(/\s+/g, ' ').trim();
-  if (!payload) return '';
+type WatermarkLayer = {
+  angle: number;
+  opacity: number;
+  rowSpread: number;
+  columnSpread: number;
+};
 
-  const canvasWidth = Math.max(1800, Math.round(pageWidth * 22));
-  const canvasHeight = Math.max(1280, Math.round(pageHeight * 22));
-  const cacheKey = `${canvasWidth}x${canvasHeight}:${payload}`;
-  const cached = watermarkImageCache.get(cacheKey);
-  if (cached) return cached;
+const WATERMARK_LAYERS: WatermarkLayer[] = [
+  { angle: -33, opacity: 0.05, rowSpread: 2.05, columnSpread: 7.1 },
+  { angle: 18, opacity: 0.024, rowSpread: 2.8, columnSpread: 8.8 },
+];
 
-  try {
-    const { createCanvas } = require('canvas') as typeof import('canvas');
-    const canvas = createCanvas(canvasWidth, canvasHeight);
-    const ctx = canvas.getContext('2d');
+const WATERMARK_GRID_ROWS = 11;
+const WATERMARK_GRID_COLUMNS = 9;
+const POINTS_PER_MILLIMETRE = 72 / 25.4;
 
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    const drawWatermarkLayer = (angleDeg: number, alpha: number, rowSpread: number, colSpread: number) => {
-      ctx.save();
-      ctx.translate(canvasWidth / 2, canvasHeight / 2);
-      ctx.rotate((angleDeg * Math.PI) / 180);
-
-      const fontSize = Math.max(34, Math.round(canvasWidth / 24));
-      const repeatText = `${payload}    ${payload}`;
-      ctx.font = `${fontSize}px Courier New, Courier, monospace`;
-
-      const xStep = Math.max(fontSize * colSpread, ctx.measureText(repeatText).width * 0.68 || fontSize * 8);
-      const yStep = Math.max(fontSize * rowSpread, canvasHeight / 5.4);
-
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = `rgba(160, 160, 160, ${alpha})`;
-
-      for (let row = -5; row <= 5; row++) {
-        for (let col = -4; col <= 4; col++) {
-          ctx.fillText(repeatText, col * xStep, row * yStep);
-        }
-      }
-
-      ctx.restore();
-    };
-
-    drawWatermarkLayer(-33, 0.05, 2.05, 7.1);
-    drawWatermarkLayer(18, 0.024, 2.8, 8.8);
-
-    const dataUrl = canvas.toDataURL('image/png');
-    watermarkImageCache.set(cacheKey, dataUrl);
-    return dataUrl;
-  } catch {
-    return '';
-  }
-}
-
+/**
+ * Draws the concealed traceability watermark using jsPDF primitives, so the PDF
+ * engine no longer needs a native canvas implementation (which is not built by
+ * `pnpm install` and previously meant every page was left unwatermarked).
+ */
 function drawHiddenWatermark(
   pdf: jsPDF,
   watermarkPayload: string,
   pageWidth: number,
   pageHeight: number,
 ) {
-  const dataUrl = buildHiddenWatermarkImageDataUrl(watermarkPayload, pageWidth, pageHeight);
-  if (!dataUrl) return;
+  const payload = safeString(watermarkPayload).replace(/\s+/g, ' ').trim();
+  if (!payload) return;
+
+  const repeatText = `${payload}    ${payload}`;
+  const centreX = pageWidth / 2;
+  const centreY = pageHeight / 2;
+  const anyPdf = pdf as jsPDF & {
+    GState?: new (options: { opacity: number }) => unknown;
+    setGState?: (state: unknown) => void;
+  };
+  const canSetOpacity =
+    typeof anyPdf.GState === 'function' && typeof anyPdf.setGState === 'function';
 
   try {
-    pdf.addImage(dataUrl, 'PNG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+    pdf.setFont('courier', 'normal');
+    pdf.setTextColor(160, 160, 160);
+
+    WATERMARK_LAYERS.forEach((layer) => {
+      const fontSizeMm = Math.max(1.6, pageWidth / 24);
+      pdf.setFontSize(fontSizeMm * POINTS_PER_MILLIMETRE);
+
+      const textWidth = pdf.getTextWidth(repeatText);
+      const columnStep = Math.max(
+        fontSizeMm * layer.columnSpread,
+        textWidth * 0.68 || fontSizeMm * 8,
+      );
+      const rowStep = Math.max(fontSizeMm * layer.rowSpread, pageHeight / 5.4);
+
+      if (canSetOpacity) {
+        anyPdf.setGState!(new anyPdf.GState!({ opacity: layer.opacity }));
+      }
+
+      for (let row = 0; row < WATERMARK_GRID_ROWS; row++) {
+        for (let column = 0; column < WATERMARK_GRID_COLUMNS; column++) {
+          const rowOffset = row - (WATERMARK_GRID_ROWS - 1) / 2;
+          const columnOffset = column - (WATERMARK_GRID_COLUMNS - 1) / 2;
+
+          pdf.text(
+            repeatText,
+            centreX + columnOffset * columnStep,
+            centreY + rowOffset * rowStep,
+            { angle: layer.angle, align: 'center', baseline: 'middle' },
+          );
+        }
+      }
+
+      if (canSetOpacity) {
+        anyPdf.setGState!(new anyPdf.GState!({ opacity: 1 }));
+      }
+    });
   } catch {
     // Intentionally swallow watermark rendering failures so PDF generation still succeeds.
+  } finally {
+    pdf.setTextColor(0, 0, 0);
   }
 }
 
-function finalizeCertificatePdf(pdf: jsPDF, certificate: CertificateData) {
+export function finalizeCertificatePdf(pdf: jsPDF, certificate: CertificateData) {
   const watermarkPayload = buildWatermarkPayload(certificate);
   const anyPdf = pdf as any;
 

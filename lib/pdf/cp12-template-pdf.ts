@@ -8,7 +8,7 @@ import {
   type ApprovalSchemeLogo,
   type ApprovalSchemeRibbonOptions,
 } from './approval-scheme-logos';
-import type { CertificateData } from './generator';
+import { finalizeCertificatePdf, type CertificateData } from './generator';
 import { resolvePdfImage, type ResolvedPdfImage } from './image-data';
 import { drawContainedImage } from './pdf-image-draw';
 
@@ -247,24 +247,68 @@ function drawPanel(
   pdf.setTextColor(0, 0, 0);
 }
 
-function drawField(
+const DETAIL_CARD_LABEL_WIDTH = 17;
+const DETAIL_CARD_ROW_GAP = 1.6;
+const DETAIL_CARD_FONT_SIZE = 5.5;
+const DETAIL_CARD_LINE_HEIGHT = 2.3;
+const DETAIL_CARD_TOP_PADDING = 9.4;
+const DETAIL_CARD_CHROME = 6 + 3.4 + 2;
+
+/**
+ * Height a detail card needs for its entries. Wrapped values (long addresses)
+ * increase the requirement so later rows are pushed down instead of colliding.
+ */
+function measureDetailCard(
+  pdf: jsPDF,
+  width: number,
+  entries: Array<[string, string]>,
+): number {
+  const valueWidth = width - DETAIL_CARD_LABEL_WIDTH - 5;
+  pdf.setFont('helvetica', 'normal');
+
+  return entries.reduce((height, [, value]) => {
+    const lines = Math.max(
+      1,
+      splitLines(pdf, value || 'Not specified', valueWidth, DETAIL_CARD_FONT_SIZE).length,
+    );
+    return height + lines * DETAIL_CARD_LINE_HEIGHT + DETAIL_CARD_ROW_GAP;
+  }, DETAIL_CARD_CHROME);
+}
+
+function drawDetailCard(
   pdf: jsPDF,
   x: number,
   y: number,
-  label: string,
-  value: string,
-  valueWidth: number,
-  fontSize = 6,
+  width: number,
+  height: number,
+  title: string,
+  entries: Array<[string, string]>,
 ) {
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(fontSize);
-  pdf.text(label, x, y);
+  drawPanel(pdf, x, y, width, height, title);
 
-  pdf.setFont('helvetica', 'normal');
-  const lines = splitLines(pdf, value, valueWidth, fontSize);
-  const lineHeight = fontSize * 0.42;
-  pdf.text(lines, x, y + 4.2);
-  return 4.2 + Math.max(lines.length, 1) * lineHeight;
+  const labelX = x + 2;
+  const valueX = x + 2 + DETAIL_CARD_LABEL_WIDTH;
+  const valueWidth = width - DETAIL_CARD_LABEL_WIDTH - 5;
+  const bottomLimit = y + height - 1.5;
+  let cursorY = y + DETAIL_CARD_TOP_PADDING;
+
+  entries.forEach(([label, value]) => {
+    pdf.setFont('helvetica', 'normal');
+    const lines = splitLines(pdf, value || 'Not specified', valueWidth, DETAIL_CARD_FONT_SIZE);
+    const textHeight = Math.max(1, lines.length) * DETAIL_CARD_LINE_HEIGHT;
+    if (cursorY + textHeight > bottomLimit) return;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(DETAIL_CARD_FONT_SIZE);
+    pdf.setTextColor(64, 64, 64);
+    pdf.text(`${label}:`, labelX, cursorY + 1.9);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(lines, valueX, cursorY + 1.9);
+
+    cursorY += textHeight + DETAIL_CARD_ROW_GAP;
+  });
 }
 
 function drawKeyValueGrid(
@@ -718,25 +762,42 @@ export async function generateCp12TemplatePdf(
     }
 
     const cardW = (pageWidth - PAGE_M * 2 - GRID * 2) / 3;
-    const cardH = 35;
+    const landlordEntries: Array<[string, string]> = [
+      ['Name', landlordName || customerName],
+      ['Address', landlordAddress || customerAddress || 'Not specified'],
+      ['Postcode', landlordPostcode || customerPostcode || 'Not specified'],
+      ['Telephone', landlordTelephone || customerPhone || 'Not specified'],
+    ];
+    const siteEntries: Array<[string, string]> = [
+      ['Name', siteName],
+      ['Address', siteAddress],
+      ['Postcode', sitePostcode || 'Not specified'],
+      ['Telephone', siteTelephone || 'Not specified'],
+    ];
+    const businessEntries: Array<[string, string]> = [
+      ['Name', businessName || 'Not specified'],
+      ['Address', businessAddress || 'Not specified'],
+      ['Postcode', businessPostcode || 'Not specified'],
+      ['Telephone', businessTelephone || 'Not specified'],
+    ];
 
-    drawPanel(pdf, PAGE_M, topY, cardW, cardH, 'Landlord / Agent Details');
-    drawField(pdf, PAGE_M + 2, topY + 9.2, 'Name', landlordName || customerName, cardW - 8, 5.5);
-    drawField(pdf, PAGE_M + 2, topY + 15.2, 'Address', landlordAddress || customerAddress || 'Not specified', cardW - 8, 5.5);
-    drawField(pdf, PAGE_M + 2, topY + 22.6, 'Postcode', landlordPostcode || customerPostcode || 'Not specified', cardW - 8, 5.5);
-    drawField(pdf, PAGE_M + 2, topY + 28.0, 'Telephone', landlordTelephone || customerPhone || 'Not specified', cardW - 8, 5.5);
+    const cardH = Math.max(
+      measureDetailCard(pdf, cardW, landlordEntries),
+      measureDetailCard(pdf, cardW, siteEntries),
+      measureDetailCard(pdf, cardW, businessEntries),
+    );
 
-    drawPanel(pdf, PAGE_M + cardW + GRID, topY, cardW, cardH, 'Site Details');
-    drawField(pdf, PAGE_M + cardW + GRID + 2, topY + 9.2, 'Name', siteName, cardW - 8, 5.5);
-    drawField(pdf, PAGE_M + cardW + GRID + 2, topY + 15.2, 'Address', siteAddress, cardW - 8, 5.5);
-    drawField(pdf, PAGE_M + cardW + GRID + 2, topY + 22.6, 'Postcode', sitePostcode || 'Not specified', cardW - 8, 5.5);
-    drawField(pdf, PAGE_M + cardW + GRID + 2, topY + 28.0, 'Telephone', siteTelephone || 'Not specified', cardW - 8, 5.5);
-
-    drawPanel(pdf, PAGE_M + (cardW + GRID) * 2, topY, cardW, cardH, 'Registered Business Details');
-    drawField(pdf, PAGE_M + (cardW + GRID) * 2 + 2, topY + 9.2, 'Name', businessName || 'Not specified', cardW - 8, 5.5);
-    drawField(pdf, PAGE_M + (cardW + GRID) * 2 + 2, topY + 15.2, 'Address', businessAddress || 'Not specified', cardW - 8, 5.5);
-    drawField(pdf, PAGE_M + (cardW + GRID) * 2 + 2, topY + 22.6, 'Postcode', businessPostcode || 'Not specified', cardW - 8, 5.5);
-    drawField(pdf, PAGE_M + (cardW + GRID) * 2 + 2, topY + 28.0, 'Telephone', businessTelephone || 'Not specified', cardW - 8, 5.5);
+    drawDetailCard(pdf, PAGE_M, topY, cardW, cardH, 'Landlord / Agent Details', landlordEntries);
+    drawDetailCard(pdf, PAGE_M + cardW + GRID, topY, cardW, cardH, 'Site Details', siteEntries);
+    drawDetailCard(
+      pdf,
+      PAGE_M + (cardW + GRID) * 2,
+      topY,
+      cardW,
+      cardH,
+      'Registered Business Details',
+      businessEntries,
+    );
 
     const inspectionY = topY + cardH + 4;
     drawPanel(pdf, PAGE_M, inspectionY, pageWidth - PAGE_M * 2, 28, 'Inspection Details');
@@ -859,6 +920,9 @@ export async function generateCp12TemplatePdf(
   drawPageOne();
   pdf.addPage('a4', 'l');
   drawPageTwo();
+
+  // Adds the concealed watermark, reference stamp and document metadata.
+  finalizeCertificatePdf(pdf, certificate);
 
   return new Uint8Array(pdf.output('arraybuffer'));
 }

@@ -1,3 +1,0 @@
-START
-EXIT:0
-LINES:2

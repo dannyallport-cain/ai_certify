@@ -1,9 +1,0 @@
-4:import { drawApprovalSchemeRibbon, getSelectedApprovalSchemes } from './approval-scheme-logos';
-2178:  const approvalRibbonHeight = await drawApprovalSchemeRibbon(y + 1);
-1588:  // Add team logo if available (left side)
-2150:  // Add team logo if available
-2153:      const pdfSafeTeamLogo = await getPdfSafeImageDataUri(certificate.teamLogo);
-2154:      if (pdfSafeTeamLogo) {
-2159:        const logoFormat = getJsPdfImageFormat(pdfSafeTeamLogo);
-2160:        pdf.addImage(pdfSafeTeamLogo, logoFormat, logoX, logoY, logoWidth, logoHeight);
-3847 lib/pdf/generator.ts
