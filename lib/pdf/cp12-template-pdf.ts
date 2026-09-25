@@ -1,6 +1,16 @@
 import { jsPDF } from 'jspdf';
 
+import {
+  drawApprovalSchemeRibbonWithLogos,
+  getSelectedApprovalSchemes,
+  measureApprovalSchemeRibbon,
+  resolveApprovalSchemeLogos,
+  type ApprovalSchemeLogo,
+  type ApprovalSchemeRibbonOptions,
+} from './approval-scheme-logos';
 import type { CertificateData } from './generator';
+import { resolvePdfImage, type ResolvedPdfImage } from './image-data';
+import { drawContainedImage } from './pdf-image-draw';
 
 type FormDataRecord = Record<string, unknown>;
 
@@ -55,22 +65,6 @@ function formatDate(value: string | null | undefined): string {
   if (Number.isNaN(parsed.getTime())) return value;
 
   return parsed.toLocaleDateString('en-GB');
-}
-
-function getJsPdfImageFormat(imageData: string): 'PNG' | 'JPEG' | 'WEBP' {
-  const match = imageData.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,/i);
-  const subtype = match?.[1]?.toLowerCase();
-
-  switch (subtype) {
-    case 'png':
-      return 'PNG';
-    case 'webp':
-      return 'WEBP';
-    case 'jpg':
-    case 'jpeg':
-    default:
-      return 'JPEG';
-  }
 }
 
 function parseJsonLike<T>(value: unknown, fallback: T): T {
@@ -356,12 +350,23 @@ function createTitleBand(
   certificateNumber: string,
   pageNumber: number,
   totalPages: number,
+  companyLogo: ResolvedPdfImage | null,
 ) {
   pdf.setDrawColor(BORDER[0], BORDER[1], BORDER[2]);
   pdf.setFillColor(255, 255, 255);
   pdf.rect(PAGE_M, PAGE_M, pageWidth - PAGE_M * 2, 18, 'FD');
   pdf.setFillColor(BRAND[0], BRAND[1], BRAND[2]);
   pdf.rect(PAGE_M, PAGE_M, pageWidth - PAGE_M * 2, 4, 'F');
+
+  // Company logo from the account's general settings, left side of the band.
+  if (companyLogo) {
+    drawContainedImage(
+      pdf,
+      companyLogo,
+      { x: PAGE_M + 3, y: PAGE_M + 5, width: 34, height: 12 },
+      0.4
+    );
+  }
 
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(BRAND[0], BRAND[1], BRAND[2]);
@@ -371,7 +376,7 @@ function createTitleBand(
   pdf.setFontSize(8.5);
   pdf.setTextColor(70, 70, 70);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('Gas Safety (Installation and Use) Regulations 1998', PAGE_M + 4, PAGE_M + 15);
+  pdf.text('Gas Safety (Installation and Use) Regulations 1998', PAGE_M + 40, PAGE_M + 15);
 
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(30, 30, 30);
@@ -632,12 +637,30 @@ function drawSignatureBlock(
   pdf.text(splitLines(pdf, dateValue || 'Not specified', fieldWidth, 5.4), x + 18, y + 14.5);
 }
 
-export function generateCp12TemplatePdf(certificate: CertificateData): Uint8Array {
+export async function generateCp12TemplatePdf(
+  certificate: CertificateData
+): Promise<Uint8Array> {
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
 
   const fd = (certificate.formData || {}) as FormDataRecord;
+
+  const approvalSchemes = getSelectedApprovalSchemes(fd);
+  const companyLogo = await resolvePdfImage(certificate.teamLogo);
+
+  const ribbonOptions: ApprovalSchemeRibbonOptions = {
+    x: PAGE_M,
+    y: PAGE_M + 20,
+    width: pageWidth - PAGE_M * 2,
+    badgeWidth: 52,
+    badgeHeight: 10,
+    gap: 2,
+    accentColor: BRAND,
+  };
+  const ribbonHeight = measureApprovalSchemeRibbon(approvalSchemes.length, ribbonOptions);
+  const approvalLogos: ApprovalSchemeLogo[] =
+    ribbonHeight > 0 ? await resolveApprovalSchemeLogos(approvalSchemes) : [];
   const certificateNumber = ss(certificate.certificateNumber) || ss(fd.certificateNumber) || 'Not specified';
   const customerName = ss(certificate.customer?.name) || ss(fd.customerName) || 'Not specified';
   const customerAddress = ss(certificate.customer?.address) || '';
@@ -686,9 +709,14 @@ export function generateCp12TemplatePdf(certificate: CertificateData): Uint8Arra
   };
 
   const drawPageOne = () => {
-    createTitleBand(pdf, pageWidth, certificateNumber, 1, totalPages);
+    createTitleBand(pdf, pageWidth, certificateNumber, 1, totalPages, companyLogo);
 
-    const topY = 24;
+    let topY = 24;
+    if (ribbonHeight > 0) {
+      drawApprovalSchemeRibbonWithLogos(pdf, approvalSchemes, approvalLogos, ribbonOptions);
+      topY = ribbonOptions.y + ribbonHeight + 3;
+    }
+
     const cardW = (pageWidth - PAGE_M * 2 - GRID * 2) / 3;
     const cardH = 35;
 

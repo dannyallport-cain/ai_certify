@@ -1,0 +1,51 @@
+
+  // ════════════════════════════════════════════════════════════
+  // PAGE 1 – Cover page (sections 1-6)
+  // ════════════════════════════════════════════════════════════
+  currentPageSections = ['1', '2', '3', '4', '5', '6'];
+
+  // Report title block
+  filledRect(margin, y, W, 16, brandRed);
+  
+  // Add team logo if available
+  if (certificate.teamLogo) {
+    try {
+      const pdfSafeTeamLogo = await getPdfSafeImageDataUri(certificate.teamLogo);
+      if (pdfSafeTeamLogo) {
+        const logoWidth = 14;
+        const logoHeight = 14;
+        const logoX = margin + W - logoWidth - 2;
+        const logoY = y + 1;
+        const logoFormat = getJsPdfImageFormat(pdfSafeTeamLogo);
+        pdf.addImage(pdfSafeTeamLogo, logoFormat, logoX, logoY, logoWidth, logoHeight);
+      }
+    } catch {
+      // Logo rendering failed silently to avoid breaking PDF generation
+    }
+  }
+  
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  text('DOMESTIC ELECTRICAL INSTALLATION', pageWidth / 2, y + 6, { align: 'center' });
+  text('CONDITION REPORT', pageWidth / 2, y + 11, { align: 'center' });
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'italic');
+  text('Requirements For Electrical Installations - BS 7671 IET Wiring Regulations', pageWidth / 2, y + 15, { align: 'center' });
+  pdf.setTextColor(0, 0, 0);
+  y += 18;
+
+  const approvalRibbonHeight = await drawApprovalSchemeRibbon(y + 1);
+  if (approvalRibbonHeight > 0) {
+    y += approvalRibbonHeight + 1;
+  }
+
+  // Report reference
+  row('Report Reference:', ss(certificate.certificateNumber));
+  y += 1;
+
+  // Section 1 – Details of the Person Ordering the Report
+  sectionHeader('1', 'Details of the Person Ordering the Report');
+  row('Client:', preferredClientName);
+  row('Address:', preferredClientAddress);
+  y += 1;

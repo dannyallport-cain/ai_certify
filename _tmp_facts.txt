@@ -1,0 +1,27 @@
+]633;E;{ echo "=== jsPDF GIF plugin ==="\x3b grep -c "processGIF" node_modules/jspdf/dist/jspdf.node.js\x3b echo "=== jsPDF filetype plugins ==="\x3b grep -o "process[A-Z]*" node_modules/jspdf/dist/jspdf.node.js | sort -u\x3b echo "=== pnpm onlyBuiltDependencies ==="\x3b grep -n "onlyBuiltDependencies" -A6 pnpm-workspace.yaml package.json 2>/dev/null\x3b echo "=== signature/avatar in generator ==="\x3b grep -n "signatureUrl\\|avatarUrl\\|getPdfSafeImageDataUri\\|getApprovalSchemeLogoDataUri" lib/pdf/generator.ts\x3b } > _tmp_facts.txt 2>&1\x3b echo ok;a4ccbb58-15bf-4ffc-88d2-78e030993974]633;C=== jsPDF GIF plugin ===
+2
+=== jsPDF filetype plugins ===
+process
+processA
+processBMP
+processD
+processDU
+processGIF
+processI
+processJPEG
+processO
+processPNG
+processRGBA
+processT
+processWEBP
+=== pnpm onlyBuiltDependencies ===
+pnpm-workspace.yaml:4:onlyBuiltDependencies:
+pnpm-workspace.yaml-5-  - '@tailwindcss/oxide'
+pnpm-workspace.yaml-6-  - esbuild
+pnpm-workspace.yaml-7-  - sharp
+=== signature/avatar in generator ===
+194:async function getPdfSafeImageDataUri(imageSrc?: string | null): Promise<string | null> {
+287:async function getApprovalSchemeLogoDataUri(logoSrc?: string): Promise<string | null> {
+293:  const normalized = await getPdfSafeImageDataUri(logoSrc);
+2142:        const logoDataUri = await getApprovalSchemeLogoDataUri(scheme.logoSrc);
+2432:      const pdfSafeTeamLogo = await getPdfSafeImageDataUri(certificate.teamLogo);

@@ -1,0 +1,11 @@
+4:import { drawApprovalSchemeRibbon, getSelectedApprovalSchemes } from './approval-scheme-logos';
+1588:  // Add team logo if available (left side)
+1894:  const drawApprovalSchemeRibbon = async (topY: number) => {
+2231:  // Add team logo if available
+2234:      const pdfSafeTeamLogo = await getPdfSafeImageDataUri(certificate.teamLogo);
+2235:      if (pdfSafeTeamLogo) {
+2240:        const logoFormat = getJsPdfImageFormat(pdfSafeTeamLogo);
+2241:        pdf.addImage(pdfSafeTeamLogo, logoFormat, logoX, logoY, logoWidth, logoHeight);
+2259:  const approvalRibbonHeight = await drawApprovalSchemeRibbon(y + 1);
+2260:  if (approvalRibbonHeight > 0) {
+2261:    y += approvalRibbonHeight + 1;

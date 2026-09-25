@@ -1,0 +1,26 @@
+]633;E;{ echo "=== root node_modules image pkgs ==="\x3b ls -d node_modules/sharp node_modules/@napi-rs node_modules/@img node_modules/jimp-compact 2>&1\x3b echo "=== jspdf webp ==="\x3b ls node_modules/jspdf/dist 2>&1 | head -30\x3b grep -ol "WEBP" node_modules/jspdf/dist/*.js 2>&1 | head\x3b } > _tmp_probe2.txt 2>&1\x3b echo done;813f11ae-050c-407e-a547-8f14ef9f8eac]633;C=== root node_modules image pkgs ===
+ls: cannot access 'node_modules/sharp': No such file or directory
+ls: cannot access 'node_modules/@napi-rs': No such file or directory
+ls: cannot access 'node_modules/@img': No such file or directory
+ls: cannot access 'node_modules/jimp-compact': No such file or directory
+=== jspdf webp ===
+jspdf.es.js
+jspdf.es.js.map
+jspdf.es.min.js
+jspdf.es.min.js.map
+jspdf.node.js
+jspdf.node.js.map
+jspdf.node.min.js
+jspdf.node.min.js.map
+jspdf.umd.js
+jspdf.umd.js.map
+jspdf.umd.min.js
+jspdf.umd.min.js.map
+polyfills.es.js
+polyfills.umd.js
+node_modules/jspdf/dist/jspdf.es.js
+node_modules/jspdf/dist/jspdf.es.min.js
+node_modules/jspdf/dist/jspdf.node.js
+node_modules/jspdf/dist/jspdf.node.min.js
+node_modules/jspdf/dist/jspdf.umd.js
+node_modules/jspdf/dist/jspdf.umd.min.js

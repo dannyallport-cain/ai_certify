@@ -1,11 +1,9 @@
 import { jsPDF } from 'jspdf';
 import { calculateMaxZs } from '../utils/calculate-zs';
 import { generateCp12TemplatePdf } from './cp12-template-pdf';
-import {
-  getApprovalSchemeIds,
-  getApprovalSchemeInfo,
-  type ApprovalSchemeInfo,
-} from '@/lib/approval-schemes';
+import { drawApprovalSchemeRibbon, getSelectedApprovalSchemes } from './approval-scheme-logos';
+import { resolvePdfImage } from './image-data';
+import { drawContainedImage } from './pdf-image-draw';
 
 export interface TemplateConfig {
   colors: {
@@ -85,217 +83,11 @@ function hashString(input: string): number {
   return hash >>> 0;
 }
 
-function getJsPdfImageFormat(imageData: string): 'PNG' | 'JPEG' | 'WEBP' {
-  const match = imageData.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,/i);
-  const subtype = match?.[1]?.toLowerCase();
-
-  switch (subtype) {
-    case 'png':
-      return 'PNG';
-    case 'webp':
-      return 'WEBP';
-    case 'jpg':
-    case 'jpeg':
-    default:
-      return 'JPEG';
-  }
-}
-
-function getSelectedApprovalSchemes(formData: Record<string, any>): ApprovalSchemeInfo[] {
-  const details = Array.isArray(formData.approvalSchemeDetails)
-    ? formData.approvalSchemeDetails
-    : typeof formData.approvalSchemeDetails === 'string'
-      ? parseJsonLike<unknown>(formData.approvalSchemeDetails, [])
-      : [];
-
-  const normalizedDetails: ApprovalSchemeInfo[] = Array.isArray(details)
-    ? details
-        .map((detail): ApprovalSchemeInfo | null => {
-          if (!detail || typeof detail !== 'object') return null;
-          const candidate = detail as Partial<ApprovalSchemeInfo> & { label?: string };
-          if (!candidate.label || typeof candidate.label !== 'string') return null;
-          return {
-            id: typeof candidate.id === 'string' ? candidate.id : candidate.label,
-            ...(typeof candidate.code === 'string' ? { code: candidate.code } : {}),
-            label: candidate.label,
-            shortLabel: typeof candidate.shortLabel === 'string' ? candidate.shortLabel : candidate.label,
-            description: typeof candidate.description === 'string' ? candidate.description : '',
-            accentColor: typeof candidate.accentColor === 'string' ? candidate.accentColor : '#1d4ed8',
-            textColor: typeof candidate.textColor === 'string' ? candidate.textColor : '#ffffff',
-            symbol:
-              typeof candidate.symbol === 'string' && candidate.symbol.trim()
-                ? candidate.symbol
-                : candidate.label.slice(0, 2).toUpperCase(),
-            ...(typeof candidate.logoSrc === 'string' ? { logoSrc: candidate.logoSrc } : {}),
-            ...(typeof candidate.logoAlt === 'string' ? { logoAlt: candidate.logoAlt } : {}),
-          };
-        })
-        .filter((scheme): scheme is ApprovalSchemeInfo => scheme !== null)
-    : [];
-
-  if (normalizedDetails.length > 0) {
-    return normalizedDetails;
-  }
-
-  const rawSchemes = formData.approvalSchemes;
-  const parsedSchemes =
-    Array.isArray(rawSchemes)
-      ? rawSchemes
-      : typeof rawSchemes === 'string'
-        ? parseJsonLike<unknown>(rawSchemes, [])
-        : [];
-
-  return getApprovalSchemeIds(parsedSchemes)
-    .map((schemeId) => getApprovalSchemeInfo(schemeId))
-    .filter((scheme): scheme is ApprovalSchemeInfo => Boolean(scheme));
-}
-
 const watermarkImageCache = new Map<string, string>();
 const printedReferenceStampImageCache = new Map<string, string>();
-const approvalSchemeLogoDataUriCache = new Map<string, string>();
-const normalizedPdfImageDataUriCache = new Map<string, string>();
 const printedReferenceStampFontPath = '/Users/admin/Library/Fonts/1952 RHEINMETALL.ttf';
 const printedReferenceStampFontFamily = '1952 RHEINMETALL';
 let printedReferenceStampFontRegistered = false;
-
-async function rasterizeSvgToPngDataUri(svgSource: string): Promise<string | null> {
-  try {
-    const { createCanvas, loadImage } = require('canvas') as typeof import('canvas');
-    const svgDataUri = svgSource.startsWith('data:')
-      ? svgSource
-      : `data:image/svg+xml;base64,${Buffer.from(svgSource).toString('base64')}`;
-    const image = await loadImage(svgDataUri);
-    const width = Math.max(1, Math.ceil(image.width || 360));
-    const height = Math.max(1, Math.ceil(image.height || 120));
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(image, 0, 0, width, height);
-    return canvas.toDataURL('image/png');
-  } catch {
-    return null;
-  }
-}
-
-async function normalizeImageToPngDataUri(imageSource: string): Promise<string | null> {
-  try {
-    const { createCanvas, loadImage } = require('canvas') as typeof import('canvas');
-    const image = await loadImage(imageSource);
-    const width = Math.max(1, Math.ceil(image.width || 360));
-    const height = Math.max(1, Math.ceil(image.height || 120));
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(image, 0, 0, width, height);
-    return canvas.toDataURL('image/png');
-  } catch {
-    return null;
-  }
-}
-
-async function getPdfSafeImageDataUri(imageSrc?: string | null): Promise<string | null> {
-  if (!imageSrc) return null;
-
-  const cached = normalizedPdfImageDataUriCache.get(imageSrc);
-  if (cached) return cached;
-
-  const storeNormalized = async (key: string, candidate: string): Promise<string | null> => {
-    const normalized = await normalizeImageToPngDataUri(candidate);
-    if (!normalized) return null;
-    normalizedPdfImageDataUriCache.set(key, normalized);
-    return normalized;
-  };
-
-  if (imageSrc.startsWith('data:image/svg+xml')) {
-    const svgPart = imageSrc.split(',', 2)[1];
-    if (!svgPart) return null;
-    const decodedSvg = imageSrc.includes(';base64,')
-      ? Buffer.from(svgPart, 'base64').toString('utf8')
-      : decodeURIComponent(svgPart);
-    const pngDataUri = await rasterizeSvgToPngDataUri(decodedSvg);
-    if (!pngDataUri) return null;
-    normalizedPdfImageDataUriCache.set(imageSrc, pngDataUri);
-    return pngDataUri;
-  }
-
-  if (imageSrc.startsWith('data:')) {
-    const pngDataUri = await storeNormalized(imageSrc, imageSrc);
-    if (pngDataUri) return pngDataUri;
-    return null;
-  }
-
-  if (imageSrc.startsWith('/')) {
-    if (typeof window !== 'undefined') return null;
-
-    try {
-      const [{ default: path }, fs] = await Promise.all([
-        import('node:path'),
-        import('node:fs/promises'),
-      ]);
-
-      const absolutePath = path.join(process.cwd(), 'public', imageSrc.replace(/^\//, ''));
-      const ext = path.extname(imageSrc).toLowerCase();
-
-      if (ext === '.svg') {
-        const svgText = await fs.readFile(absolutePath, 'utf8');
-        const pngDataUri = await rasterizeSvgToPngDataUri(svgText);
-        if (!pngDataUri) return null;
-        normalizedPdfImageDataUriCache.set(imageSrc, pngDataUri);
-        return pngDataUri;
-      }
-
-      const fileBuffer = await fs.readFile(absolutePath);
-      const fallbackMimeType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
-      const sourceDataUri = `data:${fallbackMimeType};base64,${fileBuffer.toString('base64')}`;
-      return storeNormalized(imageSrc, sourceDataUri);
-    } catch {
-      return null;
-    }
-  }
-
-  if (!/^https?:\/\//i.test(imageSrc)) {
-    return null;
-  }
-
-  try {
-    const response = await fetch(imageSrc, {
-      headers: {
-        accept: 'image/avif,image/webp,image/png,image/svg+xml,image/*,*/*;q=0.8',
-      },
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
-
-    if (contentType === 'image/svg+xml') {
-      const svgText = await response.text();
-      const pngDataUri = await rasterizeSvgToPngDataUri(svgText);
-      if (!pngDataUri) return null;
-      normalizedPdfImageDataUriCache.set(imageSrc, pngDataUri);
-      return pngDataUri;
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const sourceDataUri = `data:${contentType && contentType.startsWith('image/') ? contentType : 'image/png'};base64,${buffer.toString('base64')}`;
-    return storeNormalized(imageSrc, sourceDataUri);
-  } catch {
-    return null;
-  }
-}
-
-async function getApprovalSchemeLogoDataUri(logoSrc?: string): Promise<string | null> {
-  if (!logoSrc) return null;
-
-  const cached = approvalSchemeLogoDataUriCache.get(logoSrc);
-  if (cached) return cached;
-
-  const normalized = await getPdfSafeImageDataUri(logoSrc);
-  if (!normalized) return null;
-
-  approvalSchemeLogoDataUriCache.set(logoSrc, normalized);
-  return normalized;
-}
 
 function buildWatermarkPayload(certificate: CertificateData): string {
   const serial = safeString(certificate.certificateNumber).trim() || `CERT-${certificate.id}`;
@@ -687,6 +479,9 @@ export async function generateCertificatePDF(certificate: CertificateData): Prom
   const margin = 20;
   let yPosition = margin;
 
+  // Pre-resolve the company logo so the synchronous header helper can draw it.
+  const genericTeamLogo = await resolvePdfImage(certificate.teamLogo);
+
   // Helper functions
   const safeString = (value: any): string => {
     if (value === null || value === undefined) return '';
@@ -754,9 +549,16 @@ export async function generateCertificatePDF(certificate: CertificateData): Prom
     pdf.setTextColor(255, 255, 255);
     addText('AI-CERTIFICATES', margin + 5, margin + 10);
     
-    // Add team logo if available (top-right corner)
-    // Team logo handled in specialized certificate templates where available
-    
+    // Company logo from the account's general settings, right-aligned in the header.
+    if (genericTeamLogo) {
+      drawContainedImage(
+        pdf,
+        genericTeamLogo,
+        { x: pageWidth - margin - 28, y: margin + 16, width: 26, height: 12 },
+        0.5
+      );
+    }
+
     // Company details
     pdf.setTextColor(52, 73, 124);
     pdf.setFontSize(8);
@@ -2089,87 +1891,6 @@ async function generateEICRPDF(certificate: CertificateData): Promise<Uint8Array
   const companyEmail = ss(fd.companyEmail);
   const selectedApprovalSchemes = getSelectedApprovalSchemes(fd);
 
-  const drawApprovalSchemeRibbon = async (topY: number) => {
-    if (selectedApprovalSchemes.length === 0) {
-      return 0;
-    }
-
-    const headerHeight = 6;
-    const badgeWidth = 48;
-    const badgeHeight = 9;
-    const gap = 2;
-    const columns = Math.max(1, Math.min(5, Math.floor((W + gap) / (badgeWidth + gap))));
-    const rows = Math.ceil(selectedApprovalSchemes.length / columns);
-    const bodyHeight = rows * badgeHeight + Math.max(0, rows - 1) * gap;
-    const totalHeight = headerHeight + bodyHeight + 4;
-
-    checkPage(totalHeight);
-
-    pdf.setDrawColor(borderGrey[0], borderGrey[1], borderGrey[2]);
-    pdf.setFillColor(255, 255, 255);
-    pdf.rect(margin, topY, W, totalHeight, 'FD');
-
-    pdf.setFillColor(brandRed[0], brandRed[1], brandRed[2]);
-    pdf.rect(margin, topY, W, headerHeight, 'F');
-
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(6.5);
-    text('Selected trade association logos', margin + 3, topY + 4.3);
-    pdf.setTextColor(0, 0, 0);
-
-    const placements = selectedApprovalSchemes.map((scheme, index) => {
-      const rowIndex = Math.floor(index / columns);
-      const colIndex = index % columns;
-      const x = margin + 2 + colIndex * (badgeWidth + gap);
-      const y0 = topY + headerHeight + 2 + rowIndex * (badgeHeight + gap);
-      return { scheme, x, y0 };
-    });
-
-    return Promise.all(
-      placements.map(async ({ scheme, x, y0 }) => {
-        const hex = scheme.accentColor.replace(/^#/, '');
-        const rgb = [
-          Number.parseInt(hex.slice(0, 2), 16),
-          Number.parseInt(hex.slice(2, 4), 16),
-          Number.parseInt(hex.slice(4, 6), 16),
-        ] as [number, number, number];
-
-        pdf.setDrawColor(0, 0, 0);
-        pdf.setFillColor(rgb[0], rgb[1], rgb[2]);
-        pdf.rect(x, y0, badgeWidth, badgeHeight, 'FD');
-
-        const logoDataUri = await getApprovalSchemeLogoDataUri(scheme.logoSrc);
-        if (logoDataUri) {
-          try {
-            const logoFormat = getJsPdfImageFormat(logoDataUri);
-            const logoPadX = 1.5;
-            const logoPadY = 1.2;
-            pdf.addImage(
-              logoDataUri,
-              logoFormat,
-              x + logoPadX,
-              y0 + logoPadY,
-              badgeWidth - logoPadX * 2,
-              badgeHeight - logoPadY * 2
-            );
-            return;
-          } catch {
-            // Fall through to text fallback
-          }
-        }
-
-        const isLightText = scheme.textColor.toLowerCase() === '#ffffff';
-        pdf.setTextColor(isLightText ? 255 : 17, isLightText ? 255 : 17, isLightText ? 255 : 17);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(5.7);
-        pdf.text(scheme.symbol, x + 3, y0 + 5.9);
-        pdf.text(scheme.shortLabel, x + 12, y0 + 5.9);
-        pdf.setTextColor(0, 0, 0);
-      })
-    ).then(() => totalHeight);
-
-  };
 
   // ── Helpers ──────────────────────────────────────────────
   const text = (t: string, x: number, yy: number, opts?: any) => {
@@ -2426,21 +2147,15 @@ async function generateEICRPDF(certificate: CertificateData): Promise<Uint8Array
   // Report title block
   filledRect(margin, y, W, 16, brandRed);
   
-  // Add team logo if available
-  if (certificate.teamLogo) {
-    try {
-      const pdfSafeTeamLogo = await getPdfSafeImageDataUri(certificate.teamLogo);
-      if (pdfSafeTeamLogo) {
-        const logoWidth = 14;
-        const logoHeight = 14;
-        const logoX = margin + W - logoWidth - 2;
-        const logoY = y + 1;
-        const logoFormat = getJsPdfImageFormat(pdfSafeTeamLogo);
-        pdf.addImage(pdfSafeTeamLogo, logoFormat, logoX, logoY, logoWidth, logoHeight);
-      }
-    } catch {
-      // Logo rendering failed silently to avoid breaking PDF generation
-    }
+  // Company logo from the account's general settings, top-right of the title block.
+  const teamLogoImage = await resolvePdfImage(certificate.teamLogo);
+  if (teamLogoImage) {
+    drawContainedImage(
+      pdf,
+      teamLogoImage,
+      { x: margin + W - 16, y: y + 1, width: 14, height: 14 },
+      0.5
+    );
   }
   
   pdf.setTextColor(255, 255, 255);
@@ -2454,7 +2169,13 @@ async function generateEICRPDF(certificate: CertificateData): Promise<Uint8Array
   pdf.setTextColor(0, 0, 0);
   y += 18;
 
-  const approvalRibbonHeight = await drawApprovalSchemeRibbon(y + 1);
+  const approvalRibbonHeight = await drawApprovalSchemeRibbon(pdf, selectedApprovalSchemes, {
+    x: margin,
+    y: y + 1,
+    width: W,
+    accentColor: brandRed,
+    borderColor: borderGrey,
+  });
   if (approvalRibbonHeight > 0) {
     y += approvalRibbonHeight + 1;
   }

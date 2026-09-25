@@ -1,0 +1,25 @@
+   836 lib/pdf/cp12-template-pdf.ts
+  4126 lib/pdf/generator.ts
+  4962 total
+  }
+
+  return observations.some((obs) => obs.code === 'C1' || obs.code === 'C2')
+    ? 'UNSATISFACTORY'
+    : 'SATISFACTORY';
+}
+
+async function generateCP12PDF(certificate: CertificateData): Promise<Uint8Array> {
+  return generateCp12TemplatePdf(certificate);
+}
+
+function generateCP12PDFLegacy(certificate: CertificateData): Uint8Array {
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 12;
+  const contentWidth = pageWidth - margin * 2;
+  const fd = (certificate.formData || {}) as Record<string, any>;
+
+  const brand = [28, 63, 99] as [number, number, number];
+  const cp12Yellow = [246, 198, 0] as [number, number, number];
+0

@@ -1,0 +1,217 @@
+
+  return hash >>> 0;
+}
+
+function getJsPdfImageFormat(imageData: string): 'PNG' | 'JPEG' | 'WEBP' {
+  const match = imageData.match(/^data:image\/([a-zA-Z0-9.+-]+);base64,/i);
+  const subtype = match?.[1]?.toLowerCase();
+
+  switch (subtype) {
+    case 'png':
+      return 'PNG';
+    case 'webp':
+      return 'WEBP';
+    case 'jpg':
+    case 'jpeg':
+    default:
+      return 'JPEG';
+  }
+}
+
+function getSelectedApprovalSchemes(formData: Record<string, any>): ApprovalSchemeInfo[] {
+  const details = Array.isArray(formData.approvalSchemeDetails)
+    ? formData.approvalSchemeDetails
+    : typeof formData.approvalSchemeDetails === 'string'
+      ? parseJsonLike<unknown>(formData.approvalSchemeDetails, [])
+      : [];
+
+  const normalizedDetails: ApprovalSchemeInfo[] = Array.isArray(details)
+    ? details
+        .map((detail): ApprovalSchemeInfo | null => {
+          if (!detail || typeof detail !== 'object') return null;
+          const candidate = detail as Partial<ApprovalSchemeInfo> & { label?: string };
+          if (!candidate.label || typeof candidate.label !== 'string') return null;
+          return {
+            id: typeof candidate.id === 'string' ? candidate.id : candidate.label,
+            ...(typeof candidate.code === 'string' ? { code: candidate.code } : {}),
+            label: candidate.label,
+            shortLabel: typeof candidate.shortLabel === 'string' ? candidate.shortLabel : candidate.label,
+            description: typeof candidate.description === 'string' ? candidate.description : '',
+            accentColor: typeof candidate.accentColor === 'string' ? candidate.accentColor : '#1d4ed8',
+            textColor: typeof candidate.textColor === 'string' ? candidate.textColor : '#ffffff',
+            symbol:
+              typeof candidate.symbol === 'string' && candidate.symbol.trim()
+                ? candidate.symbol
+                : candidate.label.slice(0, 2).toUpperCase(),
+            ...(typeof candidate.logoSrc === 'string' ? { logoSrc: candidate.logoSrc } : {}),
+            ...(typeof candidate.logoAlt === 'string' ? { logoAlt: candidate.logoAlt } : {}),
+          };
+        })
+        .filter((scheme): scheme is ApprovalSchemeInfo => scheme !== null)
+    : [];
+
+  if (normalizedDetails.length > 0) {
+    return normalizedDetails;
+  }
+
+  const rawSchemes = formData.approvalSchemes;
+  const parsedSchemes =
+    Array.isArray(rawSchemes)
+      ? rawSchemes
+      : typeof rawSchemes === 'string'
+        ? parseJsonLike<unknown>(rawSchemes, [])
+        : [];
+
+  return getApprovalSchemeIds(parsedSchemes)
+    .map((schemeId) => getApprovalSchemeInfo(schemeId))
+    .filter((scheme): scheme is ApprovalSchemeInfo => Boolean(scheme));
+}
+
+const watermarkImageCache = new Map<string, string>();
+const printedReferenceStampImageCache = new Map<string, string>();
+const approvalSchemeLogoDataUriCache = new Map<string, string>();
+const normalizedPdfImageDataUriCache = new Map<string, string>();
+const printedReferenceStampFontPath = '/Users/admin/Library/Fonts/1952 RHEINMETALL.ttf';
+const printedReferenceStampFontFamily = '1952 RHEINMETALL';
+let printedReferenceStampFontRegistered = false;
+
+async function rasterizeSvgToPngDataUri(svgSource: string): Promise<string | null> {
+  try {
+    const { createCanvas, loadImage } = require('canvas') as typeof import('canvas');
+    const svgDataUri = svgSource.startsWith('data:')
+      ? svgSource
+      : `data:image/svg+xml;base64,${Buffer.from(svgSource).toString('base64')}`;
+    const image = await loadImage(svgDataUri);
+    const width = Math.max(1, Math.ceil(image.width || 360));
+    const height = Math.max(1, Math.ceil(image.height || 120));
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL('image/png');
+  } catch {
+    return null;
+  }
+}
+
+async function normalizeImageToPngDataUri(imageSource: string): Promise<string | null> {
+  try {
+    const { createCanvas, loadImage } = require('canvas') as typeof import('canvas');
+    const image = await loadImage(imageSource);
+    const width = Math.max(1, Math.ceil(image.width || 360));
+    const height = Math.max(1, Math.ceil(image.height || 120));
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL('image/png');
+  } catch {
+    return null;
+  }
+}
+
+async function getPdfSafeImageDataUri(imageSrc?: string | null): Promise<string | null> {
+  if (!imageSrc) return null;
+
+  const cached = normalizedPdfImageDataUriCache.get(imageSrc);
+  if (cached) return cached;
+
+  const storeNormalized = async (key: string, candidate: string): Promise<string | null> => {
+    const normalized = await normalizeImageToPngDataUri(candidate);
+    if (!normalized) return null;
+    normalizedPdfImageDataUriCache.set(key, normalized);
+    return normalized;
+  };
+
+  if (imageSrc.startsWith('data:image/svg+xml')) {
+    const svgPart = imageSrc.split(',', 2)[1];
+    if (!svgPart) return null;
+    const decodedSvg = imageSrc.includes(';base64,')
+      ? Buffer.from(svgPart, 'base64').toString('utf8')
+      : decodeURIComponent(svgPart);
+    const pngDataUri = await rasterizeSvgToPngDataUri(decodedSvg);
+    if (!pngDataUri) return null;
+    normalizedPdfImageDataUriCache.set(imageSrc, pngDataUri);
+    return pngDataUri;
+  }
+
+  if (imageSrc.startsWith('data:')) {
+    const pngDataUri = await storeNormalized(imageSrc, imageSrc);
+    if (pngDataUri) return pngDataUri;
+    return null;
+  }
+
+  if (imageSrc.startsWith('/')) {
+    if (typeof window !== 'undefined') return null;
+
+    try {
+      const [{ default: path }, fs] = await Promise.all([
+        import('node:path'),
+        import('node:fs/promises'),
+      ]);
+
+      const absolutePath = path.join(process.cwd(), 'public', imageSrc.replace(/^\//, ''));
+      const ext = path.extname(imageSrc).toLowerCase();
+
+      if (ext === '.svg') {
+        const svgText = await fs.readFile(absolutePath, 'utf8');
+        const pngDataUri = await rasterizeSvgToPngDataUri(svgText);
+        if (!pngDataUri) return null;
+        normalizedPdfImageDataUriCache.set(imageSrc, pngDataUri);
+        return pngDataUri;
+      }
+
+      const fileBuffer = await fs.readFile(absolutePath);
+      const fallbackMimeType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+      const sourceDataUri = `data:${fallbackMimeType};base64,${fileBuffer.toString('base64')}`;
+      return storeNormalized(imageSrc, sourceDataUri);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!/^https?:\/\//i.test(imageSrc)) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(imageSrc, {
+      headers: {
+        accept: 'image/avif,image/webp,image/png,image/svg+xml,image/*,*/*;q=0.8',
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
+
+    if (contentType === 'image/svg+xml') {
+      const svgText = await response.text();
+      const pngDataUri = await rasterizeSvgToPngDataUri(svgText);
+      if (!pngDataUri) return null;
+      normalizedPdfImageDataUriCache.set(imageSrc, pngDataUri);
+      return pngDataUri;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const sourceDataUri = `data:${contentType && contentType.startsWith('image/') ? contentType : 'image/png'};base64,${buffer.toString('base64')}`;
+    return storeNormalized(imageSrc, sourceDataUri);
+  } catch {
+    return null;
+  }
+}
+
+async function getApprovalSchemeLogoDataUri(logoSrc?: string): Promise<string | null> {
+  if (!logoSrc) return null;
+
+  const cached = approvalSchemeLogoDataUriCache.get(logoSrc);
+  if (cached) return cached;
+
+  const normalized = await getPdfSafeImageDataUri(logoSrc);
+  if (!normalized) return null;
+
+  approvalSchemeLogoDataUriCache.set(logoSrc, normalized);
+  return normalized;
+}
+
+function buildWatermarkPayload(certificate: CertificateData): string {

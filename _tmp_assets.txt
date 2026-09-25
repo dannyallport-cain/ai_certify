@@ -1,0 +1,29 @@
+public/511-5113277_gas-safe-register-logo-symbol-gas-safe-logo.png
+public/apple-touch-icon.png
+public/BAFE-Logo.webp
+public/bafe-logo-r.png
+public/eca-logo.jpg
+public/eca-logo_2.png
+public/gas-safe-logo.png
+public/gas-safe-logo-png_seeklogo-213548.png
+public/gas-safe-vector-6231473.webp
+public/icon-192.png
+public/icon-512.png
+public/NAPIT-Member-Logo.webp
+public/niceic-logo.jpg
+public/niceic-vector-logo.png
+public/risk_assessor_small_logo.png
+public/test-avatar.jpg
+BAFE Logo.png
+bafe-logo.png
+ECA Logo.png
+NICEIC Logo ClearBG.png
+niceic-logo.png
+stroma.png
+12:  logoSrc?: string;
+26:    logoSrc: '/gas-safe-logo.png',
+38:    logoSrc: '/logos/niceic-logo.png',
+50:    logoSrc: '/NAPIT-Member-Logo.webp',
+72:    logoSrc: '/logos/stroma.png',
+94:    logoSrc: '/logos/bafe-logo.png',
+159:    logoSrc: input.logoSrc,

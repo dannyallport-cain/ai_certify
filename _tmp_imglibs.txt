@@ -1,0 +1,16 @@
+@emnapi+core@1.9.1
+@emnapi+wasi-threads@1.2.0
+@img+sharp-win32-x64@0.34.5
+@napi-rs+canvas@0.1.96
+@napi-rs+canvas-win32-x64-msvc@0.1.96
+@napi-rs+triples@1.2.0
+@types+html2canvas@1.0.0
+canvas@3.2.3
+html2canvas@1.4.1
+jimp-compact@0.16.1
+napi-build-utils@2.0.0
+napi-postinstall@0.3.4
+rolldown@1.0.0-rc.1_@emnapi+core@1.9.1_@emnapi+runtime@1.7.1
+sharp@0.34.5
+stackblur-canvas@2.7.0
+vercel@54.5.0_@emnapi+core@1.9.1_@emnapi+runtime@1.7.1

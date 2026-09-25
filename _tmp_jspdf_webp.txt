@@ -1,0 +1,227 @@
+10154-    GIF87a: [[0x47, 0x49, 0x46, 0x38, 0x37, 0x61]],
+10155-    GIF89a: [[0x47, 0x49, 0x46, 0x38, 0x39, 0x61]],
+10156:    WEBP: [
+10157-      [
+10158-        0x52,
+10159-        0x49,
+10160-        0x46,
+10161-        0x46,
+10162-        undefined,
+10163-        undefined,
+10164-        undefined,
+--
+10476-          mimeType = "image/png";
+10477-          break;
+10478:        case "WEBP":
+10479:          mimeType = "image/webp";
+10480-          break;
+10481-        case "JPEG":
+10482-        case "JPG":
+10483-        default:
+10484-          mimeType = "image/jpeg";
+10485-          break;
+10486-      }
+10487-      return atob(
+--
+10838-   * @function
+10839-   * @param {string|HTMLImageElement|HTMLCanvasElement|Uint8Array|RGBAData} imageData imageData as base64 encoded DataUrl or Image-HTMLElement or Canvas-HTMLElement or object containing RGBA array (like output from canvas.getImageData).
+10840:   * @param {string} format format of file if filetype-recognition fails or in case of a Canvas-Element needs to be specified (default for Canvas is JPEG), e.g. 'JPEG', 'PNG', 'WEBP'
+10841-   * @param {number} x x Coordinate (in units declared at inception of PDF document) against left edge of the page
+10842-   * @param {number} y y Coordinate (in units declared at inception of PDF document) against upper edge of the page
+10843-   * @param {number} width width of the image (in units declared at inception of PDF document)
+10844-   * @param {number} height height of the Image (in units declared at inception of PDF document)
+10845-   * @param {string} alias alias of the image (if used multiple times)
+10846-   * @param {string} compression compression of the generated JPEG, can have the values 'NONE', 'FAST', 'MEDIUM' and 'SLOW'
+10847-   * @param {number} rotation rotation of the image in degrees (0-359)
+10848-   *
+--
+20214-})(jsPDF.API);
+20215-
+20216:function WebPDecoder(imageData) {
+20217-
+20218-  function x(F) {
+20219-    if (!F) throw Error("assert :P");
+20220-  }
+20221-  function fa(F, L, J) {
+20222-    for (var H = 0; 4 > H; H++) if (F[L + H] != J.charCodeAt(H)) return !0;
+20223-    return !1;
+20224-  }
+--
+20260-    return H;
+20261-  }
+20262:  var _WebPDecoder = function() {
+20263-    var self = this;
+20264-    function L(a, b) {
+20265-      for (var c = (1 << (b - 1)) >>> 0; a & c; ) c >>>= 1;
+20266-      return c ? (a & (c - 1)) + c : a;
+20267-    }
+20268-    function J(a, b, c, d, e) {
+20269-      x(!(d % c));
+20270-      do (d -= c), (a[b + d] = e);
+--
+20727-    }
+20728-    function Vd(a) {
+20729:      alert("todo:WebPSamplerProcessPlane");
+20730-      return a.T;
+20731-    }
+20732-    function Wd(a, b) {
+20733-      var c = a.T,
+20734-        d = b.ba.f.RGBA,
+20735-        e = d.eb,
+20736-        f = d.fb + a.ka * d.A,
+20737-        g = P[b.ba.S],
+--
+23193-          ((d = a.ga), null != d && (d.mc = null), (a.ga = null), 0 < a.Ga)
+23194-        )
+23195:          return alert("todo:WebPDequantizeLevels"), null;
+23196-      }
+23197-      return a.nb + c * e;
+23198-    }
+23199-    function If(a, b, c, d, e, f) {
+23200-      for (; 0 < e--; ) {
+23201-        var g = a,
+23202-          h = b + (c ? 1 : 0),
+23203-          k = a,
+--
+23482-        p[0] = 0;
+23483-        if (12 <= v[0] && !fa(a, t[0], "RIFF")) {
+23484:          if (fa(a, t[0] + 8, "WEBP")) {
+23485-            p = 3;
+23486-            break a;
+23487-          }
+23488-          var u = Ha(a, t[0] + 4);
+23489-          if (12 > u || 4294967286 < u) {
+23490-            p = 3;
+23491-            break a;
+23492-          }
+--
+25276-      Qf = [8, 7, 6, 4, 4, 2, 2, 2, 1, 1, 1, 1],
+25277-      Ne = 1;
+25278:    this.WebPDecodeRGBA = function(a, b, c, d, e) {
+25279-      var f = Ua;
+25280-      var g = new Cf(),
+25281-        h = new Cb();
+25282-      g.ba = h;
+25283-      h.S = f;
+25284-      h.width = [h.width];
+25285-      h.height = [h.height];
+25286-      var k = h.width;
+--
+25357-                        (c.da || hb(d.ca.S)) && Aa();
+25358-                        11 > d.ca.S ||
+25359:                          (alert("todo:WebPInitConvertARGBToYUV"),
+25360-                          null != d.ca.f.kb.F && Aa());
+25361-                        if (
+25362-                          d.Pb &&
+25363-                          0 < d.s.ua &&
+25364-                          null == d.s.vb.X &&
+25365-                          !Zb(d.s.vb, d.s.Wa.Xa)
+25366-                        ) {
+25367-                          d.a = 1;
+--
+25425-    var Dd = [3, 4, 3, 4, 4, 2, 2, 4, 4, 4, 2, 1, 1];
+25426-  };
+25427:  new _WebPDecoder();
+25428-
+25429-  /** @license
+25430-   * Copyright (c) 2017 Dominik Homberger
+25431-
+25432-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+25433-
+25434-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+25435-
+25436-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+25437-
+25438:https://webpjs.appspot.com
+25439:WebPRiffParser dominikhlbg@gmail.com
+25440-*/
+25441-
+25442-  function memcmp(data, data_off, str, size) {
+25443-    for (var i = 0; i < size; i++)
+25444-      if (data[data_off + i] != str.charCodeAt(i)) return true;
+25445-    return false;
+25446-  }
+25447-
+--
+25475-  }
+25476-
+25477:  function WebPRiffParser(src, src_off) {
+25478-    var imagearray = {};
+25479-    var i = 0;
+25480-    var alpha_chunk = false;
+25481-    var alpha_size = 0;
+25482-    var alpha_offset = 0;
+25483-    imagearray["frames"] = [];
+25484-    if (memcmp(src, src_off, "RIFF", 4)) return;
+25485-    src_off += 4;
+--
+25503-          obj["src_off"] = alpha_chunk ? alpha_offset : src_off - 8;
+25504-          obj["src_size"] = alpha_size + payload_size + 8;
+25505:          //var rgba = webpdecoder.WebPDecodeRGBA(src,(alpha_chunk?alpha_offset:src_off-8),alpha_size+payload_size+8,width,height);
+25506-          //imagearray[i]={'rgba':rgba,'width':width[0],'height':height[0]};
+25507-          i++;
+25508-          if (alpha_chunk) {
+25509-            alpha_chunk = false;
+25510-            alpha_size = 0;
+25511-            alpha_offset = 0;
+25512-          }
+25513-          break;
+--
+25562-  var width = [0];
+25563-  var pixels = [];
+25564:  var webpdecoder = new _WebPDecoder();
+25565-
+25566-  var response = imageData;
+25567:  var imagearray = WebPRiffParser(response, 0);
+25568-  imagearray["response"] = response;
+25569-  imagearray["rgbaoutput"] = true;
+25570-  imagearray["dataurl"] = false;
+25571-
+25572-  var header = imagearray["header"] ? imagearray["header"] : null;
+25573-  var frames = imagearray["frames"] ? imagearray["frames"] : null;
+25574-
+25575-  if (header) {
+--
+25584-
+25585-  var frame = frames[0];
+25586:  var rgba = webpdecoder.WebPDecodeRGBA(
+25587-    response,
+25588-    frame["src_off"],
+25589-    frame["src_size"],
+25590-    width,
+25591-    height
+25592-  );
+25593-  frame["rgba"] = rgba;
+25594-  frame["imgwidth"] = width[0];
+--
+25605-}
+25606-
+25607:WebPDecoder.prototype.getData = function() {
+25608-  return this.data;
+25609-};
+25610-
+25611-/**
+25612- * @license
+25613- * Copyright (c) 2019 Aras Abbasi
+25614- *
+25615- * Licensed under the MIT License.
+--
+25618-
+25619-/**
+25620: * jsPDF webp Support PlugIn
+25621- *
+25622: * @name webp_support
+25623- * @module
+25624- */
+25625-(function(jsPDFAPI) {
+25626-
+25627:  jsPDFAPI.processWEBP = function(imageData, index, alias, compression) {
+25628:    var reader = new WebPDecoder(imageData);
+25629-    var width = reader.width,
+25630-      height = reader.height;
+25631-    var qu = 100;
+25632-    var pixels = reader.getData();
+25633-
+25634-    var rawImageData = {
+25635-      data: pixels,
+25636-      width: width,
