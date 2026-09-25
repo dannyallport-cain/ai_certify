@@ -21,8 +21,9 @@ set -euo pipefail
 # -----------------------------
 # Replace these placeholders
 # -----------------------------
-STRIPE_SECRET_KEY="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"
-STRIPE_WEBHOOK_SECRET="whsec_PaHz2gquvwUOEIWwIoXkP5iDsPq0uCgd"
+# NEVER commit real values here — this file is tracked in a public repository.
+STRIPE_SECRET_KEY="sk_live_rotate_and_replace_me"
+STRIPE_WEBHOOK_SECRET="whsec_rotate_and_replace_me"
 STRIPE_VERIFICATION_PRICE_ID="price_1TKtiFPBgXHEoJJAOZ6TxUkr"
 
 # Vercel environment targets to update.

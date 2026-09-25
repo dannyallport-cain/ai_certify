@@ -1,8 +1,0 @@
-
-> ai-certificates@1.0.0 build C:\Users\WINDOWS11\Documents\Dev\ai_certify
-> cross-env BROWSERSLIST_IGNORE_OLD_DATA=true NODE_OPTIONS=--max-old-space-size=8192 next build
-
-▲ Next.js 16.1.5 (Turbopack)
-- Environments: .env.local, .env.production
-
-  Creating an optimized production build ...

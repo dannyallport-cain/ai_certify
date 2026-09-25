@@ -63,3 +63,11 @@ postgres_data/
 # Playwright CLI artifacts
 .playwright-cli/
 .env*
+
+# Agent/session scratch files — these have previously leaked secrets into this
+# public repository. Keep them out of version control.
+tmp-*
+tmp_*
+tenv*
+*.backup.env
+.vercel.backup.env

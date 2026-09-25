@@ -14,7 +14,7 @@
 ### 💳 **Stripe Integration**
 - ✅ Stripe CLI installed and authenticated
 - ✅ Real Stripe API keys configured in `.env`
-- ✅ Webhook endpoint created: `whsec_bc82c5dd5881fb46bf9df7b430c07796abbcb517bcf42b87cc06a4cbce181825`
+- ✅ Webhook endpoint created: `whsec_<redacted — rotate if this ever shipped>`
 - ✅ Stripe products created (Base: $8/month, Plus: $12/month)
 - ✅ Webhook listener configured for port 4000
 
@@ -25,8 +25,8 @@
 
 ### 🔐 **Authentication**
 - ✅ Default test user created:
-  - **Email:** `test@test.com`
-  - **Password:** `admin123`
+  - **Email:** `<redacted>`
+  - **Password:** `<redacted>`
 
 ## 🟢 **Current Status (LIVE NOW!)**
 
@@ -82,4 +82,3 @@ Use these test card details:
 - **Stripe Dashboard:** [dashboard.stripe.com](https://dashboard.stripe.com)
 - **Railway Dashboard:** [railway.app](https://railway.app)
 - **Vercel Dashboard:** [vercel.com](https://vercel.com)
-
