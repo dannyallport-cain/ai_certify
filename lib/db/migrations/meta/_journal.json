@@ -92,6 +92,13 @@
       "when": 1778000000000,
       "tag": "0013_add_protective_device_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790323000000,
+      "tag": "20260422005500_add_fire_alarm_room_capture_tables",
+      "breakpoints": true
     }
   ]
 }

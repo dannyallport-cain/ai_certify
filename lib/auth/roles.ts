@@ -3,11 +3,12 @@ export const USER_ROLES = [
   'user',
 ] as const;
 
+// `users.role` is a PostgreSQL enum containing only the values below
+// (see migration 0007_role_consolidation.sql). Referencing any other value in
+// a query raises `22P02 invalid input value for enum "UserRole"`, so this list
+// must stay in sync with the database enum.
 export const ADMIN_ROLES = [
   'admin',
-  'owner',
-  'manager',
-  'sysadmin',
 ] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];

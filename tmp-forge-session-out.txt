@@ -1,0 +1,6 @@
+.env.local POSTGRES_URL host -> nozomi.proxy.rlwy.net:37487/railway
+.env.production POSTGRES_URL host -> nozomi.proxy.rlwy.net:37487/railway
+effective host -> nozomi.proxy.rlwy.net:37487/railway
+users with team_members (first 10): [{"id":133,"email":"dannyallport@icloud.com","role":"admin","status":"active","team_id":1},{"id":129,"email":"alice@example.com","role":"user","status":"active","team_id":131},{"id":220,"email":"gascoltd@hotmail.com","role":"user","status":"active","team_id":130},{"id":223,"email":"test@cainenabled.com","role":"user","status":"active","team_id":67},{"id":229,"email":"davidc@total-firesolutions.com","role":"user","status":"active","team_id":67},{"id":232,"email":"danallport@yahoo.com","role":"user","status":"pending","team_id":58}]
+chosen user: {"id":129,"email":"alice@example.com","role":"user","status":"active","team_id":131}
+session token written (185 chars)

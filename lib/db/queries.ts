@@ -1,5 +1,6 @@
 import { asc, count, desc, and, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from './drizzle';
+import { isSchemaDriftError } from './errors';
 import {
   activityLogs,
   teamMembers,
@@ -280,7 +281,13 @@ export async function getLatestFireAlarmRoomCaptureForTeam() {
 
     return result[0] ?? null;
   } catch (error) {
-    if (error && typeof error === 'object' && 'code' in error && error.code === '42P01') {
+    // Drizzle wraps driver failures, so the PostgreSQL error code is on
+    // `error.cause` rather than the error itself. Treat schema drift as an
+    // empty result instead of failing the whole dashboard render.
+    if (isSchemaDriftError(error)) {
+      console.warn(
+        '[fire-plan] fire_alarm_room_captures is not available in this database; reporting no captures.'
+      );
       return null;
     }
 

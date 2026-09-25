@@ -1,0 +1,18 @@
+envPath: .env.production
+schema declares 25 tables
+MISSING TABLES (2): ["fire_alarm_room_captures","fire_alarm_capture_devices"]
+enum PaymentMode: ["subscription","payment","setup"]
+enum PaymentTransactionStatus: ["pending","requires_action","processing","succeeded","paid","failed","cancelled","refunded","expired"]
+enum PaymentType: ["subscription","one_time"]
+enum PurchaseEntitlementStatus: ["pending","active","consumed","expired","revoked"]
+enum UserRole: ["admin","user"]
+enum UserStatus: ["pending","active","inactive","suspended"]
+--- drizzle error shape ---
+constructor: DrizzleQueryError
+error.name: Error
+error.code: undefined
+error.cause.constructor: PostgresError
+error.cause.code: 42P01
+message(first 300): Failed query: select * from fire_alarm_room_captures where team_id = 1 order by updated_at desc limit 1 params: 
+guard error.code === "42P01": false
+guard error.cause.code === "42P01": true
