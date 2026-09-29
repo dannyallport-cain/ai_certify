@@ -1,0 +1,69 @@
+app/(dashboard)/admin/approval-schemes/page.tsx:21:  logoSrc: string | null;
+app/(dashboard)/admin/approval-schemes/page.tsx:37:  logoSrc: '',
+app/(dashboard)/admin/approval-schemes/page.tsx:97:          logoSrc: row.logoSrc ?? '',
+app/(dashboard)/admin/approval-schemes/page.tsx:253:              value={draft.logoSrc ?? ''}
+app/(dashboard)/admin/approval-schemes/page.tsx:255:              onChange={(nextLogo) => setDraft((prev) => ({ ...prev, logoSrc: nextLogo }))}
+app/(dashboard)/admin/approval-schemes/page.tsx:375:                      value={row.logoSrc ?? ''}
+app/(dashboard)/admin/approval-schemes/page.tsx:377:                      onChange={(nextLogo) => updateLocalRow(row.id, { logoSrc: nextLogo })}
+app/(dashboard)/certificates/new/electrical/meiwc/page.tsx:62:  logoSrc: string | null;
+app/(dashboard)/certificates/new/electrical/meiwc/page.tsx:102:  const { data: approvalSchemesData } = useSWR<ApprovalSchemeOption[]>('/api/approval-schemes', fetcher);
+app/(dashboard)/certificates/new/electrical/meiwc/page.tsx:113:  const approvalSchemes = Array.isArray(approvalSchemesData) ? approvalSchemesData : [];
+app/(dashboard)/certificates/new/electrical/meiwc/page.tsx:590:                {approvalSchemes.length === 0 ? (
+app/(dashboard)/certificates/new/electrical/meiwc/page.tsx:593:                  approvalSchemes.map((scheme) => (
+app/(dashboard)/certificates/new/electrical/meiwc/page.tsx:595:                      <input type="checkbox" name="approvalSchemes" value={scheme.label} />
+app/(dashboard)/dashboard/general/page.tsx:47:    (profileDefaults?.approvalSchemes ?? []).filter((scheme): scheme is ApprovalSchemeId =>
+app/(dashboard)/dashboard/general/page.tsx:54:      (profileDefaults?.approvalSchemes ?? []).filter(
+app/(dashboard)/dashboard/general/page.tsx:63:    approvalSchemes: selectedSchemes
+app/api/admin/approval-schemes/route.ts:25:    logoSrc: payload.logoSrc ? String(payload.logoSrc).trim() : null,
+app/api/admin/approval-schemes/[id]/route.ts:26:  if (payload.logoSrc !== undefined) patch.logoSrc = payload.logoSrc ? String(payload.logoSrc).trim() : null;
+app/api/user/profile/import-servicem8/route.ts:99:    approvalSchemes: Array.isArray(source.approvalSchemes)
+app/api/user/profile/import-servicem8/route.ts:100:      ? source.approvalSchemes.filter((item): item is string => typeof item === 'string')
+app/api/user/route.ts:76:  const approvalSchemes = sanitizeApprovalSchemes(source.approvalSchemes);
+app/api/user/route.ts:77:  if (approvalSchemes !== null) {
+app/api/user/route.ts:78:    sanitized.approvalSchemes = approvalSchemes;
+components/settings/ApprovalSchemeSelector.tsx:79:                  {scheme.logoSrc ? (
+components/settings/ApprovalSchemeSelector.tsx:81:                      src={scheme.logoSrc}
+lib/approval-schemes.ts:12:  logoSrc?: string;
+lib/approval-schemes.ts:26:    logoSrc: '/gas-safe-logo.png',
+lib/approval-schemes.ts:38:    logoSrc: '/logos/niceic-logo.png',
+lib/approval-schemes.ts:50:    logoSrc: '/NAPIT-Member-Logo.webp',
+lib/approval-schemes.ts:72:    logoSrc: '/logos/stroma.png',
+lib/approval-schemes.ts:94:    logoSrc: '/logos/bafe-logo.png',
+lib/approval-schemes.ts:159:    logoSrc: input.logoSrc,
+lib/certificates/pdf.ts:4:import { certificates, certificateItems, certificateTemplates, customers, teams, users, approvalSchemeTypes } from '@/lib/db/schema';
+lib/certificates/pdf.ts:80:    user?.eicrProfileDefaults?.approvalSchemes
+lib/certificates/pdf.ts:84:  const certificateLevelApprovalSchemes = getApprovalSchemeIds(certificateFormData.approvalSchemes);
+lib/certificates/pdf.ts:93:          .from(approvalSchemeTypes)
+lib/certificates/pdf.ts:94:          .where(eq(approvalSchemeTypes.isActive, true))
+lib/certificates/pdf.ts:117:        logoSrc: found.logoSrc ?? undefined,
+lib/certificates/pdf.ts:135:      approvalSchemes: selectedApprovalSchemes,
+lib/certificates/pdf.ts:136:      approvalSchemeDetails: selectedApprovalSchemeDetails,
+lib/db/queries.ts:20:  approvalSchemeTypes,
+lib/db/queries.ts:542:    .from(approvalSchemeTypes)
+lib/db/queries.ts:543:    .where(eq(approvalSchemeTypes.isActive, true))
+lib/db/queries.ts:544:    .orderBy(asc(approvalSchemeTypes.sortOrder), asc(approvalSchemeTypes.label));
+lib/db/queries.ts:550:    .from(approvalSchemeTypes)
+lib/db/queries.ts:551:    .orderBy(asc(approvalSchemeTypes.sortOrder), asc(approvalSchemeTypes.label));
+lib/db/queries.ts:562:  logoSrc?: string | null;
+lib/db/queries.ts:568:    .insert(approvalSchemeTypes)
+lib/db/queries.ts:577:      logoSrc: data.logoSrc ?? null,
+lib/db/queries.ts:598:    logoSrc: string | null;
+lib/db/queries.ts:605:    .update(approvalSchemeTypes)
+lib/db/queries.ts:610:    .where(eq(approvalSchemeTypes.id, id))
+lib/db/queries.ts:618:    .delete(approvalSchemeTypes)
+lib/db/queries.ts:619:    .where(eq(approvalSchemeTypes.id, id))
+lib/db/schema.ts:25:  approvalSchemes?: string[];
+lib/db/schema.ts:336:export const approvalSchemeTypes = pgTable('approval_scheme_types', {
+lib/db/schema.ts:345:  logoSrc: text('logo_src'),
+lib/db/schema.ts:870:export type ApprovalSchemeType = typeof approvalSchemeTypes.$inferSelect;
+lib/db/schema.ts:871:export type NewApprovalSchemeType = typeof approvalSchemeTypes.$inferInsert;
+lib/pdf/approval-scheme-logos.ts:87:    ...(typeof candidate.logoSrc === 'string' ? { logoSrc: candidate.logoSrc } : {}),
+lib/pdf/approval-scheme-logos.ts:94: * fully-resolved `approvalSchemeDetails` snapshot and falling back to plain
+lib/pdf/approval-scheme-logos.ts:100:  const rawDetails = formData.approvalSchemeDetails;
+lib/pdf/approval-scheme-logos.ts:113:  const rawSchemes = formData.approvalSchemes;
+lib/pdf/approval-scheme-logos.ts:179:    schemes.map(async (scheme) => (scheme.logoSrc ? resolvePdfImage(scheme.logoSrc) : null))
+lib/pdf/cp12-template-pdf.ts:693:  const approvalSchemes = getSelectedApprovalSchemes(fd);
+lib/pdf/cp12-template-pdf.ts:705:  const ribbonHeight = measureApprovalSchemeRibbon(approvalSchemes.length, ribbonOptions);
+lib/pdf/cp12-template-pdf.ts:707:    ribbonHeight > 0 ? await resolveApprovalSchemeLogos(approvalSchemes) : [];
+lib/pdf/cp12-template-pdf.ts:760:      drawApprovalSchemeRibbonWithLogos(pdf, approvalSchemes, approvalLogos, ribbonOptions);
+DONE

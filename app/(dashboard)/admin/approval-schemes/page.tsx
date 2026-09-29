@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Trash2, Plus, Save, RefreshCw } from 'lucide-react';
+import ApprovalSchemeLogoField from '@/components/admin/ApprovalSchemeLogoField';
 
 type ApprovalSchemeRow = {
   id: number;
@@ -246,13 +247,13 @@ export default function AdminApprovalSchemesPage() {
                 <option value="false">false</option>
               </select>
             </Field>
-            <Field label="Logo source">
-              <Input
-                value={draft.logoSrc ?? ''}
-                onChange={(e) => setDraft((prev) => ({ ...prev, logoSrc: e.target.value }))}
-                placeholder="/logos/niceic.png"
-              />
-            </Field>
+            <ApprovalSchemeLogoField
+              className="md:col-span-2 xl:col-span-4"
+              label="Logo"
+              value={draft.logoSrc ?? ''}
+              alt={draft.logoAlt ?? ''}
+              onChange={(nextLogo) => setDraft((prev) => ({ ...prev, logoSrc: nextLogo }))}
+            />
             <Field label="Logo alt">
               <Input
                 value={draft.logoAlt ?? ''}
@@ -368,12 +369,13 @@ export default function AdminApprovalSchemesPage() {
                         <option value="false">false</option>
                       </select>
                     </Field>
-                    <Field label="Logo source">
-                      <Input
-                        value={row.logoSrc ?? ''}
-                        onChange={(e) => updateLocalRow(row.id, { logoSrc: e.target.value })}
-                      />
-                    </Field>
+                    <ApprovalSchemeLogoField
+                      className="md:col-span-2 xl:col-span-4"
+                      label="Logo"
+                      value={row.logoSrc ?? ''}
+                      alt={row.logoAlt ?? ''}
+                      onChange={(nextLogo) => updateLocalRow(row.id, { logoSrc: nextLogo })}
+                    />
                     <Field label="Logo alt">
                       <Input
                         value={row.logoAlt ?? ''}

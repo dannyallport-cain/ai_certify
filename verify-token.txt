@@ -1,0 +1,8 @@
+admins found: 5
+  id=1 email=system@internal status=inactive deletedAt=Sun Apr 26 2026 02:13:31 GMT+0100 (British Summer Time)
+  id=133 email=dannyallport@icloud.com status=active deletedAt=null
+  id=198 email=supersystemadmin@test.com status=inactive deletedAt=Sun Apr 26 2026 02:21:47 GMT+0100 (British Summer Time)
+  id=199 email=systemadmin@test.com status=inactive deletedAt=Sun Apr 26 2026 02:21:54 GMT+0100 (British Summer Time)
+  id=230 email=sysadmin@riskassessorpro.com status=inactive deletedAt=Tue May 05 2026 05:25:05 GMT+0100 (British Summer Time)
+using admin id=133 email=dannyallport@icloud.com
+SESSION=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjp7ImlkIjoxMzN9LCJleHBpcmVzIjoiMjAyNi0wOS0yOFQyMTo0MDoxOC45MTlaIiwiaWF0IjoxNzkwNTQ1MjE4LCJleHAiOjE3OTA2MzE2MTh9.SNYujIFwe8eIRNzewz7_TIzxZuPJrSHZjUv47FOCEj0

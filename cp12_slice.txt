@@ -1,0 +1,91 @@
+  certificate: CertificateData
+): Promise<Uint8Array> {
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  const fd = (certificate.formData || {}) as FormDataRecord;
+
+  const approvalSchemes = getSelectedApprovalSchemes(fd);
+  const companyLogo = await resolvePdfImage(certificate.teamLogo);
+
+  const ribbonOptions: ApprovalSchemeRibbonOptions = {
+    x: PAGE_M,
+    y: PAGE_M + 20,
+    width: pageWidth - PAGE_M * 2,
+    badgeWidth: 52,
+    badgeHeight: 10,
+    gap: 2,
+    accentColor: BRAND,
+  };
+  const ribbonHeight = measureApprovalSchemeRibbon(approvalSchemes.length, ribbonOptions);
+  const approvalLogos: ApprovalSchemeLogo[] =
+    ribbonHeight > 0 ? await resolveApprovalSchemeLogos(approvalSchemes) : [];
+  const certificateNumber = ss(certificate.certificateNumber) || ss(fd.certificateNumber) || 'Not specified';
+  const customerName = ss(certificate.customer?.name) || ss(fd.customerName) || 'Not specified';
+  const customerAddress = ss(certificate.customer?.address) || '';
+  const customerPhone = ss(certificate.customer?.phone) || '';
+  const customerPostcode = ss(certificate.customer?.postcode) || '';
+
+  const landlordName = ss(fd.landlordName);
+  const landlordAddress = ss(fd.landlordAddress);
+  const landlordPostcode = ss(fd.landlordPostcode);
+  const landlordTelephone = ss(fd.landlordTelephone);
+
+  const siteName = ss(certificate.siteName) || ss(fd.siteName) || 'Not specified';
+  const siteAddress = ss(certificate.siteAddress) || ss(fd.siteAddress) || 'Not specified';
+  const sitePostcode = ss(fd.sitePostcode);
+  const siteTelephone = ss(fd.siteTelephone);
+
+  const businessName = ss(fd.businessName);
+  const businessAddress = ss(fd.businessAddress);
+  const businessPostcode = ss(fd.businessPostcode);
+  const businessTelephone = ss(fd.businessTelephone);
+
+  const inspectorName = ss(certificate.inspectorName) || ss(fd.inspectorName) || 'Not specified';
+  const inspectorPosition = ss(fd.inspectorPosition) || 'Gas Operative';
+  const gasSafeNumber = ss(fd.gasSafeNumber) || 'Not specified';
+  const operativeIdNo = ss(fd.operativeIdNo);
+  const inspectionDate = formatDate(certificate.inspectionDate || ss(fd.inspectionDate));
+  const nextInspectionDate = formatDate(certificate.nextInspectionDate || ss(fd.nextInspectionDate));
+  const inspectionType = ss(fd.inspectionType) || 'Annual Gas Safety Check';
+
+  const gasTightnessInitial = ss(fd.gasTightnessTestInitialValue);
+  const gasTightnessFinal = ss(fd.gasTightnessTestFinalValue);
+
+  const appliances = getAppliances(fd);
+  const combustionReadings = getCombustionReadings(fd);
+
+  const totalPages = Math.max(2, Math.ceil(appliances.length / 3));
+  const footerText = 'This record should be retained by the landlord and provided to tenants in accordance with current UK gas safety requirements.';
+
+  const drawFooter = (pageNumber: number) => {
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(6);
+    pdf.setTextColor(90, 90, 90);
+    pdf.text(footerText, PAGE_M, pageHeight - 5);
+    pdf.text(`Page ${pageNumber} of ${totalPages}`, pageWidth - PAGE_M, pageHeight - 5, { align: 'right' });
+    pdf.setTextColor(0, 0, 0);
+  };
+
+  const drawPageOne = () => {
+    createTitleBand(pdf, pageWidth, certificateNumber, 1, totalPages, companyLogo);
+
+    let topY = 24;
+    if (ribbonHeight > 0) {
+      drawApprovalSchemeRibbonWithLogos(pdf, approvalSchemes, approvalLogos, ribbonOptions);
+      topY = ribbonOptions.y + ribbonHeight + 3;
+    }
+
+    const cardW = (pageWidth - PAGE_M * 2 - GRID * 2) / 3;
+    const landlordEntries: Array<[string, string]> = [
+      ['Name', landlordName || customerName],
+      ['Address', landlordAddress || customerAddress || 'Not specified'],
+      ['Postcode', landlordPostcode || customerPostcode || 'Not specified'],
+      ['Telephone', landlordTelephone || customerPhone || 'Not specified'],
+    ];
+    const siteEntries: Array<[string, string]> = [
+      ['Name', siteName],
+      ['Address', siteAddress],
+      ['Postcode', sitePostcode || 'Not specified'],
+      ['Telephone', siteTelephone || 'Not specified'],

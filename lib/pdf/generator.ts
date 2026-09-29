@@ -2184,8 +2184,8 @@ async function generateEICRPDF(certificate: CertificateData): Promise<Uint8Array
     x: margin,
     y: y + 1,
     width: W,
-    accentColor: brandRed,
-    borderColor: borderGrey,
+    height: 9,
+    gap: 6,
   });
   if (approvalRibbonHeight > 0) {
     y += approvalRibbonHeight + 1;

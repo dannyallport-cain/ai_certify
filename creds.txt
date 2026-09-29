@@ -1,0 +1,5 @@
+README.md:40:     POSTGRES_URL=postgres://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require
+project_info__7.md:117:7. If the user is not signed in, the token is stashed in a temporary cookie and the user is sent through a sign-in completion step.
+project_info__7.md:175:   - If the sign-in completion step doesn’t restore the session cleanly, the connection never finalizes.
+lines=3
+END

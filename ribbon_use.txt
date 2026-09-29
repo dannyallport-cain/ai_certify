@@ -1,0 +1,34 @@
+app/(dashboard)/admin/approval-schemes/page.tsx:10:import ApprovalSchemeLogoField from '@/components/admin/ApprovalSchemeLogoField';
+app/(dashboard)/admin/approval-schemes/page.tsx:250:            <ApprovalSchemeLogoField
+app/(dashboard)/admin/approval-schemes/page.tsx:372:                    <ApprovalSchemeLogoField
+components/admin/ApprovalSchemeLogoField.tsx:23:type ApprovalSchemeLogoFieldProps = {
+components/admin/ApprovalSchemeLogoField.tsx:31:export default function ApprovalSchemeLogoField({
+components/admin/ApprovalSchemeLogoField.tsx:37:}: ApprovalSchemeLogoFieldProps) {
+lib/pdf/approval-scheme-logos.ts:14:export type ApprovalSchemeLogo = ResolvedPdfImage | null;
+lib/pdf/approval-scheme-logos.ts:16:export type ApprovalSchemeRibbonOptions = {
+lib/pdf/approval-scheme-logos.ts:134: * Both `measureApprovalSchemeRibbon` and the draw helpers use this, which keeps
+lib/pdf/approval-scheme-logos.ts:139:  options: ApprovalSchemeRibbonOptions
+lib/pdf/approval-scheme-logos.ts:166:export function measureApprovalSchemeRibbon(
+lib/pdf/approval-scheme-logos.ts:168:  options: ApprovalSchemeRibbonOptions
+lib/pdf/approval-scheme-logos.ts:175:export async function resolveApprovalSchemeLogos(
+lib/pdf/approval-scheme-logos.ts:177:): Promise<ApprovalSchemeLogo[]> {
+lib/pdf/approval-scheme-logos.ts:187:export function drawApprovalSchemeRibbonWithLogos(
+lib/pdf/approval-scheme-logos.ts:190:  logos: ApprovalSchemeLogo[],
+lib/pdf/approval-scheme-logos.ts:191:  options: ApprovalSchemeRibbonOptions
+lib/pdf/approval-scheme-logos.ts:255:export async function drawApprovalSchemeRibbon(
+lib/pdf/approval-scheme-logos.ts:258:  options: ApprovalSchemeRibbonOptions
+lib/pdf/approval-scheme-logos.ts:262:  const logos = await resolveApprovalSchemeLogos(schemes);
+lib/pdf/approval-scheme-logos.ts:263:  return drawApprovalSchemeRibbonWithLogos(pdf, schemes, logos, options);
+lib/pdf/cp12-template-pdf.ts:4:  drawApprovalSchemeRibbonWithLogos,
+lib/pdf/cp12-template-pdf.ts:6:  measureApprovalSchemeRibbon,
+lib/pdf/cp12-template-pdf.ts:7:  resolveApprovalSchemeLogos,
+lib/pdf/cp12-template-pdf.ts:8:  type ApprovalSchemeLogo,
+lib/pdf/cp12-template-pdf.ts:9:  type ApprovalSchemeRibbonOptions,
+lib/pdf/cp12-template-pdf.ts:696:  const ribbonOptions: ApprovalSchemeRibbonOptions = {
+lib/pdf/cp12-template-pdf.ts:705:  const ribbonHeight = measureApprovalSchemeRibbon(approvalSchemes.length, ribbonOptions);
+lib/pdf/cp12-template-pdf.ts:706:  const approvalLogos: ApprovalSchemeLogo[] =
+lib/pdf/cp12-template-pdf.ts:707:    ribbonHeight > 0 ? await resolveApprovalSchemeLogos(approvalSchemes) : [];
+lib/pdf/cp12-template-pdf.ts:760:      drawApprovalSchemeRibbonWithLogos(pdf, approvalSchemes, approvalLogos, ribbonOptions);
+lib/pdf/generator.ts:4:import { drawApprovalSchemeRibbon, getSelectedApprovalSchemes } from './approval-scheme-logos';
+lib/pdf/generator.ts:2183:  const approvalRibbonHeight = await drawApprovalSchemeRibbon(pdf, selectedApprovalSchemes, {
+DONE

@@ -1,0 +1,5 @@
+admin user: {"id":230,"email":"sysadmin@riskassessorpro.com","role":"admin","status":"inactive"}
+anonymous POST -> 401 {"error":"Unauthorized"}
+authenticated POST -> 401 {"error":"Unauthorized"}
+RESULT: FAIL - Upload failed with status 401
+Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c, line 76

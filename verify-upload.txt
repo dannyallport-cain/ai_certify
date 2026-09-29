@@ -1,0 +1,1 @@
+{"key":"approval-schemes/verify-upload/logo-1790545476022.png","url":"https://aicertify.ae50656dca5528d3f28ac637b646886e.r2.cloudflarestorage.com/approval-schemes/verify-upload/logo-1790545476022.png","contentType":"image/png"} curl_exit=0

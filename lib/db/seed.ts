@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { stripe } from '../payments/stripe';
+import { getStripeClient } from '../payments/stripe';
 import { db } from './drizzle';
 import {
   users,
@@ -42,6 +42,8 @@ async function createStripeProducts() {
   console.log('Creating Stripe products and prices...');
 
   try {
+    const stripe = await getStripeClient();
+
     // Check if products already exist
     const existingProducts = await stripe.products.list({ limit: 10 });
     const baseExists = existingProducts.data.find(p => p.name === 'Base');

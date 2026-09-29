@@ -270,6 +270,18 @@ export const purchaseEntitlements = pgTable(
   })
 );
 
+// Application-level settings (key/value). Used to store admin-managed
+// configuration such as Stripe credentials that can be changed at runtime
+// without redeploying environment variables.
+export const appSettings = pgTable('app_settings', {
+  key: varchar('key', { length: 150 }).primaryKey(),
+  value: text('value'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  updatedBy: integer('updated_by').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+});
+
 // Fire Safety Certificate Management Tables
 export const mainProtectiveDevice = pgTable('main_protective_device', {
   id: serial('id').primaryKey(),
@@ -879,6 +891,8 @@ export type ServiceM8JobMapping = typeof servicem8JobMappings.$inferSelect;
 export type NewServiceM8JobMapping = typeof servicem8JobMappings.$inferInsert;
 export type ServiceM8ClientMapping = typeof servicem8ClientMappings.$inferSelect;
 export type NewServiceM8ClientMapping = typeof servicem8ClientMappings.$inferInsert;
+export type AppSetting = typeof appSettings.$inferSelect;
+export type NewAppSetting = typeof appSettings.$inferInsert;
 
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {

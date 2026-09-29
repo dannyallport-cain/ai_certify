@@ -1,0 +1,4 @@
+0
+tsc_exit=0
+total_errors=0
+END

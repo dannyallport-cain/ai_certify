@@ -5,7 +5,6 @@ import { reportDisseminatorTemplates } from '@/lib/db/schema';
 import { getTeamForUser, getUser } from '@/lib/db/queries';
 import { isAdminRole } from '@/lib/auth/roles';
 import { sanitizeStoredPdfBase64 } from '@/lib/report-disseminator/pdf-sanitize';
-import { stripe } from '@/lib/payments/stripe';
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const NO_STORE_HEADERS = { 'Cache-Control': 'no-store' };

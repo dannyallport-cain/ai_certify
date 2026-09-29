@@ -1,60 +1,60 @@
 import { CreditCard, KeyRound, ShieldCheck } from 'lucide-react';
 import { AdminMutedNote, AdminPageHero, AdminSection } from '@/components/admin/AdminPageSection';
 import IntegrationTestCard from '@/components/integrations/IntegrationTestCard';
-import StripeSecretField from '@/components/admin/StripeSecretField';
+import StripeCredentialEditor from '@/components/admin/StripeCredentialEditor';
 import { requireAdmin } from '@/lib/auth/admin';
+import {
+  toStripeCredentialStatusList,
+  type StripeCredentialStatusDto,
+} from '@/lib/stripe/credential-status';
+import { getStripeCredentials } from '@/lib/stripe/credentials';
+
+export const dynamic = 'force-dynamic';
+
+const SOURCE_LABELS: Record<StripeCredentialStatusDto['source'], string> = {
+  database: 'Saved in admin',
+  environment: 'From environment',
+  missing: 'Not configured',
+};
 
 export default async function StripeConfigPage() {
   await requireAdmin();
 
-  const secretKey = process.env.STRIPE_SECRET_KEY ?? '';
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+  const credentials = await getStripeCredentials();
+  const credentialStatuses = toStripeCredentialStatusList(credentials);
 
   return (
     <div className="space-y-8">
       <AdminPageHero
         eyebrow="Payments setup"
         title="Stripe configuration"
-        description="Separate credential visibility, webhook verification, and deployment status into clearer sections with softer visual grouping."
+        description="Paste a new set of Stripe keys at any time. Values saved here are stored securely and used immediately for pricing, checkout, and webhooks."
         tone="blue"
         icon={<CreditCard className="h-8 w-8" />}
       />
 
       <AdminSection
         eyebrow="Configuration status"
-        title="Environment readiness"
-        description="A quick check of the two secrets required for admin billing workflows."
+        title="Active credentials"
+        description="A quick check of the keys currently powering Stripe billing workflows."
         icon={<ShieldCheck className="h-5 w-5" />}
         tone="green"
       >
         <div className="grid gap-4 md:grid-cols-2">
-          {[
-            {
-              label: 'Secret key',
-              configured: Boolean(secretKey),
-              helper: secretKey ? 'Configured from environment variables.' : 'Missing STRIPE_SECRET_KEY.',
-            },
-            {
-              label: 'Webhook secret',
-              configured: Boolean(webhookSecret),
-              helper: webhookSecret
-                ? 'Configured from environment variables.'
-                : 'Missing STRIPE_WEBHOOK_SECRET.',
-            },
-          ].map((item) => (
+          {credentialStatuses.map((credential) => (
             <div
-              key={item.label}
+              key={credential.key}
               className={`rounded-2xl border p-5 ${
-                item.configured
+                credential.configured
                   ? 'border-emerald-200 bg-emerald-50/70'
                   : 'border-amber-200 bg-amber-50/70'
               }`}
             >
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{item.label}</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{credential.label}</p>
               <p className="mt-2 text-lg font-semibold text-slate-950">
-                {item.configured ? 'Configured' : 'Attention needed'}
+                {credential.configured ? 'Configured' : 'Attention needed'}
               </p>
-              <p className="mt-2 text-sm text-slate-600">{item.helper}</p>
+              <p className="mt-2 text-sm text-slate-600">{SOURCE_LABELS[credential.source]}</p>
             </div>
           ))}
         </div>
@@ -62,46 +62,28 @@ export default async function StripeConfigPage() {
 
       <AdminSection
         eyebrow="Credentials"
-        title="Stored secret values"
-        description="Read-only secret visibility for admins, with each key broken into its own field."
+        title="Paste a new set of Stripe codes"
+        description="Replace the secret key, publishable key, or webhook signing secret. Leave a field blank to keep its current value."
         icon={<KeyRound className="h-5 w-5" />}
         tone="blue"
       >
-        <div className="grid gap-6">
-          <StripeSecretField
-            label="Secret Key"
-            value={secretKey}
-            placeholder="STRIPE_SECRET_KEY is not configured"
-            helperText={
-              secretKey ? 'Configured from environment variables.' : 'Missing STRIPE_SECRET_KEY.'
-            }
-          />
-          <StripeSecretField
-            label="Webhook Secret"
-            value={webhookSecret}
-            placeholder="STRIPE_WEBHOOK_SECRET is not configured"
-            helperText={
-              webhookSecret
-                ? 'Configured from environment variables.'
-                : 'Missing STRIPE_WEBHOOK_SECRET.'
-            }
-          />
-        </div>
+        <StripeCredentialEditor initialCredentials={credentialStatuses} />
 
         <AdminMutedNote tone="blue">
-          These values remain read-only here so the page acts as a deployment verification screen rather than a credential editor.
+          Saved values are stored against this deployment and override environment variables. Remove an override
+          with the Use env action to fall back to the configured environment variable.
         </AdminMutedNote>
       </AdminSection>
 
       <IntegrationTestCard
         title="Stripe connectivity test"
-        description="Run a live balance lookup against Stripe to confirm the admin secret can authenticate and return data from the account."
+        description="Run a live balance lookup against Stripe to confirm the active credentials can authenticate and return data from the account."
         serviceLabel="Stripe"
         endpointPath="/api/admin/stripe/test"
         tone="blue"
         buttonLabel="Test Stripe connection"
         successLabel="Stripe connection verified successfully."
-        hint="This performs a real Stripe balance retrieval using the configured STRIPE_SECRET_KEY."
+        hint="This performs a real Stripe balance retrieval using the active secret key."
       />
     </div>
   );

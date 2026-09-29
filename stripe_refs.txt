@@ -1,0 +1,26 @@
+lib/db/seed.ts:36:  if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('placeholder') || process.env.STRIPE_SECRET_KEY.includes('here')) {
+lib/db/setup.ts:200:  const STRIPE_SECRET_KEY = await getStripeSecretKey();
+lib/db/setup.ts:201:  const STRIPE_WEBHOOK_SECRET = await createStripeWebhook();
+lib/db/setup.ts:207:    STRIPE_SECRET_KEY,
+lib/db/setup.ts:208:    STRIPE_WEBHOOK_SECRET,
+lib/payments/stripe.ts:45:const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+lib/payments/stripe.ts:50:    '[stripe] STRIPE_SECRET_KEY is not set. Stripe-backed pages will run in fallback mode.'
+lib/payments/stripe.ts:61:      'STRIPE_SECRET_KEY is not set (Stripe is not configured for this environment)'
+lib/stripe/config.ts:3:if (!process.env.STRIPE_SECRET_KEY) {
+lib/stripe/config.ts:4:  throw new Error('STRIPE_SECRET_KEY is not set');
+lib/stripe/config.ts:7:export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+app/(dashboard)/admin/stripe-config/page.tsx:10:  const secretKey = process.env.STRIPE_SECRET_KEY ?? '';
+app/(dashboard)/admin/stripe-config/page.tsx:11:  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+app/(dashboard)/admin/stripe-config/page.tsx:35:              helper: secretKey ? 'Configured from environment variables.' : 'Missing STRIPE_SECRET_KEY.',
+app/(dashboard)/admin/stripe-config/page.tsx:42:                : 'Missing STRIPE_WEBHOOK_SECRET.',
+app/(dashboard)/admin/stripe-config/page.tsx:74:            placeholder="STRIPE_SECRET_KEY is not configured"
+app/(dashboard)/admin/stripe-config/page.tsx:76:              secretKey ? 'Configured from environment variables.' : 'Missing STRIPE_SECRET_KEY.'
+app/(dashboard)/admin/stripe-config/page.tsx:82:            placeholder="STRIPE_WEBHOOK_SECRET is not configured"
+app/(dashboard)/admin/stripe-config/page.tsx:86:                : 'Missing STRIPE_WEBHOOK_SECRET.'
+app/(dashboard)/admin/stripe-config/page.tsx:104:        hint="This performs a real Stripe balance retrieval using the configured STRIPE_SECRET_KEY."
+app/api/admin/stripe/test/route.ts:9:  const secretKey = process.env.STRIPE_SECRET_KEY;
+app/api/admin/stripe/test/route.ts:12:    throw new Error('STRIPE_SECRET_KEY is not configured');
+app/api/admin/stripe/test/route.ts:57:      message === 'STRIPE_SECRET_KEY is not configured'
+app/api/stripe/webhook/route.ts:17:const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+app/pricing/page.tsx:109:    pricingWarning = message.includes('STRIPE_SECRET_KEY')
+app/pricing/page.tsx:110:      ? 'Pricing is temporarily unavailable because Stripe is not configured (missing STRIPE_SECRET_KEY).'

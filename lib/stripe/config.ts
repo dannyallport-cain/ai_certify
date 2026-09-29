@@ -1,14 +1,6 @@
-import Stripe from 'stripe';
-
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
-}
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-08-27.basil',
-  typescript: true,
-});
-
+// Plan metadata used by the legacy admin Stripe screen. The Stripe client is
+// no longer created here: credentials are resolved at runtime via
+// `@/lib/stripe/client` so they can be changed from the admin UI.
 export const STRIPE_PRODUCTS = {
   STARTER: {
     id: 'prod_starter',
@@ -135,4 +127,4 @@ export const STRIPE_FEATURES = {
 };
 
 export type StripeProductId = keyof typeof STRIPE_PRODUCTS;
-export type StripeFeatureKey = keyof typeof STRIPE_FEATURES; 
+export type StripeFeatureKey = keyof typeof STRIPE_FEATURES;

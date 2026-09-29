@@ -1,0 +1,7 @@
+]633;E;{ echo "=== remaining _tmp files ==="\x3b ls _tmp_* 2>/dev/null || echo "none"\x3b echo "=== git state ==="\x3b git status -sb | head -6\x3b echo "=== HEAD ==="\x3b git log --oneline -1\x3b } > _final_check.txt 2>&1\x3b echo done\x3b40R;103a0058-9032-429a-95f9-b439da4790a4]633;C=== remaining _tmp files ===
+none
+=== git state ===
+## main...origin/main
+?? _final_check.txt
+=== HEAD ===
+b36b4ec Fix PDF logos: embed accreditation ribbon and company logo without native canvas

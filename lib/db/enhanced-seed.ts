@@ -1,4 +1,3 @@
-import { stripe } from '../payments/stripe';
 import { db } from './drizzle';
 import { 
   users, 
@@ -656,4 +655,4 @@ if (require.main === module) {
       console.error('❌ Enhanced seeding script failed:', error);
       process.exit(1);
     });
-} 
+}

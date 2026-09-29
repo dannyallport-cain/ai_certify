@@ -1,0 +1,16 @@
+lib/pdf/cp12-template-pdf.ts:10:} from './approval-scheme-logos';
+lib/pdf/cp12-template-pdf.ts-11-import { finalizeCertificatePdf, type CertificateData } from './generator';
+lib/pdf/cp12-template-pdf.ts-12-import { resolvePdfImage, type ResolvedPdfImage } from './image-data';
+lib/pdf/cp12-template-pdf.ts-13-import { drawContainedImage } from './pdf-image-draw';
+lib/pdf/cp12-template-pdf.ts-14-
+lib/pdf/cp12-template-pdf.ts-15-type FormDataRecord = Record<string, unknown>;
+lib/pdf/cp12-template-pdf.ts-16-
+--
+lib/pdf/generator.ts:4:import { drawApprovalSchemeRibbon, getSelectedApprovalSchemes } from './approval-scheme-logos';
+lib/pdf/generator.ts-5-import { resolvePdfImage } from './image-data';
+lib/pdf/generator.ts-6-import { drawContainedImage } from './pdf-image-draw';
+lib/pdf/generator.ts-7-
+lib/pdf/generator.ts-8-export interface TemplateConfig {
+lib/pdf/generator.ts-9-  colors: {
+lib/pdf/generator.ts-10-    primary: string;   // hex e.g. '#1a3a5c'
+DONE

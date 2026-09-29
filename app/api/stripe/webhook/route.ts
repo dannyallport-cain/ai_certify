@@ -2,10 +2,11 @@ import Stripe from 'stripe';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   handleSubscriptionChange,
-  stripe,
   getMetadataValue,
   getPaymentTypeFromMetadata
 } from '@/lib/payments/stripe';
+import { getStripeClient } from '@/lib/stripe/client';
+import { getStripeWebhookSecret } from '@/lib/stripe/credentials';
 import {
   getTeamByStripeCustomerId,
   updateTeamSubscription,
@@ -13,8 +14,6 @@ import {
   upsertStripePaymentTransaction,
   upsertStripePurchaseEntitlement
 } from '@/lib/db/queries';
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 type StoredPaymentStatus =
   | 'pending'
@@ -278,9 +277,20 @@ export async function POST(request: NextRequest) {
   const payload = await request.text();
   const signature = request.headers.get('stripe-signature') as string;
 
+  const webhookSecret = await getStripeWebhookSecret();
+
+  if (!webhookSecret) {
+    console.error('Stripe webhook secret is not configured.');
+    return NextResponse.json(
+      { error: 'Webhook is not configured.' },
+      { status: 503 }
+    );
+  }
+
   let event: Stripe.Event;
 
   try {
+    const stripe = await getStripeClient();
     event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed.', err);

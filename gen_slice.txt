@@ -1,0 +1,47 @@
+  
+  // Company logo from the account's general settings, top-right of the title block.
+  const teamLogoImage = await resolvePdfImage(certificate.teamLogo);
+  if (teamLogoImage) {
+    drawContainedImage(
+      pdf,
+      teamLogoImage,
+      { x: margin + W - 16, y: y + 1, width: 14, height: 14 },
+      0.5
+    );
+  }
+  
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  text('DOMESTIC ELECTRICAL INSTALLATION', pageWidth / 2, y + 6, { align: 'center' });
+  text('CONDITION REPORT', pageWidth / 2, y + 11, { align: 'center' });
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'italic');
+  text('Requirements For Electrical Installations - BS 7671 IET Wiring Regulations', pageWidth / 2, y + 15, { align: 'center' });
+  pdf.setTextColor(0, 0, 0);
+  y += 18;
+
+  const approvalRibbonHeight = await drawApprovalSchemeRibbon(pdf, selectedApprovalSchemes, {
+    x: margin,
+    y: y + 1,
+    width: W,
+    accentColor: brandRed,
+    borderColor: borderGrey,
+  });
+  if (approvalRibbonHeight > 0) {
+    y += approvalRibbonHeight + 1;
+  }
+
+  // Report reference
+  row('Report Reference:', ss(certificate.certificateNumber));
+  y += 1;
+
+  // Section 1 – Details of the Person Ordering the Report
+  sectionHeader('1', 'Details of the Person Ordering the Report');
+  row('Client:', preferredClientName);
+  row('Address:', preferredClientAddress);
+  y += 1;
+
+  // Section 2 – Reason for Producing This Report
+  sectionHeader('2', 'Reason for Producing This Report');
+DONE

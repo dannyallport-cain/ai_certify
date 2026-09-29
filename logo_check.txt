@@ -1,0 +1,16 @@
+lib/approval-schemes.ts:12:  logoSrc?: string;
+lib/approval-schemes.ts:13:  logoAlt?: string;
+lib/approval-schemes.ts:26:    logoSrc: '/gas-safe-logo.png',
+lib/approval-schemes.ts:27:    logoAlt: 'Gas Safe Register logo',
+lib/approval-schemes.ts:38:    logoSrc: '/logos/niceic-logo.png',
+lib/approval-schemes.ts:39:    logoAlt: 'NICEIC logo',
+lib/approval-schemes.ts:50:    logoSrc: '/NAPIT-Member-Logo.webp',
+lib/approval-schemes.ts:51:    logoAlt: 'NAPIT Member logo',
+lib/approval-schemes.ts:72:    logoSrc: '/logos/stroma.png',
+lib/approval-schemes.ts:73:    logoAlt: 'Stroma logo',
+lib/approval-schemes.ts:94:    logoSrc: '/logos/bafe-logo.png',
+lib/approval-schemes.ts:95:    logoAlt: 'BAFE logo',
+lib/approval-schemes.ts:159:    logoSrc: input.logoSrc,
+lib/approval-schemes.ts:160:    logoAlt: input.logoAlt,
+DONE
+15 logo_check.txt

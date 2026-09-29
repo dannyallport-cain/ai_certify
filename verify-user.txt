@@ -1,0 +1,2 @@
+token_len=185
+{"id":133,"name":"D Allport","email":"dannyallport@icloud.com","role":"admin","status":"active","deletedAt":null,"createdAt":"2025-09-05T08:23:56.641Z","updatedAt":"2026-09-27T20:31:05.970Z","activatedAt":"2026-05-06T05:09:07.043Z","avatarUrl":"/api/user/asset/avatar","avatarR2Key":null,"avatarUpdatedAt":"2026-06-19T06:27:55.685Z","signatureUrl":"/api/user/asset/signature","signatureR2Key":null,"signatureUpdatedAt":"2026-06-19T06:26:55.346Z"}curl_exit=0

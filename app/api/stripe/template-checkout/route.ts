@@ -6,7 +6,8 @@ import {
   LOCAL_AUTHORITY_TEMPLATE_PACK_FEATURE_KEY,
   getLocalAuthorityTemplatePackOffer,
 } from '@/lib/payments/addons';
-import { buildStripeMetadata, stripe, getBaseUrl } from '@/lib/payments/stripe';
+import { buildStripeMetadata, getBaseUrl } from '@/lib/payments/stripe';
+import { getStripeClient } from '@/lib/stripe/client';
 
 export async function POST(request: NextRequest) {
   const team = await getTeamForUser();
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
     },
   };
 
+  const stripe = await getStripeClient();
   const session = await stripe.checkout.sessions.create(checkoutParams);
 
   if (!session.url) {

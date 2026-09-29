@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 
 import { listPurchaseEntitlementsForTeam } from '@/lib/db/queries';
-import { stripe } from './stripe';
+import { getStripeClient } from '@/lib/stripe/client';
 
 export const LOCAL_AUTHORITY_TEMPLATE_PACK_NAME =
   'Local Authority / Housing Association Template Pack';
@@ -52,6 +52,7 @@ function isTemplatePackProduct(product: Stripe.Product) {
 }
 
 export async function getLocalAuthorityTemplatePackOffer(): Promise<AddonOffer | null> {
+  const stripe = await getStripeClient();
   const prices = await stripe.prices.list({
     active: true,
     expand: ['data.product'],

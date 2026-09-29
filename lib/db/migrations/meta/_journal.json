@@ -99,6 +99,13 @@
       "when": 1790323000000,
       "tag": "20260422005500_add_fire_alarm_room_capture_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790600000000,
+      "tag": "0016_add_app_settings",
+      "breakpoints": true
     }
   ]
 }

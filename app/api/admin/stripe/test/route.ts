@@ -2,20 +2,9 @@ import Stripe from 'stripe';
 import { NextResponse } from 'next/server';
 
 import { isAdmin } from '@/lib/auth/admin';
+import { getStripeClient, STRIPE_NOT_CONFIGURED_MESSAGE } from '@/lib/stripe/client';
 
 export const dynamic = 'force-dynamic';
-
-function getStripeClient() {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-
-  if (!secretKey) {
-    throw new Error('STRIPE_SECRET_KEY is not configured');
-  }
-
-  return new Stripe(secretKey, {
-    apiVersion: '2025-08-27.basil',
-  });
-}
 
 function serializeBalanceEntry(entry: Stripe.Balance.Available): {
   amount: number;
@@ -35,7 +24,7 @@ export async function POST() {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
     }
 
-    const stripe = getStripeClient();
+    const stripe = await getStripeClient();
     const balance = await stripe.balance.retrieve();
 
     return NextResponse.json({
@@ -53,10 +42,7 @@ export async function POST() {
     const message =
       error instanceof Error ? error.message : 'Failed to verify Stripe connectivity';
 
-    const status =
-      message === 'STRIPE_SECRET_KEY is not configured'
-        ? 503
-        : 502;
+    const status = message === STRIPE_NOT_CONFIGURED_MESSAGE ? 503 : 502;
 
     return NextResponse.json(
       {

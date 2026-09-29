@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { requireAdmin } from '@/lib/auth/admin';
-import { STRIPE_PRODUCTS, STRIPE_FEATURES, stripe } from '@/lib/stripe/config';
+import { STRIPE_PRODUCTS, STRIPE_FEATURES } from '@/lib/stripe/config';
 import { Edit, Plus, Save, Trash2, DollarSign, Users, Settings, CheckCircle2 } from 'lucide-react';
 
 async function StripeAdminContent() {
@@ -291,4 +291,4 @@ export default function StripeAdminPage() {
       <StripeAdminContent />
     </Suspense>
   );
-} 
+}

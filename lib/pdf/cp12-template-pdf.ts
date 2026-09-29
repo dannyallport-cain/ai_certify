@@ -697,10 +697,8 @@ export async function generateCp12TemplatePdf(
     x: PAGE_M,
     y: PAGE_M + 20,
     width: pageWidth - PAGE_M * 2,
-    badgeWidth: 52,
-    badgeHeight: 10,
-    gap: 2,
-    accentColor: BRAND,
+    height: 10,
+    gap: 6,
   };
   const ribbonHeight = measureApprovalSchemeRibbon(approvalSchemes.length, ribbonOptions);
   const approvalLogos: ApprovalSchemeLogo[] =

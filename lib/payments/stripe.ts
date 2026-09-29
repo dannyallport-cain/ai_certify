@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
 import { Team } from '@/lib/db/schema';
+import { getStripeClient } from '@/lib/stripe/client';
 import {
   getTeamByStripeCustomerId,
   getUser,
@@ -42,28 +43,9 @@ export type CreateOneTimeCheckoutParams = {
   metadata?: Record<string, string | undefined>;
 };
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const hasStripeSecretKey = Boolean(stripeSecretKey);
-
-if (!hasStripeSecretKey) {
-  console.warn(
-    '[stripe] STRIPE_SECRET_KEY is not set. Stripe-backed pages will run in fallback mode.'
-  );
-}
-
-export const stripe = new Stripe(stripeSecretKey || 'sk_missing_configuration', {
-  apiVersion: '2025-08-27.basil'
-});
-
-function ensureStripeConfigured() {
-  if (!hasStripeSecretKey) {
-    throw new Error(
-      'STRIPE_SECRET_KEY is not set (Stripe is not configured for this environment)'
-    );
-  }
-
-  return stripe;
-}
+// The Stripe client is created on demand from the active credentials so that an
+// administrator can replace the keys at runtime. See `@/lib/stripe/client`.
+export { getStripeClient } from '@/lib/stripe/client';
 
 export function getBaseUrl() {
   return process.env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -133,7 +115,7 @@ export async function createSubscriptionCheckoutSession({
 
   const baseUrl = getBaseUrl();
 
-  const stripeClient = ensureStripeConfigured();
+  const stripeClient = await getStripeClient();
   const session = await stripeClient.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
@@ -177,7 +159,7 @@ export async function createOneTimeCheckoutSession({
   const resolvedUserId =
     typeof userId === 'number' ? userId.toString() : userId || undefined;
 
-  const stripeClient = ensureStripeConfigured();
+  const stripeClient = await getStripeClient();
   const session = await stripeClient.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: lineItems,
@@ -215,7 +197,7 @@ export async function createCustomerPortalSession(team: Team) {
   }
 
   let configuration: Stripe.BillingPortal.Configuration;
-  const stripeClient = ensureStripeConfigured();
+  const stripeClient = await getStripeClient();
   const configurations = await stripeClient.billingPortal.configurations.list();
 
   if (configurations.data.length > 0) {
@@ -330,7 +312,7 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
-  const stripeClient = ensureStripeConfigured();
+  const stripeClient = await getStripeClient();
   const prices = await stripeClient.prices.list({
     expand: ['data.product'],
     active: true,
@@ -483,7 +465,7 @@ function getApprovedPlanDefaults(planName: string) {
 export async function getAdminStripeSubscriptionPlans(): Promise<
   AdminStripeSubscriptionPlan[]
 > {
-  const stripeClient = ensureStripeConfigured();
+  const stripeClient = await getStripeClient();
   const prices = await stripeClient.prices.list({
     expand: ['data.product'],
     type: 'recurring',
@@ -569,7 +551,7 @@ export async function getAdminStripeSubscriptionPlans(): Promise<
 }
 
 export async function getStripeProducts() {
-  const stripeClient = ensureStripeConfigured();
+  const stripeClient = await getStripeClient();
 
   const products = await stripeClient.products.list({
     active: true,

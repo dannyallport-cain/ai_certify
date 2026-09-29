@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { setSession } from '@/lib/auth/session';
 import { teamMembers, teams, users } from '@/lib/db/schema';
-import { stripe } from '@/lib/payments/stripe';
+import { getStripeClient } from '@/lib/stripe/client';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const stripe = await getStripeClient();
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['customer', 'subscription']
     });

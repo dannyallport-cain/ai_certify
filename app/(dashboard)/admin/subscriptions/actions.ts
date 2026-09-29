@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { requireAdmin } from '@/lib/auth/admin';
-import { stripe } from '@/lib/payments/stripe';
+import { getStripeClient } from '@/lib/stripe/client';
 
 const createStripePlanSchema = z.object({
   name: z.string().min(1, 'Plan name is required'),
@@ -73,6 +73,7 @@ export async function createStripePlanMetadata(
   formData: FormData
 ): Promise<CreateStripePlanState> {
   await requireAdmin();
+  const stripe = await getStripeClient();
 
   const parsed = createStripePlanSchema.safeParse({
     name: formData.get('name'),
@@ -146,6 +147,7 @@ export async function updateStripePlanMetadata(
   formData: FormData
 ): Promise<UpdateStripePlanState> {
   await requireAdmin();
+  const stripe = await getStripeClient();
 
   const parsed = updateStripePlanSchema.safeParse({
     productId: formData.get('productId'),
@@ -250,6 +252,7 @@ export async function deleteStripePlanMetadata(
   formData: FormData
 ): Promise<DeleteStripePlanState> {
   await requireAdmin();
+  const stripe = await getStripeClient();
 
   const parsed = deleteStripePlanSchema.safeParse({
     productId: formData.get('productId'),

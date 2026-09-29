@@ -14,46 +14,31 @@ export type Rgb = readonly [number, number, number];
 export type ApprovalSchemeLogo = ResolvedPdfImage | null;
 
 export type ApprovalSchemeRibbonOptions = {
+  /** Left edge of the logo line, in millimetres. */
   x: number;
+  /** Top edge of the logo line, in millimetres. */
   y: number;
+  /** Total width available for the row of logos, in millimetres. */
   width: number;
-  title?: string;
-  columns?: number;
-  badgeWidth?: number;
-  badgeHeight?: number;
+  /** Height each logo is fitted into (default 9mm). */
+  height?: number;
+  /** Horizontal gap kept between logos (default 6mm). */
   gap?: number;
-  headerHeight?: number;
-  titleFontSize?: number;
-  accentColor?: Rgb;
-  borderColor?: Rgb;
-  emptyFill?: Rgb;
 };
 
 type RibbonLayout = {
-  columns: number;
-  rows: number;
-  badgeWidth: number;
-  badgeHeight: number;
+  height: number;
   gap: number;
-  headerHeight: number;
-  titleFontSize: number;
+  cellWidth: number;
   totalHeight: number;
 };
 
 const DEFAULTS = {
-  title: 'Selected trade association logos',
-  columns: 5,
-  badgeWidth: 48,
-  badgeHeight: 9,
-  gap: 2,
-  headerHeight: 6,
-  titleFontSize: 6.5,
-  accentColor: [200, 16, 46] as Rgb,
-  borderColor: [165, 165, 165] as Rgb,
-  emptyFill: [255, 255, 255] as Rgb,
+  height: 9,
+  gap: 6,
 } as const;
 
-const FALLBACK_ACCENT: Rgb = [29, 78, 216];
+const FALLBACK_TEXT_COLOR: Rgb = [30, 41, 59];
 
 function parseJsonLike(value: unknown): unknown {
   if (typeof value !== 'string') return value;
@@ -118,51 +103,28 @@ export function getSelectedApprovalSchemes(
     .filter((scheme): scheme is ApprovalSchemeInfo => Boolean(scheme));
 }
 
-function hexToRgb(hex: string, fallback: Rgb): Rgb {
-  const normalized = hex.replace(/^#/, '');
-  if (!/^[0-9a-f]{6}$/i.test(normalized)) return fallback;
-
-  return [
-    Number.parseInt(normalized.slice(0, 2), 16),
-    Number.parseInt(normalized.slice(2, 4), 16),
-    Number.parseInt(normalized.slice(4, 6), 16),
-  ];
-}
-
 /**
- * Works out the badge grid so the caller can reserve space before drawing.
- * Both `measureApprovalSchemeRibbon` and the draw helpers use this, which keeps
- * pagination maths and rendering in agreement.
+ * Works out the single-row layout so the caller can reserve space before
+ * drawing. Both `measureApprovalSchemeRibbon` and the draw helpers use this,
+ * which keeps pagination maths and rendering in agreement.
  */
 function resolveRibbonLayout(
   schemeCount: number,
   options: ApprovalSchemeRibbonOptions
 ): RibbonLayout {
-  const badgeWidth = options.badgeWidth ?? DEFAULTS.badgeWidth;
-  const badgeHeight = options.badgeHeight ?? DEFAULTS.badgeHeight;
+  const height = options.height ?? DEFAULTS.height;
   const gap = options.gap ?? DEFAULTS.gap;
-  const headerHeight = options.headerHeight ?? DEFAULTS.headerHeight;
-  const titleFontSize = options.titleFontSize ?? DEFAULTS.titleFontSize;
-
-  const maxColumns = Math.max(1, Math.floor((options.width + gap) / (badgeWidth + gap)));
-  const requestedColumns = options.columns ?? DEFAULTS.columns;
-  const columns = Math.max(1, Math.min(requestedColumns, maxColumns, Math.max(1, schemeCount)));
-  const rows = Math.max(1, Math.ceil(schemeCount / columns));
-  const bodyHeight = rows * badgeHeight + Math.max(0, rows - 1) * gap;
+  const cellWidth = options.width / Math.max(1, schemeCount);
 
   return {
-    columns,
-    rows,
-    badgeWidth,
-    badgeHeight,
+    height,
     gap,
-    headerHeight,
-    titleFontSize,
-    totalHeight: headerHeight + bodyHeight + 4,
+    cellWidth,
+    totalHeight: height,
   };
 }
 
-/** Height the ribbon will occupy, or 0 when there is nothing to draw. */
+/** Height the logo line will occupy, or 0 when there is nothing to draw. */
 export function measureApprovalSchemeRibbon(
   schemeCount: number,
   options: ApprovalSchemeRibbonOptions
@@ -181,8 +143,9 @@ export async function resolveApprovalSchemeLogos(
 }
 
 /**
- * Draws the accreditation ribbon using already-resolved logos and returns the
- * vertical space it consumed. Never paginates — callers reserve the space.
+ * Draws the selected accreditation logos in a single line across the header.
+ * Logos are rendered bare — no border, panel, or coloured badge behind them —
+ * and returned to the caller so it can advance the cursor. Never paginates.
  */
 export function drawApprovalSchemeRibbonWithLogos(
   pdf: jsPDF,
@@ -193,65 +156,48 @@ export function drawApprovalSchemeRibbonWithLogos(
   if (schemes.length === 0) return 0;
 
   const layout = resolveRibbonLayout(schemes.length, options);
-  const { x, y, width } = options;
-  const title = options.title ?? DEFAULTS.title;
-  const accentColor = options.accentColor ?? DEFAULTS.accentColor;
-  const borderColor = options.borderColor ?? DEFAULTS.borderColor;
-  const emptyFill = options.emptyFill ?? DEFAULTS.emptyFill;
-
-  pdf.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
-  pdf.setFillColor(emptyFill[0], emptyFill[1], emptyFill[2]);
-  pdf.setLineWidth(0.3);
-  pdf.rect(x, y, width, layout.totalHeight, 'FD');
-
-  pdf.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-  pdf.rect(x, y, width, layout.headerHeight, 'F');
-
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(layout.titleFontSize);
-  pdf.text(title, x + 3, y + layout.headerHeight - 1.7);
-  pdf.setTextColor(0, 0, 0);
+  const { x, y } = options;
+  const horizontalInset = layout.gap / 2;
 
   schemes.forEach((scheme, index) => {
-    const rowIndex = Math.floor(index / layout.columns);
-    const columnIndex = index % layout.columns;
-    const badgeX = x + 2 + columnIndex * (layout.badgeWidth + layout.gap);
-    const badgeY =
-      y + layout.headerHeight + 2 + rowIndex * (layout.badgeHeight + layout.gap);
-    const box: ImageBox = {
-      x: badgeX,
-      y: badgeY,
-      width: layout.badgeWidth,
-      height: layout.badgeHeight,
-    };
-
-    const accent = hexToRgb(scheme.accentColor, FALLBACK_ACCENT);
-
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setFillColor(accent[0], accent[1], accent[2]);
-    pdf.rect(badgeX, badgeY, layout.badgeWidth, layout.badgeHeight, 'FD');
-
+    const cellX = x + index * layout.cellWidth;
     const image = logos[index] ?? null;
-    if (image && drawContainedImage(pdf, image, box, 1.2)) {
-      return;
+
+    if (image) {
+      const box: ImageBox = {
+        x: cellX + horizontalInset,
+        y,
+        width: Math.max(1, layout.cellWidth - layout.gap),
+        height: layout.height,
+      };
+
+      if (drawContainedImage(pdf, image, box, 0)) {
+        return;
+      }
     }
 
-    const isLightText = scheme.textColor.toLowerCase() === '#ffffff';
-    const textChannel = isLightText ? 255 : 17;
-    pdf.setTextColor(textChannel, textChannel, textChannel);
+    // Text fallback for schemes without a logo image: plain label, no fill.
+    pdf.setTextColor(
+      FALLBACK_TEXT_COLOR[0],
+      FALLBACK_TEXT_COLOR[1],
+      FALLBACK_TEXT_COLOR[2]
+    );
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(5.7);
-    const baseline = badgeY + layout.badgeHeight / 2 + 1.9;
-    pdf.text(scheme.symbol, badgeX + 3, baseline);
-    pdf.text(scheme.shortLabel, badgeX + 12, baseline);
-    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(6.5);
+
+    const label = scheme.shortLabel || scheme.label;
+
+    pdf.text(label, cellX + layout.cellWidth / 2, y + layout.height / 2 + 2.3, {
+      align: 'center',
+    });
   });
+
+  pdf.setTextColor(0, 0, 0);
 
   return layout.totalHeight;
 }
 
-/** Convenience wrapper: resolves the logos then draws the ribbon. */
+/** Convenience wrapper: resolves the logos then draws the line. */
 export async function drawApprovalSchemeRibbon(
   pdf: jsPDF,
   schemes: ApprovalSchemeInfo[],
