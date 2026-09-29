@@ -198,3 +198,105 @@ export function getApprovalSchemeIds(values: unknown): ApprovalSchemeId[] {
 
   return result;
 }
+/**
+ * Shape returned by `GET /api/approval-schemes`. The database is the single
+ * source of truth for approval scheme metadata, including logos uploaded
+ * through the admin screen, so user-facing pages map these rows rather than
+ * trusting the bundled catalogue above.
+ */
+export type ApprovalSchemeRow = {
+  id?: number;
+  code?: string | null;
+  label?: string | null;
+  shortLabel?: string | null;
+  description?: string | null;
+  accentColor?: string | null;
+  textColor?: string | null;
+  symbol?: string | null;
+  logoSrc?: string | null;
+  logoAlt?: string | null;
+  sortOrder?: number | null;
+  isActive?: boolean | null;
+};
+
+function optionalTrimmed(value: string | null | undefined): string | undefined {
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * Converts a database row into the shape the UI consumes.
+ *
+ * The `id` is intentionally the row label rather than the row code: stored user
+ * preferences and the MEIWC form both persist the label as the scheme
+ * identifier, so reusing the label keeps existing selections valid.
+ */
+export function mapApprovalSchemeRowToInfo(row: ApprovalSchemeRow): ApprovalSchemeInfo | null {
+  const label = optionalTrimmed(row.label);
+  if (!label) {
+    return null;
+  }
+
+  return normalizeApprovalSchemeInfo({
+    id: label,
+    code: optionalTrimmed(row.code),
+    label,
+    shortLabel: optionalTrimmed(row.shortLabel) ?? label,
+    description: optionalTrimmed(row.description) ?? '',
+    accentColor: optionalTrimmed(row.accentColor) ?? '#1d4ed8',
+    textColor: optionalTrimmed(row.textColor) ?? '#ffffff',
+    symbol: optionalTrimmed(row.symbol) ?? label.slice(0, 2).toUpperCase(),
+    logoSrc: optionalTrimmed(row.logoSrc),
+    logoAlt: optionalTrimmed(row.logoAlt),
+  });
+}
+
+/** Maps an unknown API payload into a de-duplicated list of scheme info. */
+export function buildApprovalSchemesFromRows(payload: unknown): ApprovalSchemeInfo[] {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const schemes: ApprovalSchemeInfo[] = [];
+
+  for (const row of payload) {
+    if (!row || typeof row !== 'object') {
+      continue;
+    }
+
+    const scheme = mapApprovalSchemeRowToInfo(row as ApprovalSchemeRow);
+    if (!scheme) {
+      continue;
+    }
+
+    const key = scheme.id.trim().toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    schemes.push(scheme);
+  }
+
+  return schemes;
+}
+
+/**
+ * Keeps only the stored scheme identifiers that still resolve against the
+ * supplied catalogue, preserving the original order. Falls back to the bundled
+ * catalogue when no database-backed list is available yet.
+ */
+export function filterKnownApprovalSchemes(
+  values: unknown,
+  availableSchemes?: ApprovalSchemeInfo[]
+): ApprovalSchemeId[] {
+  const catalogue =
+    Array.isArray(availableSchemes) && availableSchemes.length > 0
+      ? availableSchemes
+      : APPROVAL_SCHEMES;
+
+  return getApprovalSchemeIds(values).filter(
+    (schemeId) => getApprovalSchemeInfo(schemeId, catalogue) !== null
+  );
+}

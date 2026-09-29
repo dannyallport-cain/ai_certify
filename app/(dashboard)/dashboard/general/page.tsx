@@ -12,7 +12,12 @@ import { ApprovalSchemeSelector } from '@/components/settings/ApprovalSchemeSele
 import ProfileMediaSettings from '@/components/settings/ProfileMediaSettings';
 import TeamBrandingSettings from '@/components/settings/TeamBrandingSettings';
 import IntegrationTestCard from '@/components/integrations/IntegrationTestCard';
-import { APPROVAL_SCHEMES, type ApprovalSchemeId } from '@/lib/approval-schemes';
+import {
+  filterKnownApprovalSchemes,
+  type ApprovalSchemeId,
+  type ApprovalSchemeInfo,
+} from '@/lib/approval-schemes';
+import { useApprovalSchemes } from '@/lib/use-approval-schemes';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 
@@ -35,28 +40,26 @@ type AccountFormProps = {
   nameValue?: string;
   emailValue?: string;
   profileDefaults?: EicrProfileDefaults | null;
+  /** Admin-managed approval catalogue used to validate stored selections. */
+  availableSchemes?: ApprovalSchemeInfo[];
 };
 
 function AccountForm({
   state,
   nameValue = '',
   emailValue = '',
-  profileDefaults = null
+  profileDefaults = null,
+  availableSchemes = []
 }: AccountFormProps) {
-  const [selectedSchemes, setSelectedSchemes] = useState<ApprovalSchemeId[]>(
-    (profileDefaults?.approvalSchemes ?? []).filter((scheme): scheme is ApprovalSchemeId =>
-      APPROVAL_SCHEMES.some((option) => option.id === scheme)
-    )
+  const [selectedSchemes, setSelectedSchemes] = useState<ApprovalSchemeId[]>(() =>
+    filterKnownApprovalSchemes(profileDefaults?.approvalSchemes, availableSchemes)
   );
 
   useEffect(() => {
     setSelectedSchemes(
-      (profileDefaults?.approvalSchemes ?? []).filter(
-        (scheme): scheme is ApprovalSchemeId =>
-          APPROVAL_SCHEMES.some((option) => option.id === scheme)
-      )
+      filterKnownApprovalSchemes(profileDefaults?.approvalSchemes, availableSchemes)
     );
-  }, [profileDefaults]);
+  }, [profileDefaults, availableSchemes]);
 
   const mergedProfileDefaults = {
     ...(profileDefaults ?? {}),
@@ -108,7 +111,13 @@ function AccountForm({
   );
 }
 
-function AccountFormWithData({ state }: { state: ActionState }) {
+function AccountFormWithData({
+  state,
+  availableSchemes
+}: {
+  state: ActionState;
+  availableSchemes: ApprovalSchemeInfo[];
+}) {
   const { data: user } = useSWR<User>('/api/user', fetcher);
   return (
     <AccountForm
@@ -116,6 +125,7 @@ function AccountFormWithData({ state }: { state: ActionState }) {
       nameValue={user?.name ?? ''}
       emailValue={user?.email ?? ''}
       profileDefaults={user?.eicrProfileDefaults ?? null}
+      availableSchemes={availableSchemes}
     />
   );
 }
@@ -126,6 +136,7 @@ export default function GeneralPage() {
     {}
   );
   const { data: team } = useSWR<TeamProfile>('/api/team', fetcher);
+  const { schemes: approvalSchemes } = useApprovalSchemes();
 
   return (
     <section className="flex-1 space-y-6 p-4 lg:p-8">
@@ -139,8 +150,10 @@ export default function GeneralPage() {
         </CardHeader>
         <CardContent>
           <form className="space-y-4" action={formAction}>
-            <Suspense fallback={<AccountForm state={state} />}>
-              <AccountFormWithData state={state} />
+            <Suspense
+              fallback={<AccountForm state={state} availableSchemes={approvalSchemes} />}
+            >
+              <AccountFormWithData state={state} availableSchemes={approvalSchemes} />
             </Suspense>
             {state.error && (
               <p className="text-red-500 text-sm">{state.error}</p>
