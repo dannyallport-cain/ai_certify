@@ -1,9 +1,18 @@
+/**
+ * Mobile ServiceM8 job detail.
+ *
+ * The customer used to be fetched with `getClient(company_uuid)`, but the Company
+ * endpoint returns no contact details at all - so job detail screens showed a
+ * nameless customer. The client now comes from the shared directory, which joins
+ * in CompanyContact records.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+
 import {
   getMobileServiceM8Client,
-  normalizeServiceM8Attachment,
-  normalizeServiceM8Client,
-  normalizeServiceM8Job,
+  isServiceM8Context,
+  loadMobileJobDetail,
 } from '../../_shared';
 
 export async function GET(
@@ -13,53 +22,23 @@ export async function GET(
   try {
     const result = await getMobileServiceM8Client(request);
 
-    if ('error' in result) {
+    if (!isServiceM8Context(result)) {
       return result.error;
     }
 
     const { jobUuid } = await context.params;
-    const job = await result.serviceM8Client.getJob(jobUuid);
 
-    const [customer, attachmentRecords] = await Promise.all([
-      (async () => {
-        if (!job.company_uuid) {
-          return null;
-        }
+    if (!jobUuid) {
+      return NextResponse.json({ error: 'Job id is required' }, { status: 400 });
+    }
 
-        try {
-          const company = await result.serviceM8Client.getClient(job.company_uuid);
-          return normalizeServiceM8Client(company);
-        } catch (error) {
-          console.warn('Failed to fetch ServiceM8 job customer for mobile route', error);
-          return null;
-        }
-      })(),
-      (async () => {
-        try {
-          const attachments = await result.serviceM8Client.getJobAttachments(jobUuid);
-          const normalizedAttachments = await Promise.all(
-            attachments.map((attachment) =>
-              normalizeServiceM8Attachment(result.serviceM8Client, attachment),
-            ),
-          );
-
-          return normalizedAttachments.sort((a, b) => {
-            const aTime = new Date(a.createdAt || a.updatedAt || 0).getTime();
-            const bTime = new Date(b.createdAt || b.updatedAt || 0).getTime();
-            return bTime - aTime;
-          });
-        } catch (error) {
-          console.warn('Failed to fetch ServiceM8 job attachments for mobile route', error);
-          return [];
-        }
-      })(),
-    ]);
+    const detail = await loadMobileJobDetail(result.serviceM8Client, jobUuid);
 
     return NextResponse.json({
       job: {
-        ...normalizeServiceM8Job(job),
-        customer,
-        attachments: attachmentRecords,
+        ...detail.job,
+        customer: detail.customer,
+        attachments: detail.attachments,
       },
     });
   } catch (error) {

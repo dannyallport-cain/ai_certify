@@ -1,8 +1,24 @@
+/**
+ * Mobile ServiceM8 job attachments.
+ *
+ * Attachments come from `/attachment.json` scoped by `related_object`, and each
+ * record carries a same-origin `fileUrl` that the mobile app can load without
+ * needing the OAuth token.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  getMobileServiceM8Client,
-  normalizeServiceM8Attachment,
-} from '../../../_shared';
+
+import { normalizeServiceM8Attachment } from '@/lib/servicem8/normalize';
+import type { ServiceM8AttachmentRecord } from '@/lib/servicem8/types';
+
+import { getMobileServiceM8Client, isServiceM8Context } from '../../../_shared';
+
+function byNewest(left: ServiceM8AttachmentRecord, right: ServiceM8AttachmentRecord): number {
+  const leftTime = new Date(left.createdAt ?? left.updatedAt ?? 0).getTime();
+  const rightTime = new Date(right.createdAt ?? right.updatedAt ?? 0).getTime();
+
+  return rightTime - leftTime;
+}
 
 export async function GET(
   request: NextRequest,
@@ -11,27 +27,24 @@ export async function GET(
   try {
     const result = await getMobileServiceM8Client(request);
 
-    if ('error' in result) {
+    if (!isServiceM8Context(result)) {
       return result.error;
     }
 
     const { jobUuid } = await context.params;
-    const attachments = await result.serviceM8Client.getJobAttachments(jobUuid);
-    const normalized = await Promise.all(
-      attachments.map((attachment) =>
-        normalizeServiceM8Attachment(result.serviceM8Client, attachment),
-      ),
-    );
 
-    const sorted = normalized.sort((a, b) => {
-      const aTime = new Date(a.createdAt || a.updatedAt || 0).getTime();
-      const bTime = new Date(b.createdAt || b.updatedAt || 0).getTime();
-      return bTime - aTime;
-    });
+    if (!jobUuid) {
+      return NextResponse.json({ error: 'Job id is required' }, { status: 400 });
+    }
+
+    const records = await result.serviceM8Client.getJobAttachments(jobUuid);
+    const attachments = records
+      .map((attachment) => normalizeServiceM8Attachment(attachment))
+      .sort(byNewest);
 
     return NextResponse.json({
-      attachments: sorted,
-      images: sorted.filter((attachment) => attachment.isImage),
+      attachments,
+      images: attachments.filter((attachment) => attachment.isImage),
     });
   } catch (error) {
     console.error('Error fetching mobile ServiceM8 job attachments:', error);

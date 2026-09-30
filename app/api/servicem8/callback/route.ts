@@ -168,6 +168,12 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
     console.warn('Could not fetch ServiceM8 company info:', e);
   }
 
+  // Record exactly which scopes were granted. Contact details and attachments
+  // require read_customer_contacts and read_attachments, which older connections
+  // were never authorised for; without this the app cannot tell why those fields
+  // come back empty.
+  const grantedScopes = tokenData.scope ?? null;
+
   const existingByTeam = await db
     .select()
     .from(servicem8Connections)
@@ -183,6 +189,7 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
         tokenExpiresAt: expiresAt,
         servicem8CompanyName: companyName,
         servicem8AccountUuid: accountUuid,
+        grantedScopes,
         isActive: true,
         updatedAt: new Date(),
         userId: user.id,
@@ -208,6 +215,7 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
         tokenExpiresAt: expiresAt,
         servicem8CompanyName: companyName,
         servicem8AccountUuid: accountUuid,
+        grantedScopes,
         isActive: true,
         updatedAt: new Date(),
       })
@@ -224,6 +232,7 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
     tokenExpiresAt: expiresAt,
     servicem8CompanyName: companyName,
     servicem8AccountUuid: accountUuid,
+    grantedScopes,
     isActive: true,
     syncEnabled: true,
     syncDirection: 'bidirectional',

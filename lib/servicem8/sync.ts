@@ -172,12 +172,15 @@ async function uploadCompletedCertificatePdfIfNeeded({
   }
 
   const fileName = buildCertificateAttachmentFileName(certificateData);
+  // Attachments come from `/attachment.json`; the raw record only exposes
+  // `attachment_name` (there is no `file_name` field on the ServiceM8 schema).
   const attachments = await serviceM8Client.getJobAttachments(servicem8JobUuid);
 
-  const alreadyUploaded = attachments.some((attachment) => {
-    const candidateName = attachment.file_name || attachment.attachment_name;
-    return candidateName?.trim().toLowerCase() === fileName.toLowerCase();
-  });
+  const alreadyUploaded = attachments.some(
+    (attachment) =>
+      attachment.active !== 0 &&
+      attachment.attachment_name?.trim().toLowerCase() === fileName.toLowerCase(),
+  );
 
   if (alreadyUploaded) {
     return {

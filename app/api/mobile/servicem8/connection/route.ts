@@ -1,39 +1,43 @@
+/**
+ * Mobile ServiceM8 connection status.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+
 import {
-  ServiceM8ConnectionStatus,
   buildServiceM8Address,
   getMobileServiceM8Client,
+  isServiceM8Context,
+  type ServiceM8ConnectionStatus,
 } from '../_shared';
 
 export async function GET(request: NextRequest) {
   try {
     const result = await getMobileServiceM8Client(request);
 
-    if ('error' in result) {
+    if (!isServiceM8Context(result)) {
       return result.error;
     }
 
-    let companyInfo: Awaited<ReturnType<typeof result.serviceM8Client.getCompanyInfo>> | null = null;
-    try {
-      companyInfo = await result.serviceM8Client.getCompanyInfo();
-    } catch (error) {
-      console.warn('ServiceM8 company info unavailable for mobile connection status:', error);
-    }
+    // Company info is an optional endpoint: a connection without the `vendor`
+    // scope returns an empty record rather than throwing, so the connection is
+    // still reported as healthy.
+    const companyInfo = await result.serviceM8Client.getCompanyInfo();
 
     const payload: ServiceM8ConnectionStatus = {
       connected: true,
       connection: {
         teamId: result.teamId,
-        companyName: companyInfo?.name ?? null,
-        email: companyInfo?.email ?? null,
-        phone: companyInfo?.phone ?? null,
+        companyName: companyInfo.name,
+        email: companyInfo.email,
+        phone: companyInfo.phone,
         address: buildServiceM8Address({
-          address: companyInfo?.address ?? null,
-          city: companyInfo?.city ?? null,
-          state: companyInfo?.state ?? null,
-          postcode: companyInfo?.postcode ?? null,
-          country: companyInfo?.country ?? null,
-        }),
+          raw: companyInfo.address,
+          city: companyInfo.city,
+          state: companyInfo.state,
+          postcode: companyInfo.postcode,
+          country: companyInfo.country,
+        }).formatted,
       },
     };
 

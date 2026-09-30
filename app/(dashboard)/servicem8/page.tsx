@@ -3,7 +3,16 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { AlertCircle, CheckCircle2, ExternalLink, Loader2, Plug, RefreshCw, Unplug } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  Plug,
+  RefreshCw,
+  Unplug,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +34,10 @@ type ServiceM8ConnectionPayload = {
     lastSyncAt: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    /** Scopes this connection was asked for but was not granted. */
+    missingScopes: string[];
+    reconnectRequired: boolean;
+    reconnectReason: string | null;
   };
   error?: string;
 };
@@ -217,6 +230,30 @@ export default function ServiceM8Page() {
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error instanceof Error ? error.message : 'Failed to load ServiceM8 connection.'}
+        </div>
+      ) : null}
+
+      {connection?.reconnectRequired ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">ServiceM8 needs reconnecting</p>
+              <p className="mt-1">
+                {connection.reconnectReason ??
+                  'This connection is missing permissions required to read client details.'}
+              </p>
+              <p className="mt-1 text-xs text-amber-800">
+                Missing: {connection.missingScopes.join(', ')}
+              </p>
+            </div>
+          </div>
+          <Button asChild variant="outline" className="shrink-0">
+            <a href="/api/servicem8/activate">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Reconnect now
+            </a>
+          </Button>
         </div>
       ) : null}
 

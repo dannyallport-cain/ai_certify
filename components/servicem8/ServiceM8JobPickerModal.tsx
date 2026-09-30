@@ -10,45 +10,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { ServiceM8Job } from '@/lib/servicem8/client';
+import type { ServiceM8JobPickerRecord } from '@/lib/servicem8/picker';
 
-export type ServiceM8JobPickerItem = Pick<
-  ServiceM8Job,
-  | 'uuid'
-  | 'generated_job_id'
-  | 'job_address'
-  | 'job_description'
-  | 'work_done_description'
-  | 'date'
-  | 'status'
-  | 'first_name'
-  | 'last_name'
-  | 'company_uuid'
-  | 'company_name'
-  | 'address'
-  | 'billing_address'
-  | 'billing_city'
-  | 'billing_postcode'
-  | 'billing_state'
-  | 'billing_country'
-  | 'address_street'
-  | 'address_city'
-  | 'address_postcode'
-  | 'address_state'
-  | 'address_country'
-  | 'billing_address2'
-  | 'billing_attention'
-> & {
-  firstName?: string | null;
-  lastName?: string | null;
-  workAddress?: string | null;
-  billingAddress?: string | null;
-  billingContactName?: string | null;
-  companyName?: string | null;
-  customerName?: string | null;
-  postcode?: string | null;
-  billingPostcode?: string | null;
-};
+/**
+ * One row in the job picker.
+ *
+ * The API route returns the raw ServiceM8 job fields merged with the normalised
+ * ones (customer name and contact details come from the linked client, which the
+ * job endpoint itself does not carry), so the item type is shared with the route
+ * that produces it rather than re-declared here.
+ */
+export type ServiceM8JobPickerItem = ServiceM8JobPickerRecord;
 
 type ServiceM8JobPickerModalProps = {
   open: boolean;

@@ -1,51 +1,80 @@
+/**
+ * Mobile ServiceM8 jobs.
+ *
+ * Jobs are enriched from the shared client directory, so the customer name and
+ * contact details are always populated instead of relying on the Company record
+ * (which has no contact fields) or issuing a request per job.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { getMobileServiceM8Client, normalizeServiceM8Job } from '../_shared';
+
+import { loadServiceM8Jobs } from '@/lib/servicem8/directory';
+
+import { getMobileServiceM8Client, isServiceM8Context, matchesText } from '../_shared';
+
+const DEFAULT_LIMIT = 50;
+const MAX_LIMIT = 200;
+
+function parseLimit(value: string | null): number {
+  const parsed = Number(value ?? String(DEFAULT_LIMIT));
+
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_LIMIT;
+  }
+
+  return Math.max(1, Math.min(Math.trunc(parsed), MAX_LIMIT));
+}
+
+function escapeFilterValue(value: string): string {
+  return value.replace(/'/g, "''");
+}
 
 export async function GET(request: NextRequest) {
   try {
     const result = await getMobileServiceM8Client(request);
 
-    if ('error' in result) {
+    if (!isServiceM8Context(result)) {
       return result.error;
     }
 
-    const search = request.nextUrl.searchParams.get('search')?.trim();
-    const status = request.nextUrl.searchParams.get('status')?.trim();
-    const limitParam = Number(request.nextUrl.searchParams.get('limit') ?? '50');
-    const limit = Number.isFinite(limitParam)
-      ? Math.max(1, Math.min(limitParam, 100))
-      : 50;
+    const search = request.nextUrl.searchParams.get('search') ?? '';
+    const status = request.nextUrl.searchParams.get('status')?.trim() ?? '';
+    const limit = parseLimit(request.nextUrl.searchParams.get('limit'));
 
-    const filters: string[] = ['active eq 1'];
+    const filters = ['active eq 1'];
+
     if (status) {
-      filters.push(`status eq '${status.replace(/'/g, "''")}'`);
+      filters.push(`status eq '${escapeFilterValue(status)}'`);
     }
 
-    const jobs = await result.serviceM8Client.getJobs(filters.join(' and '));
+    const { jobs, directory } = await loadServiceM8Jobs(result.serviceM8Client, {
+      filter: filters.join(' and '),
+    });
 
-    const filteredJobs = jobs
-      .filter((job) => {
-        if (!search) return true;
-
-        const haystack = [
-          job.generated_job_id,
-          job.job_address,
-          job.job_description,
-          job.work_done_description,
-          job.first_name,
-          job.last_name,
+    const filtered = jobs.filter((job) =>
+      matchesText(
+        [
+          job.generatedJobId,
+          job.address,
+          job.description,
+          job.workDoneDescription,
           job.status,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
+          job.customerName,
+          job.firstName,
+          job.lastName,
+          job.email,
+          job.phone,
+          job.mobile,
+        ],
+        search,
+      ),
+    );
 
-        return haystack.includes(search.toLowerCase());
-      })
-      .slice(0, limit)
-      .map((job) => normalizeServiceM8Job(job));
-
-    return NextResponse.json({ jobs: filteredJobs });
+    return NextResponse.json({
+      jobs: filtered.slice(0, limit),
+      total: filtered.length,
+      warnings: directory?.warnings ?? [],
+    });
   } catch (error) {
     console.error('Error fetching mobile ServiceM8 jobs:', error);
     return NextResponse.json({ error: 'Failed to fetch ServiceM8 jobs' }, { status: 500 });

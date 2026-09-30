@@ -21,6 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServiceM8DataTable, type TableOption } from "@/components/servicem8-data-table";
+import { getMissingServiceM8ClientFields } from "@/lib/servicem8/client-mapping";
+import type { ServiceM8JobPickerRecord } from "@/lib/servicem8/picker";
+import type { ServiceM8ClientRecord } from "@/lib/servicem8/types";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -35,37 +38,31 @@ interface ConnectionData {
     lastSyncAt: string | null;
     createdAt: string;
     updatedAt: string;
+    /** Scopes the connection was asked for but was not granted. */
+    missingScopes: string[];
+    reconnectRequired: boolean;
+    reconnectReason: string | null;
   };
 }
 
-interface SM8Job {
-  uuid: string;
-  status: string | null;
-  job_address: string | null;
-  job_description: string | null;
-  generated_job_id: string | null;
-  date: string | null;
-  first_name: string | null;
-  last_name: string | null;
-}
+/**
+ * Both endpoints return the raw ServiceM8 record merged with its normalised
+ * form, so the UI types come straight from the modules that build them. The
+ * previous hand-written interfaces listed Company fields ServiceM8 never
+ * returns (`company_name`, `billing_city`, ...), which is why several columns
+ * rendered blank even though the data existed on CompanyContact.
+ */
+type SM8Job = ServiceM8JobPickerRecord;
+type SM8Client = ServiceM8ClientRecord;
 
-interface SM8Client {
-  uuid: string;
-  name?: string | null;
-  address?: string | null;
-  postcode?: string | null;
-  company_name: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone: string | null;
-  mobile: string | null;
-  billing_address: string | null;
-  billing_address2: string | null;
-  billing_city: string | null;
-  billing_state: string | null;
-  billing_postcode: string | null;
-  billing_country: string | null;
+interface ImportResult {
+  imported: number;
+  updated: number;
+  skipped: number;
+  total: number;
+  /** Imported clients that ServiceM8 holds no email, phone or mobile for. */
+  importedWithGaps: number;
+  warnings: string[];
 }
 
 const PENDING_SERVICE_M8_ACTION_KEY = "ai_certify_servicem8_pending_action";
@@ -141,9 +138,8 @@ export default function ServiceM8Page() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [importingClients, setImportingClients] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(
-    null
-  );
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [urlMessage, setUrlMessage] = useState<{ type: "success" | "error"; text: string } | null>(
     null
   );
@@ -216,6 +212,7 @@ export default function ServiceM8Page() {
     const { allowConnectRedirect = true } = options;
     setImportingClients(true);
     setImportResult(null);
+    setImportError(null);
 
     try {
       if (allowConnectRedirect && !isConnected) {
@@ -233,7 +230,11 @@ export default function ServiceM8Page() {
       const data = (await res.json().catch(() => ({}))) as {
         success?: boolean;
         imported?: number;
+        updated?: number;
         skipped?: number;
+        total?: number;
+        importedWithGaps?: number;
+        warnings?: string[];
         error?: string;
       };
 
@@ -250,10 +251,19 @@ export default function ServiceM8Page() {
       clearPendingServiceM8Action();
 
       if (data.success) {
-        setImportResult({ imported: data.imported ?? 0, skipped: data.skipped ?? 0 });
+        setImportResult({
+          imported: data.imported ?? 0,
+          updated: data.updated ?? 0,
+          skipped: data.skipped ?? 0,
+          total: data.total ?? 0,
+          importedWithGaps: data.importedWithGaps ?? 0,
+          warnings: data.warnings ?? [],
+        });
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to import clients";
       console.error("Failed to import clients:", error);
+      setImportError(message);
     } finally {
       setImportingClients(false);
     }
@@ -369,6 +379,29 @@ export default function ServiceM8Page() {
       {connError && !connLoading ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
           Failed to load ServiceM8 connection.
+        </div>
+      ) : null}
+
+      {connData?.connection?.reconnectRequired ? (
+        <div className="flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-medium">Reconnect ServiceM8 to read client contact details</p>
+            <p className="mt-1 text-sm">
+              {connData.connection.reconnectReason ??
+                "This connection is missing OAuth scopes that ServiceM8 requires before it will return contact details and images."}
+            </p>
+            <p className="mt-1 text-xs">
+              Missing scopes: {connData.connection.missingScopes.join(", ")}
+            </p>
+          </div>
+          <Button onClick={handleConnect} className="shrink-0" disabled={isConnecting}>
+            {isConnecting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Reconnect
+          </Button>
         </div>
       ) : null}
 
@@ -522,10 +555,35 @@ export default function ServiceM8Page() {
                 </Button>
               </div>
 
+              {importError ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+                  {importError}
+                </div>
+              ) : null}
+
               {importResult ? (
-                <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
-                  Imported {importResult.imported} clients, skipped {importResult.skipped} already
-                  existing.
+                <div className="space-y-3 rounded-lg border border-green-200 bg-green-50 p-4 text-green-900">
+                  <div className="text-sm">
+                    Imported {importResult.imported} new client
+                    {importResult.imported === 1 ? "" : "s"}, refreshed {importResult.updated},
+                    skipped {importResult.skipped} of {importResult.total}.
+                  </div>
+
+                  {importResult.importedWithGaps > 0 ? (
+                    <div className="text-sm text-amber-800">
+                      {importResult.importedWithGaps} client
+                      {importResult.importedWithGaps === 1 ? "" : "s"} have no email, phone or
+                      mobile number recorded in ServiceM8.
+                    </div>
+                  ) : null}
+
+                  {importResult.warnings.length > 0 ? (
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-amber-800">
+                      {importResult.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -630,8 +688,12 @@ export default function ServiceM8Page() {
 }
 
 function JobsTab() {
-  const { data, error, isLoading } = useSWR<{ jobs: SM8Job[] }>("/api/servicem8/jobs", fetcher);
+  const { data, error, isLoading } = useSWR<{ jobs: SM8Job[]; warnings?: string[] }>(
+    "/api/servicem8/jobs",
+    fetcher
+  );
   const jobs = data?.jobs ?? [];
+  const warnings = data?.warnings ?? [];
 
   const columns = useMemo<ColumnDef<SM8Job>[]>(
     () => [
@@ -652,14 +714,31 @@ function JobsTab() {
         header: "Address",
         cell: ({ row }) => (
           <div className="max-w-[24rem] break-words text-muted-foreground">
-            {row.original.job_address || "-"}
+            {row.original.workAddress || row.original.job_address || "-"}
           </div>
         ),
       },
       {
-        accessorKey: "first_name",
+        accessorKey: "customer_name",
         header: "Customer",
-        cell: ({ row }) => <>{formatContactName(row.original.first_name, row.original.last_name)}</>,
+        cell: ({ row }) => {
+          const customerName =
+            row.original.customer_name ||
+            row.original.billingContactName ||
+            formatContactName(row.original.firstName, row.original.lastName);
+          const contact = [row.original.email, row.original.mobile, row.original.phone]
+            .filter(Boolean)
+            .join(" · ");
+
+          return (
+            <div className="max-w-[20rem]">
+              <div className="font-medium">{customerName}</div>
+              {contact ? (
+                <div className="break-words text-xs text-muted-foreground">{contact}</div>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         accessorKey: "status",
@@ -716,6 +795,14 @@ function JobsTab() {
         </p>
       </div>
 
+      {warnings.length > 0 ? (
+        <div className="space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          {warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </div>
+      ) : null}
+
       <ServiceM8DataTable
         data={jobs}
         columns={columns}
@@ -725,9 +812,16 @@ function JobsTab() {
             job.generated_job_id,
             job.job_description,
             job.job_address,
+            job.workAddress,
             job.status,
-            job.first_name,
-            job.last_name,
+            job.customer_name,
+            job.billingContactName,
+            job.companyName,
+            job.firstName,
+            job.lastName,
+            job.email,
+            job.phone,
+            job.mobile,
           ]
             .filter(Boolean)
             .join(" ")
@@ -753,7 +847,12 @@ function JobsTab() {
           }
 
           if (groupBy === "customer") {
-            return formatContactName(job.first_name, job.last_name);
+            return (
+              job.customer_name ||
+              job.billingContactName ||
+              formatContactName(job.firstName, job.lastName) ||
+              "Unspecified"
+            );
           }
 
           return "Unspecified";
@@ -765,11 +864,12 @@ function JobsTab() {
 }
 
 function ClientsTab() {
-  const { data, error, isLoading } = useSWR<{ clients: SM8Client[] }>(
+  const { data, error, isLoading } = useSWR<{ clients: SM8Client[]; warnings?: string[] }>(
     "/api/servicem8/clients",
     fetcher
   );
   const clients = data?.clients ?? [];
+  const warnings = data?.warnings ?? [];
 
   const columns = useMemo<ColumnDef<SM8Client>[]>(
     () => [
@@ -777,22 +877,54 @@ function ClientsTab() {
         accessorKey: "name",
         header: "Client",
         cell: ({ row }) => (
-          <div className="font-medium">
-            {row.original.name || row.original.company_name || formatContactName(row.original.first_name, row.original.last_name)}
+          <div className="flex items-center gap-3">
+            {row.original.images[0] ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={row.original.images[0].fileUrl}
+                alt={row.original.name}
+                className="h-9 w-9 shrink-0 rounded-md border border-gray-200 object-cover"
+              />
+            ) : (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-dashed border-gray-300 text-[10px] text-muted-foreground">
+                n/a
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="font-medium">{row.original.name}</div>
+              {row.original.abnNumber ? (
+                <div className="text-xs text-muted-foreground">ABN {row.original.abnNumber}</div>
+              ) : null}
+            </div>
           </div>
         ),
       },
       {
-        accessorKey: "first_name",
+        accessorKey: "billingContactName",
         header: "Contact",
-        cell: ({ row }) => <div>{formatContactName(row.original.first_name, row.original.last_name)}</div>,
+        cell: ({ row }) => (
+          <div>
+            <div>
+              {row.original.billingContactName ||
+                formatContactName(row.original.firstName, row.original.lastName)}
+            </div>
+            {row.original.contacts.length > 1 ? (
+              <div className="text-xs text-muted-foreground">
+                +{row.original.contacts.length - 1} more contact
+                {row.original.contacts.length - 1 === 1 ? "" : "s"}
+              </div>
+            ) : null}
+          </div>
+        ),
       },
       {
         accessorKey: "email",
         header: "Email",
         cell: ({ row }) => (
           <div className="max-w-[20rem] break-words text-muted-foreground">
-            {row.original.email || "-"}
+            {row.original.email || (
+              <span className="text-amber-700">Not held in ServiceM8</span>
+            )}
           </div>
         ),
       },
@@ -801,31 +933,65 @@ function ClientsTab() {
         header: "Phone",
         cell: ({ row }) => (
           <div className="text-muted-foreground">
-            {row.original.phone || row.original.mobile || "-"}
+            <div>
+              {row.original.phone ||
+                row.original.mobile || (
+                  <span className="text-amber-700">Not held in ServiceM8</span>
+                )}
+            </div>
+            {row.original.phone && row.original.mobile ? (
+              <div className="text-xs">Mobile {row.original.mobile}</div>
+            ) : null}
+          </div>
+        ),
+      },
+      {
+        id: "city",
+        accessorFn: (row) => row.addressDetails.city ?? row.addressDetails.state ?? "",
+        header: "City",
+        cell: ({ row }) => (
+          <div className="text-muted-foreground">
+            {row.original.addressDetails.city || row.original.addressDetails.state || "-"}
           </div>
         ),
       },
       {
         accessorKey: "postcode",
         header: "Postcode",
-        cell: ({ row }) => <div className="text-muted-foreground">{row.original.postcode || row.original.billing_postcode || "-"}</div>,
+        cell: ({ row }) => (
+          <div className="text-muted-foreground">
+            {row.original.postcode || row.original.billingPostcode || "-"}
+          </div>
+        ),
       },
       {
         accessorKey: "address",
         header: "Address",
         cell: ({ row }) => (
           <div className="max-w-[24rem] break-words text-muted-foreground">
-            {row.original.address ||
-              formatAddress([
-                row.original.billing_address,
-                row.original.billing_address2,
-                row.original.billing_city,
-                row.original.billing_state,
-                row.original.billing_postcode,
-                row.original.billing_country,
-              ])}
+            {formatAddress(
+              Array.from(new Set([row.original.address, row.original.billingAddress])),
+            )}
           </div>
         ),
+      },
+      {
+        id: "completeness",
+        accessorFn: (row) => getMissingServiceM8ClientFields(row).join(", "),
+        header: "Missing",
+        cell: ({ row }) => {
+          const missing = getMissingServiceM8ClientFields(row.original);
+
+          if (missing.length === 0) {
+            return <Badge variant="outline">Complete</Badge>;
+          }
+
+          return (
+            <div className="max-w-[16rem] break-words text-xs text-amber-700">
+              {missing.join(", ")}
+            </div>
+          );
+        },
       },
     ],
     []
@@ -835,7 +1001,11 @@ function ClientsTab() {
     () =>
       toTableOptions(
         Array.from(
-          new Set(clients.map((client) => client.billing_city?.trim()).filter((city): city is string => Boolean(city)))
+          new Set(
+            clients
+              .map((client) => client.addressDetails.city?.trim())
+              .filter((city): city is string => Boolean(city))
+          )
         )
       ),
     [clients]
@@ -867,6 +1037,14 @@ function ClientsTab() {
 
   return (
     <div className="space-y-4">
+      {warnings.length > 0 ? (
+        <div className="space-y-1 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          {warnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </div>
+      ) : null}
+
       <ServiceM8DataTable
         data={clients}
         columns={columns}
@@ -874,20 +1052,22 @@ function ClientsTab() {
         getSearchText={(client) =>
           [
             client.name,
-            client.address,
-            client.postcode,
-            client.company_name,
-            client.first_name,
-            client.last_name,
+            client.companyName,
+            client.firstName,
+            client.lastName,
+            client.billingContactName,
             client.email,
             client.phone,
             client.mobile,
-            client.billing_address,
-            client.billing_address2,
-            client.billing_city,
-            client.billing_state,
-            client.billing_postcode,
-            client.billing_country,
+            client.website,
+            client.abnNumber,
+            client.address,
+            client.billingAddress,
+            client.postcode,
+            client.billingPostcode,
+            client.addressDetails.city,
+            client.addressDetails.state,
+            client.addressDetails.postcode,
           ]
             .filter(Boolean)
             .join(" ")
@@ -896,7 +1076,7 @@ function ClientsTab() {
           cityOptions.length > 0
             ? [
                 {
-                  columnId: "billing_city",
+                  columnId: "city",
                   label: "City",
                   options: cityOptions,
                 },
@@ -909,7 +1089,7 @@ function ClientsTab() {
         ]}
         getGroupValue={(client, groupBy) => {
           if (groupBy === "city") {
-            return client.billing_city || "Unspecified";
+            return client.addressDetails.city || client.addressDetails.state || "Unspecified";
           }
 
           if (groupBy === "email") {

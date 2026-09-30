@@ -1,9 +1,10 @@
 /**
  * ServiceM8 Connection Management API
  *
- * GET  - Get connection status for current user
- * DELETE - Disconnect ServiceM8 from current user
- * PATCH - Update sync settings
+ * GET    - Connection status, including whether the granted OAuth scopes are
+ *          sufficient for the fields the UI displays.
+ * DELETE - Disconnect ServiceM8 from the current team.
+ * PATCH  - Update sync settings.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,6 +12,7 @@ import { db } from '@/lib/db/drizzle';
 import { servicem8Connections } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { describeServiceM8ScopeGap, getMissingServiceM8Scopes } from '@/lib/servicem8/scopes';
 
 async function getServiceM8Context(): Promise<{ userId: number; teamId: number } | null> {
   const user = await getUser();
@@ -37,6 +39,7 @@ export async function GET() {
         id: servicem8Connections.id,
         isActive: servicem8Connections.isActive,
         servicem8CompanyName: servicem8Connections.servicem8CompanyName,
+        grantedScopes: servicem8Connections.grantedScopes,
         syncEnabled: servicem8Connections.syncEnabled,
         syncDirection: servicem8Connections.syncDirection,
         lastSyncAt: servicem8Connections.lastSyncAt,
@@ -53,9 +56,21 @@ export async function GET() {
       return NextResponse.json({ connected: false });
     }
 
+    const connection = connections[0];
+
+    // A connection authorised before the contact/attachment scopes existed will
+    // return blank names, emails, phone numbers and no images. Surface that as an
+    // actionable state instead of leaving the user staring at empty fields.
+    const missingScopes = getMissingServiceM8Scopes(connection.grantedScopes);
+
     return NextResponse.json({
       connected: true,
-      connection: connections[0],
+      connection: {
+        ...connection,
+        missingScopes,
+        reconnectRequired: missingScopes.length > 0,
+        reconnectReason: describeServiceM8ScopeGap(missingScopes),
+      },
     });
   } catch (error) {
     console.error('Error fetching ServiceM8 connection:', error);
@@ -91,7 +106,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { syncEnabled, syncDirection } = body;
 
-    const updates: Record<string, any> = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (typeof syncEnabled === 'boolean') updates.syncEnabled = syncEnabled;
     if (syncDirection && ['to_servicem8', 'from_servicem8', 'bidirectional'].includes(syncDirection)) {
       updates.syncDirection = syncDirection;

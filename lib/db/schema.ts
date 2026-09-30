@@ -361,6 +361,17 @@ export const customers = pgTable('customers', {
   address: text('address'),
   postcode: varchar('postcode', { length: 20 }),
   contactPerson: varchar('contact_person', { length: 255 }),
+  // Extended profile detail. Populated from ServiceM8 on client import; ServiceM8
+  // clients carry a first/last name, mobile, website, ABN and a separate billing
+  // address that the original three-column customer record could not hold.
+  firstName: varchar('first_name', { length: 255 }),
+  lastName: varchar('last_name', { length: 255 }),
+  mobile: varchar('mobile', { length: 50 }),
+  website: varchar('website', { length: 255 }),
+  abnNumber: varchar('abn_number', { length: 50 }),
+  billingAddress: text('billing_address'),
+  billingPostcode: varchar('billing_postcode', { length: 20 }),
+  billingAttention: varchar('billing_attention', { length: 255 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -513,6 +524,12 @@ export const servicem8Connections = pgTable('servicem8_connections', {
   servicem8CompanyName: varchar('servicem8_company_name', { length: 255 }),
   isActive: boolean('is_active').default(true),
   lastSyncAt: timestamp('last_sync_at'),
+  /**
+   * Space-separated OAuth scopes granted when the connection was authorised.
+   * Used to detect connections that predate a newly required scope so the UI can
+   * prompt the user to reconnect.
+   */
+  grantedScopes: text('granted_scopes'),
   syncEnabled: boolean('sync_enabled').default(true),
   // Which direction to sync: 'to_servicem8', 'from_servicem8', 'bidirectional'
   syncDirection: varchar('sync_direction', { length: 20 }).default('bidirectional'),
@@ -552,6 +569,15 @@ export const servicem8ClientMappings = pgTable('servicem8_client_mappings', {
   servicem8CompanyUuid: varchar('servicem8_company_uuid', { length: 255 }).notNull(),
   lastSyncAt: timestamp('last_sync_at'),
   syncStatus: varchar('sync_status', { length: 20 }).default('synced'),
+  /**
+   * Full normalised ServiceM8 client snapshot: contacts, image attachments,
+   * badges, payment terms and billing detail that the customers table has no
+   * column for.
+   */
+  companyData: json('company_data').$type<import('@/lib/servicem8/types').ServiceM8ClientRecord | null>(),
+  /** ServiceM8 `edit_date`, so we can tell when the remote record changed. */
+  servicem8EditDate: timestamp('servicem8_edit_date'),
+  lastError: text('last_error'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

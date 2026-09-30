@@ -19,6 +19,36 @@ function getRequiredEnv(name: 'SERVICEM8_APP_ID' | 'SERVICEM8_APP_SECRET') {
   return value;
 }
 
+/**
+ * Read-only scopes the integration needs.
+ *
+ * These map one-to-one onto the endpoints we call, and every one is required:
+ *
+ * - `read_customers`          -> /company.json           (client records)
+ * - `read_customer_contacts`  -> /companycontact.json    (names, email, phone)
+ * - `read_jobs`               -> /job.json
+ * - `read_job_categories`     -> /jobcategory.json
+ * - `read_job_materials`      -> /jobmaterial.json
+ * - `read_attachments`        -> /attachment.json        (client and job images)
+ * - `vendor`                  -> /companycontactinfo.json (account details)
+ *
+ * Client contact details and attachments were previously missing because
+ * `read_customer_contacts` and `read_attachments` were never requested: the
+ * calls returned 403 and the code silently fell back to blank values.
+ */
+export const SERVICEM8_READ_SCOPES = [
+  'read_customers',
+  'read_customer_contacts',
+  'read_jobs',
+  'read_job_categories',
+  'read_job_materials',
+  'read_attachments',
+  'vendor',
+] as const;
+
+/** Scopes required to write back to ServiceM8. */
+export const SERVICEM8_WRITE_SCOPES = ['manage_jobs', 'manage_attachments'] as const;
+
 export const SERVICEM8_CONFIG = {
   get appId() {
     return getRequiredEnv('SERVICEM8_APP_ID');
@@ -27,6 +57,10 @@ export const SERVICEM8_CONFIG = {
     return getRequiredEnv('SERVICEM8_APP_SECRET');
   },
 
+  /**
+   * Enables pushing data back to ServiceM8 (certificate PDFs, created jobs).
+   * Requires the write scopes to have been granted on the connection.
+   */
   get writeJobsEnabled() {
     return process.env.SERVICEM8_ENABLE_WRITE_JOBS === 'true';
   },
@@ -48,15 +82,17 @@ export const SERVICEM8_CONFIG = {
     return process.env.SERVICEM8_ACTIVATION_URL || `${getBaseUrl()}/api/servicem8/activate`;
   },
 
-  // OAuth scopes needed for integration.
-  // Keep read-only access as the default because ServiceM8 rejects unsupported scopes
-  // with `invalid_scope`. Enable write scope explicitly only after the addon permissions
-  // are granted in the ServiceM8 developer configuration.
+  /**
+   * OAuth scopes requested during authorisation.
+   *
+   * ServiceM8 rejects unknown scopes with `invalid_scope`, so this list must only
+   * ever contain names from the published scope table.
+   */
   get scopes() {
-    const scopes = ['read_jobs', 'read_customers'];
+    const scopes: string[] = [...SERVICEM8_READ_SCOPES];
 
     if (process.env.SERVICEM8_ENABLE_WRITE_JOBS === 'true') {
-      scopes.push('write_jobs');
+      scopes.push(...SERVICEM8_WRITE_SCOPES);
     }
 
     return scopes;
