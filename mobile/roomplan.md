@@ -356,18 +356,23 @@ The mobile app should move from demo to workflow.
 ### Existing
 - `mobile/app/(tabs)/room-plan.tsx`
 
-### Add next
-1. `mobile/app/room-plan/review.tsx`
+### Delivered
+1. `mobile/app/room-plan/plan.tsx`
+   - 3D plan editor with device placement and coverage
+2. `mobile/app/room-plan/review.tsx`
    - list all detected devices
    - edit type/manufacturer/confidence
-2. `mobile/app/room-plan/session/[id].tsx`
+3. `mobile/app/room-plan/session/[id].tsx`
    - show floorplan/session summary
-3. `mobile/app/room-plan/export.tsx`
+4. `mobile/app/room-plan/export.tsx`
    - export/share JSON session
-4. `mobile/services/roomplan/session-store.ts`
+5. `mobile/services/roomplan/session-store.ts`
    - persist sessions locally
-5. `mobile/services/roomplan/correction-store.ts`
-   - persist user corrections
+
+### Add next
+- `mobile/services/roomplan/correction-store.ts`
+  - persist user corrections separately from the session snapshot
+- server sync for plan edits (today only explicit saves go through `/api/mobile/room-captures`)
 
 ### Review UX requirements
 Each device row should support:
@@ -395,6 +400,41 @@ with:
 - notes
 
 ---
+
+## 6a. 3D plan editor (implemented)
+
+Status: **done** — a captured session now renders as a rotatable 3D plan with device placement and indicative coverage.
+
+### Module layer (`mobile/modules/fire-alarm-roomplan/`)
+
+- `geometry-math.ts` — polygon area, centroid, perimeter, point-in-polygon, bounds
+- `plan-geometry.ts`, `plan-geometry-manual.ts` — normalise captured sessions and manual rectangular rooms into one metre-space geometry model
+- `projection.ts` — isometric-style camera (`projectPoint3D`, `unprojectGroundPoint`, `groundMetreScreenLength`), fit-to-viewport, yaw/pitch/zoom clamps
+- `plan-scene-floor.ts`, `plan-scene-walls.ts`, `plan-scene-devices.ts`, `plan-scene.ts` — depth-sorted scene: floors, culled near-wall dollhouse faces, openings, per-room clipped coverage discs, markers, leader lines, labels
+- `resolveLabelCollisions()` in `plan-scene-devices.ts` — room names are placed first and treated as fixed blockers; device labels stack upwards and flip below their marker when a cluster is too dense, so no two labels ever draw on top of each other
+- `plan-coverage.ts` — indicative smoke/heat detection coverage sampled across each room polygon, with per-room ratios and uncovered areas
+- `plan-autoplace.ts` — greedy detector layout over remaining uncovered floor area
+- `plan-service.ts` — `createPlanSnapshot()`, the single entry point the screens consume
+
+### Screens and components (`mobile/components/room-plan/`, `mobile/app/room-plan/`)
+
+- `plan.tsx` — plan editor: stats, canvas, toolbar, quick-add devices, auto-layout, coverage, manual rooms, device list, inspector, save/review/export
+- `Plan3DCanvas.tsx` — `react-native-svg` canvas; tap a marker to select a device, tap the floor to move the selected one. Canvas height follows the available width (`300–520 px`, `0.62 × width`) because the view is depth-limited, so a taller frame is what makes the plan fill a wide screen
+- `PlanMarkers.tsx`, `PlanLabel.tsx` — device markers and haloed labels
+- `PlanToolbar.tsx` — rotate, tilt, zoom, plan view, reset, label/grid/coverage toggles
+- `CoveragePanel.tsx` — per-class coverage, per-room breakdown, uncovered areas
+- `DeviceInspector.tsx` — type, label, height, notes, move-on-plan, delete
+- `ManualRoomCard.tsx` — add/remove rectangular rooms with no LiDAR capture
+- `usePlanEditor.ts` — session load, debounced local autosave, device and room mutations
+
+### Deliberate limits
+
+- Coverage radii are **indicative** spacing assumptions, not a BS 5839-1 compliance calculation, and every screen says so.
+- There is no ML device recognition yet: devices are placed manually or by the greedy auto-layout.
+
+### Verification
+
+The engine is covered by `tmp-plan-verify.js` (31 assertions over geometry, projection round trips, coverage, auto-layout, wall culling, clip paths and label placement) and `tmp-plan-render.js`, which renders the same scene data the canvas receives into a standalone HTML preview. Both are throwaway harnesses: re-create them if the geometry model changes, and rely on `npx tsc --noEmit` plus the web export for the shipping code.
 
 ## 7. Training data strategy
 

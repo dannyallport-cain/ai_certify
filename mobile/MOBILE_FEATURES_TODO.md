@@ -39,15 +39,28 @@ This list is based on the current Expo mobile app code and workflow docs in `mob
   - Relevant files: `mobile/MOBILE_WIZARD_WORKFLOW.md`, `mobile/app/(tabs)/wizard.tsx`, `mobile/app/(tabs)/capture.tsx`
 
 ## Fire alarm room plan
+
+### 3D plan editor (delivered)
+- [x] Render the captured floorplan as a 3D dollhouse plan with device markers
+  - Modules: `mobile/modules/fire-alarm-roomplan/` (`plan-geometry`, `projection`, `plan-scene-*`, `plan-coverage`, `plan-autoplace`, `plan-service`)
+  - Screens: `mobile/app/room-plan/plan.tsx`, plus `(tabs)/room-plan.tsx`, `review.tsx`, `session/[id].tsx`, `export.tsx`
+  - Canvas: `mobile/components/room-plan/Plan3DCanvas.tsx`, `PlanMarkers.tsx`, `PlanLabel.tsx`
+- [x] Rotate / tilt / zoom / top-view controls, label, grid and coverage toggles (`PlanToolbar.tsx`)
+- [x] Manual device add, select, move-on-plan, edit height/type/label and delete (`DeviceInspector.tsx`, `usePlanEditor.ts`)
+- [x] Manual rectangular rooms when no LiDAR capture exists (`ManualRoomCard.tsx`)
+- [x] Indicative detection coverage per detector class with per-room breakdown (`CoveragePanel.tsx`)
+- [x] Greedy auto-layout of detectors over uncovered floor area
+
+### Remaining
 - [ ] Add real ML inference / device recognition to room-plan workflow
-  - Rationale: The room-plan screen explicitly says ML detection and manufacturer inference are deferred to a later milestone.
-  - Relevant files: `mobile/app/(tabs)/room-plan.tsx`
-- [ ] Add manual add/edit support for device rows in the room-plan review workflow if not already complete
-  - Rationale: The room-plan screen says review should support manual add and edit even when no inferred devices exist.
-  - Relevant files: `mobile/app/(tabs)/room-plan.tsx`, `mobile/app/room-plan/review.tsx`
+  - Rationale: Devices are still placed manually or auto-laid out; no on-device model yet.
+  - Relevant files: `mobile/modules/fire-alarm-roomplan/pipeline.ts`, `mobile/app/room-plan/plan.tsx`
 - [ ] Improve unsupported-device handling and fallback UX for RoomPlan
   - Rationale: RoomPlan is typically unavailable on Android, simulators, or unsupported iOS hardware and needs a stronger fallback path.
   - Relevant files: `mobile/app/(tabs)/room-plan.tsx`, `mobile/roomplan.md`
+- [ ] Persist plan edits through the API as well as local storage
+  - Rationale: `usePlanEditor` autosaves to the local session store; server sync uses the room-captures endpoint only on explicit capture save.
+  - Relevant files: `mobile/components/room-plan/usePlanEditor.ts`, `mobile/services/roomplan/session-store.ts`
 
 ## General product follow-up
 - [ ] Audit all top-level task cards to ensure each one lands in a distinct complete workflow

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { FireAlarmScanSession } from '@/modules/fire-alarm-roomplan';
@@ -153,6 +153,18 @@ export default function RoomPlanSessionScreen() {
             <Text className="text-center text-sm font-semibold text-white">Open review workflow</Text>
           </Pressable>
         </Link>
+
+        <Pressable
+          className="mt-2 rounded-xl bg-emerald-600 px-4 py-3"
+          onPress={() =>
+            router.push({
+              pathname: '/room-plan/plan',
+              params: { sessionId: session.id },
+            })
+          }
+        >
+          <Text className="text-center text-sm font-semibold text-white">Open 3D plan</Text>
+        </Pressable>
       </View>
 
       <View className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">

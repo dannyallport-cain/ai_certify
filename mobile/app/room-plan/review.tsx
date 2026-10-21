@@ -289,6 +289,18 @@ export default function RoomPlanReviewScreen() {
             </Pressable>
           </Link>
         </View>
+
+        <Pressable
+          className="mt-2 rounded-xl bg-blue-600 px-4 py-3"
+          onPress={() =>
+            router.push({
+              pathname: '/room-plan/plan',
+              params: { sessionId: reviewedSession.id },
+            })
+          }
+        >
+          <Text className="text-center text-sm font-semibold text-white">Open 3D plan</Text>
+        </Pressable>
       </View>
 
       {devices.length === 0 ? (

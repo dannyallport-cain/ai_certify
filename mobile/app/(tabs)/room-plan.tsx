@@ -1085,6 +1085,18 @@ export default function RoomPlanScreen() {
 
             <View className="gap-3">
               <Pressable
+                className="rounded-2xl bg-[#15803D] px-4 py-4"
+                onPress={() =>
+                  router.push({
+                    pathname: '/room-plan/plan',
+                    params: { sessionId: currentSession.id },
+                  })
+                }
+              >
+                <Text className="text-sm font-semibold text-white">Open 3D fire alarm plan</Text>
+              </Pressable>
+
+              <Pressable
                 className="rounded-2xl bg-[#0D47A1] px-4 py-4"
                 onPress={() =>
                   router.push({
@@ -1170,6 +1182,12 @@ export default function RoomPlanScreen() {
             <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
             <Text className="ml-2 flex-1 text-sm text-[#334155]">
               Review and export screens are linked directly from the session summary
+            </Text>
+          </View>
+          <View className="flex-row items-start">
+            <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
+            <Text className="ml-2 flex-1 text-sm text-[#334155]">
+              The 3D plan screen places devices in the room and checks indicative coverage
             </Text>
           </View>
           <View className="flex-row items-start">
