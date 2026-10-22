@@ -25,6 +25,7 @@
     "stripe:verify-callback": "pnpm exec tsx scripts/verify-stripe-signup-callback.ts",
     "stripe:sync-pricing": "pnpm exec tsx scripts/sync-stripe-pricing.ts",
     "db:seed-plans": "pnpm exec tsx scripts/seed-subscription-plans.ts",
+    "db:promote-admin": "pnpm exec tsx scripts/promote-admin.ts",
     "update:baseline-browser-mapping": "pnpm add baseline-browser-mapping@latest -D"
   },
   "dependencies": {
