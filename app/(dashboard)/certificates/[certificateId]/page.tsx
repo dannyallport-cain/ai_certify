@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { DownloadPDFButton } from '@/components/DownloadPDFButton';
 import { PdfPreviewFrame } from '@/components/PdfPreviewFrame';
+import { getCertificateTypeLabel } from '@/lib/certificates/labels';
 
 export default async function CertificatePage({ params }: any) {
   const resolvedParams = await params;
@@ -49,9 +50,14 @@ export default async function CertificatePage({ params }: any) {
               'CP12': 'cp12',
               'EICR': 'eicr',
             };
-            const editPath = `/certificates/new/${typeMap[certificate.certificateType] || certificate.certificateType.toLowerCase().replace(/_/g, '-')}?editId=${certificate.id}`;
+            const segment = typeMap[certificate.certificateType];
+
+            if (!segment) {
+              return null;
+            }
+
             return (
-              <Link href={editPath}>
+              <Link href={`/certificates/new/${segment}?editId=${certificate.id}`}>
                 <Button variant="outline">Back to Edit Report</Button>
               </Link>
             );
@@ -72,7 +78,7 @@ export default async function CertificatePage({ params }: any) {
           <CardTitle>Details</CardTitle>
         </CardHeader>
         <CardContent>
-          <p><strong>Type:</strong> {certificate.certificateType}</p>
+          <p><strong>Type:</strong> {getCertificateTypeLabel(certificate.certificateType)}</p>
           <p><strong>Customer:</strong> {customer?.name}</p>
           <p><strong>Site:</strong> {certificate.siteName} ({certificate.siteAddress})</p>
           <p><strong>Inspection Date:</strong> {certificate.inspectionDate ? new Date(certificate.inspectionDate).toLocaleDateString() : ''}</p>

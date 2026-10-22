@@ -16,6 +16,7 @@ import {
   hasLocalAuthorityTemplatePackAccess,
 } from '@/lib/payments/addons';
 import { checkoutAction } from '@/lib/payments/actions';
+import { getPlanByKey } from '@/lib/payments/pricing/plan-catalog';
 import { getAdminStripeSubscriptionPlans } from '@/lib/payments/stripe';
 import { Check, CreditCard, Receipt, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
@@ -184,19 +185,25 @@ export default async function BillingPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-3">
-            {activeSubscriptionPlans.map((plan) => (
-              <PricingCard
-                key={plan.priceId}
-                name={plan.name}
-                price={Math.round(plan.monthlyPrice * 100)}
-                currency={plan.currency}
-                interval={plan.interval || 'month'}
-                trialDays={plan.trialPeriodDays || 0}
-                description={plan.description || undefined}
-                features={plan.features}
-                priceId={plan.priceId}
-              />
-            ))}
+            {activeSubscriptionPlans.map((plan) => {
+              const catalogPlan = plan.catalogKey ? getPlanByKey(plan.catalogKey) : null;
+
+              return (
+                <PricingCard
+                  key={plan.priceId}
+                  name={plan.name}
+                  price={Math.round((catalogPlan?.monthlyPrice ?? plan.monthlyPrice) * 100)}
+                  currency={plan.currency}
+                  interval={plan.interval || 'month'}
+                  trialDays={plan.trialPeriodDays || 0}
+                  description={plan.description || undefined}
+                  features={plan.features}
+                  priceId={plan.priceId}
+                  planKey={catalogPlan?.key ?? null}
+                  productId={plan.productId}
+                />
+              );
+            })}
           </CardContent>
         </Card>
 
@@ -330,6 +337,8 @@ function PricingCard({
   description,
   features,
   priceId,
+  planKey,
+  productId,
 }: {
   name: string;
   price: number;
@@ -339,6 +348,8 @@ function PricingCard({
   description?: string;
   features: string[];
   priceId?: string;
+  planKey?: string | null;
+  productId?: string;
 }) {
   const formattedPrice = new Intl.NumberFormat('en-GB', {
     style: 'currency',
@@ -368,6 +379,8 @@ function PricingCard({
       </ul>
       <form action={checkoutAction} className="mt-6">
         <input type="hidden" name="priceId" value={priceId} />
+        {planKey ? <input type="hidden" name="planKey" value={planKey} /> : null}
+        {productId ? <input type="hidden" name="productId" value={productId} /> : null}
         <SubmitButton />
       </form>
     </div>

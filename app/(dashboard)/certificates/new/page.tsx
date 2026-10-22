@@ -3,10 +3,13 @@ import { and, asc, eq } from 'drizzle-orm';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Building2 } from 'lucide-react';
+
 import { GasSafeRegisterLogo } from '@/components/GasSafeRegisterLogo';
 import { db } from '@/lib/db/drizzle';
 import { getTeamForUser } from '@/lib/db/queries';
 import { certificateTemplates } from '@/lib/db/schema';
+import { getCertificateTypeLabel } from '@/lib/certificates/labels';
 import {
   CERTIFICATE_DISCIPLINE_GROUPS,
   CERTIFICATE_HUB_INTRODUCTION,
@@ -21,19 +24,6 @@ type TemplateRecord = {
   certificateType: string;
   description: string | null;
   isDefault: boolean | null;
-};
-
-const certificateTypeLabels: Record<string, string> = {
-  BS5839_1: 'BS5839-1',
-  BS5839_6: 'BS5839-6',
-  BS5266: 'BS5266',
-  FIRE_EXTINGUISHER: 'Fire Extinguisher',
-  DRY_RISER: 'Dry Riser',
-  CP12: 'CP12 Gas Safety',
-  EICR: 'EICR',
-  EICR_STREAMLINED: 'EICR - Streamlined',
-  EIC: 'Electrical Installation Certificate',
-  MEIWC: 'Minor Electrical Installation Works Certificate',
 };
 
 function getTemplatePath(certificateType: string) {
@@ -86,6 +76,8 @@ function getEntryAccentClass(entry: CertificateTypeCatalogEntry) {
       return 'bg-gray-50 border-gray-200 hover:bg-gray-100';
     case 'dry-riser':
       return 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100';
+    case 'housing':
+      return 'bg-teal-50 border-teal-200 hover:bg-teal-100';
     default:
       return 'bg-slate-50 border-slate-200 hover:bg-slate-100';
   }
@@ -103,6 +95,10 @@ function CertificateTypeCard({ entry }: { entry: CertificateTypeCatalogEntry }) 
               <div className="flex items-center gap-3">
                 {entry.discipline === 'gas' ? (
                   <GasSafeRegisterLogo className="h-12 w-16 rounded-lg border-amber-300 p-1.5 shadow-none" sizes="64px" />
+                ) : entry.discipline === 'housing' ? (
+                  <span className="rounded-xl bg-teal-100 p-2 text-teal-700">
+                    <Building2 className="h-5 w-5" />
+                  </span>
                 ) : (
                   <span className="text-2xl" aria-hidden="true">
                     {entry.discipline === 'electrical'
@@ -119,7 +115,7 @@ function CertificateTypeCard({ entry }: { entry: CertificateTypeCatalogEntry }) 
                 <div>
                   <CardTitle className="text-lg">{entry.label}</CardTitle>
                   <p className="mt-1 text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                    {certificateTypeLabels[entry.certificateType] || entry.certificateType}
+                    {getCertificateTypeLabel(entry.certificateType)}
                   </p>
                 </div>
               </div>
@@ -165,7 +161,7 @@ function CertificateTypeCard({ entry }: { entry: CertificateTypeCatalogEntry }) 
                 <div>
                   <CardTitle className="text-lg">{entry.label}</CardTitle>
                   <p className="mt-1 text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                    {certificateTypeLabels[entry.certificateType] || entry.certificateType}
+                    {getCertificateTypeLabel(entry.certificateType)}
                   </p>
                 </div>
               </div>
@@ -299,7 +295,7 @@ export default async function NewCertificatePage() {
                     ) : null}
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {certificateTypeLabels[template.certificateType] || template.certificateType}
+                    {getCertificateTypeLabel(template.certificateType)}
                   </p>
                   {template.description ? (
                     <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{template.description}</p>

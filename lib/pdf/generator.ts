@@ -4,6 +4,8 @@ import { generateCp12TemplatePdf } from './cp12-template-pdf';
 import { drawApprovalSchemeRibbon, getSelectedApprovalSchemes } from './approval-scheme-logos';
 import { resolvePdfImage } from './image-data';
 import { drawContainedImage } from './pdf-image-draw';
+import { generateHousingReportPDF } from './housing-report-pdf';
+import { isHousingReportType } from '@/lib/housing';
 
 export interface TemplateConfig {
   colors: {
@@ -482,6 +484,11 @@ export async function generateCertificatePDF(certificate: CertificateData): Prom
 
   if (certificate.certificateType === 'CP12') {
     return generateCP12PDF(certificate);
+  }
+
+  // Housing pack reports use their own section/field layout.
+  if (isHousingReportType(certificate.certificateType)) {
+    return generateHousingReportPDF(certificate);
   }
 
   const pdf = new jsPDF();

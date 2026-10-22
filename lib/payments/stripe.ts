@@ -3,6 +3,12 @@ import { redirect } from 'next/navigation';
 import { Team } from '@/lib/db/schema';
 import { getStripeClient } from '@/lib/stripe/client';
 import {
+  formatSeatPrice,
+  getPlanByKey,
+  getPlanForProductName,
+  type PlanKey
+} from '@/lib/payments/pricing/plan-catalog';
+import {
   getTeamByStripeCustomerId,
   getUser,
   updateTeamSubscription
@@ -17,13 +23,21 @@ export type StripeCheckoutMetadata = {
   purchaseType?: string;
   featureId?: string;
   templateName?: string;
+  planKey?: string;
   type?: string;
   [key: string]: string | undefined;
 };
 
 export type CreateSubscriptionCheckoutParams = {
   team: Team | null;
-  priceId: string;
+  priceId?: string;
+  /**
+   * Catalogue plan key. When present (and the Stripe product is known) the
+   * subscription is created at the published catalogue price, so the amount in
+   * checkout always matches the amount on the pricing page.
+   */
+  planKey?: string | null;
+  productId?: string | null;
   successPath?: string;
   cancelPath?: string;
   purchaseType?: string;
@@ -87,9 +101,43 @@ export function getPaymentTypeFromMetadata(
   return undefined;
 }
 
+function buildSubscriptionLineItem({
+  catalogPlanKey,
+  productId,
+  priceId
+}: {
+  catalogPlanKey?: string | null;
+  productId?: string | null;
+  priceId?: string;
+}): Stripe.Checkout.SessionCreateParams.LineItem {
+  const catalogPlan = catalogPlanKey ? getPlanByKey(catalogPlanKey) : null;
+
+  if (catalogPlan && productId) {
+    return {
+      price_data: {
+        currency: catalogPlan.currency,
+        product: productId,
+        unit_amount: Math.round(catalogPlan.monthlyPrice * 100),
+        recurring: { interval: 'month' }
+      },
+      quantity: 1
+    };
+  }
+
+  if (!priceId) {
+    throw new Error(
+      'A Stripe priceId or a catalogue plan key with a productId is required to start checkout.'
+    );
+  }
+
+  return { price: priceId, quantity: 1 };
+}
+
 export async function createSubscriptionCheckoutSession({
   team,
   priceId,
+  planKey,
+  productId,
   successPath = '/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}',
   cancelPath = '/pricing',
   purchaseType,
@@ -101,14 +149,17 @@ export async function createSubscriptionCheckoutSession({
     !!process.env.STRIPE_VERIFICATION_PRICE_ID &&
     priceId === process.env.STRIPE_VERIFICATION_PRICE_ID;
 
+  const checkoutReference = priceId || planKey || '';
+
   if (!team || !user) {
-    redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
+    redirect(`/sign-up?redirect=checkout&priceId=${checkoutReference}`);
   }
 
   const metadata = buildStripeMetadata({
     paymentType: 'subscription',
     purchaseType,
     featureId,
+    planKey: planKey ?? undefined,
     teamId: team.id.toString(),
     userId: user.id.toString()
   });
@@ -119,10 +170,11 @@ export async function createSubscriptionCheckoutSession({
   const session = await stripeClient.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
-      {
-        price: priceId,
-        quantity: 1
-      }
+      buildSubscriptionLineItem({
+        catalogPlanKey: planKey,
+        productId,
+        priceId
+      })
     ],
     mode: 'subscription',
     success_url: `${baseUrl}${successPath}`,
@@ -335,6 +387,8 @@ export type AdminStripeSubscriptionPlan = {
   productId: string;
   priceId: string;
   name: string;
+  /** Catalogue plan this Stripe product is mapped to, when one matches. */
+  catalogKey: PlanKey | null;
   description: string | null;
   active: boolean;
   currency: string;
@@ -355,112 +409,10 @@ export type AdminStripeSubscriptionPlan = {
   features: string[];
 };
 
-const approvedPlanDefaults = {
-  starter: {
-    displayName: 'Starter',
-    description:
-      'For solo engineers who need compliant certificates, branded PDFs, and a low-friction upgrade path.',
-    monthlyPrice: 5,
-    annualPrice: 50,
-    currency: 'gbp',
-    badge: 'Entry Plan',
-    targetUser: 'Occasional or newly self-employed engineers',
-    certificates: 'Up to 30 certificates / month',
-    teamSeats: '1 user included',
-    additionalSeatPrice: null,
-    savingsNote: 'Set at ~50% of the common £10 solo benchmark.',
-    competitorAnchor: 'Comparable specialist tools often land around £10/month.',
-    features: [
-      'Electrical and fire certificate workflows',
-      'Branded PDF exports',
-      'Customer and installation records',
-      'Admin analytics visibility',
-      'Email support'
-    ]
-  },
-  professional: {
-    displayName: 'Small Business',
-    description:
-      'Built for growing electrical businesses that need unlimited certificates, faster admin, and room for a small office team.',
-    monthlyPrice: 9,
-    annualPrice: 90,
-    currency: 'gbp',
-    badge: 'Most Popular',
-    targetUser: 'Growing contractors and small electrical businesses',
-    certificates: 'Unlimited certificates',
-    teamSeats: '3 users included',
-    additionalSeatPrice: '£2.50/month each',
-    savingsNote:
-      'Designed as the best-value plan for day-to-day operational use.',
-    competitorAnchor: 'A practical fit for small firms moving beyond solo usage.',
-    features: [
-      'Unlimited certificate generation',
-      'AI-assisted data extraction and autofill',
-      'Shared customer and installation records',
-      'Priority PDF generation',
-      'Team-ready admin visibility',
-      'Priority support'
-    ]
-  },
-  team: {
-    displayName: 'Enterprise',
-    description:
-      'For larger firms that need broader team access, stronger oversight, and a scalable certificate workflow across the business.',
-    monthlyPrice: 19,
-    annualPrice: 190,
-    currency: 'gbp',
-    badge: 'For Larger Teams',
-    targetUser: 'Larger contractors, offices, and compliance-led teams',
-    certificates: 'Unlimited certificates',
-    teamSeats: '10 users included',
-    additionalSeatPrice: '£2/month each',
-    savingsNote:
-      'Higher seat allowance and admin controls for larger operational teams.',
-    competitorAnchor:
-      'Structured for businesses needing wider rollout across engineers and admins.',
-    features: [
-      'Everything in Small Business',
-      '10 included users',
-      'Enhanced admin and oversight visibility',
-      'Streamlined onboarding for office and field teams',
-      'Priority operational support',
-      'Designed for multi-user rollout'
-    ]
-  }
-} as const;
-
-function getApprovedPlanKey(planName: string) {
-  const normalized = planName.toLowerCase();
-
-  if (
-    normalized.includes('starter') ||
-    normalized.includes('basic') ||
-    normalized.includes('base')
-  ) {
-    return 'starter';
-  }
-
-  if (
-    normalized.includes('professional') ||
-    normalized.includes('small business') ||
-    normalized.includes('pro') ||
-    normalized.includes('plus')
-  ) {
-    return 'professional';
-  }
-
-  if (normalized.includes('team') || normalized.includes('enterprise')) {
-    return 'team';
-  }
-
-  return null;
-}
-
-function getApprovedPlanDefaults(planName: string) {
-  const key = getApprovedPlanKey(planName);
-
-  return key ? approvedPlanDefaults[key] : null;
-}
+const GENERIC_DESCRIPTIONS = new Set([
+  'Base subscription plan',
+  'Plus subscription plan'
+]);
 
 export async function getAdminStripeSubscriptionPlans(): Promise<
   AdminStripeSubscriptionPlan[]
@@ -488,8 +440,14 @@ export async function getAdminStripeSubscriptionPlans(): Promise<
         Object.entries(product.metadata ?? {}).map(([key, value]) => [key, value ?? ''])
       );
 
-      const defaults = getApprovedPlanDefaults(product.name);
-      const annualPrice = metadata.annualPrice ? Number.parseFloat(metadata.annualPrice) : null;
+      const catalogPlan =
+        getPlanForProductName(product.name) ??
+        getPlanForProductName(metadata.planId) ??
+        getPlanForProductName(metadata.displayName);
+
+      const annualPriceFromMetadata = metadata.annualPrice
+        ? Number.parseFloat(metadata.annualPrice)
+        : null;
       const isVerificationPlan =
         product.id === process.env.STRIPE_VERIFICATION_PRODUCT_ID ||
         price.id === process.env.STRIPE_VERIFICATION_PRICE_ID ||
@@ -505,23 +463,25 @@ export async function getAdminStripeSubscriptionPlans(): Promise<
         .filter(Boolean);
 
       const isGenericDescription =
-        !product.description ||
-        product.description === 'Base subscription plan' ||
-        product.description === 'Plus subscription plan';
+        !product.description || GENERIC_DESCRIPTIONS.has(product.description);
 
       return {
         id: metadata.planId || product.id,
         productId: product.id,
         priceId: price.id,
-        name: defaults?.displayName || product.name,
+        name: catalogPlan?.name || product.name,
+        catalogKey: catalogPlan?.key ?? null,
         description: isGenericDescription
-          ? defaults?.description || product.description
+          ? catalogPlan?.description ?? product.description
           : product.description,
         active: product.active && price.active,
-        currency: defaults?.currency || price.currency,
-        monthlyPrice: defaults?.monthlyPrice ?? (price.unit_amount ?? 0) / 100,
+        currency: catalogPlan?.currency || price.currency,
+        // The live Stripe amount is what will actually be charged, so it wins.
+        monthlyPrice: (price.unit_amount ?? 0) / 100,
         annualPrice:
-          Number.isFinite(annualPrice) ? annualPrice : defaults?.annualPrice ?? null,
+          Number.isFinite(annualPriceFromMetadata) && annualPriceFromMetadata !== null
+            ? annualPriceFromMetadata
+            : catalogPlan?.annualPrice ?? null,
         interval: price.recurring?.interval ?? null,
         trialPeriodDays:
           price.recurring?.trial_period_days ??
@@ -529,16 +489,21 @@ export async function getAdminStripeSubscriptionPlans(): Promise<
         metadata,
         allowances: {
           certificates:
-            metadata.certificates || defaults?.certificates || 'Unlimited certificates',
-          teamSeats: metadata.teamSeats || defaults?.teamSeats || '1 user included',
+            metadata.certificates || catalogPlan?.certificates || 'Unlimited certificates',
+          teamSeats:
+            metadata.teamSeats ||
+            (catalogPlan ? `${catalogPlan.seatsIncluded} users included` : '1 user included'),
           additionalSeatPrice:
-            metadata.additionalSeatPrice || defaults?.additionalSeatPrice || null,
-          targetUser: metadata.targetUser || defaults?.targetUser || 'Electrical contractors',
-          badge: metadata.badge || defaults?.badge || null,
-          savingsNote: metadata.savingsNote || defaults?.savingsNote || null,
-          competitorAnchor: metadata.competitorAnchor || defaults?.competitorAnchor || null,
+            metadata.additionalSeatPrice ||
+            (catalogPlan ? formatSeatPrice(catalogPlan) : null),
+          targetUser:
+            metadata.targetUser || catalogPlan?.targetUser || 'Electrical contractors',
+          badge: metadata.badge || catalogPlan?.badge || null,
+          savingsNote: metadata.savingsNote || catalogPlan?.savingsNote || null,
+          competitorAnchor:
+            metadata.competitorAnchor || catalogPlan?.competitorAnchor || null
         },
-        features: features.length > 0 ? features : [...(defaults?.features || [])]
+        features: features.length > 0 ? features : [...(catalogPlan?.features ?? [])]
       };
     })
     .filter((plan): plan is AdminStripeSubscriptionPlan => plan !== null);

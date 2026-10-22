@@ -1,129 +1,97 @@
-// Plan metadata used by the legacy admin Stripe screen. The Stripe client is
-// no longer created here: credentials are resolved at runtime via
-// `@/lib/stripe/client` so they can be changed from the admin UI.
+import { formatSeatPrice, PLAN_CATALOG } from '@/lib/payments/pricing/plan-catalog';
+
+/**
+ * Static reference data for the legacy admin Stripe screen. Live values come
+ * from `@/lib/payments/stripe`; everything here is derived from the published
+ * pricing catalogue so the admin view can never disagree with the pricing page.
+ */
+const [soloPlan, businessPlan, enterprisePlan] = PLAN_CATALOG;
+
+function toProduct(plan: typeof soloPlan, idPrefix: string) {
+  return {
+    id: `prod_${idPrefix}`,
+    name: `${plan.name} Plan`,
+    description: plan.description,
+    features: plan.features,
+    prices: {
+      monthly: {
+        id: `price_${idPrefix}_monthly`,
+        amount: Math.round(plan.monthlyPrice * 100),
+        interval: 'month' as const,
+      },
+      yearly: {
+        id: `price_${idPrefix}_yearly`,
+        amount: Math.round(plan.annualPrice * 100),
+        interval: 'year' as const,
+      },
+    },
+  };
+}
+
 export const STRIPE_PRODUCTS = {
-  STARTER: {
-    id: 'prod_starter',
-    name: 'Starter Plan',
-    description: 'Perfect for small teams getting started',
-    features: [
-      'Up to 100 certificates/month',
-      'Basic templates',
-      'Email support',
-      'PDF export',
-      'Basic analytics'
-    ],
-    prices: {
-      monthly: {
-        id: 'price_starter_monthly',
-        amount: 2900, // $29.00
-        interval: 'month'
-      },
-      yearly: {
-        id: 'price_starter_yearly',
-        amount: 29000, // $290.00
-        interval: 'year'
-      }
-    }
-  },
-  PROFESSIONAL: {
-    id: 'prod_professional',
-    name: 'Professional Plan',
-    description: 'Ideal for growing organizations',
-    features: [
-      'Up to 1000 certificates/month',
-      'Custom templates',
-      'Priority support',
-      'Advanced analytics',
-      'API access',
-      'Team collaboration'
-    ],
-    prices: {
-      monthly: {
-        id: 'price_professional_monthly',
-        amount: 9900, // $99.00
-        interval: 'month'
-      },
-      yearly: {
-        id: 'price_professional_yearly',
-        amount: 99000, // $990.00
-        interval: 'year'
-      }
-    }
-  },
-  ENTERPRISE: {
-    id: 'prod_enterprise',
-    name: 'Enterprise Plan',
-    description: 'For large organizations with advanced needs',
-    features: [
-      'Unlimited certificates',
-      'Custom branding',
-      '24/7 support',
-      'Advanced security',
-      'Custom integrations',
-      'Dedicated account manager'
-    ],
-    prices: {
-      monthly: {
-        id: 'price_enterprise_monthly',
-        amount: 29900, // $299.00
-        interval: 'month'
-      },
-      yearly: {
-        id: 'price_enterprise_yearly',
-        amount: 299000, // $2,990.00
-        interval: 'year'
-      }
-    }
-  }
+  STARTER: toProduct(soloPlan, 'solo'),
+  PROFESSIONAL: toProduct(businessPlan, 'business'),
+  ENTERPRISE: toProduct(enterprisePlan, 'enterprise'),
 };
 
 export const STRIPE_FEATURES = {
   CERTIFICATE_LIMIT: {
-    STARTER: 100,
-    PROFESSIONAL: 1000,
-    ENTERPRISE: -1 // Unlimited
+    STARTER: 40,
+    PROFESSIONAL: -1, // Unlimited
+    ENTERPRISE: -1,
+  },
+  TEAM_SEATS: {
+    STARTER: soloPlan.seatsIncluded,
+    PROFESSIONAL: businessPlan.seatsIncluded,
+    ENTERPRISE: enterprisePlan.seatsIncluded,
   },
   TEMPLATES: {
     STARTER: 'basic',
     PROFESSIONAL: 'custom',
-    ENTERPRISE: 'custom'
+    ENTERPRISE: 'custom',
   },
   SUPPORT: {
     STARTER: 'email',
     PROFESSIONAL: 'priority',
-    ENTERPRISE: '24/7'
+    ENTERPRISE: '24/7',
   },
   ANALYTICS: {
     STARTER: 'basic',
     PROFESSIONAL: 'advanced',
-    ENTERPRISE: 'advanced'
+    ENTERPRISE: 'advanced',
   },
   API_ACCESS: {
     STARTER: false,
-    PROFESSIONAL: true,
-    ENTERPRISE: true
+    PROFESSIONAL: false,
+    ENTERPRISE: true,
   },
   TEAM_COLLABORATION: {
     STARTER: false,
     PROFESSIONAL: true,
-    ENTERPRISE: true
+    ENTERPRISE: true,
   },
   CUSTOM_BRANDING: {
-    STARTER: false,
-    PROFESSIONAL: false,
-    ENTERPRISE: true
+    STARTER: true,
+    PROFESSIONAL: true,
+    ENTERPRISE: true,
   },
-  CUSTOM_INTEGRATIONS: {
-    STARTER: false,
-    PROFESSIONAL: false,
-    ENTERPRISE: true
+  FLOOR_PLAN_MODULE: {
+    STARTER: true,
+    PROFESSIONAL: true,
+    ENTERPRISE: true,
   },
   DEDICATED_ACCOUNT_MANAGER: {
     STARTER: false,
     PROFESSIONAL: false,
-    ENTERPRISE: true
-  }
+    ENTERPRISE: true,
+  },
+};
+
+/** Extra-seat pricing shown next to each plan, e.g. "£16.49/month each". */
+export const STRIPE_PLAN_SEAT_PRICING = {
+  STARTER: formatSeatPrice(soloPlan),
+  PROFESSIONAL: formatSeatPrice(businessPlan),
+  ENTERPRISE: formatSeatPrice(enterprisePlan),
 };
 
 export type StripeProductId = keyof typeof STRIPE_PRODUCTS;

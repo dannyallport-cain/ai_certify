@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import IssueCertificateModal from "@/components/IssueCertificateModal";
+import { getCertificateTypeLabel } from "@/lib/certificates/labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -142,9 +143,13 @@ export default function CertificateList({ certificates }: CertificateListProps) 
     },
     {
       id: "certificateType",
-      accessorFn: (row) => row.certificate.certificateType || "",
+      accessorFn: (row) => getCertificateTypeLabel(row.certificate.certificateType),
       header: "Type",
-      cell: ({ row }) => row.original.certificate.certificateType || "—",
+      cell: ({ row }) => (
+        <span className="text-slate-700">
+          {getCertificateTypeLabel(row.original.certificate.certificateType)}
+        </span>
+      ),
     },
     {
       id: "customer",
@@ -249,8 +254,8 @@ export default function CertificateList({ certificates }: CertificateListProps) 
     const values = Array.from(
       new Set(
         certificates
-          .map((row) => formatText(row.certificate.certificateType))
-          .filter((value): value is string => Boolean(value))
+          .map((row) => getCertificateTypeLabel(row.certificate.certificateType))
+          .filter((value): value is string => Boolean(value) && value !== "Unspecified")
       )
     );
 
@@ -321,7 +326,7 @@ export default function CertificateList({ certificates }: CertificateListProps) 
         ]}
         getGroupValue={(row, groupBy) => {
           if (groupBy === "certificateType") {
-            return row.certificate.certificateType || "Unspecified";
+            return getCertificateTypeLabel(row.certificate.certificateType);
           }
 
           if (groupBy === "status") {

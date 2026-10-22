@@ -19,6 +19,8 @@ export async function checkoutAction(formData: FormData) {
 
   const team = await getTeamForUser();
   const priceId = formData.get('priceId') as string;
+  const planKey = (formData.get('planKey') as string | null) || null;
+  const productId = (formData.get('productId') as string | null) || null;
   const purchaseType =
     (formData.get('purchaseType') as string | null) || 'subscription_plan';
   const featureId = (formData.get('featureId') as string | null) || undefined;
@@ -26,6 +28,8 @@ export async function checkoutAction(formData: FormData) {
   await createSubscriptionCheckoutSession({
     team,
     priceId,
+    planKey,
+    productId,
     purchaseType,
     featureId
   });

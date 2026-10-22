@@ -18,7 +18,7 @@ export type BrevoTransactionalEmailInput = {
   sender: BrevoSender;
   to: BrevoRecipient[];
   subject: string;
-  htmlContent: string;
+  htmlContent?: string;
   textContent?: string;
   attachment?: BrevoAttachment[];
 };
@@ -83,9 +83,9 @@ export async function sendBrevoTransactionalEmail(
       sender: input.sender,
       to: input.to,
       subject: input.subject,
-      htmlContent: input.htmlContent,
-      textContent: input.textContent,
-      attachment: input.attachment,
+      ...(input.htmlContent ? { htmlContent: input.htmlContent } : {}),
+      ...(input.textContent ? { textContent: input.textContent } : {}),
+      ...(input.attachment ? { attachment: input.attachment } : {}),
     }),
   });
 

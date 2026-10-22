@@ -1,10 +1,13 @@
+import { HOUSING_REPORT_TEMPLATES, getHousingReportRoute } from '@/lib/housing';
+
 export type CertificateDiscipline =
   | 'gas'
   | 'electrical'
   | 'fire-alarm'
   | 'emergency-lighting'
   | 'fire-extinguisher'
-  | 'dry-riser';
+  | 'dry-riser'
+  | 'housing';
 
 export type CertificateImplementationStatus = 'implemented' | 'planned';
 
@@ -28,6 +31,26 @@ export interface CertificateDisciplineGroup {
   discipline: CertificateDiscipline;
   entries: CertificateTypeCatalogEntry[];
 }
+
+/**
+ * The housing pack is described once in `lib/housing`, so the hub entries are
+ * derived from those templates rather than duplicated here.
+ */
+const HOUSING_CATALOG_ENTRIES: CertificateTypeCatalogEntry[] = HOUSING_REPORT_TEMPLATES.map(
+  (template) => ({
+    key: `housing-${template.key}`,
+    certificateType: template.certificateType,
+    discipline: 'housing',
+    label: template.title,
+    route: getHousingReportRoute(template.key),
+    description: template.summary,
+    standards: template.standards,
+    typicalUse: template.typicalUse,
+    explanatoryNotes: template.explanatoryNotes,
+    designNotes: [],
+    implementationStatus: 'implemented',
+  }),
+);
 
 export const CERTIFICATE_TYPE_CATALOG: CertificateTypeCatalogEntry[] = [
   {
@@ -467,6 +490,7 @@ export const CERTIFICATE_TYPE_CATALOG: CertificateTypeCatalogEntry[] = [
     ],
     implementationStatus: 'planned',
   },
+  ...HOUSING_CATALOG_ENTRIES,
 ];
 
 export const CERTIFICATE_DISCIPLINE_GROUPS: CertificateDisciplineGroup[] = [
@@ -505,6 +529,13 @@ export const CERTIFICATE_DISCIPLINE_GROUPS: CertificateDisciplineGroup[] = [
     description: 'Dry riser testing and commissioning records.',
     discipline: 'dry-riser',
     entries: CERTIFICATE_TYPE_CATALOG.filter((entry) => entry.discipline === 'dry-riser'),
+  },
+  {
+    title: 'Housing reports',
+    description:
+      'Void, stock condition, damp and mould, communal area, plant, water hygiene and permit-to-work reports for housing teams.',
+    discipline: 'housing',
+    entries: CERTIFICATE_TYPE_CATALOG.filter((entry) => entry.discipline === 'housing'),
   },
 ];
 

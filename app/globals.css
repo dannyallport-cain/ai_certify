@@ -73,6 +73,17 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
 }
 
 @layer utilities {
@@ -148,6 +159,31 @@
 
   .animate-grid-snap {
     animation: grid-snap 6s ease-in-out infinite;
+  }
+
+  /* Marketing shell: pages glide in on navigation instead of snapping. */
+  .page-enter {
+    animation: page-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .animate-float,
+  .animate-pulse-slow {
+    animation: none !important;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

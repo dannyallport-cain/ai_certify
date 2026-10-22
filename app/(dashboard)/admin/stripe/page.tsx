@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { requireAdmin } from '@/lib/auth/admin';
 import { STRIPE_PRODUCTS, STRIPE_FEATURES } from '@/lib/stripe/config';
-import { Edit, Plus, Save, Trash2, DollarSign, Users, Settings, CheckCircle2 } from 'lucide-react';
+import { Edit, Plus, Trash2, Settings, CheckCircle2 } from 'lucide-react';
 
 async function StripeAdminContent() {
   await requireAdmin();
@@ -55,9 +55,9 @@ async function StripeAdminContent() {
                       <p className="text-gray-600">{product.description}</p>
                     </div>
                     <div>
-                      <Label>Monthly Price</Label>
+                      <Label>Monthly price (GBP)</Label>
                       <div className="flex items-center space-x-2">
-                        <DollarSign className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-500">£</span>
                         <Input
                           type="number"
                           value={product.prices.monthly.amount / 100}
@@ -67,9 +67,9 @@ async function StripeAdminContent() {
                       </div>
                     </div>
                     <div>
-                      <Label>Yearly Price</Label>
+                      <Label>Annual price (GBP)</Label>
                       <div className="flex items-center space-x-2">
-                        <DollarSign className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-500">£</span>
                         <Input
                           type="number"
                           value={product.prices.yearly.amount / 100}
@@ -204,8 +204,8 @@ async function StripeAdminContent() {
                       aria-label="Filter by subscription plan"
                     >
                       <option value="all">All Plans</option>
-                      <option value="starter">Starter</option>
-                      <option value="professional">Professional</option>
+                      <option value="solo">Solo</option>
+                      <option value="business">Business</option>
                       <option value="enterprise">Enterprise</option>
                     </select>
                   </div>
@@ -256,7 +256,7 @@ async function StripeAdminContent() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Professional
+                            Business
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
