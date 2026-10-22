@@ -20,6 +20,8 @@ CONFIGURATION="Release"
 
 # Default device UDID (can be overridden with environment variable)
 DEFAULT_DEVICE_UDID="00008101-0019452434A1001E"
+# Remember whether the caller supplied a UDID, so detection failures can fall back to it.
+USER_SUPPLIED_UDID="${IOS_DEVICE_UDID:-}"
 IOS_DEVICE_UDID="${IOS_DEVICE_UDID:-$DEFAULT_DEVICE_UDID}"
 DETECTED_DEVICE_NAME=""
 DETECTED_DEVICE_OS_VERSION=""
@@ -98,11 +100,23 @@ check_dependencies() {
 check_device() {
     log_info "Checking for connected iOS devices..."
 
-    # Get list of connected devices and sanitize any non-printable characters
+    # Get list of connected devices and sanitize any non-printable characters.
+    # `xctrace` does not always list a paired device, so `devicectl` is used as a second source.
     DEVICES=$(xcrun xctrace list devices 2>/dev/null | grep -E "iPhone|iPad" | grep -v "Simulator" | head -1)
     DEVICES=$(printf '%s' "$DEVICES" | tr -cd '[:print:]\n')
 
     if [ -z "$DEVICES" ]; then
+        DEVICES=$(xcrun devicectl list devices 2>/dev/null | grep -E "iPhone|iPad" | grep -i "connected" | head -1)
+        DEVICES=$(printf '%s' "$DEVICES" | tr -cd '[:print:]\n')
+    fi
+
+    if [ -z "$DEVICES" ]; then
+        if [ -n "$USER_SUPPLIED_UDID" ]; then
+            log_warning "No connected iOS device was detected, so the supplied UDID will be used: $USER_SUPPLIED_UDID"
+            log_info "If the build fails, check that the device is connected, unlocked and trusted."
+            return
+        fi
+
         log_error "No iOS devices found. Please connect your iPhone and ensure it's unlocked."
         log_info "You can also set IOS_DEVICE_UDID environment variable to specify a device UDID."
         exit 1

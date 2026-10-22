@@ -291,7 +291,7 @@ export default function RoomPlanReviewScreen() {
         </View>
 
         <Pressable
-          className="mt-2 rounded-xl bg-blue-600 px-4 py-3"
+          className="mt-3 flex-row items-center justify-center rounded-xl bg-teal-700 px-4 py-3"
           onPress={() =>
             router.push({
               pathname: '/room-plan/plan',
@@ -299,7 +299,8 @@ export default function RoomPlanReviewScreen() {
             })
           }
         >
-          <Text className="text-center text-sm font-semibold text-white">Open 3D plan</Text>
+          <Ionicons name="cube-outline" size={18} color="#FFFFFF" />
+          <Text className="ml-2 text-center text-sm font-semibold text-white">View 3D plan</Text>
         </Pressable>
       </View>
 

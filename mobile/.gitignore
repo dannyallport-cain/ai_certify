@@ -8,3 +8,5 @@ ios/
 !modules/fire-alarm-roomplan/ios/**
 expo-env.d.ts
 # @end expo-cli
+.vercel
+.env*

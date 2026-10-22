@@ -15,6 +15,7 @@
     "plugins": [
       "expo-router",
       "./plugins/withFireAlarmRoomPlan",
+      "./plugins/withSceneLifecycle",
       [
         "expo-camera",
         {
@@ -44,7 +45,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aicertify.field",
-      "buildNumber": "1",
+      "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "AI Certify uses your location to automatically fill in the installation address.",

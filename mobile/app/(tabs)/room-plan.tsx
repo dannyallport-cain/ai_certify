@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -179,7 +179,7 @@ function SectionCard({
 }: {
   title: string;
   subtitle?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <View className="mb-4 rounded-[28px] border border-[#E0E6ED] bg-[#FFFFFF] p-5">
@@ -368,10 +368,7 @@ export default function RoomPlanScreen() {
   );
 
   const applyDetectionEvent = useCallback((event: FireAlarmRoomPlanDetectionEvent) => {
-    setCapturedDevices((currentDevices) => {
-      const nextDevices = mergeDeviceLists(currentDevices, [event.detection]);
-      return mergeDeviceLists(nextDevices, []);
-    });
+    setCapturedDevices((currentDevices) => mergeDeviceLists(currentDevices, [event.detection]));
 
     setSelectedDeviceId((currentSelectedDeviceId) => currentSelectedDeviceId ?? event.detection.id);
   }, []);
@@ -591,6 +588,23 @@ export default function RoomPlanScreen() {
           backend, while the full session can still be reviewed and exported locally.
         </Text>
       </View>
+
+      {__DEV__ ? (
+        <Pressable
+          accessibilityRole="button"
+          className="mb-4 flex-row items-center rounded-[24px] border border-[#CBD5E1] bg-white px-4 py-4"
+          onPress={() => router.push('/room-plan/plan')}
+        >
+          <Ionicons name="cube-outline" size={18} color="#0D47A1" />
+          <View className="ml-3 flex-1">
+            <Text className="text-sm font-semibold text-[#1A202C]">3D plan preview</Text>
+            <Text className="mt-0.5 text-xs leading-5 text-[#718096]">
+              Development shortcut — opens the plan screen without a RoomPlan capture
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+        </Pressable>
+      ) : null}
 
       <SectionCard
         title="Capture status"
@@ -1085,7 +1099,7 @@ export default function RoomPlanScreen() {
 
             <View className="gap-3">
               <Pressable
-                className="rounded-2xl bg-[#15803D] px-4 py-4"
+                className="rounded-2xl bg-[#0F766E] px-4 py-4"
                 onPress={() =>
                   router.push({
                     pathname: '/room-plan/plan',
@@ -1093,7 +1107,12 @@ export default function RoomPlanScreen() {
                   })
                 }
               >
-                <Text className="text-sm font-semibold text-white">Open 3D fire alarm plan</Text>
+                <View className="flex-row items-center justify-center">
+                  <Ionicons name="cube-outline" size={18} color="#FFFFFF" />
+                  <Text className="ml-2 text-sm font-semibold text-white">
+                    Generate 3D plan
+                  </Text>
+                </View>
               </Pressable>
 
               <Pressable
@@ -1182,12 +1201,6 @@ export default function RoomPlanScreen() {
             <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
             <Text className="ml-2 flex-1 text-sm text-[#334155]">
               Review and export screens are linked directly from the session summary
-            </Text>
-          </View>
-          <View className="flex-row items-start">
-            <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-            <Text className="ml-2 flex-1 text-sm text-[#334155]">
-              The 3D plan screen places devices in the room and checks indicative coverage
             </Text>
           </View>
           <View className="flex-row items-start">
