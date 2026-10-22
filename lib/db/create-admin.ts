@@ -39,7 +39,7 @@ export async function createAdminUser() {
         .insert(teams)
         .values({
           name: adminTeamName,
-          planName: 'Admin',
+          planName: null,
           subscriptionStatus: 'active',
         })
         .returning();
@@ -66,16 +66,3 @@ export async function createAdminUser() {
     throw error;
   }
 }
-
-// Run if called directly
-if (require.main === module) {
-  createAdminUser()
-    .then(() => {
-      console.log('Admin setup completed');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('Admin setup failed:', error);
-      process.exit(1);
-    });
-} 

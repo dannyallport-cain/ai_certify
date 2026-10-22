@@ -19,14 +19,14 @@ SCHEME_NAME="AICertifyField"
 CONFIGURATION="Release"
 
 # Default device UDID (can be overridden with environment variable)
-DEFAULT_DEVICE_UDID="00008101-0019452434A1001E"
+DEFAULT_DEVICE_UDID="00008110-001E54900EEB801E"
 # Remember whether the caller supplied a UDID, so detection failures can fall back to it.
 USER_SUPPLIED_UDID="${IOS_DEVICE_UDID:-}"
 IOS_DEVICE_UDID="${IOS_DEVICE_UDID:-$DEFAULT_DEVICE_UDID}"
 DETECTED_DEVICE_NAME=""
 DETECTED_DEVICE_OS_VERSION=""
 # Xcode signing team (can be overridden with environment variable)
-DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-}"
+DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-4UMCJ237RQ}"
 # Whether to regenerate the native iOS project with Expo prebuild
 CLEAN_PREBUILD="${CLEAN_PREBUILD:-false}"
 
@@ -70,31 +70,38 @@ log_error() {
 check_dependencies() {
     log_info "Checking dependencies..."
 
-    # Check if Xcode is installed
+    # Xcode is required for every build.
     if ! command -v xcodebuild &> /dev/null; then
         log_error "Xcode is not installed or not in PATH"
         exit 1
     fi
 
-    # Check if Node.js is installed
+    # Node.js is required for the React Native bundle phase.
     if ! command -v node &> /dev/null; then
         log_error "Node.js is not installed or not in PATH"
         exit 1
     fi
 
-    # Check if Expo CLI is installed
+    # Expo is only needed when regenerating the native project, and `npx expo`
+    # is used, so a global install is optional.
     if ! command -v expo &> /dev/null; then
-        log_error "Expo CLI is not installed. Run: npm install -g @expo/cli"
-        exit 1
+        log_info "No global Expo CLI found. 'npx expo' will be used if a prebuild is required."
     fi
 
-    # Check if CocoaPods is installed
+    # CocoaPods is only needed when the Pods directory is out of date. If it is
+    # missing but Pods are already in sync, the build can proceed.
     if ! command -v pod &> /dev/null; then
-        log_error "CocoaPods is not installed. Run: sudo gem install cocoapods"
-        exit 1
+        log_warning "CocoaPods is not installed. Pod installation will be skipped if Pods are already in sync."
     fi
 
-    log_success "All dependencies are installed"
+    log_success "Dependency check complete"
+}
+
+pods_are_in_sync() {
+    local podfile_lock="$IOS_DIR/Podfile.lock"
+    local manifest_lock="$IOS_DIR/Pods/Manifest.lock"
+
+    [ -f "$podfile_lock" ] && [ -f "$manifest_lock" ] && cmp -s "$podfile_lock" "$manifest_lock"
 }
 
 check_device() {
@@ -181,20 +188,31 @@ prebuild_app() {
 
     cd "$PROJECT_ROOT"
 
-    # Prebuild with Expo
+    # Prebuild with Expo (npx avoids requiring a global install)
     npx expo prebuild --platform ios --clean
 
     log_success "Expo prebuild completed"
 }
 
 install_dependencies() {
-  log_info "Installing CocoaPods dependencies..."
+  log_info "Checking CocoaPods dependencies..."
 
   cd "$IOS_DIR"
 
   sync_xcode_node_env
 
-  # Install pods
+  if pods_are_in_sync; then
+    log_success "Pods are already in sync with Podfile.lock - skipping pod install"
+    return
+  fi
+
+  if ! command -v pod &> /dev/null; then
+    log_error "Pods are out of date and CocoaPods is not installed."
+    log_info "Install it with: sudo gem install cocoapods, then rerun this script."
+    exit 1
+  fi
+
+  log_info "Pods are out of date or missing - running pod install..."
   pod install
 
   log_success "CocoaPods dependencies installed"
@@ -275,9 +293,9 @@ show_usage() {
     echo "  $0                         # Build and install using the existing native iOS project"
     echo "  $0 -p                      # Clean prebuild, then build and install"
     echo "  $0 --clean-prebuild        # Same as -p"
-    echo "  $0 -d 00008101-0019452434A1001E  # Build for specific device"
+    echo "  $0 -d $DEFAULT_DEVICE_UDID  # Build for specific device"
     echo "  $0 -t ABCDE12345           # Use specific Xcode development team"
-    echo "  IOS_DEVICE_UDID=00008101-0019452434A1001E $0  # Using environment variable"
+    echo "  IOS_DEVICE_UDID=$DEFAULT_DEVICE_UDID $0  # Using environment variable"
     echo "  DEVELOPMENT_TEAM=ABCDE12345 $0  # Using environment variable"
     echo "  CLEAN_PREBUILD=true $0     # Regenerate the native iOS project before building"
 }

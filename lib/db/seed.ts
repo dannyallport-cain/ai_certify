@@ -150,17 +150,17 @@ async function createSampleTeams(users: any[]) {
   const sampleTeams = [
     {
       name: 'Fire Safety Pro Ltd',
-      planName: 'Professional',
+      planName: 'Business',
       subscriptionStatus: 'active'
     },
     {
       name: 'Safe Buildings Co',
-      planName: 'Starter',
+      planName: 'Solo',
       subscriptionStatus: 'active'
     },
     {
       name: 'City Inspectors Group',
-      planName: 'Professional',
+      planName: 'Business',
       subscriptionStatus: 'trial'
     }
   ];
