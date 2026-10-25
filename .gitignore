@@ -60,6 +60,9 @@ postgres_data/
 .cursor/
 .windsurf/
 
+# Mobile build scripts write verbose Xcode/Expo logs here (~17MB per run).
+mobile/build/
+
 # Playwright CLI artifacts
 .playwright-cli/
 .env*

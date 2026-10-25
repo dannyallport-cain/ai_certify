@@ -11,6 +11,7 @@ import { db } from '@/lib/db/drizzle';
 import { servicem8Connections } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { verifyMobileOAuthState } from '@/lib/servicem8/mobile-oauth';
 
 function parseServiceM8State(state: string | null): Record<string, string> {
   if (!state) {
@@ -137,25 +138,18 @@ function buildPendingSignInRedirect(request: NextRequest, isPopup: boolean) {
   return signInUrl;
 }
 
-async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) {
-  const user = await getUser();
-  if (!user) {
-    return { ok: false as const, reason: 'no_user' };
-  }
-
-  const teamData = await getTeamForUser();
-  if (!teamData) {
-    return { ok: false as const, reason: 'no_team' };
-  }
-
-  const teamId = teamData.id;
+async function storeConnectionForIds(
+  tokenData: ServiceM8TokenResponse,
+  userId: number,
+  teamId: number
+) {
   const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
 
   const client = new ServiceM8Client_API(
     tokenData.access_token,
     tokenData.refresh_token,
     teamId,
-    user.id
+    userId
   );
 
   let companyName = '';
@@ -192,7 +186,7 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
         grantedScopes,
         isActive: true,
         updatedAt: new Date(),
-        userId: user.id,
+        userId,
       })
       .where(eq(servicem8Connections.teamId, teamId));
 
@@ -202,7 +196,7 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
   const existingByUser = await db
     .select()
     .from(servicem8Connections)
-    .where(eq(servicem8Connections.userId, user.id))
+    .where(eq(servicem8Connections.userId, userId))
     .limit(1);
 
   if (existingByUser.length > 0) {
@@ -226,7 +220,7 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
 
   await db.insert(servicem8Connections).values({
     teamId,
-    userId: user.id,
+    userId,
     accessToken: tokenData.access_token,
     refreshToken: tokenData.refresh_token,
     tokenExpiresAt: expiresAt,
@@ -241,6 +235,84 @@ async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) 
   return { ok: true as const };
 }
 
+/** Web flow: identify the user and team from the dashboard session cookie. */
+async function storeConnectionForCurrentUser(tokenData: ServiceM8TokenResponse) {
+  const user = await getUser();
+  if (!user) {
+    return { ok: false as const, reason: 'no_user' as const };
+  }
+
+  const teamData = await getTeamForUser();
+  if (!teamData) {
+    return { ok: false as const, reason: 'no_team' as const };
+  }
+
+  return storeConnectionForIds(tokenData, user.id, teamData.id);
+}
+
+type MobileOutcome = 'connected' | 'denied' | 'expired' | 'failed';
+
+/**
+ * Fixed copy per outcome. Nothing from the request is interpolated into the
+ * markup, so the page cannot be used to inject HTML.
+ */
+const MOBILE_OUTCOMES: Record<MobileOutcome, { heading: string; body: string; accent: string }> = {
+  connected: {
+    heading: 'ServiceM8 connected',
+    body: 'AI Certify Field can now read your ServiceM8 jobs, clients and attachments.',
+    accent: '#15803D',
+  },
+  denied: {
+    heading: 'ServiceM8 sign-in cancelled',
+    body: 'Authorisation was not granted. You can try connecting again from the app.',
+    accent: '#B45309',
+  },
+  expired: {
+    heading: 'ServiceM8 sign-in expired',
+    body: 'That connection attempt timed out. Start the sign-in again from the app.',
+    accent: '#B45309',
+  },
+  failed: {
+    heading: 'ServiceM8 sign-in failed',
+    body: 'Something went wrong while finishing the connection. Please try again from the app.',
+    accent: '#B91C1C',
+  },
+};
+
+/**
+ * Result page for the mobile flow.
+ *
+ * There is no dashboard to land on: the browser is a one-off hand-off, so the
+ * page offers a deep link back into the app instead.
+ */
+function buildMobileResultPage(outcome: MobileOutcome) {
+  const copy = MOBILE_OUTCOMES[outcome];
+
+  const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${copy.heading}</title>
+  </head>
+  <body style="margin:0;font-family:-apple-system,system-ui,sans-serif;background:#F5F7FA;color:#1A202C;">
+    <main style="max-width:520px;margin:0 auto;padding:48px 24px;">
+      <h1 style="font-size:22px;margin:0 0 12px;color:${copy.accent};">${copy.heading}</h1>
+      <p style="font-size:15px;line-height:1.6;margin:0 0 24px;">${copy.body}</p>
+      <a href="aicertifyfield:///" style="display:inline-block;background:#0D47A1;color:#fff;text-decoration:none;padding:14px 20px;border-radius:14px;font-weight:600;">Return to AI Certify Field</a>
+      <p style="font-size:13px;line-height:1.6;margin:24px 0 0;color:#718096;">You can close this browser tab.</p>
+    </main>
+  </body>
+</html>`;
+
+  return new NextResponse(html, {
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+    },
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl;
@@ -249,6 +321,35 @@ export async function GET(request: NextRequest) {
     const error = searchParams.get('error');
     const parsedState = parseServiceM8State(state);
     const isPopup = searchParams.get('popup') === '1' || parsedState.popup === '1';
+
+    // Mobile flow: the identity is carried in the signed state, so the
+    // connection is completed here without any web session cookie.
+    const mobileState = verifyMobileOAuthState(state);
+
+    if (mobileState) {
+      if (error) {
+        console.error('ServiceM8 mobile OAuth error:', error);
+        return buildMobileResultPage(error === 'access_denied' ? 'denied' : 'failed');
+      }
+
+      if (!code) {
+        return buildMobileResultPage('expired');
+      }
+
+      const tokenData = await ServiceM8Client_API.exchangeCode(code);
+      const stored = await storeConnectionForIds(
+        tokenData,
+        mobileState.userId,
+        mobileState.teamId
+      );
+
+      if (!stored.ok) {
+        console.error('ServiceM8 mobile connection could not be stored');
+        return buildMobileResultPage('failed');
+      }
+
+      return buildMobileResultPage('connected');
+    }
 
     if (error) {
       console.error('ServiceM8 OAuth error:', error);

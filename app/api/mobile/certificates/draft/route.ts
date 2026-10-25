@@ -4,6 +4,29 @@ import { certificates, customers } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getMobileUser } from '@/lib/auth/mobile';
 
+/**
+ * Certificate types this endpoint can create. The mobile editor gathers BS 7671
+ * electrical detail, so it must not be able to file a gas or fire certificate.
+ */
+const MOBILE_CERTIFICATE_TYPES = ['EICR', 'EIC', 'MEIWC'] as const;
+
+const DEFAULT_CERTIFICATE_TYPE = 'EICR';
+
+function resolveCertificateType(value: unknown): string | null {
+  if (value === undefined || value === null || value === '') {
+    return DEFAULT_CERTIFICATE_TYPE;
+  }
+
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalised = value.trim().toUpperCase();
+  return (MOBILE_CERTIFICATE_TYPES as readonly string[]).includes(normalised)
+    ? normalised
+    : null;
+}
+
 function generateCertificateNumber(): string {
   const now = new Date();
   const year = now.getFullYear().toString().slice(-2);
@@ -23,10 +46,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { customerId, siteAddress, inspectionDate, formData } = body;
+    const { customerId, siteAddress, inspectionDate, formData, certificateType } = body;
 
     if (!customerId) {
       return NextResponse.json({ error: 'customerId is required' }, { status: 400 });
+    }
+
+    const resolvedCertificateType = resolveCertificateType(certificateType);
+
+    if (!resolvedCertificateType) {
+      return NextResponse.json(
+        {
+          error: `Unsupported certificateType. Use one of: ${MOBILE_CERTIFICATE_TYPES.join(', ')}`,
+        },
+        { status: 400 },
+      );
     }
 
     // Verify customer belongs to team
@@ -81,7 +115,7 @@ export async function POST(request: NextRequest) {
       .values({
         teamId: auth.team.id,
         customerId: Number(customerId),
-        certificateType: 'EICR',
+        certificateType: resolvedCertificateType,
         certificateNumber,
         status: 'draft',
         siteAddress: siteAddress ?? null,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BiometricSecurityCard } from '@/components/auth/BiometricSecurityCard';
 import { getApiBaseUrl, getMobileAccountOverview, type MobileAccountOverview } from '@/services/api';
 
 
@@ -145,6 +146,15 @@ export default function AccountScreen() {
         label="Billing bypass"
         value={overview?.subscription?.subscriptionBypass ? 'Enabled' : 'Disabled'}
       />
+
+      <View className="mb-3 mt-2 flex-row items-center justify-between">
+        <View>
+          <Text className="text-lg font-semibold text-[#1A202C]">Security</Text>
+          <Text className="text-sm text-[#8B7F75]">How this device signs you in</Text>
+        </View>
+      </View>
+
+      <BiometricSecurityCard accountEmail={overview?.user?.email ?? null} />
 
       <TouchableOpacity
         className="mt-2 rounded-[24px] bg-[#0D47A1] px-5 py-4"

@@ -65,6 +65,8 @@ export type InstallationType =
 
 export interface WizardState {
   inspectionDate: string;
+  /** `certificates.certificate_type`, chosen by the user or inferred from the job. */
+  certificateType: string;
   dataEntryMode: 'guided_photo' | 'manual_only' | 'hybrid';
   reportPurpose: ReportPurpose;
   installationType: InstallationType;
@@ -156,6 +158,7 @@ const initialState: JobState = {
   importedServiceM8Images: [],
   wizard: {
     inspectionDate: getTodayIsoDate(),
+    certificateType: 'EICR',
     dataEntryMode: 'guided_photo',
     reportPurpose: null,
     installationType: null,

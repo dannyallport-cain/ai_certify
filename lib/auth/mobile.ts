@@ -2,6 +2,7 @@ import { jwtVerify, SignJWT } from 'jose';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { users, teamMembers, teams, teamRuntimeSafeColumns } from '@/lib/db/schema';
+import { ensureTeamForUser } from '@/lib/db/queries';
 import { eq, and, isNull } from 'drizzle-orm';
 
 const key = new TextEncoder().encode(process.env.AUTH_SECRET);
@@ -37,6 +38,30 @@ export async function verifyMobileToken(token: string): Promise<MobileSessionDat
   }
 }
 
+export type MobileUser = Omit<typeof users.$inferSelect, 'passwordHash'>;
+
+async function resolveTeamForUser(
+  user: Pick<MobileUser, 'id' | 'name' | 'email'>,
+  currentTeamId: number | null
+) {
+  if (currentTeamId !== null) {
+    const [team] = await db
+      .select(teamRuntimeSafeColumns)
+      .from(teams)
+      .where(eq(teams.id, currentTeamId))
+      .limit(1);
+
+    if (team) {
+      return team;
+    }
+  }
+
+  // Every mobile endpoint is scoped to a team, so an account without one would
+  // sign in successfully and then fail on every screen. Provisioning the same
+  // default team the web app creates for regular users keeps the app usable.
+  return ensureTeamForUser(user);
+}
+
 export async function getMobileUser(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) return null;
@@ -56,14 +81,14 @@ export async function getMobileUser(request: NextRequest) {
 
   if (!result[0]) return null;
 
-  const teamResult = await db
-    .select(teamRuntimeSafeColumns)
-    .from(teams)
-    .where(eq(teams.id, result[0].teamId!))
-    .limit(1);
+  // Never hand the password hash to a client: /api/mobile/account serialises
+  // everything this returns.
+  const { passwordHash: _passwordHash, ...user } = result[0].user;
+
+  const team = await resolveTeamForUser(user, result[0].teamId ?? null);
 
   return {
-    user: result[0].user,
-    team: teamResult[0] ?? null,
+    user,
+    team: team ?? null,
   };
 }

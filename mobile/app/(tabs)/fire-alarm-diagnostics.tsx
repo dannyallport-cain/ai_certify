@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { KeyboardAwareScreen, TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
 
 import {
   RuleBasedFireAlarmDiagnosticsAssistant,
@@ -340,9 +341,10 @@ export default function FireAlarmDiagnosticsScreen() {
   };
 
   return (
-    <ScrollView
-      className="flex-1 bg-gray-50"
-      contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
+    <KeyboardAwareScreen
+      className="bg-gray-50"
+      contentContainerStyle={{ padding: 16 }}
+      contentBottomPadding={TAB_BAR_CLEARANCE}
     >
       <View className="rounded-2xl bg-brand px-5 py-5">
         <View className="flex-row items-start">
@@ -618,6 +620,6 @@ export default function FireAlarmDiagnosticsScreen() {
           />
         </View>
       </View>
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }

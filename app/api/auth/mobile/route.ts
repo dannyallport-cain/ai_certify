@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/drizzle';
-import { users, teamMembers } from '@/lib/db/schema';
-import { eq, isNull } from 'drizzle-orm';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { comparePasswords } from '@/lib/auth/session';
 import { signMobileToken } from '@/lib/auth/mobile';
+import { ensureTeamForUser } from '@/lib/db/queries';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,11 +39,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const teamResult = await db
-      .select({ teamId: teamMembers.teamId })
-      .from(teamMembers)
-      .where(eq(teamMembers.userId, user.id))
-      .limit(1);
+    // Every mobile endpoint is team-scoped, so the team is resolved (and, for an
+    // account created outside sign-up, provisioned) before the token is issued.
+    const team = await ensureTeamForUser(user);
+    const teamId = team?.id ?? null;
 
     const loginAt = new Date();
     const token = await signMobileToken(user.id);
@@ -55,13 +55,13 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(users.id, user.id));
 
-    const { passwordHash, ...safeUser } = user;
+    const { passwordHash: _passwordHash, ...safeUser } = user;
 
     return NextResponse.json({
       token,
       user: {
         ...safeUser,
-        teamId: teamResult[0]?.teamId ?? null,
+        teamId,
       },
     });
   } catch (error) {

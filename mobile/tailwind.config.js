@@ -8,6 +8,7 @@ module.exports = {
       colors: {
         // Modern professional brand colors
         brand: {
+          DEFAULT: '#0D47A1',      // Deep blue (bg-brand / text-brand)
           primary: '#0D47A1',      // Deep blue
           secondary: '#E8591E',    // Warm orange
           tertiary: '#4CAF50',     // Fresh green

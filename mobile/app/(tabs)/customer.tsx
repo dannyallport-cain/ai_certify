@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
   Modal,
@@ -14,6 +13,15 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useJob } from '@/components/JobStateContext';
+import { KeyboardAwareScreen, TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
+import { CustomerJobGroupCard } from '@/components/servicem8/CustomerJobGroups';
+import { StatusFilterChips } from '@/components/servicem8/StatusFilterChips';
+import {
+  collectStatusOptions,
+  countGroupedJobs,
+  groupJobsByCustomer,
+  limitGroupsToJobs,
+} from '@/services/servicem8/grouping';
 import {
   listCustomers,
   createCustomer,
@@ -26,6 +34,9 @@ import {
   type ServiceM8ClientRecord,
   type ServiceM8JobRecord,
 } from '@/services/api';
+
+/** Jobs rendered before the user asks for more — keeps the list cheap to draw. */
+const JOBS_PAGE_SIZE = 10;
 
 function buildImportedCustomerFromServiceM8Client(client: ServiceM8ClientRecord): Customer {
   return {
@@ -60,6 +71,10 @@ export default function CustomerScreen() {
   const [search, setSearch] = useState('');
   const [showNewModal, setShowNewModal] = useState(false);
   const [serviceM8Search, setServiceM8Search] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const [visibleJobCount, setVisibleJobCount] = useState(JOBS_PAGE_SIZE);
+  const seededExpansionRef = useRef(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -71,14 +86,17 @@ export default function CustomerScreen() {
     queryFn: listCustomers,
   });
 
+  // Jobs are fetched once and filtered/sorted/grouped locally: the whole list is
+  // a few hundred rows at most, and local filtering keeps status chips, search
+  // and grouping instant instead of a round trip per keystroke.
   const serviceM8JobsQuery = useQuery<ServiceM8JobRecord[]>({
-    queryKey: ['servicem8-jobs', serviceM8Search],
-    queryFn: () => listServiceM8Jobs({ search: serviceM8Search, limit: 12 }),
+    queryKey: ['servicem8-jobs'],
+    queryFn: () => listServiceM8Jobs({ limit: 200 }),
   });
 
   const serviceM8ClientsQuery = useQuery<ServiceM8ClientRecord[]>({
-    queryKey: ['servicem8-clients', serviceM8Search],
-    queryFn: () => listServiceM8Clients(serviceM8Search),
+    queryKey: ['servicem8-clients'],
+    queryFn: () => listServiceM8Clients(),
   });
 
   const serviceM8AttachmentsQuery = useQuery<ServiceM8AttachmentRecord[]>({
@@ -92,15 +110,90 @@ export default function CustomerScreen() {
     (customer.email ?? '').toLowerCase().includes(search.toLowerCase()),
   );
 
-  const serviceM8Jobs = useMemo(
-    () => (serviceM8JobsQuery.data ?? []).slice(0, 8),
+  const allServiceM8Jobs = useMemo(
+    () => serviceM8JobsQuery.data ?? [],
     [serviceM8JobsQuery.data],
   );
 
-  const serviceM8Clients = useMemo(
-    () => (serviceM8ClientsQuery.data ?? []).slice(0, 8),
-    [serviceM8ClientsQuery.data],
+  const statusOptions = useMemo(
+    () => collectStatusOptions(allServiceM8Jobs),
+    [allServiceM8Jobs],
   );
+
+  const customerGroups = useMemo(
+    () =>
+      groupJobsByCustomer(allServiceM8Jobs, {
+        search: serviceM8Search,
+        status: selectedStatus,
+      }),
+    [allServiceM8Jobs, serviceM8Search, selectedStatus],
+  );
+
+  // Customers with no matching job still need to be selectable, so they are
+  // listed separately instead of being buried inside the grouping.
+  const clientsWithoutJobs = useMemo(() => {
+    const groupedKeys = new Set(customerGroups.map((group) => group.key));
+    const needle = serviceM8Search.trim().toLowerCase();
+
+    return (serviceM8ClientsQuery.data ?? [])
+      .filter((client) => !groupedKeys.has(client.uuid))
+      .filter((client) => {
+        if (!needle) {
+          return true;
+        }
+
+        const haystack = [
+          client.name,
+          client.companyName,
+          client.firstName,
+          client.lastName,
+          client.email,
+          client.phone,
+          client.address,
+        ]
+          .filter((value): value is string => typeof value === 'string' && value.length > 0)
+          .join(' ')
+          .toLowerCase();
+
+        return haystack.includes(needle);
+      })
+      .slice(0, 25);
+  }, [customerGroups, serviceM8ClientsQuery.data, serviceM8Search]);
+
+  // A new search or status filter is a new result set, so start from the first
+  // page again rather than leaving the list scrolled deep.
+  useEffect(() => {
+    setVisibleJobCount(JOBS_PAGE_SIZE);
+  }, [serviceM8Search, selectedStatus]);
+
+  const totalMatchingJobs = useMemo(
+    () => countGroupedJobs(customerGroups),
+    [customerGroups]
+  );
+
+  const visibleGroups = useMemo(
+    () => limitGroupsToJobs(customerGroups, visibleJobCount),
+    [customerGroups, visibleJobCount]
+  );
+
+  const remainingJobCount = Math.max(0, totalMatchingJobs - visibleJobCount);
+
+  // Open the newest customer once the first page of jobs arrives, so the screen
+  // does not present a wall of collapsed rows with nothing selected.
+  useEffect(() => {
+    if (seededExpansionRef.current || customerGroups.length === 0) {
+      return;
+    }
+
+    seededExpansionRef.current = true;
+    setExpandedKeys([customerGroups[0].key]);
+  }, [customerGroups]);
+
+  function toggleGroup(key: string) {
+    setExpandedKeys((current) =>
+      current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key]
+    );
+  }
 
   const serviceM8ImageAttachments = useMemo(
     () => (serviceM8AttachmentsQuery.data ?? []).filter((attachment) => attachment.isImage && !!attachment.url),
@@ -231,7 +324,7 @@ export default function CustomerScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 32 }}>
+      <KeyboardAwareScreen contentBottomPadding={TAB_BAR_CLEARANCE}>
         <View className="px-4 pt-6 pb-3">
           <Text className="mb-4 text-2xl font-bold text-gray-900">Select Customer</Text>
 
@@ -250,94 +343,107 @@ export default function CustomerScreen() {
               />
             </View>
 
-            {serviceM8JobsQuery.isLoading || serviceM8ClientsQuery.isLoading ? (
+            <StatusFilterChips
+              options={statusOptions}
+              selectedStatus={selectedStatus}
+              totalCount={allServiceM8Jobs.length}
+              onSelect={setSelectedStatus}
+            />
+
+            {serviceM8JobsQuery.isLoading ? (
               <ActivityIndicator color="#1d4ed8" />
+            ) : serviceM8JobsQuery.isError ? (
+              <Text className="text-sm text-[#B91C1C]">
+                {serviceM8JobsQuery.error instanceof Error
+                  ? serviceM8JobsQuery.error.message
+                  : 'Unable to load ServiceM8 jobs.'}
+              </Text>
+            ) : customerGroups.length === 0 ? (
+              <Text className="text-sm text-[#475569]">
+                {serviceM8Search.trim() || selectedStatus
+                  ? 'No jobs match that search and status.'
+                  : 'No active ServiceM8 jobs were found for this account.'}
+              </Text>
             ) : (
-              <>
-                {serviceM8Jobs.length > 0 ? (
-                  <View className="mb-3">
-                    <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-800">
-                      Jobs
+              <View>
+                <Text className="mb-2 text-xs font-semibold uppercase tracking-[0.7px] text-[#64748B]">
+                  Showing {Math.min(visibleJobCount, totalMatchingJobs)} of {totalMatchingJobs} job
+                  {totalMatchingJobs === 1 ? '' : 's'} · newest first
+                </Text>
+
+                {visibleGroups.map((group) => (
+                  <CustomerJobGroupCard
+                    key={group.key}
+                    group={group}
+                    isExpanded={expandedKeys.includes(group.key)}
+                    onToggle={() => toggleGroup(group.key)}
+                    selectedJobUuid={state.selectedServiceM8Job?.uuid ?? null}
+                    loadingJobUuid={loadingJobUuid}
+                    onSelectJob={selectServiceM8Job}
+                  />
+                ))}
+
+                {remainingJobCount > 0 ? (
+                  <TouchableOpacity
+                    className="mb-3 items-center rounded-xl border border-[#0D47A1] bg-[#EAF1FF] py-3"
+                    onPress={() => setVisibleJobCount((current) => current + JOBS_PAGE_SIZE)}
+                    accessibilityRole="button"
+                  >
+                    <Text className="text-sm font-semibold text-[#0D47A1]">
+                      View more ({remainingJobCount} more job{remainingJobCount === 1 ? '' : 's'})
                     </Text>
-                    {serviceM8Jobs.map((job) => {
-                      const selected = state.selectedServiceM8Job?.uuid === job.uuid;
-                      const loading = loadingJobUuid === job.uuid;
-
-                      return (
-                        <TouchableOpacity
-                          key={job.uuid}
-                          className={`mb-2 rounded-xl border p-3 ${selected ? 'border-blue-500 bg-white' : 'border-blue-100 bg-white'}`}
-                          onPress={() => selectServiceM8Job(job)}
-                          disabled={loading}
-                        >
-                          <View className="flex-row items-start justify-between">
-                            <View className="mr-3 flex-1">
-                              <Text className="font-semibold text-gray-900">
-                                {job.generatedJobId ? `Job ${job.generatedJobId}` : 'ServiceM8 Job'}
-                              </Text>
-                              {job.status ? (
-                                <Text className="mt-1 text-xs font-medium uppercase text-blue-700">
-                                  {job.status}
-                                </Text>
-                              ) : null}
-                              {job.address ? (
-                                <Text className="mt-1 text-sm text-gray-600">{job.address}</Text>
-                              ) : null}
-                              {job.description ? (
-                                <Text className="mt-1 text-xs text-gray-500">{job.description}</Text>
-                              ) : null}
-                            </View>
-                            {loading ? (
-                              <ActivityIndicator color="#1d4ed8" />
-                            ) : selected ? (
-                              <Ionicons name="checkmark-circle" size={22} color="#1d4ed8" />
-                            ) : null}
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
+                  </TouchableOpacity>
                 ) : null}
-
-                {serviceM8Clients.length > 0 ? (
-                  <View>
-                    <Text className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-800">
-                      Customers
-                    </Text>
-                    {serviceM8Clients.map((client) => {
-                      const selected = state.selectedServiceM8Client?.uuid === client.uuid;
-
-                      return (
-                        <TouchableOpacity
-                          key={client.uuid}
-                          className={`mb-2 rounded-xl border p-3 ${selected ? 'border-blue-500 bg-white' : 'border-gray-100 bg-white'}`}
-                          onPress={() => selectServiceM8Client(client)}
-                        >
-                          <View className="flex-row items-start justify-between">
-                            <View className="mr-3 flex-1">
-                              <Text className="font-semibold text-gray-900">{client.name}</Text>
-                              {client.address ? (
-                                <Text className="mt-1 text-sm text-gray-600">{client.address}</Text>
-                              ) : null}
-                              {client.email ? (
-                                <Text className="mt-1 text-xs text-gray-500">{client.email}</Text>
-                              ) : null}
-                            </View>
-                            {selected ? (
-                              <Ionicons name="checkmark-circle" size={22} color="#1d4ed8" />
-                            ) : null}
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                ) : null}
-
-                {serviceM8Jobs.length === 0 && serviceM8Clients.length === 0 && serviceM8Search.trim() ? (
-                  <Text className="text-sm text-blue-800">No ServiceM8 results found.</Text>
-                ) : null}
-              </>
+              </View>
             )}
+
+            {clientsWithoutJobs.length > 0 ? (
+              <View className="mt-2">
+                <Text className="mb-2 text-xs font-semibold uppercase tracking-[0.7px] text-[#64748B]">
+                  Customers without matching jobs
+                </Text>
+
+                {clientsWithoutJobs.map((client) => {
+                  const selected = state.selectedServiceM8Client?.uuid === client.uuid;
+                  const displayName =
+                    client.companyName?.trim() ||
+                    client.name?.trim() ||
+                    [client.firstName, client.lastName].filter(Boolean).join(' ') ||
+                    'Unnamed customer';
+
+                  return (
+                    <TouchableOpacity
+                      key={client.uuid}
+                      className={`mb-2 rounded-xl border p-3 ${
+                        selected ? 'border-[#0D47A1] bg-[#EAF1FF]' : 'border-[#E0E6ED] bg-white'
+                      }`}
+                      onPress={() => selectServiceM8Client(client)}
+                    >
+                      <View className="flex-row items-start justify-between">
+                        <View className="mr-3 flex-1">
+                          <Text className="text-sm font-semibold text-[#1A202C]" numberOfLines={1}>
+                            {displayName}
+                          </Text>
+                          {client.address ? (
+                            <Text className="mt-1 text-xs text-[#718096]" numberOfLines={2}>
+                              {client.address}
+                            </Text>
+                          ) : null}
+                          {client.email ? (
+                            <Text className="mt-1 text-xs text-[#718096]" numberOfLines={1}>
+                              {client.email}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {selected ? (
+                          <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : null}
           </View>
 
           {state.selectedServiceM8Job ? (
@@ -510,54 +616,75 @@ export default function CustomerScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      </KeyboardAwareScreen>
 
-      <Modal visible={showNewModal} animationType="slide" presentationStyle="pageSheet">
-        <View className="flex-1 bg-white px-6 pt-10">
-          <Text className="mb-6 text-xl font-bold text-gray-900">New Customer</Text>
+      <Modal
+        visible={showNewModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowNewModal(false)}
+      >
+        <View className="flex-1 bg-white">
+          <View className="flex-row items-center justify-between px-6 pt-6 pb-2">
+            <Text className="text-xl font-bold text-gray-900">New Customer</Text>
+            <TouchableOpacity
+              className="h-9 w-9 items-center justify-center rounded-full bg-gray-100"
+              onPress={() => setShowNewModal(false)}
+              accessibilityLabel="Close new customer form"
+            >
+              <Ionicons name="close" size={20} color="#374151" />
+            </TouchableOpacity>
+          </View>
 
-          <Text className="mb-1 font-medium text-gray-700">Name *</Text>
-          <TextInput
-            className="mb-4 rounded-xl border border-gray-300 px-4 py-3 text-base"
-            placeholder="Acme Ltd"
-            value={newName}
-            onChangeText={setNewName}
-          />
+          <KeyboardAwareScreen contentContainerClassName="px-6 pt-4" contentBottomPadding={48}>
+            <Text className="mb-1 font-medium text-gray-700">Name *</Text>
+            <TextInput
+              className="mb-4 rounded-xl border border-gray-300 px-4 py-3 text-base"
+              placeholder="Acme Ltd"
+              value={newName}
+              onChangeText={setNewName}
+              returnKeyType="next"
+            />
 
-          <Text className="mb-1 font-medium text-gray-700">Email</Text>
-          <TextInput
-            className="mb-4 rounded-xl border border-gray-300 px-4 py-3 text-base"
-            placeholder="contact@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={newEmail}
-            onChangeText={setNewEmail}
-          />
+            <Text className="mb-1 font-medium text-gray-700">Email</Text>
+            <TextInput
+              className="mb-4 rounded-xl border border-gray-300 px-4 py-3 text-base"
+              placeholder="contact@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              value={newEmail}
+              onChangeText={setNewEmail}
+              returnKeyType="next"
+            />
 
-          <Text className="mb-1 font-medium text-gray-700">Phone</Text>
-          <TextInput
-            className="mb-8 rounded-xl border border-gray-300 px-4 py-3 text-base"
-            placeholder="07700 000000"
-            keyboardType="phone-pad"
-            value={newPhone}
-            onChangeText={setNewPhone}
-          />
+            <Text className="mb-1 font-medium text-gray-700">Phone</Text>
+            <TextInput
+              className="mb-8 rounded-xl border border-gray-300 px-4 py-3 text-base"
+              placeholder="07700 000000"
+              keyboardType="phone-pad"
+              value={newPhone}
+              onChangeText={setNewPhone}
+              returnKeyType="done"
+              onSubmitEditing={handleCreate}
+            />
 
-          <TouchableOpacity
-            className="mb-3 items-center rounded-xl bg-brand py-4"
-            onPress={handleCreate}
-            disabled={creating}
-          >
-            {creating ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="text-base font-bold text-white">Create Customer</Text>
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity
+              className="mb-3 items-center rounded-xl bg-brand py-4"
+              onPress={handleCreate}
+              disabled={creating}
+            >
+              {creating ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text className="text-base font-bold text-white">Create Customer</Text>
+              )}
+            </TouchableOpacity>
 
-          <TouchableOpacity className="items-center py-3" onPress={() => setShowNewModal(false)}>
-            <Text className="text-gray-500">Cancel</Text>
-          </TouchableOpacity>
+            <TouchableOpacity className="items-center py-3" onPress={() => setShowNewModal(false)}>
+              <Text className="text-gray-500">Cancel</Text>
+            </TouchableOpacity>
+          </KeyboardAwareScreen>
         </View>
       </Modal>
     </View>

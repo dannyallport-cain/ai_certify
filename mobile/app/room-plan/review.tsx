@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { KeyboardAwareScreen } from '@/components/keyboard/KeyboardAwareScreen';
 
 import type {
   FireAlarmDeviceDetection,
@@ -254,7 +255,7 @@ export default function RoomPlanReviewScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 24 }}>
+    <KeyboardAwareScreen className="bg-white" contentContainerStyle={{ padding: 24 }}>
       <View className="mb-6 flex-row items-center justify-between">
         <View className="flex-1 pr-3">
           <Text className="text-2xl font-bold text-slate-900">Review RoomPlan session</Text>
@@ -513,6 +514,6 @@ export default function RoomPlanReviewScreen() {
           <Text className="text-center text-sm font-semibold text-white">Go to export</Text>
         </Pressable>
       </View>
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }

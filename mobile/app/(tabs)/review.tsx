@@ -352,6 +352,7 @@ export default function ReviewScreen() {
         customerId: selectedCustomer.id,
         siteAddress: gpsAddress,
         inspectionDate: wizard.inspectionDate,
+        certificateType: wizard.certificateType,
         formData,
       });
 

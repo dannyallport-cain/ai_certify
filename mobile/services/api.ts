@@ -523,13 +523,28 @@ export interface ServiceM8JobRecord {
   address: string | null;
   description: string | null;
   workDoneDescription: string | null;
+  /** Work date, the field ServiceM8 sorts job lists by. */
   date: string | null;
   completionDate: string | null;
+  quoteDate: string | null;
+  workOrderDate: string | null;
+  invoiceDate: string | null;
+  unsuccessfulDate: string | null;
+  editDate: string | null;
   companyUuid: string | null;
+  /** Business name of the linked client, when the directory resolved it. */
+  companyName: string | null;
+  /** Contact name (or business name as fallback) of the linked client. */
+  customerName: string | null;
+  billingContactName: string | null;
   categoryUuid: string | null;
   badge: string | null;
   firstName: string | null;
   lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  mobile: string | null;
+  totalInvoiceAmount: number | null;
 }
 
 export interface ServiceM8JobDetail extends ServiceM8JobRecord {
@@ -595,6 +610,32 @@ export function mapImportedServiceM8ImagesToDraftPayload(
     isImage: image.attachment.isImage,
     evidenceCategory: 'consumer_unit_image',
   }));
+}
+
+/**
+ * Requests the ServiceM8 authorization URL for this signed-in user.
+ *
+ * The app cannot open the dashboard page directly: `/servicem8` requires a web
+ * session cookie and would send the browser to the web sign-in screen. This
+ * endpoint authenticates with the mobile bearer token instead, and the returned
+ * URL already carries a signed state so the callback can complete the connection
+ * without a web session.
+ */
+export async function startServiceM8Connection(): Promise<string> {
+  const res = await authFetch('/api/mobile/servicem8/activate', { method: 'POST' });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? 'Unable to start ServiceM8 sign-in');
+  }
+
+  const data = await res.json();
+
+  if (typeof data?.authorizeUrl !== 'string' || data.authorizeUrl.length === 0) {
+    throw new Error('ServiceM8 did not return an authorization URL');
+  }
+
+  return data.authorizeUrl;
 }
 
 export async function getServiceM8ConnectionStatus(): Promise<ServiceM8ConnectionStatus> {
@@ -831,6 +872,8 @@ export interface DraftCertificateInput {
   customerId: number;
   siteAddress: string;
   inspectionDate: string; // ISO date string
+  /** EICR / EIC / MEIWC — the certificate being produced. */
+  certificateType?: string;
   formData?: Record<string, unknown>;
 }
 

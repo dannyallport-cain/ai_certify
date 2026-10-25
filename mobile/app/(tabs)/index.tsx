@@ -1,8 +1,15 @@
+import { useEffect, useState } from 'react';
 import { Alert, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useJob } from '@/components/JobStateContext';
-import { deleteToken, getApiBaseUrl } from '@/services/api';
+import { useAuthLock } from '@/components/auth/useAuthLock';
+import { getServiceM8ConnectionStatus, startServiceM8Connection } from '@/services/api';
+
+type ServiceM8State =
+  | { status: 'checking' }
+  | { status: 'connected'; companyName: string | null }
+  | { status: 'disconnected' };
 
 type MenuActionProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -37,40 +44,82 @@ function MenuAction({ icon, title, subtitle, accent, onPress }: MenuActionProps)
   );
 }
 
-async function openExternalPath(path: string) {
-  const url = `${getApiBaseUrl()}${path}`;
-
+/**
+ * Starts ServiceM8 OAuth using the app's own session.
+ *
+ * Opening the dashboard page in a browser would just show the web sign-in
+ * screen, because the mobile bearer token is not a web session cookie. The API
+ * hands back a ServiceM8 authorization URL instead, already carrying a signed
+ * state so the callback can store the connection for this user.
+ */
+async function connectServiceM8() {
   try {
-    const supported = await Linking.canOpenURL(url);
+    const authorizeUrl = await startServiceM8Connection();
+
+    const supported = await Linking.canOpenURL(authorizeUrl);
 
     if (!supported) {
-      Alert.alert('Unable to open link', 'This device cannot open the requested page right now.');
+      Alert.alert('Unable to open ServiceM8', 'This device cannot open the sign-in page.');
       return;
     }
 
-    await Linking.openURL(url);
+    await Linking.openURL(authorizeUrl);
   } catch (error) {
-    console.error('Failed to open external link:', error);
-    Alert.alert('Unable to open link', 'Please try again in a moment.');
+    console.error('Failed to start ServiceM8 sign-in:', error);
+    Alert.alert(
+      'ServiceM8 sign-in failed',
+      error instanceof Error ? error.message : 'Please try again in a moment.',
+    );
   }
-}
-
-async function signOut() {
-  Alert.alert('Log out', 'Do you want to log out of the mobile app?', [
-    { text: 'Cancel', style: 'cancel' },
-    {
-      text: 'Log out',
-      style: 'destructive',
-      onPress: async () => {
-        await deleteToken();
-        router.replace('/(auth)/login');
-      },
-    },
-  ]);
 }
 
 export default function HomeScreen() {
   const { state, dispatch } = useJob();
+  const { signOut, capability, isBiometricEnabled } = useAuthLock();
+  const [serviceM8, setServiceM8] = useState<ServiceM8State>({ status: 'checking' });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getServiceM8ConnectionStatus()
+      .then((result) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setServiceM8(
+          result.connected
+            ? { status: 'connected', companyName: result.connection?.companyName ?? null }
+            : { status: 'disconnected' },
+        );
+      })
+      .catch(() => {
+        // A missing connection is the common case, so a failed probe is not an
+        // error worth interrupting the menu for.
+        if (isMounted) {
+          setServiceM8({ status: 'disconnected' });
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  function confirmSignOut() {
+    Alert.alert('Log out', 'Do you want to log out of the mobile app?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log out',
+        style: 'destructive',
+        onPress: () => {
+          // Clearing the token also removes the face/fingerprint unlock
+          // preference, so the next user has to sign in with a password.
+          void signOut().then(() => router.replace('/(auth)/login'));
+        },
+      },
+    ]);
+  }
 
   const hasDraftCertificate = !!state.createdCertificate;
   const hasWorkflowProgress =
@@ -192,10 +241,16 @@ export default function HomeScreen() {
 
       <MenuAction
         icon="link-outline"
-        title="ServiceM8 login"
-        subtitle="Open the ServiceM8 connection page in the web app to connect or update access."
+        title={serviceM8.status === 'connected' ? 'ServiceM8 connected' : 'ServiceM8 login'}
+        subtitle={
+          serviceM8.status === 'connected'
+            ? `Signed in${serviceM8.companyName ? ` as ${serviceM8.companyName}` : ''}. Tap to re-authorise.`
+            : serviceM8.status === 'checking'
+              ? 'Checking your ServiceM8 connection…'
+              : 'Sign in to ServiceM8 to import jobs, clients and site photos.'
+        }
         accent="bg-[#E8F5E9]"
-        onPress={() => void openExternalPath('/servicem8')}
+        onPress={() => void connectServiceM8()}
       />
 
       <MenuAction
@@ -238,7 +293,7 @@ export default function HomeScreen() {
         <View className="flex-row items-center">
           <TouchableOpacity
             className="h-12 w-12 items-center justify-center rounded-full bg-[#E3F2FD]"
-            onPress={() => void signOut()}
+            onPress={confirmSignOut}
             activeOpacity={0.8}
           >
             <Ionicons name="person-circle-outline" size={28} color="#0D47A1" />
@@ -246,7 +301,9 @@ export default function HomeScreen() {
 
           <View className="ml-3">
             <Text className="text-sm font-semibold text-[#1A202C]">Signed in</Text>
-            <Text className="text-xs text-[#718096]">Tap the avatar to log out</Text>
+            <Text className="text-xs text-[#718096]">
+              {isBiometricEnabled ? `${capability.label} unlock on` : 'Tap the avatar to log out'}
+            </Text>
           </View>
         </View>
 

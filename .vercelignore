@@ -1,0 +1,65 @@
+# CLI deployments upload the working directory, so everything that is not part
+# of the Next.js app or its build has to be excluded explicitly. Without this
+# file the upload is ~1.4GB (mostly node_modules and the 3.9GB mobile project).
+#
+# Every entry is anchored with a leading `/` so it only matches the repository
+# root. An unanchored `mobile` here also matches `app/api/mobile/...` and strips
+# the entire mobile API out of the deployment.
+/node_modules
+/.git
+/.github
+
+# Native mobile app — built and shipped with Xcode/EAS, never part of the web app.
+# No web module imports from it (checked: app/, lib/, components/, types/).
+/mobile
+
+# Python ML pipeline and the Railway workers run as separate services.
+/ml
+/railway-ai-worker
+
+# Local artefacts and logs.
+/export
+/reports
+/test-results
+/dev-next.log
+/_final_check.txt
+/out1.txt
+/out2.txt
+/out3.txt
+/asl_imports.txt
+/cp12_slice.txt
+/gen_slice.txt
+/stripe_imports.txt
+/stripe_refs.txt
+/logo_check.txt
+/logo_use.txt
+/ribbon_use.txt
+/menu_out.txt
+/eslint-output.txt
+/next-build-output.txt
+/node_bin_present.txt
+/node_modules_present.txt
+/pnpm_list_tsx.txt
+/tsx_ver_out.txt
+/gh-auth-status.txt
+/gh-user.txt
+/ai_certify.code-workspace
+/add_email_dns.sh
+/add_vercel_dns.sh
+/start-webhook.sh
+/build-and-install.sh
+
+# Course material, not shipped.
+/exam practice
+
+# Local environment copies. The real values live in the Vercel project.
+/.env.local
+/.env.local.backup-20261025-025512
+/.env.pulled
+/.env.railway.ai-worker.production
+/.env.railway.backup-worker.production
+/.env.railway.install-pg-stat-statements.production
+/.env.railway.pg-install-extension.production
+/.env.railway.postgres.production
+/.env.railway.setup-pg-extensions.production
+/.env copy.example

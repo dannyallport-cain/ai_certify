@@ -1,8 +1,11 @@
-import { useEffect, useMemo } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useRef } from 'react';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useJob, type WizardPhotoType } from '@/components/JobStateContext';
+import { KeyboardAwareScreen, TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
+import { CertificateTypeSelector } from '@/components/certificate/CertificateTypeSelector';
+import { inferCertificateTypeFromJob } from '@/services/certificates/types';
 
 type StepItem = {
   key: string;
@@ -127,6 +130,28 @@ export default function WizardScreen() {
       payload: { key: 'dataEntryMode', value: requestedEntryMode },
     });
   }, [dispatch, isValidRequestedEntryMode, requestedEntryMode, state.wizard.dataEntryMode]);
+
+  // A ServiceM8 job usually states what is needed in its description, so seed
+  // the type from it once per job. The user can always override the choice.
+  const inference = useMemo(
+    () => inferCertificateTypeFromJob(state.selectedServiceM8Job),
+    [state.selectedServiceM8Job]
+  );
+  const appliedInferenceRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const jobUuid = state.selectedServiceM8Job?.uuid ?? null;
+
+    if (!jobUuid || appliedInferenceRef.current === jobUuid) {
+      return;
+    }
+
+    appliedInferenceRef.current = jobUuid;
+    dispatch({
+      type: 'SET_WIZARD_FIELD',
+      payload: { key: 'certificateType', value: inference.type },
+    });
+  }, [dispatch, inference.type, state.selectedServiceM8Job]);
 
   const currentEntryMode = isValidRequestedEntryMode
     ? requestedEntryMode
@@ -507,7 +532,10 @@ export default function WizardScreen() {
   const reviewUnlocked = Object.values(stepFlags).every(Boolean);
 
   return (
-    <ScrollView className="flex-1 bg-gray-50 px-4 pt-6">
+    <KeyboardAwareScreen
+      className="bg-gray-50 px-4 pt-6"
+      contentBottomPadding={TAB_BAR_CLEARANCE}
+    >
       <View className="mb-5 rounded-3xl bg-brand px-5 py-5">
         <Text className="mb-2 text-2xl font-bold text-white">
           {isManualEntryRoute ? 'New certificate — manual entry' : 'New certificate — AI / guided'}
@@ -538,6 +566,18 @@ export default function WizardScreen() {
             : 'Follow the ordered steps below to build a certificate draft through the guided route. Customer, address, capture, and review remain inside this certificate workflow.'}
         </Text>
       </View>
+
+      <CertificateTypeSelector
+        value={state.wizard.certificateType}
+        onChange={(value) =>
+          dispatch({ type: 'SET_WIZARD_FIELD', payload: { key: 'certificateType', value } })
+        }
+        inferredFrom={
+          appliedInferenceRef.current === (state.selectedServiceM8Job?.uuid ?? null)
+            ? inference.matchedKeyword
+            : null
+        }
+      />
 
       <Text className="mb-3 text-lg font-bold text-gray-900">Workflow progress</Text>
       {steps.map(({ key, ...step }, index) => (
@@ -1335,6 +1375,6 @@ export default function WizardScreen() {
       <Text className="mb-10 text-center text-sm text-gray-400">
         Workflow reference: `mobile/MOBILE_WIZARD_WORKFLOW.md`
       </Text>
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }

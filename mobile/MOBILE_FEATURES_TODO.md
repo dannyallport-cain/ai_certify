@@ -51,6 +51,12 @@ This list is based on the current Expo mobile app code and workflow docs in `mob
 - [x] Indicative detection coverage per detector class with per-room breakdown (`CoveragePanel.tsx`)
 - [x] Greedy auto-layout of detectors over uncovered floor area
 
+### Native RoomPlan capture (delivered)
+- [x] Local `fire-alarm-roomplan` Expo module linked into the iOS build and registered in `ExpoModulesProvider`
+  - Constraint: the podspec requires **iOS 16.0**, so `plugins/withFireAlarmRoomPlan.js` raises `ios.deploymentTarget` and `IPHONEOS_DEPLOYMENT_TARGET` to 16.0. Without that CocoaPods silently drops the whole pod and the JS bridge reports the module as "not installed".
+- [x] Capture crash fixed — RoomPlan delivers `RoomCaptureSessionDelegate` callbacks on its own queue, so every callback hops to the main actor before touching UIKit (`_AssertAutoLayoutOnAllowedThreadsOnly` abort otherwise)
+- [x] Capture scope trimmed to walls, doors, windows and room dimensions: furniture (`CapturedRoom.objects`) is excluded from the session payload and the USDZ mesh export is skipped (it also blocked the main thread)
+
 ### Remaining
 - [ ] Add real ML inference / device recognition to room-plan workflow
   - Rationale: Devices are still placed manually or auto-laid out; no on-device model yet.
@@ -61,6 +67,30 @@ This list is based on the current Expo mobile app code and workflow docs in `mob
 - [ ] Persist plan edits through the API as well as local storage
   - Rationale: `usePlanEditor` autosaves to the local session store; server sync uses the room-captures endpoint only on explicit capture save.
   - Relevant files: `mobile/components/room-plan/usePlanEditor.ts`, `mobile/services/roomplan/session-store.ts`
+
+## Face / fingerprint login
+
+### Delivered
+- [x] Device capability probe covering Face ID, Touch ID, fingerprint and iris, with device-appropriate labels
+  - Modules: `mobile/services/biometrics/` (`capability`, `preferences`, `authenticate`, `types`)
+- [x] Enrolment prompt straight after a successful password login
+  - Screen: `mobile/app/(auth)/login.tsx`
+- [x] Lock screen that unlocks with the enrolled biometric, with a password fallback path
+  - Components: `mobile/components/auth/UnlockScreen.tsx`, `BiometricGlyph.tsx`
+- [x] Re-lock after 60s in the background without unmounting the signed-in screens
+  - Hooks: `mobile/components/auth/useBackgroundRelock.ts`, `AuthLockProvider.tsx`
+- [x] Enable / disable toggle on the account screen with a hand-off to device settings
+  - Component: `mobile/components/auth/BiometricSecurityCard.tsx`
+- [x] Preference kept in SecureStore, cleared on sign out and whenever the enrolled sensor disappears
+  - Modules: `mobile/services/biometrics/preferences.ts`, `mobile/components/auth/resolveStartupState.ts`
+
+### Remaining
+- [ ] Require a fresh biometric check before high-risk actions (submit a certificate, export a PDF)
+  - Rationale: The gate currently runs at app open and on return from the background only.
+  - Relevant files: `mobile/components/auth/useAuthLock.ts`, `mobile/app/(tabs)/review.tsx`
+- [ ] Offer a per-session "do not lock on next launch" choice for shared site devices
+  - Rationale: The lock is a per-device preference today; there is no per-session opt-out.
+  - Relevant files: `mobile/components/auth/AuthLockProvider.tsx`
 
 ## General product follow-up
 - [ ] Audit all top-level task cards to ensure each one lands in a distinct complete workflow

@@ -17,6 +17,7 @@ PROJECT_NAME="ai-certify-field"
 WORKSPACE_NAME="AICertifyField"
 SCHEME_NAME="AICertifyField"
 CONFIGURATION="Release"
+BUNDLE_IDENTIFIER="com.aicertify.field"
 
 # Default device UDID (can be overridden with environment variable)
 DEFAULT_DEVICE_UDID="00008110-001E54900EEB801E"
@@ -29,6 +30,8 @@ DETECTED_DEVICE_OS_VERSION=""
 DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM:-4UMCJ237RQ}"
 # Whether to regenerate the native iOS project with Expo prebuild
 CLEAN_PREBUILD="${CLEAN_PREBUILD:-false}"
+# Whether to stop after resolving the target device, without building anything
+DETECT_ONLY=false
 
 # Paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,6 +40,7 @@ IOS_DIR="$PROJECT_ROOT/ios"
 WORKSPACE="$IOS_DIR/$WORKSPACE_NAME.xcworkspace"
 BUILD_DIR="$PROJECT_ROOT/build/ios"
 DERIVED_DATA_DIR="$BUILD_DIR/DerivedData"
+DEVICECTL_JSON="$BUILD_DIR/devicectl-devices.json"
 
 # Functions
 sync_xcode_node_env() {
@@ -104,39 +108,66 @@ pods_are_in_sync() {
     [ -f "$podfile_lock" ] && [ -f "$manifest_lock" ] && cmp -s "$podfile_lock" "$manifest_lock"
 }
 
+detect_device_via_devicectl() {
+    # Prints "<udid>\t<name>\t<osVersion>" for the best paired, booted, physical iPhone.
+    # `devicectl` reports a usable phone as "available (paired)" rather than "connected",
+    # so its JSON output is parsed instead of its human-readable table.
+    mkdir -p "$(dirname "$DEVICECTL_JSON")"
+
+    if ! xcrun devicectl list devices --json-output "$DEVICECTL_JSON" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    node "$SCRIPT_DIR/scripts/detect-ios-device.mjs" "$DEVICECTL_JSON" 2>/dev/null || true
+}
+
+detect_device_via_xctrace() {
+    # Fallback for setups without devicectl: xctrace prints "<name> (<os>) (<udid>)".
+    local device_line
+    local device_name
+    local device_os_version
+    local device_udid
+
+    device_line=$(xcrun xctrace list devices 2>/dev/null | grep -E "iPhone|iPad" | grep -v "Simulator" | head -1)
+    device_line=$(printf '%s' "$device_line" | tr -cd '[:print:]')
+
+    if [ -z "$device_line" ]; then
+        return 0
+    fi
+
+    device_udid=$(printf '%s' "$device_line" | grep -oE '\([0-9A-Za-z-]{16,}\)' | tail -1 | tr -d '()')
+
+    if [ -z "$device_udid" ]; then
+        return 0
+    fi
+
+    device_name=$(printf '%s' "$device_line" | sed -E 's/[[:space:]]*\([0-9A-Za-z._ -]+\)[[:space:]]*\([0-9A-Za-z-]{16,}\)[[:space:]]*$//')
+    device_os_version=$(printf '%s' "$device_line" | sed -nE 's/^.*\(([0-9]+([.][0-9]+)*)\)[[:space:]]*\([0-9A-Za-z-]{16,}\)[[:space:]]*$/\1/p')
+
+    printf '%s\t%s\t%s\n' "$device_udid" "$device_name" "$device_os_version"
+}
+
+detect_connected_device() {
+    local detected
+
+    detected=$(detect_device_via_devicectl)
+
+    if [ -z "$detected" ]; then
+        detected=$(detect_device_via_xctrace)
+    fi
+
+    printf '%s' "$detected"
+}
+
 check_device() {
     log_info "Checking for connected iOS devices..."
 
-    # Get list of connected devices and sanitize any non-printable characters.
-    # `xctrace` does not always list a paired device, so `devicectl` is used as a second source.
-    DEVICES=$(xcrun xctrace list devices 2>/dev/null | grep -E "iPhone|iPad" | grep -v "Simulator" | head -1)
-    DEVICES=$(printf '%s' "$DEVICES" | tr -cd '[:print:]\n')
+    local detected
 
-    if [ -z "$DEVICES" ]; then
-        DEVICES=$(xcrun devicectl list devices 2>/dev/null | grep -E "iPhone|iPad" | grep -i "connected" | head -1)
-        DEVICES=$(printf '%s' "$DEVICES" | tr -cd '[:print:]\n')
-    fi
+    detected=$(detect_connected_device)
 
-    if [ -z "$DEVICES" ]; then
-        if [ -n "$USER_SUPPLIED_UDID" ]; then
-            log_warning "No connected iOS device was detected, so the supplied UDID will be used: $USER_SUPPLIED_UDID"
-            log_info "If the build fails, check that the device is connected, unlocked and trusted."
-            return
-        fi
-
-        log_error "No iOS devices found. Please connect your iPhone and ensure it's unlocked."
-        log_info "You can also set IOS_DEVICE_UDID environment variable to specify a device UDID."
-        exit 1
-    fi
-
-    # Extract the last parenthesized identifier from the device line
-    DETECTED_UDID=$(printf '%s' "$DEVICES" | grep -oE '\([0-9A-Za-z-]{16,}\)' | tail -1 | tr -d '()')
-    DETECTED_DEVICE_NAME=$(printf '%s' "$DEVICES" | sed -E 's/[[:space:]]*\([0-9A-Za-z._ -]+\)[[:space:]]*\([0-9A-Za-z-]{16,}\)[[:space:]]*$//')
-    DETECTED_DEVICE_OS_VERSION=$(printf '%s' "$DEVICES" | sed -nE 's/^.*\(([0-9]+([.][0-9]+)*)\)[[:space:]]*\([0-9A-Za-z-]{16,}\)[[:space:]]*$/\1/p')
-
-    if [ -n "$DETECTED_UDID" ] && [ "$IOS_DEVICE_UDID" = "$DEFAULT_DEVICE_UDID" ]; then
-        log_info "Using detected device identifier: $DETECTED_UDID"
-        IOS_DEVICE_UDID="$DETECTED_UDID"
+    if [ -n "$detected" ]; then
+        IFS=$'\t' read -r DETECTED_UDID DETECTED_DEVICE_NAME DETECTED_DEVICE_OS_VERSION <<< "$detected" || true
     fi
 
     if [ -n "$DETECTED_DEVICE_NAME" ]; then
@@ -145,6 +176,20 @@ check_device() {
 
     if [ -n "$DETECTED_DEVICE_OS_VERSION" ]; then
         log_info "Detected device iOS version: $DETECTED_DEVICE_OS_VERSION"
+    fi
+
+    if [ -n "$USER_SUPPLIED_UDID" ]; then
+        IOS_DEVICE_UDID="$USER_SUPPLIED_UDID"
+        log_info "Using device UDID supplied by caller: $IOS_DEVICE_UDID"
+    elif [ -n "$DETECTED_UDID" ]; then
+        IOS_DEVICE_UDID="$DETECTED_UDID"
+    elif [ -n "$DEFAULT_DEVICE_UDID" ]; then
+        log_warning "No connected iOS device was detected, so the configured default UDID will be used: $DEFAULT_DEVICE_UDID"
+        log_info "If the build fails, check that the device is connected, unlocked and trusted."
+    else
+        log_error "No iOS devices found. Please connect your iPhone and ensure it's unlocked."
+        log_info "You can also set IOS_DEVICE_UDID environment variable to specify a device UDID."
+        exit 1
     fi
 
     log_success "Using device UDID: $IOS_DEVICE_UDID"
@@ -160,7 +205,7 @@ check_xcode_ios_platform_support() {
     fi
 
     if [ -z "$DETECTED_DEVICE_OS_VERSION" ]; then
-        log_warning "Could not determine the connected device iOS version from xctrace output."
+        log_warning "Could not determine the connected device iOS version from device detection."
         log_info "Continuing because the exact device support requirement could not be validated ahead of time."
         return
     fi
@@ -216,6 +261,71 @@ install_dependencies() {
   pod install
 
   log_success "CocoaPods dependencies installed"
+}
+
+built_app_path() {
+    printf '%s\n' "$DERIVED_DATA_DIR/Build/Products/$CONFIGURATION-iphoneos/$SCHEME_NAME.app"
+}
+
+read_built_bundle_version() {
+    local app_plist
+
+    app_plist="$(built_app_path)/Info.plist"
+
+    if [ ! -f "$app_plist" ]; then
+        return 0
+    fi
+
+    /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$app_plist" 2>/dev/null || true
+}
+
+read_installed_bundle_version() {
+    # `devicectl device info apps` prints a table whose final column is the
+    # installed CFBundleVersion, e.g. "AI Certify Field  com.aicertify.field  1.0.0  3".
+    local listing
+
+    listing=$(xcrun devicectl device info apps --device "$IOS_DEVICE_UDID" --bundle-id "$BUNDLE_IDENTIFIER" 2>/dev/null || true)
+    printf '%s\n' "$listing" | awk -v id="$BUNDLE_IDENTIFIER" '$0 ~ id {print $NF}' | tail -1
+}
+
+ensure_installed_build_is_current() {
+    # The `install` action can report success while the device keeps an older
+    # bundle, so the installed build number is compared with the built one and a
+    # direct devicectl install is used when they differ.
+    local built_version
+    local installed_version
+
+    built_version=$(read_built_bundle_version)
+    installed_version=$(read_installed_bundle_version)
+
+    if [ -n "$built_version" ] && [ "$built_version" = "$installed_version" ]; then
+        log_success "Device reports build $installed_version installed"
+        return
+    fi
+
+    log_warning "Device reports build '${installed_version:-unknown}' but the built app is build '${built_version:-unknown}'"
+    log_info "Installing the freshly built app directly with devicectl..."
+
+    if ! xcrun devicectl device install app --device "$IOS_DEVICE_UDID" "$(built_app_path)" >/dev/null 2>&1; then
+        log_warning "Direct install failed - the bundle installed by xcodebuild may be an older build."
+        return
+    fi
+
+    installed_version=$(read_installed_bundle_version)
+
+    if [ -n "$built_version" ] && [ "$built_version" = "$installed_version" ]; then
+        log_success "Device now reports build $installed_version installed"
+    else
+        log_warning "Device still reports build '${installed_version:-unknown}' after reinstalling"
+    fi
+}
+
+launch_app_on_device() {
+    if xcrun devicectl device process launch --terminate-existing --device "$IOS_DEVICE_UDID" "$BUNDLE_IDENTIFIER" >/dev/null 2>&1; then
+        log_success "Launched $BUNDLE_IDENTIFIER on the device"
+    else
+        log_warning "Could not launch the app automatically - open it from the iPhone home screen."
+    fi
 }
 
 verify_embedded_bundle() {
@@ -282,6 +392,7 @@ show_usage() {
     echo "  -t, --team TEAM           Specify Xcode development team ID for signing"
     echo "  -p, --prebuild            Regenerate the native iOS project with Expo prebuild"
     echo "  --clean-prebuild          Regenerate the native iOS project with Expo prebuild (same as --prebuild)"
+    echo "  -D, --detect-only         Detect the target iPhone and exit without building"
     echo "  -h, --help                Show this help message"
     echo ""
     echo "Environment Variables:"
@@ -315,6 +426,10 @@ while [[ $# -gt 0 ]]; do
             CLEAN_PREBUILD=true
             shift 1
             ;;
+        -D|--detect-only)
+            DETECT_ONLY=true
+            shift 1
+            ;;
         -h|--help)
             show_usage
             exit 0
@@ -336,6 +451,12 @@ main() {
     check_device
     check_xcode_ios_platform_support
 
+    if [ "$DETECT_ONLY" = true ]; then
+        log_success "Detection complete - target device is $IOS_DEVICE_UDID"
+        log_info "Re-run without --detect-only to build and install."
+        exit 0
+    fi
+
     if [ "$CLEAN_PREBUILD" = true ]; then
         prebuild_app
     elif [ ! -d "$IOS_DIR" ] || [ ! -f "$IOS_DIR/Podfile" ]; then
@@ -347,6 +468,8 @@ main() {
 
     install_dependencies
     build_and_install
+    ensure_installed_build_is_current
+    launch_app_on_device
 
     echo ""
     log_success "🎉 Process completed successfully!"

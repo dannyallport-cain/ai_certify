@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { loadServiceM8Jobs } from '@/lib/servicem8/directory';
+import { compareJobsByDateDesc } from '@/lib/servicem8/job-sort';
 
 import { getMobileServiceM8Client, isServiceM8Context, matchesText } from '../_shared';
 
@@ -70,9 +71,13 @@ export async function GET(request: NextRequest) {
       ),
     );
 
+    // Newest first: the app asks for a bounded page, so the order has to be
+    // applied before slicing or the newest jobs fall outside the window.
+    const ordered = [...filtered].sort(compareJobsByDateDesc);
+
     return NextResponse.json({
-      jobs: filtered.slice(0, limit),
-      total: filtered.length,
+      jobs: ordered.slice(0, limit),
+      total: ordered.length,
       warnings: directory?.warnings ?? [],
     });
   } catch (error) {

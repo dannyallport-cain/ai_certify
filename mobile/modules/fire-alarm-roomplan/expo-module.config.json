@@ -1,5 +1,5 @@
 {
-  "platforms": ["apple"],
+  "platforms": ["ios"],
   "apple": {
     "modules": ["FireAlarmRoomPlanModule"],
     "podspecPath": "ios/FireAlarmRoomPlan.podspec"

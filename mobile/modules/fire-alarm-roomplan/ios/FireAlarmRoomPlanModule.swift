@@ -234,6 +234,8 @@ private final class FireAlarmRoomPlanCaptureCoordinator: NSObject, @preconcurren
   func present(from presenter: UIViewController) {
     self.presenter = presenter
 
+    // Must be set before presenting; setting it in viewDidLoad is too late.
+    captureViewController.modalPresentationStyle = .fullScreen
     captureViewController.captureView.captureSession.delegate = self
     captureViewController.onCancel = { [weak self] in
       self?.cancelCapture()
@@ -270,41 +272,67 @@ private final class FireAlarmRoomPlanCaptureCoordinator: NSObject, @preconcurren
     captureViewController.captureView.captureSession.stop()
   }
 
-  func captureSession(_ session: RoomCaptureSession, didStartWith configuration: RoomCaptureSession.Configuration) {
-    self.session.status = .scanning
-    self.session.startedAt = self.session.startedAt ?? Date()
-    self.session.lifecycleNotes.append("RoomCaptureSession started.")
-    onStatus(self.session.statusPayload(formatter: isoFormatter, phase: "capturing", progress: 0.05, message: "Move around the room and scan all walls."))
-    onProgress(progressPayload(progress: 0.05, phase: "capturing", message: "Capture started."))
-    onSession([
-      "session": self.session.payload(formatter: isoFormatter),
-      "timestamp": isoFormatter.string(from: Date()),
-    ])
+  // RoomPlan delivers these callbacks on its own queue. Touching UIKit from
+  // there throws "Auto Layout on a non-main thread" and aborts the app, so every
+  // callback hops to the main actor before doing anything observable.
+  nonisolated func captureSession(_ session: RoomCaptureSession, didStartWith configuration: RoomCaptureSession.Configuration) {
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      self.session.status = .scanning
+      self.session.startedAt = self.session.startedAt ?? Date()
+      self.session.lifecycleNotes.append("RoomCaptureSession started.")
+      self.onStatus(self.session.statusPayload(formatter: self.isoFormatter, phase: "capturing", progress: 0.05, message: "Move around the room and scan all walls."))
+      self.onProgress(self.progressPayload(progress: 0.05, phase: "capturing", message: "Capture started."))
+      self.onSession([
+        "session": self.session.payload(formatter: self.isoFormatter),
+        "timestamp": self.isoFormatter.string(from: Date()),
+      ])
+    }
   }
 
-  func captureSession(_ session: RoomCaptureSession, didProvide instruction: RoomCaptureSession.Instruction) {
-    latestInstruction = instructionText(for: instruction)
-    captureViewController.updateInstruction(latestInstruction ?? "Move slowly and keep the full room in view.")
-    onProgress(progressPayload(progress: estimatedLiveProgress(), phase: "capturing", message: latestInstruction))
+  nonisolated func captureSession(_ session: RoomCaptureSession, didProvide instruction: RoomCaptureSession.Instruction) {
+    let text = instructionText(for: instruction)
+
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      self.latestInstruction = text
+      self.captureViewController.updateInstruction(text)
+      self.onProgress(self.progressPayload(progress: self.estimatedLiveProgress(), phase: "capturing", message: text))
+    }
   }
 
-  func captureSession(_ session: RoomCaptureSession, didUpdate room: CapturedRoom) {
-    updateLiveRoom(room)
+  nonisolated func captureSession(_ session: RoomCaptureSession, didUpdate room: CapturedRoom) {
+    Task { @MainActor [weak self] in
+      self?.updateLiveRoom(room)
+    }
   }
 
-  func captureSession(_ session: RoomCaptureSession, didAdd room: CapturedRoom) {
-    updateLiveRoom(room)
+  nonisolated func captureSession(_ session: RoomCaptureSession, didAdd room: CapturedRoom) {
+    Task { @MainActor [weak self] in
+      self?.updateLiveRoom(room)
+    }
   }
 
-  func captureSession(_ session: RoomCaptureSession, didChange room: CapturedRoom) {
-    updateLiveRoom(room)
+  nonisolated func captureSession(_ session: RoomCaptureSession, didChange room: CapturedRoom) {
+    Task { @MainActor [weak self] in
+      self?.updateLiveRoom(room)
+    }
   }
 
-  func captureSession(_ session: RoomCaptureSession, didRemove room: CapturedRoom) {
-    self.session.lifecycleNotes.append("RoomPlan reported a room removal event.")
+  nonisolated func captureSession(_ session: RoomCaptureSession, didRemove room: CapturedRoom) {
+    Task { @MainActor [weak self] in
+      self?.session.lifecycleNotes.append("RoomPlan reported a room removal event.")
+    }
   }
 
-  func captureSession(_ session: RoomCaptureSession, didEndWith data: CapturedRoomData, error: Error?) {
+  nonisolated func captureSession(_ session: RoomCaptureSession, didEndWith data: CapturedRoomData, error: Error?) {
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      self.handleCaptureEnded(data: data, error: error)
+    }
+  }
+
+  private func handleCaptureEnded(data: CapturedRoomData, error: Error?) {
     if let error {
       if isCancelling {
         finishAsStopped(reason: "Capture cancelled before processing completed.")
@@ -449,14 +477,10 @@ private final class FireAlarmRoomPlanCaptureCoordinator: NSObject, @preconcurren
       artifacts["capturedRoomJSONURL"] = roomJSONURL.absoluteString
     }
 
-    let roomUSDZURL = baseDirectory.appendingPathComponent("captured-room.usdz")
-    do {
-      try room.export(to: roomUSDZURL, exportOptions: .mesh)
-      artifacts["capturedRoomUSDZURL"] = roomUSDZURL.absoluteString
-    } catch {
-      session.lifecycleNotes.append("Unable to export USDZ artifact: \(error.localizedDescription)")
-    }
-
+    // The USDZ mesh export is deliberately skipped: it blocks the main thread
+    // while RoomPlan tessellates the room (risking a watchdog kill on large
+    // rooms) and it bakes in the furniture meshes this survey ignores. The JSON
+    // artifacts above already carry the walls, doors, windows and dimensions.
     return artifacts
   }
 }
@@ -497,7 +521,9 @@ private final class FireAlarmRoomPlanNativeSession {
     metrics.wallCount = room.walls.count
     metrics.roomCount = 1
     metrics.openingCount = room.doors.count + room.windows.count + room.openings.count
-    metrics.objectCount = room.objects.count
+    // Furniture and other loose objects are deliberately ignored: the survey
+    // only cares about the shell of the room, its doors and windows.
+    metrics.objectCount = 0
   }
 
   func payload(formatter: ISO8601DateFormatter) -> [String: Any] {
@@ -636,20 +662,9 @@ private final class FireAlarmRoomPlanSessionStore {
 }
 
 private func buildRawPayload(session: FireAlarmRoomPlanNativeSession) -> [String: Any] {
-  var roomPlanObjects: [[String: Any]] = []
-
-  if let latestCapturedRoom = session.latestCapturedRoom {
-    roomPlanObjects = latestCapturedRoom.objects.map { object in
-      [
-        "id": object.identifier.uuidString,
-        "category": String(describing: object.category),
-        "confidence": confidenceScore(object.confidence),
-        "dimensions": vectorPayload(object.dimensions),
-        "transform": matrixPayload(object.transform),
-      ]
-    }
-  }
-
+  // `CapturedRoom.objects` holds furniture such as chairs, tables and sofas.
+  // The fire alarm survey has no use for them, so they are dropped here rather
+  // than being carried through the session payload and downstream plan.
   return [
     "source": "native-roomplan",
     "roomPlanAvailable": session.support.roomPlanAvailable,
@@ -662,7 +677,9 @@ private func buildRawPayload(session: FireAlarmRoomPlanNativeSession) -> [String
       "note": "Room geometry capture is complete. Fire alarm device recognition remains a separate milestone.",
     ],
     "artifacts": session.rawArtifacts,
-    "roomPlanObjects": roomPlanObjects,
+    "roomPlanObjects": [],
+    "roomPlanObjectsExcluded": true,
+    "roomPlanObjectsNote": "Furniture and loose contents are excluded; only walls, doors, windows and dimensions are recorded.",
     "exportHistory": session.exportHistory,
     "options": session.options,
   ]

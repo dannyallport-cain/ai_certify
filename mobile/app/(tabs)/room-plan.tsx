@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { KeyboardAwareScreen, TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
 
 import {
   FireAlarmRoomPlan,
@@ -545,9 +546,10 @@ export default function RoomPlanScreen() {
   const supportTone: Tone = supportState?.isSupported ? 'emerald' : 'amber';
 
   return (
-    <ScrollView
-      className="flex-1 bg-[#F5F7FA]"
-      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 132 }}
+    <KeyboardAwareScreen
+      className="bg-[#F5F7FA]"
+      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20 }}
+      contentBottomPadding={TAB_BAR_CLEARANCE}
     >
       <View className="mb-4 rounded-[32px] border border-[#E0E6ED] bg-[#FFFFFF] p-5">
         <View className="flex-row items-start justify-between">
@@ -1211,6 +1213,6 @@ export default function RoomPlanScreen() {
           </View>
         </View>
       </SectionCard>
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }

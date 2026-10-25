@@ -4,6 +4,7 @@ import * as Location from 'expo-location';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useJob } from '@/components/JobStateContext';
+import { KeyboardAwareScreen, TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
 
 export default function LocationScreen() {
   const [loading, setLoading] = useState(false);
@@ -68,7 +69,11 @@ export default function LocationScreen() {
   }
 
   return (
-    <View className="flex-1 bg-white px-6 pt-8">
+    <KeyboardAwareScreen
+      className="bg-white"
+      contentContainerClassName="px-6 pt-8"
+      contentBottomPadding={TAB_BAR_CLEARANCE}
+    >
       <Text className="text-2xl font-bold text-gray-900 mb-2">Site Address</Text>
       <Text className="text-gray-500 mb-6">Confirm the inspection address for the certificate.</Text>
 
@@ -105,6 +110,9 @@ export default function LocationScreen() {
         value={manualAddress}
         onChangeText={setManualAddress}
         multiline
+        returnKeyType="done"
+        submitBehavior="blurAndSubmit"
+        textAlignVertical="top"
       />
       <TouchableOpacity
         className="bg-gray-800 rounded-xl py-3 items-center mb-8"
@@ -121,6 +129,6 @@ export default function LocationScreen() {
           <Text className="text-white font-bold text-base">Next: Select Customer</Text>
         </TouchableOpacity>
       ) : null}
-    </View>
+    </KeyboardAwareScreen>
   );
 }

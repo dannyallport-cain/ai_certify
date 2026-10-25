@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useJob } from '@/components/JobStateContext';
+import { KeyboardAwareScreen, TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
 import {
   buildCertificateEditorPayload,
   createEmptyCircuit,
@@ -232,7 +233,7 @@ export default function CertificateScreen() {
   const circuits = record.formData.circuits ?? [];
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
+    <KeyboardAwareScreen className="bg-gray-50" contentBottomPadding={TAB_BAR_CLEARANCE}>
       <View className="px-5 pt-6 pb-10">
         <View className="flex-row items-start justify-between mb-5">
           <View className="flex-1 pr-4">
@@ -795,7 +796,7 @@ export default function CertificateScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </KeyboardAwareScreen>
   );
 }
 
@@ -866,6 +867,8 @@ function MultilineField({
       multiline
       textAlignVertical="top"
       placeholder={placeholder}
+      returnKeyType="done"
+      submitBehavior="blurAndSubmit"
     />
   );
 }
