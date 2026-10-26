@@ -16,6 +16,7 @@ import Plan3DCanvas from '@/components/roomplan/Plan3DCanvas';
 import Plan3DDisplayControls from '@/components/roomplan/Plan3DDisplayControls';
 import Plan3DSummary from '@/components/roomplan/Plan3DSummary';
 import Plan3DViewControls from '@/components/roomplan/Plan3DViewControls';
+import { usePlan3DOrbitCamera } from '@/components/roomplan/usePlan3DOrbitCamera';
 import {
   DEFAULT_PLAN3D_WALL_HEIGHT_METERS,
   createSampleScanSession,
@@ -31,8 +32,6 @@ import { getRoomPlanSession } from '@/services/roomplan/session-store';
 
 interface Plan3DViewState {
   projection: Plan3DProjection;
-  yawDegrees: number;
-  pitchDegrees: number;
   wallHeightMeters: number;
   showCeiling: boolean;
   showFloorGrid: boolean;
@@ -46,14 +45,14 @@ const MAX_CANVAS_WIDTH = 560;
 const CANVAS_ASPECT_RATIO = 0.82;
 const CANVAS_PADDING = 26;
 const SVG_EXPORT_SCALE = 3;
+const INITIAL_PROJECTION: Plan3DProjection = 'isometric';
+/** Matches Plan3DViewControls so its stepper range is not silently clamped. */
+const MIN_CAMERA_PITCH_DEGREES = 5;
+const MAX_CAMERA_PITCH_DEGREES = 89;
 
 function createInitialViewState(): Plan3DViewState {
-  const preset = getPlan3DProjectionPreset('isometric');
-
   return {
     projection: 'isometric',
-    yawDegrees: preset.yawDegrees,
-    pitchDegrees: preset.pitchDegrees,
     wallHeightMeters: DEFAULT_PLAN3D_WALL_HEIGHT_METERS,
     showCeiling: false,
     showFloorGrid: true,
@@ -91,6 +90,25 @@ export default function RoomPlanPlanScreen() {
   const [view, setView] = useState<Plan3DViewState>(createInitialViewState);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+
+  // The camera is the one piece of view state a gesture can change, so the hook owns it and the
+  // projection chips and steppers write back through setCamera.
+  const initialPreset = getPlan3DProjectionPreset(INITIAL_PROJECTION);
+  const orbit = usePlan3DOrbitCamera({
+    initial: {
+      yawDegrees: initialPreset.yawDegrees,
+      pitchDegrees: initialPreset.pitchDegrees,
+      zoom: 1,
+    },
+    minPitchDegrees: MIN_CAMERA_PITCH_DEGREES,
+    maxPitchDegrees: MAX_CAMERA_PITCH_DEGREES,
+  });
+
+  const resetView = useCallback(() => {
+    const preset = getPlan3DProjectionPreset(view.projection);
+
+    orbit.setCamera({ yawDegrees: preset.yawDegrees, pitchDegrees: preset.pitchDegrees, zoom: 1 });
+  }, [orbit, view.projection]);
 
   const inlineSession = useMemo(() => parseSessionParam(firstParam(params.session)), [params.session]);
 
@@ -142,8 +160,9 @@ export default function RoomPlanPlanScreen() {
     return generateFireAlarmPlan3D(session, {
       camera: {
         projection: view.projection,
-        yawDegrees: view.yawDegrees,
-        pitchDegrees: view.pitchDegrees,
+        yawDegrees: orbit.camera.yawDegrees,
+        pitchDegrees: orbit.camera.pitchDegrees,
+        zoom: orbit.camera.zoom,
         wallHeightMeters: view.wallHeightMeters,
         showCeiling: view.showCeiling,
         showFloorGrid: view.showFloorGrid,
@@ -155,7 +174,7 @@ export default function RoomPlanPlanScreen() {
       wallHeightMeters: view.wallHeightMeters,
       viewport: { width: canvasWidth, height: canvasHeight, padding: CANVAS_PADDING },
     });
-  }, [canvasHeight, canvasWidth, selectedDeviceId, session, view]);
+  }, [canvasHeight, canvasWidth, orbit.camera, selectedDeviceId, session, view]);
 
   const handleShareSvg = useCallback(async () => {
     if (!plan) {
@@ -233,6 +252,7 @@ export default function RoomPlanPlanScreen() {
     <ScrollView
       className="flex-1 bg-[#F5F7FA]"
       contentContainerStyle={{ paddingHorizontal: HORIZONTAL_PADDING, paddingTop: 16, paddingBottom: 40 }}
+      scrollEnabled={!orbit.isDragging}
     >
       <View className="mb-4 flex-row items-center">
         <Pressable
@@ -253,19 +273,36 @@ export default function RoomPlanPlanScreen() {
       {plan ? (
         <>
           <View className="items-center rounded-[28px] border border-[#E0E6ED] bg-white p-2">
-            <Plan3DCanvas
-              plan={plan}
-              selectedDeviceId={selectedDeviceId}
-              onSelectDevice={handleSelectDevice}
-            />
+            <View {...orbit.panHandlers} style={{ width: canvasWidth, height: canvasHeight }}>
+              <Plan3DCanvas
+                plan={plan}
+                selectedDeviceId={selectedDeviceId}
+                onSelectDevice={handleSelectDevice}
+              />
+            </View>
             <View className="mt-2 w-full flex-row items-center justify-between px-2 pb-1">
               <Text className="text-[11px] text-[#718096]">
                 {plan.stats.roomCount} room(s) · {plan.stats.deviceCount} device(s)
               </Text>
-              <Text className="text-[11px] text-[#718096]">
-                yaw {Math.round(plan.camera.yawDegrees)}° · tilt {Math.round(plan.camera.pitchDegrees)}°
-              </Text>
+              <View className="flex-row items-center gap-2">
+                <Text className="text-[11px] text-[#718096]">
+                  yaw {Math.round(orbit.camera.yawDegrees)}° · tilt{' '}
+                  {Math.round(orbit.camera.pitchDegrees)}° · zoom {orbit.camera.zoom.toFixed(1)}×
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset the 3D view"
+                  onPress={resetView}
+                  hitSlop={8}
+                  className="h-7 w-7 items-center justify-center rounded-full border border-[#E0E6ED] bg-white"
+                >
+                  <Ionicons name="refresh" size={13} color="#334155" />
+                </Pressable>
+              </View>
             </View>
+            <Text className="w-full px-2 pb-1 text-[11px] text-[#94A3B8]">
+              Drag to rotate · pinch to zoom · tap a marker to select a device
+            </Text>
           </View>
 
           <View className="mt-4 rounded-[28px] border border-[#E0E6ED] bg-white p-5">
@@ -277,14 +314,14 @@ export default function RoomPlanPlanScreen() {
             <Text className="mb-4 text-lg font-semibold text-[#1A202C]">View</Text>
             <Plan3DViewControls
               projection={view.projection}
-              yawDegrees={view.yawDegrees}
-              pitchDegrees={view.pitchDegrees}
+              yawDegrees={orbit.camera.yawDegrees}
+              pitchDegrees={orbit.camera.pitchDegrees}
               wallHeightMeters={view.wallHeightMeters}
               onProjectionChange={(projection) =>
                 setView((current) => ({ ...current, projection }))
               }
-              onYawChange={(yawDegrees) => setView((current) => ({ ...current, yawDegrees }))}
-              onPitchChange={(pitchDegrees) => setView((current) => ({ ...current, pitchDegrees }))}
+              onYawChange={(yawDegrees) => orbit.setCamera({ yawDegrees })}
+              onPitchChange={(pitchDegrees) => orbit.setCamera({ pitchDegrees })}
               onWallHeightChange={(wallHeightMeters) =>
                 setView((current) => ({ ...current, wallHeightMeters }))
               }

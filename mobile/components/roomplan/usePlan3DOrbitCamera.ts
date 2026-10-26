@@ -15,6 +15,9 @@ export interface Plan3DOrbitCameraOptions {
   onTap?: (point: Plan3DPoint) => void;
   minZoom?: number;
   maxZoom?: number;
+  /** Lowest camera tilt allowed. The placement view needs a floor it can still ray-cast onto. */
+  minPitchDegrees?: number;
+  maxPitchDegrees?: number;
 }
 
 export interface Plan3DOrbitCameraController {
@@ -24,6 +27,8 @@ export interface Plan3DOrbitCameraController {
   reset: () => void;
   rotateBy: (yawDeltaDegrees: number, pitchDeltaDegrees: number) => void;
   zoomBy: (factor: number) => void;
+  /** Sets absolute camera values, so sliders and gestures can share one source of truth. */
+  setCamera: (patch: Partial<Plan3DOrbitCamera>) => void;
 }
 
 export const DEFAULT_ORBIT_CAMERA: Plan3DOrbitCamera = {
@@ -77,14 +82,16 @@ export function usePlan3DOrbitCamera(
 ): Plan3DOrbitCameraController {
   const minZoom = options.minZoom ?? DEFAULT_MIN_ZOOM;
   const maxZoom = options.maxZoom ?? DEFAULT_MAX_ZOOM;
+  const minPitchDegrees = options.minPitchDegrees ?? MIN_PITCH_DEGREES;
+  const maxPitchDegrees = options.maxPitchDegrees ?? MAX_PITCH_DEGREES;
 
   const initialCamera = useMemo<Plan3DOrbitCamera>(
     () => ({
       yawDegrees: options.initial?.yawDegrees ?? DEFAULT_ORBIT_CAMERA.yawDegrees,
       pitchDegrees: clamp(
         options.initial?.pitchDegrees ?? DEFAULT_ORBIT_CAMERA.pitchDegrees,
-        MIN_PITCH_DEGREES,
-        MAX_PITCH_DEGREES,
+        options.minPitchDegrees ?? MIN_PITCH_DEGREES,
+        options.maxPitchDegrees ?? MAX_PITCH_DEGREES,
       ),
       zoom: clamp(options.initial?.zoom ?? DEFAULT_ORBIT_CAMERA.zoom, minZoom, maxZoom),
     }),
@@ -121,10 +128,10 @@ export function usePlan3DOrbitCamera(
       applyCamera({
         ...current,
         yawDegrees: normaliseYaw(current.yawDegrees + yawDeltaDegrees),
-        pitchDegrees: clamp(current.pitchDegrees + pitchDeltaDegrees, MIN_PITCH_DEGREES, MAX_PITCH_DEGREES),
+        pitchDegrees: clamp(current.pitchDegrees + pitchDeltaDegrees, minPitchDegrees, maxPitchDegrees),
       });
     },
-    [applyCamera],
+    [applyCamera, maxPitchDegrees, minPitchDegrees],
   );
 
   const zoomBy = useCallback(
@@ -134,6 +141,23 @@ export function usePlan3DOrbitCamera(
       applyCamera({ ...current, zoom: clamp(current.zoom * factor, minZoom, maxZoom) });
     },
     [applyCamera, maxZoom, minZoom],
+  );
+
+  const updateCamera = useCallback(
+    (patch: Partial<Plan3DOrbitCamera>) => {
+      const current = cameraRef.current;
+
+      applyCamera({
+        yawDegrees: normaliseYaw(patch.yawDegrees ?? current.yawDegrees),
+        pitchDegrees: clamp(
+          patch.pitchDegrees ?? current.pitchDegrees,
+          minPitchDegrees,
+          maxPitchDegrees,
+        ),
+        zoom: clamp(patch.zoom ?? current.zoom, minZoom, maxZoom),
+      });
+    },
+    [applyCamera, maxPitchDegrees, maxZoom, minPitchDegrees, minZoom],
   );
 
   const panHandlers = useMemo<GestureResponderHandlers>(() => {
@@ -214,8 +238,8 @@ export function usePlan3DOrbitCamera(
           yawDegrees: normaliseYaw(baseline.camera.yawDegrees - gestureState.dx * YAW_DEGREES_PER_PIXEL),
           pitchDegrees: clamp(
             baseline.camera.pitchDegrees + gestureState.dy * PITCH_DEGREES_PER_PIXEL,
-            MIN_PITCH_DEGREES,
-            MAX_PITCH_DEGREES,
+            minPitchDegrees,
+            maxPitchDegrees,
           ),
         });
       },
@@ -247,7 +271,15 @@ export function usePlan3DOrbitCamera(
     });
 
     return responder.panHandlers;
-  }, [applyCamera, maxZoom, minZoom]);
+  }, [applyCamera, maxPitchDegrees, maxZoom, minPitchDegrees, minZoom]);
 
-  return { camera, panHandlers, isDragging, reset, rotateBy, zoomBy };
+  return {
+    camera,
+    panHandlers,
+    isDragging,
+    reset,
+    rotateBy,
+    zoomBy,
+    setCamera: updateCamera,
+  };
 }
