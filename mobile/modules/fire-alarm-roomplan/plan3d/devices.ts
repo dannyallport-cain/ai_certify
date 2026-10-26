@@ -29,11 +29,31 @@ function getMountingDefault(type: FireAlarmDeviceType): MountingDefault {
   return MOUNTING_DEFAULTS[type] ?? UNKNOWN_MOUNTING;
 }
 
+/**
+ * Reads the surface the inspector picked in the placement view. An explicit choice outranks the
+ * per-type defaults, so a detector deliberately put on a wall is not snapped back to the ceiling.
+ */
+export function readDeclaredMounting(device: FireAlarmDeviceDetection): Plan3DMounting | null {
+  const declared = device.metadata?.mounting;
+
+  return declared === 'floor' || declared === 'wall' || declared === 'ceiling' ? declared : null;
+}
+
 /** Resolves a device's installed height, falling back to the type's typical mounting height. */
 export function resolveDeviceHeightMeters(
   device: FireAlarmDeviceDetection,
   roomHeightMeters: number,
 ): number {
+  const declared = readDeclaredMounting(device);
+
+  if (declared === 'ceiling') {
+    return roomHeightMeters;
+  }
+
+  if (declared === 'floor') {
+    return MIN_DEVICE_HEIGHT_METERS;
+  }
+
   const fallback = getMountingDefault(device.type);
   const candidate = device.location?.z;
 
@@ -53,6 +73,12 @@ export function resolveDeviceMounting(
   heightMeters: number,
   roomHeightMeters: number,
 ): Plan3DMounting {
+  const declared = readDeclaredMounting(device);
+
+  if (declared) {
+    return declared;
+  }
+
   if (device.type === 'detector' || heightMeters >= roomHeightMeters - CEILING_SNAP_MARGIN_METERS) {
     return 'ceiling';
   }

@@ -5,6 +5,7 @@ import { Stack, router, usePathname } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { JobStateProvider } from '@/components/JobStateContext';
 import { AppNavigationProvider } from '@/components/navigation/AppNavigationContext';
+import AppHeader from '@/components/navigation/AppHeader';
 import { AuthLockProvider } from '@/components/auth/AuthLockProvider';
 import { UnlockScreen } from '@/components/auth/UnlockScreen';
 import { useAuthLock } from '@/components/auth/useAuthLock';
@@ -65,7 +66,23 @@ function AppShell() {
   return (
     <View className="flex-1">
       <AuthRouteSync />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack
+        screenOptions={{
+          headerShown: true,
+          // One header for the whole app: brand mark, title and a back control that is always
+          // there. It is rendered by the navigator, so it stays pinned while a screen scrolls.
+          header: (props) => <AppHeader {...props} />,
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="account" options={{ title: 'Account' }} />
+        <Stack.Screen name="certificates" options={{ title: 'Certificates' }} />
+        <Stack.Screen name="room-plan/review" options={{ title: 'Review session' }} />
+        <Stack.Screen name="room-plan/plan" options={{ title: '3D plan' }} />
+        <Stack.Screen name="room-plan/export" options={{ title: 'Export' }} />
+        <Stack.Screen name="room-plan/session/[id]" options={{ title: 'Session details' }} />
+      </Stack>
       {status === 'locked' ? <UnlockScreen /> : null}
     </View>
   );

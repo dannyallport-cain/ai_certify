@@ -9,10 +9,16 @@ import {
   useJob,
   type CaptureMode,
   type CapturedImage,
-  type PhotoQualityAssessment,
   type WizardPhotoType,
 } from "@/components/JobStateContext";
-import { analyseImage, type AnalysisResult } from "@/services/api";
+import {
+  analyseDetectorImage,
+  analyseImage,
+  isDetectorCaptureMode,
+  type AnalysisResult,
+} from "@/services/api";
+import { buildAnalysisMessage, buildAnalysisSummary } from "@/lib/analysis-summary";
+import { buildQualityAssessment } from "@/lib/photo-quality";
 
 type CapturedPreview = {
   uri: string;
@@ -26,14 +32,17 @@ type CaptureRequirement = {
   guidance: string[];
 };
 
+// Each photo type is analysed by the pipeline that can actually describe it.
+// Detectors used to be mapped onto `consumer_unit`, which sent a photo of a
+// smoke alarm through the distribution-board OCR pipeline.
 const wizardPhotoModeMap: Record<WizardPhotoType, CaptureMode> = {
   consumer_unit_external: "consumer_unit",
   consumer_unit_internal: "consumer_unit",
   bonding: "consumer_unit",
   damaged_accessory: "consumer_unit",
   damaged_luminaire: "consumer_unit",
-  smoke_detector: "consumer_unit",
-  co_detector: "consumer_unit",
+  smoke_detector: "smoke_detector",
+  co_detector: "co_detector",
 };
 
 const captureRequirementMap: Record<WizardPhotoType, CaptureRequirement> = {
@@ -81,45 +90,6 @@ const captureRequirementMap: Record<WizardPhotoType, CaptureRequirement> = {
   },
 };
 
-function getBrandModel(result: AnalysisResult | null | undefined) {
-  return [result?.consumerUnit?.brand, result?.consumerUnit?.model].filter(Boolean).join(" ");
-}
-
-function getTextDetectionCount(result: AnalysisResult | null | undefined) {
-  return Array.isArray(result?.textDetections) ? result.textDetections.length : 0;
-}
-
-function getObservationCount(result: AnalysisResult | null | undefined) {
-  return Array.isArray(result?.observations) ? result.observations.length : 0;
-}
-
-function buildAnalysisMessage(result: AnalysisResult) {
-  const localLlm = result.modelInfo?.localLlm;
-  const providerLabel =
-    localLlm?.provider === 'ollama'
-      ? 'Ollama'
-      : localLlm?.provider === 'lmstudio'
-        ? 'LM Studio'
-        : localLlm?.provider === 'disabled'
-          ? 'Disabled'
-          : null;
-
-  const lines = [
-    result.summary || 'Analysis completed successfully.',
-    getBrandModel(result) ? `Consumer unit: ${getBrandModel(result)}` : null,
-    `Extracted text items: ${getTextDetectionCount(result)}`,
-    `Observations: ${getObservationCount(result)}`,
-    `Needs human review: ${result.needsHumanReview ? 'Yes' : 'No'}`,
-    providerLabel ? `Local AI provider: ${providerLabel}` : null,
-    localLlm?.model ? `Configured model: ${localLlm.model}` : null,
-    localLlm?.status ? `Provider status: ${localLlm.status}` : null,
-    localLlm?.healthy === false ? 'Provider health check: unavailable' : null,
-    localLlm?.healthy === true ? 'Provider health check: healthy' : null,
-  ];
-
-  return lines.filter(Boolean).join('\n');
-}
-
 function getImageDimensions(uri: string) {
   return new Promise<{ width: number; height: number }>((resolve, reject) => {
     Image.getSize(
@@ -128,59 +98,6 @@ function getImageDimensions(uri: string) {
       () => reject(new Error("Unable to read image dimensions.")),
     );
   });
-}
-
-function buildQualityAssessment(params: {
-  width: number | null;
-  height: number | null;
-  mode: CaptureMode;
-  result: AnalysisResult | null;
-}): PhotoQualityAssessment {
-  const { width, height, mode, result } = params;
-  const reasons: string[] = [];
-  let score = 100;
-
-  const isLandscape = typeof width === "number" && typeof height === "number" ? width >= height : false;
-  const textCount = getTextDetectionCount(result);
-  const hasUsefulTextDetection = textCount >= (mode === "circuit_label" ? 3 : 1);
-  const needsHumanReview = !!result?.needsHumanReview;
-
-  if (typeof width !== "number" || typeof height !== "number") {
-    score -= 20;
-    reasons.push("The app could not confirm the image dimensions.");
-  } else {
-    if (width < 1200 || height < 900) {
-      score -= 30;
-      reasons.push("The image resolution looks low.");
-    }
-    if (!isLandscape) {
-      score -= 10;
-      reasons.push("Landscape framing is recommended.");
-    }
-  }
-
-  if (!hasUsefulTextDetection && mode !== "consumer_unit") {
-    score -= 20;
-    reasons.push("Very little readable text was detected.");
-  }
-
-  if (needsHumanReview) {
-    score -= 15;
-    reasons.push("The AI flagged this image for human review.");
-  }
-
-  return {
-    isSufficient: score >= 70,
-    score: Math.max(0, Math.min(100, score)),
-    reasons,
-    checks: {
-      width,
-      height,
-      isLandscape,
-      hasUsefulTextDetection,
-      needsHumanReview,
-    },
-  };
 }
 
 export default function CaptureScreen() {
@@ -205,22 +122,10 @@ export default function CaptureScreen() {
     ];
   }, [activeRequirement]);
 
-  const analysisSummary = useMemo(() => {
-    if (!state.analysisResult) return null;
-
-    return {
-      summary: state.analysisResult.summary || 'No summary returned.',
-      brandModel: getBrandModel(state.analysisResult),
-      textCount: getTextDetectionCount(state.analysisResult),
-      observationCount: getObservationCount(state.analysisResult),
-      needsHumanReview: !!state.analysisResult.needsHumanReview,
-      localLlmProvider: state.analysisResult.modelInfo?.localLlm?.provider ?? null,
-      localLlmModel: state.analysisResult.modelInfo?.localLlm?.model ?? null,
-      localLlmStatus: state.analysisResult.modelInfo?.localLlm?.status ?? null,
-      localLlmHealthy: state.analysisResult.modelInfo?.localLlm?.healthy ?? null,
-      localLlmDetail: state.analysisResult.modelInfo?.localLlm?.detail ?? null,
-    };
-  }, [state.analysisResult]);
+  const analysisSummary = useMemo(
+    () => buildAnalysisSummary(state.analysisResult),
+    [state.analysisResult],
+  );
 
   function clearActiveCapture() {
     dispatch({
@@ -272,22 +177,43 @@ export default function CaptureScreen() {
     }
   }
 
+  async function analysePreview(preview: CapturedPreview): Promise<{
+    result: AnalysisResult | null;
+    analysisError: string | null;
+  }> {
+    try {
+      const result = isDetectorCaptureMode(preview.mode)
+        ? await analyseDetectorImage(preview.uri, preview.mode)
+        : await analyseImage(preview.uri, preview.mode);
+
+      dispatch({ type: "SET_ANALYSIS", payload: result });
+      return { result, analysisError: null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Analysis failed";
+
+      // A detector photo is evidence in its own right: an AI outage must not
+      // stop the inspector recording the alarm. Board photos keep the stricter
+      // behaviour, because the analysis is what that photo is captured for.
+      if (isDetectorCaptureMode(preview.mode)) {
+        return { result: null, analysisError: message };
+      }
+
+      throw error;
+    }
+  }
+
   async function confirmPhoto() {
     if (!capturedPreview) return;
 
+    const preview = capturedPreview;
     setAnalysing(true);
 
     try {
-      let result: AnalysisResult | null = null;
-
-      if (capturedPreview.mode === "consumer_unit" || capturedPreview.mode === "circuit_label") {
-        result = await analyseImage(capturedPreview.uri, capturedPreview.mode);
-        dispatch({ type: "SET_ANALYSIS", payload: result });
-      }
+      const { result, analysisError } = await analysePreview(preview);
 
       let dimensions: { width: number; height: number } | null = null;
       try {
-        dimensions = await getImageDimensions(capturedPreview.uri);
+        dimensions = await getImageDimensions(preview.uri);
       } catch {
         dimensions = null;
       }
@@ -295,8 +221,9 @@ export default function CaptureScreen() {
       const qualityAssessment = buildQualityAssessment({
         width: dimensions?.width ?? null,
         height: dimensions?.height ?? null,
-        mode: capturedPreview.mode,
+        mode: preview.mode,
         result,
+        analysisError,
       });
 
       if (!qualityAssessment.isSufficient) {
@@ -416,37 +343,16 @@ export default function CaptureScreen() {
 
           {analysisSummary ? (
             <View className="mt-4 rounded-[24px] border border-white/10 bg-black/55 px-4 py-4">
-              <Text className="font-semibold text-white">Latest analysis</Text>
+              <Text className="font-semibold text-white">{analysisSummary.title}</Text>
               <Text className="mt-2 text-sm leading-5 text-white/85">{analysisSummary.summary}</Text>
-              {analysisSummary.brandModel ? (
-                <Text className="mt-2 text-sm text-white/75">Consumer unit: {analysisSummary.brandModel}</Text>
-              ) : null}
-              <Text className="mt-2 text-sm text-white/75">Text detected: {analysisSummary.textCount}</Text>
-              <Text className="mt-1 text-sm text-white/75">Observations: {analysisSummary.observationCount}</Text>
-              {analysisSummary.localLlmProvider ? (
-                <Text className="mt-1 text-sm text-white/75">
-                  Local AI provider: {analysisSummary.localLlmProvider}
-                </Text>
-              ) : null}
-              {analysisSummary.localLlmModel ? (
-                <Text className="mt-1 text-sm text-white/75">
-                  Configured model: {analysisSummary.localLlmModel}
-                </Text>
-              ) : null}
-              {analysisSummary.localLlmStatus ? (
-                <Text className="mt-1 text-sm text-white/75">
-                  Provider status: {analysisSummary.localLlmStatus}
-                  {analysisSummary.localLlmHealthy === true
-                    ? ' (healthy)'
-                    : analysisSummary.localLlmHealthy === false
-                      ? ' (unavailable)'
-                      : ''}
-                </Text>
-              ) : null}
-              {analysisSummary.localLlmDetail ? (
-                <Text className="mt-2 text-xs leading-5 text-white/60">
-                  {analysisSummary.localLlmDetail}
-                </Text>
+              {analysisSummary.lines.map((line) => (
+                <View key={`${line.label}-${line.value}`} className="mt-1 flex-row items-start">
+                  <Text className="mr-2 text-sm text-white/60">{line.label}:</Text>
+                  <Text className="flex-1 text-sm text-white/85">{line.value}</Text>
+                </View>
+              ))}
+              {analysisSummary.detail ? (
+                <Text className="mt-2 text-xs leading-5 text-white/60">{analysisSummary.detail}</Text>
               ) : null}
             </View>
           ) : null}

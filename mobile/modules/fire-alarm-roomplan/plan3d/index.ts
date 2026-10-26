@@ -51,12 +51,30 @@ export {
   PLAN3D_DEVICE_TYPE_ORDER,
 } from './palette';
 
+export type {
+  Plan3DPickOptions,
+  Plan3DPickSurface,
+  Plan3DPickSurfaceKind,
+  Plan3DPlacement,
+  Plan3DRay,
+  Plan3DRayHit,
+} from './picking';
+
+export {
+  buildPlan3DPickSurfaces,
+  createPlan3DPickRay,
+  intersectPlan3DRayWithSurface,
+  pickPlan3DPlacement,
+  resolvePlacementPosition,
+} from './picking';
+
 export {
   DEFAULT_PLAN3D_WALL_HEIGHT_METERS,
   PLAN3D_PROJECTIONS,
   createPlan3DViewport,
   getPlan3DProjectionLabel,
   getPlan3DProjectionPreset,
+  mapProjectedPoint,
   projectVertex,
   resolvePlan3DCamera,
 } from './projection';

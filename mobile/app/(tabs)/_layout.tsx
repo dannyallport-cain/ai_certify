@@ -1,10 +1,19 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { HeaderBackButton, HeaderForwardButton, useTrackCurrentRoute } from '@/components/navigation/StackHeaderNav';
+import { useTrackCurrentRoute } from '@/components/navigation/StackHeaderNav';
+import AppHeader from '@/components/navigation/AppHeader';
 
 type TabBarIconProps = {
   color: string;
   size: number;
+};
+
+/** Where each wizard step's forward chevron leads when there is no forward history. */
+const FORWARD_FALLBACKS: Record<string, string | undefined> = {
+  index: '/(tabs)/wizard',
+  location: '/(tabs)/customer',
+  customer: '/(tabs)/review',
+  review: '/(tabs)/success',
 };
 
 export default function TabsLayout() {
@@ -12,37 +21,11 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      screenOptions={({ navigation, route }) => ({
-        headerStyle: {
-          backgroundColor: '#FAFBFC',
-        },
-        headerShadowVisible: false,
-        headerTintColor: '#1A202C',
-        headerTitleStyle: {
-          fontSize: 18,
-          fontWeight: '700',
-          color: '#1A202C',
-        },
-        headerLeft: () => <HeaderBackButton navigation={navigation} />,
-        headerRight: () => {
-          if (route.name === 'index') {
-            return <HeaderForwardButton fallbackHref="/(tabs)/wizard" />;
-          }
-
-          if (route.name === 'location') {
-            return <HeaderForwardButton fallbackHref="/(tabs)/customer" />;
-          }
-
-          if (route.name === 'customer') {
-            return <HeaderForwardButton fallbackHref="/(tabs)/review" />;
-          }
-
-          if (route.name === 'review') {
-            return <HeaderForwardButton fallbackHref="/(tabs)/success" />;
-          }
-
-          return null;
-        },
+      screenOptions={({ route }) => ({
+        // The same header every pushed screen uses, so the mark and the back control never move.
+        header: (props) => (
+          <AppHeader {...props} forwardHref={FORWARD_FALLBACKS[route.name]} />
+        ),
         sceneStyle: {
           backgroundColor: '#F5F7FA',
         },

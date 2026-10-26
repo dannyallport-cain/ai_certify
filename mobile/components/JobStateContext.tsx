@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import type {
   AnalysisResult,
+  CaptureMode,
   Customer,
   ServiceM8AttachmentRecord,
   ServiceM8ClientRecord,
@@ -8,7 +9,10 @@ import type {
   ServiceM8JobRecord,
 } from '@/services/api';
 
-export type CaptureMode = 'consumer_unit' | 'circuit_label';
+// Capture modes live with the API service so the request payload and the
+// stored capture can never drift apart. Re-exported here for the many
+// components that already import capture types from this context.
+export type { CaptureMode };
 
 export type WizardPhotoType =
   | 'consumer_unit_external'
@@ -29,6 +33,10 @@ export interface PhotoQualityAssessment {
     isLandscape: boolean;
     hasUsefulTextDetection: boolean;
     needsHumanReview: boolean;
+    /** Detector captures only: whether an alarm was actually visible. */
+    detectorPresent?: boolean | null;
+    /** Detector captures only: model confidence, 0..1. */
+    detectorConfidence?: number | null;
   };
 }
 

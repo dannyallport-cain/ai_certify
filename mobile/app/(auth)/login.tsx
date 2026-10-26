@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
@@ -126,10 +127,20 @@ export default function LoginScreen() {
       dismissKeyboardOnTap={false}
       footer={actions}
     >
-      <Text className="mb-2 text-4xl font-bold" style={{ color: BRAND_BLUE }}>
-        AI Certify
-      </Text>
-      <Text className="mb-10 text-base text-gray-500">Field Inspection App</Text>
+      <View className="mb-6 flex-row items-center">
+        <Image
+          source={require('../../assets/icon.png')}
+          style={{ width: 48, height: 48, borderRadius: 12 }}
+          resizeMode="cover"
+          accessibilityIgnoresInvertColors
+        />
+        <View className="ml-3">
+          <Text className="text-3xl font-bold" style={{ color: BRAND_BLUE }}>
+            AI Certify
+          </Text>
+          <Text className="mt-1 text-sm text-gray-500">Field Inspection App</Text>
+        </View>
+      </View>
 
       {unlockError ? (
         <View className="mb-6 flex-row items-start rounded-2xl bg-[#FFF4E6] px-4 py-3">

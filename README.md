@@ -53,6 +53,31 @@ The admin AI test route forwards to the Railway/FastAPI worker at `/analyze-imag
 - `RAILWAY_AI_WORKER_URL` — Railway worker base URL for AI image analysis
 - In local development, this defaults to `http://localhost:8000` if the variable is unset
 
+### Detector photo analysis
+
+Smoke and CO detector photos are analysed by `POST /api/ai/analyze-detector`, which is
+separate from the consumer-unit OCR pipeline (`/api/ai/analyze-image`). A detector has no
+board, circuit chart or readable text block, so the board pipeline cannot describe it.
+
+The device read is made with the Vercel AI SDK (`ai` + `@ai-sdk/gateway`) through the
+Vercel AI Gateway; no other model provider is used by this route. `generateObject` asks the
+model for a zod-validated reading, so a malformed reply cannot half-populate a report, and a
+reply that is valid JSON but misses a field is salvaged rather than discarded.
+
+Configuration:
+
+- `AI_GATEWAY_API_KEY` — Vercel AI Gateway key (required for detector vision)
+- `AI_GATEWAY_VISION_MODEL` — optional model id, default `openai/gpt-4o`
+- `AI_GATEWAY_BASE_URL` — optional override, useful for local stubbing
+
+Without `AI_GATEWAY_API_KEY`, or when the gateway call fails, the photo is still accepted
+and marked for human confirmation: the endpoint reports what it did not read instead of
+guessing. Detector readings are also cross-checked against the device label and printed
+standard, so a smoke alarm cannot be recorded as CO evidence because the model claimed it
+matched.
+
+Verify the detector rules with `pnpm verify:detector`.
+
 ### Transactional email setup
 
 The app sends verification emails and certificate emails through Brevo.

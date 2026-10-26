@@ -14,15 +14,20 @@ import type {
   FireAlarmScanSession,
 } from '@/modules/fire-alarm-roomplan/types';
 import type { ImportedServiceM8Image } from '@/components/JobStateContext';
+import type { BoardCaptureMode, DetectorCaptureMode } from './capture-modes';
 
 const TOKEN_KEY = 'mobile_auth_token';
 
-// Base URL for the deployed web API (Vercel) or a local tunnel in development.
-// Prefer Expo config extra.apiUrl because Expo env vars are not always injected into
-// native/device builds the same way they are in local dev. Fall back to EXPO_PUBLIC_API_URL.
+// Base URL for the deployed web API (Vercel) or a local server in development.
+//
+// EXPO_PUBLIC_API_URL wins when it is set, because it is inlined by Metro at
+// bundle time and is the only way to point a Release build at a local server
+// without editing app.json (and therefore without shipping that change).
+// Otherwise the Expo config value is used, so normal builds still target the
+// deployed app.
 const configuredBaseUrl =
-  Constants.expoConfig?.extra?.apiUrl ??
   process.env.EXPO_PUBLIC_API_URL ??
+  Constants.expoConfig?.extra?.apiUrl ??
   'https://ai-certificates.app';
 
 const BASE_URL = configuredBaseUrl.replace(/\/+$/, '');
@@ -31,12 +36,19 @@ export function getApiBaseUrl() {
   return BASE_URL;
 }
 
-const configuredAiWorkerUrl =
-  Constants.expoConfig?.extra?.aiWorkerUrl ??
-  process.env.EXPO_PUBLIC_AI_WORKER_URL ??
-  'https://ai-certificates.app/api/ai/analyze-image';
+// Base URL of the AI worker routes, without a per-endpoint suffix. Each call
+// appends its own endpoint ("/analyze-image", "/analyze-detector"), so a value
+// that still carries a trailing endpoint is trimmed to keep the URL valid.
+// Prefer Expo config extra because Expo env vars are not always injected into
+// native/device builds the same way they are in local dev.
+const configuredAiWorkerBaseUrl =
+  Constants.expoConfig?.extra?.aiWorkerBaseUrl ??
+  process.env.EXPO_PUBLIC_AI_WORKER_BASE_URL ??
+  `${BASE_URL}/api/ai`;
 
-const AI_WORKER_URL = configuredAiWorkerUrl.replace(/\/+$/, '');
+const AI_WORKER_BASE_URL = configuredAiWorkerBaseUrl
+  .replace(/\/+$/, '')
+  .replace(/\/analyze-(?:image|detector)$/i, '');
 
 function getWebTokenStorage(): Storage | null {
   if (typeof window === 'undefined') {
@@ -206,7 +218,32 @@ export async function saveFireAlarmRoomCapture(
 
 // ── Image Analysis ────────────────────────────────────────────────────────────
 
-export type CaptureMode = 'consumer_unit' | 'circuit_label';
+/**
+ * Capture modes live in a dependency-free module and are re-exported here so
+ * existing imports from the API service keep working.
+ */
+export type {
+  BoardCaptureMode,
+  CaptureMode,
+  DetectorCaptureMode,
+} from './capture-modes';
+export { isDetectorCaptureMode } from './capture-modes';
+
+export interface AnalysisDetector {
+  detectorType: 'smoke' | 'co';
+  detectedTypeLabel: string | null;
+  present: boolean | null;
+  manufacturer: string | null;
+  model: string | null;
+  powerSource: string | null;
+  mountingPosition: string | null;
+  standards: string[];
+  replaceByDate: string | null;
+  condition: string[];
+  confidence: number;
+  needsHumanReview: boolean;
+  method: 'vision' | 'ocr-text';
+}
 
 export interface AnalysisConsumerUnit {
   brand?: string | null;
@@ -250,6 +287,7 @@ export interface AnalysisResult {
   success?: boolean;
   summary?: string | null;
   consumerUnit?: AnalysisConsumerUnit | null;
+  detector?: AnalysisDetector | null;
   textDetections?: string[];
   observations?: string[];
   prefill?: AnalysisPrefill | null;
@@ -295,9 +333,44 @@ async function imageUriToDataUrl(imageUri: string): Promise<string> {
   return blobToDataUrl(blob);
 }
 
+function parseStringOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function parseStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && item.length > 0)
+    : [];
+}
+
+function parseDetector(raw: any): AnalysisDetector | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const detectorType = raw.detectorType === 'co' ? 'co' : 'smoke';
+
+  return {
+    detectorType,
+    detectedTypeLabel: parseStringOrNull(raw.detectedTypeLabel),
+    present: typeof raw.present === 'boolean' ? raw.present : null,
+    manufacturer: parseStringOrNull(raw.manufacturer),
+    model: parseStringOrNull(raw.model),
+    powerSource: parseStringOrNull(raw.powerSource),
+    mountingPosition: parseStringOrNull(raw.mountingPosition),
+    standards: parseStringArray(raw.standards),
+    replaceByDate: parseStringOrNull(raw.replaceByDate),
+    condition: parseStringArray(raw.condition),
+    confidence: typeof raw.confidence === 'number' ? raw.confidence : 0,
+    needsHumanReview: Boolean(raw.needsHumanReview),
+    method: raw.method === 'vision' ? 'vision' : 'ocr-text',
+  };
+}
+
 function buildAnalysisResult(data: any): AnalysisResult {
   const findings = data?.findings ?? {};
   const consumerUnit = findings?.consumerUnit ?? null;
+  const detector = parseDetector(findings?.detector);
   const textDetections = Array.isArray(findings?.textDetections) ? findings.textDetections : [];
   const observations = Array.isArray(findings?.observations) ? findings.observations : [];
   const rawText =
@@ -311,6 +384,7 @@ function buildAnalysisResult(data: any): AnalysisResult {
     success: Boolean(data?.success),
     summary: typeof data?.summary === 'string' ? data.summary : null,
     consumerUnit,
+    detector,
     textDetections,
     observations,
     prefill: data?.prefill ?? null,
@@ -360,34 +434,44 @@ function buildAnalysisResult(data: any): AnalysisResult {
   };
 }
 
+async function buildAiRequestHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  const token = await getToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
+/**
+ * Analyses a consumer-unit or circuit-label photo.
+ *
+ * Detector photos must go through {@link analyseDetectorImage}: they are
+ * handled by a different endpoint, because the consumer-unit pipeline can
+ * only describe boards.
+ */
 export async function analyseImage(
   imageUri: string,
-  mode: CaptureMode = 'consumer_unit',
+  mode: BoardCaptureMode = 'consumer_unit',
 ): Promise<AnalysisResult> {
   const imageBase64 = await imageUriToDataUrl(imageUri);
   const reportType = 'electrical_installation_condition_report';
-  const inspectionType = mode === 'consumer_unit' ? 'consumer_unit' : 'circuit_label';
   const requestedSections =
     mode === 'consumer_unit'
       ? ['consumer_unit_details', 'observations', 'supply_characteristics']
       : ['circuit_details', 'observations'];
 
-  const token = await getToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  const res = await fetch(`${AI_WORKER_URL}/analyze-image`, {
+  const res = await fetch(`${AI_WORKER_BASE_URL}/analyze-image`, {
     method: 'POST',
-    headers,
+    headers: await buildAiRequestHeaders(),
     body: JSON.stringify({
       imageBase64,
       reportType,
-      inspectionType,
+      inspectionType: mode,
       requestedSections,
       metadata: {
         source: 'expo-mobile-app',
@@ -399,6 +483,40 @@ export async function analyseImage(
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? body.message ?? 'Image analysis failed');
+  }
+
+  const data = await res.json();
+  return buildAnalysisResult(data);
+}
+
+/**
+ * Analyses a smoke or CO detector photo.
+ *
+ * The endpoint identifies the device in frame, reads its printed marks and
+ * reports whether the capture actually shows the detector that was requested.
+ */
+export async function analyseDetectorImage(
+  imageUri: string,
+  mode: DetectorCaptureMode,
+): Promise<AnalysisResult> {
+  const imageBase64 = await imageUriToDataUrl(imageUri);
+
+  const res = await fetch(`${AI_WORKER_BASE_URL}/analyze-detector`, {
+    method: 'POST',
+    headers: await buildAiRequestHeaders(),
+    body: JSON.stringify({
+      imageBase64,
+      inspectionType: mode,
+      metadata: {
+        source: 'expo-mobile-app',
+        captureMode: mode,
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? body.message ?? 'Detector analysis failed');
   }
 
   const data = await res.json();
@@ -417,7 +535,7 @@ export async function getFireAlarmDiagnosticsFeedback(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${AI_WORKER_URL}/fire-alarm-diagnostics`, {
+  const res = await fetch(`${AI_WORKER_BASE_URL}/fire-alarm-diagnostics`, {
     method: 'POST',
     headers,
     body: JSON.stringify({

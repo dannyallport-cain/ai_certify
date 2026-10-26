@@ -54,6 +54,7 @@
       "buildNumber": "10",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "NSLocalNetworkUsageDescription": "AI Certify connects to a local development server on your network while testing.",
         "NSFaceIDUsageDescription": "AI Certify uses Face ID to unlock the app and protect your inspection data.",
         "NSLocationWhenInUseUsageDescription": "AI Certify uses your location to automatically fill in the installation address.",
         "NSCameraUsageDescription": "AI Certify needs camera access to photograph consumer units, circuit labels, and RoomPlan fire alarm scans.",

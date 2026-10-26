@@ -9,7 +9,10 @@
     "ios": "expo run:ios",
     "ios:device:xcode": "bash ./build-ios-device.sh",
     "ios:build-and-install": "bash ./build-and-install.sh",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "verify:device-placement": "tsx scripts/verify-device-placement.ts",
+    "verify:photo-quality": "tsx scripts/verify-photo-quality.ts",
+    "verify:roomplan-review": "tsx scripts/verify-roomplan-review.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "^6.1.2",

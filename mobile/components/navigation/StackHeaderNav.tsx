@@ -6,7 +6,12 @@ import { useAppNavigation } from './AppNavigationContext';
 
 type HeaderBackButtonProps = {
   navigation: Pick<NavigationProp<ReactNavigation.RootParamList>, 'canGoBack' | 'goBack'>;
+  /** Where to go when the screen has no history to pop, e.g. a cold app launch. */
+  fallbackHref?: string;
 };
+
+/** Home tab, used when there is nothing to go back to. */
+const DEFAULT_BACK_FALLBACK_HREF = '/(tabs)';
 
 type HeaderForwardButtonProps = {
   fallbackHref?: string;
@@ -21,13 +26,14 @@ export function useTrackCurrentRoute() {
   }, [pathname, recordNavigation]);
 }
 
-export function HeaderBackButton({ navigation }: HeaderBackButtonProps) {
-  const { canGoBackInHistory, goBackInHistory } = useAppNavigation();
+export function HeaderBackButton({
+  navigation,
+  fallbackHref = DEFAULT_BACK_FALLBACK_HREF,
+}: HeaderBackButtonProps) {
+  const { goBackInHistory } = useAppNavigation();
 
-  if (!navigation.canGoBack() && !canGoBackInHistory) {
-    return null;
-  }
-
+  // Always render. It used to return null when the screen had no history,
+  // which is why a freshly opened tab appeared to have no way back at all.
   return (
     <HeaderNavButton
       icon="chevron-back"
@@ -41,7 +47,10 @@ export function HeaderBackButton({ navigation }: HeaderBackButtonProps) {
 
         if (navigation.canGoBack()) {
           navigation.goBack();
+          return;
         }
+
+        router.replace(fallbackHref as never);
       }}
     />
   );
