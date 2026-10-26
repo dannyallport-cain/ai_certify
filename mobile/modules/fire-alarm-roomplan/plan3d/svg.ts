@@ -86,6 +86,7 @@ function renderPolygons(plan: FireAlarmPlan3D): string[] {
 
 function renderMarkers(plan: FireAlarmPlan3D): string[] {
   const output: string[] = [];
+  const VOID_RING_INSET = 3.5;
 
   plan.markers.forEach((marker) => {
     output.push(
@@ -94,6 +95,19 @@ function renderMarkers(plan: FireAlarmPlan3D): string[] {
       )}" r="${formatNumber(marker.radius)}" fill="${marker.colour}" fill-opacity="0.92" stroke="${
         marker.selected ? '#FFFFFF' : '#0B1727'
       }" stroke-width="${marker.selected ? 3 : 1.5}" />`,
+    );
+
+    // A device in the ceiling void carries the same dashed ring as the in-app marker, so an
+    // exported plan cannot be read as if it were mounted in the room.
+    if (marker.mounting === 'ceiling_void') {
+      output.push(
+        `<circle cx="${formatNumber(marker.position.x)}" cy="${formatNumber(
+          marker.position.y,
+        )}" r="${formatNumber(Math.max(marker.radius - VOID_RING_INSET, 2))}" fill="none" stroke="#FFFFFF" stroke-opacity="0.92" stroke-width="1" stroke-dasharray="2 2" />`,
+      );
+    }
+
+    output.push(
       `<text x="${formatNumber(marker.position.x)}" y="${formatNumber(
         marker.position.y + MARKER_FONT_SIZE / 3,
       )}" fill="#0B1727" font-family="${TEXT_FONT_FAMILY}" font-size="${MARKER_FONT_SIZE}" font-weight="700" text-anchor="middle">${sanitiseSvgText(

@@ -3,12 +3,15 @@ import { Text, View } from 'react-native';
 
 import {
   generateFireAlarmPlan3D,
+  getMountingCamera,
+  getSurfaceKindsForMountings,
   mapProjectedPoint,
   pickPlan3DPlacement,
   projectVertex,
   resolvePlan3DRooms,
   type FireAlarmScanSession,
   type Plan3DColourScheme,
+  type Plan3DMounting,
   type Plan3DPlacement,
   type Plan3DPoint,
   type Plan3DVertex,
@@ -25,10 +28,16 @@ export interface Plan3DPlacementViewProps {
   height: number;
   wallHeightMeters?: number;
   colourScheme?: Plan3DColourScheme;
+  /**
+   * The surface family the inspector asked for. It fixes both the camera the view opens in and
+   * the only surfaces a tap can resolve to, which is what stops a ceiling tap landing on the
+   * floor in a plan view.
+   */
+  mounting?: Plan3DMounting;
   /** Current cross position in world space, or null before anything has been placed. */
   position: Plan3DVertex | null;
   onPick: (placement: Plan3DPlacement) => void;
-  /** Fired when a tap lands outside every floor, wall and ceiling surface. */
+  /** Fired when a tap lands outside every allowed surface. */
   onMiss?: () => void;
 }
 
@@ -37,13 +46,19 @@ const ROTATE_STEP_DEGREES = 15;
 const TILT_STEP_DEGREES = 8;
 const ZOOM_STEP_FACTOR = 1.25;
 const LEADER_MIN_HEIGHT_METERS = 0.25;
-const HINT_IDLE = 'Drag to rotate this view · pinch to zoom · tap a surface to place the cross';
-const HINT_PLACED = 'Drag to rotate · pinch to zoom · tap to move the cross';
+
+const MOUNTING_PROMPTS: Record<Plan3DMounting, string> = {
+  ceiling: 'Tap inside the room to fix the device to the ceiling',
+  ceiling_void: 'Tap inside the room to drop the device into the ceiling void',
+  wall: 'Spin the room, then tap a wall at the mounting height',
+  floor: 'Tap inside the room to stand the device on the floor',
+  unknown: 'Tap a surface to place the cross',
+};
 
 /**
  * The placement workspace: the generated 3D plan inside a single gesture surface. Dragging orbits
  * the room on both axes, pinching zooms, and a still tap casts a ray through the room to put the
- * cross on whichever surface is closest to the camera.
+ * cross on whichever allowed surface is nearest the camera.
  */
 export default function Plan3DPlacementView({
   session,
@@ -51,6 +66,7 @@ export default function Plan3DPlacementView({
   height,
   wallHeightMeters,
   colourScheme = 'blueprint',
+  mounting = 'unknown',
   position,
   onPick,
   onMiss,
@@ -64,8 +80,15 @@ export default function Plan3DPlacementView({
   // created once. Routing the call through a ref keeps both constraints.
   const tapTargetRef = useRef<(point: Plan3DPoint) => void>(() => {});
 
+  const surfaceKinds = useMemo(() => getSurfaceKindsForMountings([mounting]), [mounting]);
+  const cameraPreset = useMemo(() => getMountingCamera(mounting), [mounting]);
+
   const orbit = usePlan3DOrbitCamera({
-    initial: { yawDegrees: 45, pitchDegrees: 32, zoom: 1 },
+    initial: {
+      yawDegrees: cameraPreset.yawDegrees,
+      pitchDegrees: cameraPreset.pitchDegrees,
+      zoom: 1,
+    },
     onTap: (point) => tapTargetRef.current(point),
   });
 
@@ -73,7 +96,7 @@ export default function Plan3DPlacementView({
     () =>
       generateFireAlarmPlan3D(session, {
         camera: {
-          projection: 'isometric',
+          projection: cameraPreset.projection,
           yawDegrees: orbit.camera.yawDegrees,
           pitchDegrees: orbit.camera.pitchDegrees,
           zoom: orbit.camera.zoom,
@@ -87,7 +110,15 @@ export default function Plan3DPlacementView({
         wallHeightMeters,
         viewport: { width, height, padding: CANVAS_PADDING },
       }),
-    [colourScheme, height, orbit.camera, session, wallHeightMeters, width],
+    [
+      cameraPreset.projection,
+      colourScheme,
+      height,
+      orbit.camera,
+      session,
+      wallHeightMeters,
+      width,
+    ],
   );
 
   tapTargetRef.current = (point) => {
@@ -96,7 +127,9 @@ export default function Plan3DPlacementView({
       rooms,
       camera: plan.camera,
       viewport: plan.viewport,
-      includeCeiling: false,
+      includeCeiling: surfaceKinds.includes('ceiling'),
+      includeCeilingVoid: surfaceKinds.includes('ceiling_void'),
+      surfaceKinds,
     });
 
     if (placement) {
@@ -125,6 +158,8 @@ export default function Plan3DPlacementView({
     return mapProjectedPoint(projectVertex(floorVertex, plan.camera), plan.viewport);
   }, [plan, position]);
 
+  const hint = `${MOUNTING_PROMPTS[mounting] ?? MOUNTING_PROMPTS.unknown} · drag to rotate · pinch to zoom`;
+
   return (
     <View>
       <View {...orbit.panHandlers} style={{ width, height }}>
@@ -149,7 +184,7 @@ export default function Plan3DPlacementView({
               color: '#E2E8F0',
             }}
           >
-            {position ? HINT_PLACED : HINT_IDLE}
+            {hint}
           </Text>
         </View>
       </View>

@@ -81,6 +81,20 @@ export {
 
 export { resolvePlan3DRooms } from './rooms';
 
+export type { Plan3DMountingCamera, Plan3DMountingOption } from './mounting-rules';
+
+export {
+  CEILING_VOID_OFFSET_METERS,
+  getDefaultMounting,
+  getMountingCamera,
+  getMountingDescription,
+  getMountingLabel,
+  getMountingOptions,
+  getMountingSurfaceKinds,
+  getSurfaceKindsForMountings,
+  isCeilingVoidMounting,
+} from './mounting-rules';
+
 export {
   createVertex,
   projectPointOnSegment,

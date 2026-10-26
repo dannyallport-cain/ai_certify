@@ -1,4 +1,4 @@
-import type { FireAlarmDeviceType, FireAlarmManufacturer } from '../types';
+import type { FireAlarmManufacturer } from '../types';
 import type {
   Plan3DCamera,
   Plan3DLegendEntry,
@@ -98,7 +98,7 @@ export function buildPlan3DMarkers(input: {
   return rooms
     .flatMap((room) =>
       room.devices.map((placed) => {
-        const style = getPlan3DDeviceStyle(placed.device.type);
+        const style = getPlan3DDeviceStyle(placed.device.type, placed.mounting);
         const projected = projectVertex(placed.worldPosition, camera);
         const selected = Boolean(selectedDeviceId && selectedDeviceId === placed.device.id);
 
@@ -277,23 +277,40 @@ export function buildPlan3DTexts(input: {
 }
 
 export function buildPlan3DLegend(rooms: Plan3DRoom[]): Plan3DLegendEntry[] {
-  const counts = new Map<FireAlarmDeviceType, number>();
+  // Ceiling-void devices are counted apart from the same type in the room: they are drawn with a
+  // different marker, so folding them into one total would make the legend lie about the plan.
+  const counts = new Map<string, number>();
 
   rooms.forEach((room) => {
     room.devices.forEach((placed) => {
-      counts.set(placed.device.type, (counts.get(placed.device.type) ?? 0) + 1);
+      const key = `${placed.device.type}|${placed.mounting === 'ceiling_void' ? 'void' : 'room'}`;
+
+      counts.set(key, (counts.get(key) ?? 0) + 1);
     });
   });
 
-  return PLAN3D_DEVICE_TYPE_ORDER.filter((type) => (counts.get(type) ?? 0) > 0).map((type) => {
-    const style = getPlan3DDeviceStyle(type);
+  const entries: Plan3DLegendEntry[] = [];
 
-    return {
-      deviceType: type,
-      label: style.label,
-      glyph: style.glyph,
-      colour: style.colour,
-      count: counts.get(type) ?? 0,
-    } satisfies Plan3DLegendEntry;
+  PLAN3D_DEVICE_TYPE_ORDER.forEach((type) => {
+    ([false, true] as const).forEach((inCeilingVoid) => {
+      const count = counts.get(`${type}|${inCeilingVoid ? 'void' : 'room'}`) ?? 0;
+
+      if (count === 0) {
+        return;
+      }
+
+      const style = getPlan3DDeviceStyle(type, inCeilingVoid ? 'ceiling_void' : null);
+
+      entries.push({
+        deviceType: type,
+        label: style.label,
+        glyph: style.glyph,
+        colour: style.colour,
+        count,
+        inCeilingVoid,
+      });
+    });
   });
+
+  return entries;
 }

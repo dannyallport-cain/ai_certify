@@ -1,5 +1,5 @@
 import type { FireAlarmDeviceType } from '../types';
-import type { Plan3DColourScheme } from './plan3d-types';
+import type { Plan3DColourScheme, Plan3DMounting } from './plan3d-types';
 
 export interface Plan3DPalette {
   surfaceBackground: string;
@@ -88,28 +88,42 @@ export interface Plan3DDeviceStyle {
   label: string;
   glyph: string;
   colour: string;
+  /**
+   * True when the device sits above the finished ceiling. The marker layer draws these with a
+   * dashed inner ring, so a device in the void cannot be mistaken for one in the room.
+   */
+  inCeilingVoid: boolean;
 }
 
 const DEVICE_STYLES: Record<FireAlarmDeviceType, Plan3DDeviceStyle> = {
-  panel: { label: 'Control panel', glyph: 'FACP', colour: '#F97316' },
-  sounder: { label: 'Sounder', glyph: 'SND', colour: '#22D3EE' },
-  detector: { label: 'Detector', glyph: 'DET', colour: '#34D399' },
-  interface: { label: 'Interface', glyph: 'INT', colour: '#38BDF8' },
-  io_unit: { label: 'I/O unit', glyph: 'I/O', colour: '#FBBF24' },
-  vad: { label: 'VAD / beacon', glyph: 'VAD', colour: '#F472B6' },
-  unknown: { label: 'Unidentified', glyph: '?', colour: '#94A3B8' },
+  panel: { label: 'Control panel', glyph: 'FACP', colour: '#F97316', inCeilingVoid: false },
+  sounder: { label: 'Sounder', glyph: 'SND', colour: '#22D3EE', inCeilingVoid: false },
+  detector: { label: 'Detector', glyph: 'DET', colour: '#34D399', inCeilingVoid: false },
+  interface: { label: 'Interface', glyph: 'INT', colour: '#38BDF8', inCeilingVoid: false },
+  io_unit: { label: 'I/O unit', glyph: 'I/O', colour: '#FBBF24', inCeilingVoid: false },
+  vad: { label: 'VAD / beacon', glyph: 'VAD', colour: '#F472B6', inCeilingVoid: false },
+  unknown: { label: 'Unidentified', glyph: '?', colour: '#94A3B8', inCeilingVoid: false },
 };
 
 const FALLBACK_DEVICE_STYLE: Plan3DDeviceStyle = DEVICE_STYLES.unknown;
 
 export function getPlan3DDeviceStyle(
   type: FireAlarmDeviceType | string | null | undefined,
+  mounting?: Plan3DMounting | null,
 ): Plan3DDeviceStyle {
-  if (!type) {
-    return FALLBACK_DEVICE_STYLE;
+  const base = type
+    ? (DEVICE_STYLES[type as FireAlarmDeviceType] ?? FALLBACK_DEVICE_STYLE)
+    : FALLBACK_DEVICE_STYLE;
+
+  if (mounting !== 'ceiling_void') {
+    return base;
   }
 
-  return DEVICE_STYLES[type as FireAlarmDeviceType] ?? FALLBACK_DEVICE_STYLE;
+  return {
+    ...base,
+    label: `${base.label} (ceiling void)`,
+    inCeilingVoid: true,
+  };
 }
 
 export const PLAN3D_DEVICE_TYPE_ORDER: FireAlarmDeviceType[] = [

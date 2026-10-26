@@ -1,6 +1,7 @@
 import type {
   Plan3DCamera,
   Plan3DMounting,
+  Plan3DPickSurfaceKind,
   Plan3DPoint,
   Plan3DVertex,
   Plan3DViewport,
@@ -8,9 +9,9 @@ import type {
 import type { Plan3DRoom } from './room-types';
 import { clamp, createVertex, degreesToRadians, normaliseDegrees, polygonCentroid2D } from './geometry';
 import { mapProjectedPoint, projectVertex } from './projection';
+import { CEILING_VOID_OFFSET_METERS } from './mounting-rules';
 
-/** Surface families a device can be placed against. */
-export type Plan3DPickSurfaceKind = 'floor' | 'wall' | 'ceiling';
+export type { Plan3DPickSurfaceKind } from './plan3d-types';
 
 /** A planar, world-space surface the placement ray can hit. */
 export interface Plan3DPickSurface {
@@ -56,6 +57,13 @@ export interface Plan3DPickOptions {
   viewport: Plan3DViewport;
   /** Ceiling pick targets are dropped unless the plan is drawing a ceiling. */
   includeCeiling?: boolean;
+  /** Adds the plane above the finished ceiling, where void-mounted devices sit. */
+  includeCeilingVoid?: boolean;
+  /**
+   * Surfaces the tap may resolve to. Restricting this is what makes plan view unambiguous: with
+   * only ceilings offered, a downward ray can never land on the floor instead.
+   */
+  surfaceKinds?: Plan3DPickSurfaceKind[];
 }
 
 const WALL_OFFSET_METERS = 0.12;
@@ -140,7 +148,7 @@ function wallInteriorNormal(
  */
 export function buildPlan3DPickSurfaces(
   rooms: Plan3DRoom[],
-  options: { includeCeiling?: boolean } = {},
+  options: { includeCeiling?: boolean; includeCeilingVoid?: boolean } = {},
 ): Plan3DPickSurface[] {
   const surfaces: Plan3DPickSurface[] = [];
 
@@ -167,6 +175,20 @@ export function buildPlan3DPickSurfaces(
           ),
           normal: createVertex(0, 0, -1),
           offsetMeters: CEILING_OFFSET_METERS,
+        });
+      }
+
+      if (options.includeCeilingVoid) {
+        surfaces.push({
+          id: `${room.id}-ceiling-void`,
+          roomId: room.id,
+          roomName: room.name,
+          kind: 'ceiling_void',
+          vertices: room.footprint.map((vertex) =>
+            createVertex(vertex.x, vertex.y, room.heightMeters + CEILING_VOID_OFFSET_METERS),
+          ),
+          normal: createVertex(0, 0, -1),
+          offsetMeters: CEILING_VOID_OFFSET_METERS,
         });
       }
     }
@@ -223,17 +245,29 @@ export function createPlan3DPickRay(
     z: sinPitch,
   }) ?? createVertex(0, 0, 1);
 
-  // A particular solution: the point on the ray at floor height. `sinPitch` vanishes in a
-  // horizontal view, where the depth term has no vertical component left to solve for.
-  const rotatedY = sinPitch > 1e-4 ? projectedY / sinPitch : 0;
+  // Any point on the ray will do, so pick the better conditioned of the two candidates. Looking
+  // down (plan view) the tap's height term vanishes and the floor plane is the safe origin;
+  // looking sideways (front view) the depth term vanishes, so start on the plane that keeps the
+  // tap's height. Both sit on the same ray, so which surface is nearest is unaffected.
+  if (sinPitch >= cosPitch) {
+    const rotatedY = sinPitch > 1e-4 ? projectedY / sinPitch : 0;
 
-  const origin = createVertex(
-    cosYaw * projectedX + sinYaw * rotatedY,
-    -sinYaw * projectedX + cosYaw * rotatedY,
-    0,
-  );
+    return {
+      origin: createVertex(
+        cosYaw * projectedX + sinYaw * rotatedY,
+        -sinYaw * projectedX + cosYaw * rotatedY,
+        0,
+      ),
+      direction,
+    };
+  }
 
-  return { origin, direction };
+  const originZ = cosPitch > 1e-4 ? -projectedY / cosPitch : 0;
+
+  return {
+    origin: createVertex(cosYaw * projectedX, -sinYaw * projectedX, originZ),
+    direction,
+  };
 }
 
 export interface Plan3DRayHit {
@@ -325,6 +359,21 @@ export function resolvePlacementPosition(
     return createVertex(hit.x, hit.y, Math.max(roomHeightMeters - surface.offsetMeters, 0));
   }
 
+  if (surface.kind === 'ceiling_void') {
+    // The void plane is above the room, not inside it, so it is read back off the surface rather
+    // than derived from the room height.
+    const planeHeight = surface.vertices.reduce(
+      (lowest, vertex) => Math.min(lowest, vertex.z),
+      Number.POSITIVE_INFINITY,
+    );
+
+    return createVertex(
+      hit.x,
+      hit.y,
+      Number.isFinite(planeHeight) ? planeHeight : roomHeightMeters + CEILING_VOID_OFFSET_METERS,
+    );
+  }
+
   if (surface.kind === 'floor') {
     return createVertex(hit.x, hit.y, surface.offsetMeters);
   }
@@ -348,6 +397,10 @@ function mountingForSurface(kind: Plan3DPickSurfaceKind): Plan3DMounting {
     return 'ceiling';
   }
 
+  if (kind === 'ceiling_void') {
+    return 'ceiling_void';
+  }
+
   return 'wall';
 }
 
@@ -358,7 +411,11 @@ function mountingForSurface(kind: Plan3DPickSurfaceKind): Plan3DMounting {
  */
 export function pickPlan3DPlacement(options: Plan3DPickOptions): Plan3DPlacement | null {
   const { point, rooms, camera, viewport } = options;
-  const surfaces = buildPlan3DPickSurfaces(rooms, { includeCeiling: options.includeCeiling });
+  const allowedKinds = options.surfaceKinds;
+  const surfaces = buildPlan3DPickSurfaces(rooms, {
+    includeCeiling: options.includeCeiling,
+    includeCeilingVoid: options.includeCeilingVoid ?? Boolean(allowedKinds?.includes('ceiling_void')),
+  }).filter((surface) => !allowedKinds || allowedKinds.includes(surface.kind));
 
   if (surfaces.length === 0) {
     return null;

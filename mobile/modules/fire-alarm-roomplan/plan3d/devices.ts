@@ -2,6 +2,7 @@ import type { FireAlarmDeviceDetection, FireAlarmDeviceType } from '../types';
 import type { Plan3DMounting, Plan3DVertex } from './plan3d-types';
 import type { Plan3DPlacedDevice } from './room-types';
 import { boundsOfVertices, clamp, finaliseBounds, isFiniteNumber, lerp } from './geometry';
+import { CEILING_VOID_OFFSET_METERS } from './mounting-rules';
 
 interface MountingDefault {
   heightMeters: number;
@@ -36,7 +37,12 @@ function getMountingDefault(type: FireAlarmDeviceType): MountingDefault {
 export function readDeclaredMounting(device: FireAlarmDeviceDetection): Plan3DMounting | null {
   const declared = device.metadata?.mounting;
 
-  return declared === 'floor' || declared === 'wall' || declared === 'ceiling' ? declared : null;
+  return declared === 'floor' ||
+    declared === 'wall' ||
+    declared === 'ceiling' ||
+    declared === 'ceiling_void'
+    ? declared
+    : null;
 }
 
 /** Resolves a device's installed height, falling back to the type's typical mounting height. */
@@ -52,6 +58,11 @@ export function resolveDeviceHeightMeters(
 
   if (declared === 'floor') {
     return MIN_DEVICE_HEIGHT_METERS;
+  }
+
+  if (declared === 'ceiling_void') {
+    // Inside the void the device sits above the finished ceiling, not at it.
+    return roomHeightMeters + CEILING_VOID_OFFSET_METERS;
   }
 
   const fallback = getMountingDefault(device.type);

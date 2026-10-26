@@ -14,6 +14,8 @@ const MARKER_BORDER_WIDTH = 1.5;
 const SELECTED_BORDER_WIDTH = 3;
 const GLYPH_SIZE_RATIO = 0.62;
 const HIT_SLOP = 8;
+/** Inset of the dashed ring that marks a device installed in the ceiling void. */
+const VOID_RING_INSET = 3.5;
 
 export default function Plan3DMarkerLayer({
   markers,
@@ -50,6 +52,23 @@ export default function Plan3DMarkerLayer({
               justifyContent: 'center',
             }}
           >
+            {marker.mounting === 'ceiling_void' ? (
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: VOID_RING_INSET,
+                  top: VOID_RING_INSET,
+                  right: VOID_RING_INSET,
+                  bottom: VOID_RING_INSET,
+                  borderRadius: marker.radius,
+                  borderWidth: 1,
+                  borderStyle: 'dashed',
+                  borderColor: 'rgba(255, 255, 255, 0.92)',
+                }}
+              />
+            ) : null}
+
             <View pointerEvents="none">
               <Text
                 numberOfLines={1}

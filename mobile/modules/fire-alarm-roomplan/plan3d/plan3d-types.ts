@@ -72,7 +72,14 @@ export interface Plan3DSegment {
   dashed: boolean;
 }
 
-export type Plan3DMounting = 'floor' | 'wall' | 'ceiling' | 'unknown';
+/**
+ * Where a device is fixed. `ceiling_void` is above the finished ceiling — a detector dropped into
+ * the void above the tiles rather than into the room — and is drawn with its own marker treatment.
+ */
+export type Plan3DMounting = 'floor' | 'wall' | 'ceiling' | 'ceiling_void' | 'unknown';
+
+/** Surface families a placement tap can resolve to. */
+export type Plan3DPickSurfaceKind = 'floor' | 'wall' | 'ceiling' | 'ceiling_void';
 
 export interface Plan3DMarker {
   deviceId: string;
@@ -109,6 +116,8 @@ export interface Plan3DLegendEntry {
   glyph: string;
   colour: string;
   count: number;
+  /** Ceiling-void entries are listed separately, because they read differently on the plan. */
+  inCeilingVoid: boolean;
 }
 
 export type Plan3DProjection = 'isometric' | 'dimetric' | 'top-down';

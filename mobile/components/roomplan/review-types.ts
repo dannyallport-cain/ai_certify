@@ -26,7 +26,12 @@ export interface ManualDevicePlacement {
 let manualDeviceSequence = 0;
 
 function isMounting(value: unknown): value is Plan3DMounting {
-  return value === 'floor' || value === 'wall' || value === 'ceiling';
+  return (
+    value === 'floor' ||
+    value === 'wall' ||
+    value === 'ceiling' ||
+    value === 'ceiling_void'
+  );
 }
 
 function readString(value: unknown): string | null {
@@ -111,6 +116,7 @@ const MOUNTING_LABELS: Record<Plan3DMounting, string> = {
   floor: 'Floor mounted',
   wall: 'Wall mounted',
   ceiling: 'Ceiling mounted',
+  ceiling_void: 'In the ceiling void',
   unknown: 'Unplaced',
 };
 
