@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  PanResponder,
   Pressable,
   ScrollView,
   Share,
@@ -17,7 +18,9 @@ import Plan3DDisplayControls from '@/components/roomplan/Plan3DDisplayControls';
 import Plan3DSummary from '@/components/roomplan/Plan3DSummary';
 import Plan3DViewControls from '@/components/roomplan/Plan3DViewControls';
 import SendZonePlanModal from '@/components/roomplan/SendZonePlanModal';
+import ZoneEditorPanel from '@/components/roomplan/ZoneEditorPanel';
 import { usePlan3DOrbitCamera } from '@/components/roomplan/usePlan3DOrbitCamera';
+import { usePlanZones } from '@/components/roomplan/usePlanZones';
 import {
   DEFAULT_PLAN3D_WALL_HEIGHT_METERS,
   createSampleScanSession,
@@ -92,6 +95,7 @@ export default function RoomPlanPlanScreen() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
+  const [zoneMode, setZoneMode] = useState(false);
 
   // The camera is the one piece of view state a gesture can change, so the hook owns it and the
   // projection chips and steppers write back through setCamera.
@@ -105,6 +109,10 @@ export default function RoomPlanPlanScreen() {
     minPitchDegrees: MIN_CAMERA_PITCH_DEGREES,
     maxPitchDegrees: MAX_CAMERA_PITCH_DEGREES,
   });
+
+  // Zones authored here travel with the plan and are published with it, so the inspector can
+  // define the compartments before the link is sent rather than leaving it to the recipient.
+  const zonesEditor = usePlanZones();
 
   const resetView = useCallback(() => {
     const preset = getPlan3DProjectionPreset(view.projection);
@@ -175,8 +183,9 @@ export default function RoomPlanPlanScreen() {
       selectedDeviceId,
       wallHeightMeters: view.wallHeightMeters,
       viewport: { width: canvasWidth, height: canvasHeight, padding: CANVAS_PADDING },
+      zones: zonesEditor.zones,
     });
-  }, [canvasHeight, canvasWidth, orbit.camera, selectedDeviceId, session, view]);
+  }, [canvasHeight, canvasWidth, orbit.camera, selectedDeviceId, session, view, zonesEditor.zones]);
 
   const handleShareSvg = useCallback(async () => {
     if (!plan) {
@@ -205,6 +214,55 @@ export default function RoomPlanPlanScreen() {
   const handleSelectDevice = useCallback((deviceId: string) => {
     setSelectedDeviceId((current) => (current === deviceId ? null : deviceId));
   }, []);
+
+  const toggleZoneMode = useCallback(() => {
+    setZoneMode((current) => {
+      const next = !current;
+
+      if (next) {
+        // A zone is a floor rectangle, so drawing needs the plan view where a tap maps to one
+        // point on the floor instead of a ray through the room.
+        setView((state) => ({ ...state, projection: 'top-down' }));
+        orbit.setCamera({ yawDegrees: 0, pitchDegrees: 90, zoom: 1 });
+        zonesEditor.selectZone(null);
+      }
+
+      return next;
+    });
+  }, [orbit, zonesEditor]);
+
+  const zonePan = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => zoneMode,
+        onMoveShouldSetPanResponder: () => zoneMode,
+        onPanResponderGrant: (event) => {
+          zonesEditor.beginDraft({
+            x: event.nativeEvent.locationX,
+            y: event.nativeEvent.locationY,
+          });
+        },
+        onPanResponderMove: (event) => {
+          zonesEditor.moveDraft({
+            x: event.nativeEvent.locationX,
+            y: event.nativeEvent.locationY,
+          });
+        },
+        onPanResponderRelease: (event) => {
+          if (!plan) {
+            return;
+          }
+
+          zonesEditor.commitDraft(
+            { x: event.nativeEvent.locationX, y: event.nativeEvent.locationY },
+            plan.camera,
+            plan.viewport,
+          );
+        },
+        onPanResponderTerminate: () => zonesEditor.cancelDraft(),
+      }),
+    [plan, zoneMode, zonesEditor],
+  );
 
   if (isLoading) {
     return (
@@ -254,7 +312,8 @@ export default function RoomPlanPlanScreen() {
     <ScrollView
       className="flex-1 bg-[#F5F7FA]"
       contentContainerStyle={{ paddingHorizontal: HORIZONTAL_PADDING, paddingTop: 16, paddingBottom: 40 }}
-      scrollEnabled={!orbit.isDragging}
+      // A zone drag is a horizontal-ish gesture, so the page must not scroll under it.
+      scrollEnabled={!orbit.isDragging && !zoneMode}
     >
       <View className="mb-4 flex-row items-center">
         <Pressable
@@ -275,12 +334,33 @@ export default function RoomPlanPlanScreen() {
       {plan ? (
         <>
           <View className="items-center rounded-[28px] border border-[#E0E6ED] bg-white p-2">
-            <View {...orbit.panHandlers} style={{ width: canvasWidth, height: canvasHeight }}>
+            <View
+              {...(zoneMode ? zonePan.panHandlers : orbit.panHandlers)}
+              style={{ width: canvasWidth, height: canvasHeight }}
+            >
               <Plan3DCanvas
                 plan={plan}
                 selectedDeviceId={selectedDeviceId}
+                selectedZoneId={zonesEditor.selectedZoneId}
                 onSelectDevice={handleSelectDevice}
               />
+
+              {zonesEditor.draft ? (
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    left: Math.min(zonesEditor.draft.start.x, zonesEditor.draft.end.x),
+                    top: Math.min(zonesEditor.draft.start.y, zonesEditor.draft.end.y),
+                    width: Math.abs(zonesEditor.draft.end.x - zonesEditor.draft.start.x),
+                    height: Math.abs(zonesEditor.draft.end.y - zonesEditor.draft.start.y),
+                    borderWidth: 2,
+                    borderColor: '#F97316',
+                    backgroundColor: 'rgba(249, 115, 22, 0.18)',
+                    borderRadius: 4,
+                  }}
+                />
+              ) : null}
             </View>
             <View className="mt-2 w-full flex-row items-center justify-between px-2 pb-1">
               <Text className="text-[11px] text-[#718096]">
@@ -303,8 +383,43 @@ export default function RoomPlanPlanScreen() {
               </View>
             </View>
             <Text className="w-full px-2 pb-1 text-[11px] text-[#94A3B8]">
-              Drag to rotate · pinch to zoom · tap a marker to select a device
+              {zoneMode
+                ? 'Drag on the plan to draw a zone · tap Done when finished'
+                : 'Drag to rotate · pinch to zoom · tap a marker to select a device'}
             </Text>
+          </View>
+
+          <View className="mt-4 rounded-[28px] border border-[#E0E6ED] bg-white p-5">
+            <View className="mb-3 flex-row items-start justify-between">
+              <View className="flex-1 pr-3">
+                <Text className="text-lg font-semibold text-[#1A202C]">Colour coded zones</Text>
+                <Text className="mt-1 text-xs text-[#718096]">
+                  {zonesEditor.zones.length === 0
+                    ? 'No zones drawn yet'
+                    : `${zonesEditor.zones.length} zone(s) drawn in plan view`}
+                </Text>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={zoneMode ? 'Finish drawing zones' : 'Draw zones'}
+                onPress={toggleZoneMode}
+                className={`rounded-xl px-3 py-2 ${zoneMode ? 'bg-[#15803D]' : 'bg-[#0D47A1]'}`}
+              >
+                <Text className="text-xs font-semibold text-white">
+                  {zoneMode ? 'Done' : 'Draw zones'}
+                </Text>
+              </Pressable>
+            </View>
+
+            <ZoneEditorPanel
+              zones={zonesEditor.zones}
+              selectedZoneId={zonesEditor.selectedZoneId}
+              onSelect={zonesEditor.selectZone}
+              onRename={zonesEditor.renameZone}
+              onCycleColour={zonesEditor.cycleColour}
+              onRemove={zonesEditor.removeZone}
+            />
           </View>
 
           <View className="mt-4 rounded-[28px] border border-[#E0E6ED] bg-white p-5">
@@ -405,6 +520,7 @@ export default function RoomPlanPlanScreen() {
 
       <SendZonePlanModal
         session={session}
+        zones={zonesEditor.zones}
         visible={isSendOpen}
         onClose={() => setIsSendOpen(false)}
       />

@@ -13,12 +13,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { normaliseLegendConfig } from '@/modules/fire-alarm-roomplan/plan3d/legend-config';
+import type { Plan3DZone } from '@/modules/fire-alarm-roomplan/plan3d/plan3d-types';
 import type { FireAlarmScanSession } from '@/modules/fire-alarm-roomplan/types';
 
 import { publishZonePlan, type PublishedZonePlan } from '@/services/roomplan/zone-plan-api';
 
 interface SendZonePlanModalProps {
   session: FireAlarmScanSession;
+  /** Zones drawn on the plan, published as they are so the recipient opens a finished plan. */
+  zones: Plan3DZone[];
   visible: boolean;
   onClose: () => void;
 }
@@ -28,10 +31,16 @@ const EMAIL_PLACEHOLDER = 'client@example.com';
 /**
  * Publishes the session to the hosted viewer and, when an address is given, emails the link.
  *
- * The zones start empty on purpose: the link is created so the recipient can draw the colour coded
- * zones in plan view themselves, which is what the viewer offers when editing is allowed.
+ * The zones drawn on the phone travel with the plan, so the recipient normally opens a finished
+ * plan. Editing is still offered because they often want to adjust the compartments or add their
+ * own company details before it goes to the building's responsible person.
  */
-export default function SendZonePlanModal({ session, visible, onClose }: SendZonePlanModalProps) {
+export default function SendZonePlanModal({
+  session,
+  zones,
+  visible,
+  onClose,
+}: SendZonePlanModalProps) {
   const [email, setEmail] = useState('');
   const [allowEdit, setAllowEdit] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
@@ -53,7 +62,7 @@ export default function SendZonePlanModal({ session, visible, onClose }: SendZon
     try {
       const plan = await publishZonePlan({
         session,
-        zones: [],
+        zones,
         legend: normaliseLegendConfig(null),
         recipientEmail: email.trim() ? email.trim() : null,
         editEnabled: allowEdit,
@@ -149,6 +158,15 @@ export default function SendZonePlanModal({ session, visible, onClose }: SendZon
                 Publish this session to a hosted plan view, then email the link. Publishing again
                 from the same session keeps the existing link working.
               </Text>
+
+              <View className="mt-3 flex-row items-center rounded-xl bg-[#EEF2F7] px-3 py-2">
+                <Ionicons name="layers-outline" size={15} color="#334155" />
+                <Text className="ml-2 text-xs text-[#334155]">
+                  {zones.length === 0
+                    ? 'No zones drawn yet — the recipient can draw them in the viewer.'
+                    : `${zones.length} zone(s) drawn on the plan will be sent with it.`}
+                </Text>
+              </View>
 
               <Text className="mt-5 text-xs font-semibold uppercase tracking-wide text-[#64748B]">
                 Send to (optional)
