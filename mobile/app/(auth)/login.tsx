@@ -1,24 +1,20 @@
 import { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  Image,
-} from 'react-native';
+import { Alert, Image, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
 import { KeyboardAwareScreen } from '@/components/keyboard/KeyboardAwareScreen';
 import { BiometricGlyph } from '@/components/auth/BiometricGlyph';
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
 import { useAuthLock } from '@/components/auth/useAuthLock';
 import { describeBuild } from '@/lib/build-info';
 import { login, saveToken } from '@/services/api';
+import { useTheme } from '@/theme/useTheme';
 
-const BRAND_BLUE = '#0D47A1';
-const FIELDS_MISSING_MESSAGE = 'Please enter your email and password.';
+const FIELDS_MISSING_MESSAGE = 'Enter your email and password.';
 
 export default function LoginScreen() {
+  const { palette } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,8 +31,6 @@ export default function LoginScreen() {
     returnToBiometricUnlock,
   } = useAuthLock();
 
-  // Shown on both the sign-in and the unlock view, so whoever is holding the phone can say
-  // exactly which build they are running.
   const buildLine = describeBuild();
 
   function offerBiometricUnlock(accountEmail: string) {
@@ -46,7 +40,7 @@ export default function LoginScreen() {
 
     Alert.alert(
       `Enable ${capability.label}?`,
-      `Unlock AI Certify with ${capability.label} next time instead of typing your password. You can turn this off in Account.`,
+      `Unlock AI Certify with ${capability.label} next time instead of typing your password.`,
       [
         { text: 'Not now', style: 'cancel' },
         {
@@ -61,7 +55,7 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email.trim() || !password) {
-      Alert.alert('Error', FIELDS_MISSING_MESSAGE);
+      Alert.alert('Missing details', FIELDS_MISSING_MESSAGE);
       return;
     }
 
@@ -71,96 +65,126 @@ export default function LoginScreen() {
       const normalisedEmail = email.trim();
       const { token } = await login(normalisedEmail, password);
       await saveToken(token);
-      // The auth lock owns navigation: flipping the session state routes the
-      // user into the app, so signing in must not also navigate by itself.
       completePasswordLogin(normalisedEmail);
       offerBiometricUnlock(normalisedEmail);
     } catch (err) {
-      Alert.alert('Login Failed', err instanceof Error ? err.message : 'Unknown error');
+      Alert.alert('Login failed', err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
   }
 
-  const actions = (
-    <View className="px-8 pt-3">
-      <TouchableOpacity
-        style={{ backgroundColor: BRAND_BLUE }}
-        className="items-center rounded-xl py-4"
-        onPress={handleLogin}
-        disabled={loading}
-        accessibilityRole="button"
-        accessibilityLabel="Sign In"
-        activeOpacity={0.85}
-      >
-        {loading ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text className="text-base font-semibold text-white">Sign In</Text>
-        )}
-      </TouchableOpacity>
+  const inputStyle = {
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: palette.surface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: palette.ink,
+    fontSize: 15,
+  } as const;
+
+  const footer = (
+    <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
+      <Button
+        label="Sign in"
+        icon="log-in-outline"
+        accent="sky"
+        size="large"
+        loading={loading}
+        onPress={() => void handleLogin()}
+        block
+      />
 
       {canUseBiometricUnlock ? (
         <TouchableOpacity
-          className="mt-3 flex-row items-center justify-center rounded-xl border border-[#D6E2F5] bg-[#F5F9FF] py-4"
           onPress={returnToBiometricUnlock}
           accessibilityRole="button"
           accessibilityLabel={`Unlock with ${capability.label}`}
           activeOpacity={0.85}
+          style={{
+            marginTop: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            paddingVertical: 14,
+            borderRadius: 14,
+            borderWidth: 1.5,
+            borderColor: palette.brand,
+            backgroundColor: palette.brandSoft,
+          }}
         >
-          <BiometricGlyph kind={capability.kind} size={20} color={BRAND_BLUE} />
-          <Text className="ml-2 text-base font-semibold" style={{ color: BRAND_BLUE }}>
-            Unlock with {capability.label}
-          </Text>
+          <BiometricGlyph kind={capability.kind} size={18} color={palette.brand} />
+          <AppText variant="bodyStrong" tone="brand">
+            {`Unlock with ${capability.label}`}
+          </AppText>
         </TouchableOpacity>
       ) : null}
 
-      <Text className="mt-2 text-center text-[11px] text-[#A0AEC0]">{buildLine}</Text>
+      <AppText variant="caption" tone="soft" style={{ marginTop: 10, textAlign: 'center' }}>
+        {buildLine}
+      </AppText>
     </View>
   );
 
   return (
     <KeyboardAwareScreen
-      className="bg-white"
-      contentContainerClassName="px-8 pt-24"
-      contentContainerStyle={{ paddingBottom: 24 }}
+      contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 56 }}
+      contentBottomPadding={24}
       dismissKeyboardOnTap={false}
-      footer={actions}
+      scrollViewProps={{ style: { backgroundColor: palette.canvas } }}
+      footer={footer}
     >
-      <View className="mb-6 flex-row items-center">
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 28 }}>
         <Image
           source={require('../../assets/icon.png')}
-          style={{ width: 48, height: 48, borderRadius: 12 }}
+          style={{ width: 46, height: 46, borderRadius: 12 }}
           resizeMode="cover"
           accessibilityIgnoresInvertColors
         />
-        <View className="ml-3">
-          <Text className="text-3xl font-bold" style={{ color: BRAND_BLUE }}>
-            AI Certify
-          </Text>
-          <Text className="mt-1 text-sm text-gray-500">Field Inspection App</Text>
+        <View style={{ marginLeft: 12 }}>
+          <AppText variant="title">AI Certify</AppText>
+          <AppText variant="caption" tone="muted">
+            Field inspection app
+          </AppText>
         </View>
       </View>
 
       {unlockError ? (
-        <View className="mb-6 flex-row items-start rounded-2xl bg-[#FFF4E6] px-4 py-3">
-          <Ionicons name="alert-circle-outline" size={18} color="#C56E00" style={{ marginTop: 1 }} />
-          <Text className="ml-2 flex-1 text-sm leading-5 text-[#8A6A3A]">{unlockError}</Text>
+        <View
+          style={{
+            marginBottom: 20,
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: 8,
+            backgroundColor: palette.warningSoft,
+            borderRadius: 14,
+            padding: 12,
+          }}
+        >
+          <Ionicons name="alert-circle-outline" size={17} color={palette.warning} />
+          <AppText variant="caption" tone="warning" style={{ flex: 1 }}>
+            {unlockError}
+          </AppText>
           <TouchableOpacity
             onPress={dismissUnlockError}
             accessibilityRole="button"
             accessibilityLabel="Dismiss message"
-            activeOpacity={0.7}
           >
-            <Ionicons name="close" size={18} color="#C56E00" />
+            <Ionicons name="close" size={17} color={palette.warning} />
           </TouchableOpacity>
         </View>
       ) : null}
 
-      <Text className="mb-1 font-medium text-gray-700">Email</Text>
+      <AppText variant="label" tone="muted" style={{ marginBottom: 6 }}>
+        EMAIL
+      </AppText>
       <TextInput
-        className="mb-4 rounded-lg border border-gray-300 px-4 py-3 text-base"
+        style={[inputStyle, { marginBottom: 16 }]}
         placeholder="you@example.com"
+        placeholderTextColor={palette.inkSoft}
         autoCapitalize="none"
         autoCorrect={false}
         autoComplete="email"
@@ -172,18 +196,21 @@ export default function LoginScreen() {
         submitBehavior="submit"
       />
 
-      <Text className="mb-1 font-medium text-gray-700">Password</Text>
+      <AppText variant="label" tone="muted" style={{ marginBottom: 6 }}>
+        PASSWORD
+      </AppText>
       <TextInput
         ref={passwordRef}
-        className="mb-6 rounded-lg border border-gray-300 px-4 py-3 text-base"
+        style={inputStyle}
         placeholder="••••••••"
+        placeholderTextColor={palette.inkSoft}
         secureTextEntry
         autoCapitalize="none"
         autoComplete="current-password"
         returnKeyType="go"
         value={password}
         onChangeText={setPassword}
-        onSubmitEditing={handleLogin}
+        onSubmitEditing={() => void handleLogin()}
       />
     </KeyboardAwareScreen>
   );

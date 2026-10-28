@@ -1,6 +1,8 @@
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 
+import { AppText } from '@/components/ui/AppText';
 import type { StatusOption } from '@/services/servicem8/grouping';
+import { useTheme } from '@/theme/useTheme';
 
 interface StatusFilterChipsProps {
   options: StatusOption[];
@@ -20,27 +22,48 @@ function Chip({
   active: boolean;
   onPress: () => void;
 }) {
+  const { palette } = useTheme();
+
   return (
     <TouchableOpacity
-      className={`mr-2 flex-row items-center rounded-full border px-3 py-2 ${
-        active ? 'border-[#0D47A1] bg-[#0D47A1]' : 'border-[#E0E6ED] bg-white'
-      }`}
-      onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={{
+        marginRight: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 999,
+        borderWidth: 1.5,
+        borderColor: active ? palette.brand : palette.line,
+        backgroundColor: active ? palette.brand : palette.surfaceAlt,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+      }}
     >
-      <Text
-        className={`text-xs font-semibold ${active ? 'text-white' : 'text-[#475569]'}`}
+      <AppText
+        variant="caption"
         numberOfLines={1}
+        style={{ color: active ? palette.onBrand : palette.inkMuted, fontWeight: '600' }}
       >
         {label}
-      </Text>
+      </AppText>
+
       <View
-        className={`ml-2 rounded-full px-1.5 py-0.5 ${active ? 'bg-white/25' : 'bg-[#EEF2F7]'}`}
+        style={{
+          marginLeft: 8,
+          borderRadius: 999,
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          backgroundColor: active ? 'rgba(255,255,255,0.22)' : palette.surface,
+        }}
       >
-        <Text className={`text-[10px] font-bold ${active ? 'text-white' : 'text-[#64748B]'}`}>
-          {count}
-        </Text>
+        <AppText
+          variant="caption"
+          style={{ color: active ? palette.onBrand : palette.inkSoft, fontWeight: '700' }}
+        >
+          {String(count)}
+        </AppText>
       </View>
     </TouchableOpacity>
   );
@@ -64,8 +87,7 @@ export function StatusFilterChips({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingRight: 8 }}
-      className="mb-3"
+      contentContainerStyle={{ paddingRight: 8, paddingBottom: 12 }}
     >
       <Chip
         label="All"
@@ -85,3 +107,5 @@ export function StatusFilterChips({
     </ScrollView>
   );
 }
+
+export default StatusFilterChips;

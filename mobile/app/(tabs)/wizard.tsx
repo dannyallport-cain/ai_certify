@@ -1,11 +1,21 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+
 import { useJob, type WizardPhotoType } from '@/components/JobStateContext';
-import { KeyboardAwareScreen, TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
+import { TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
 import { CertificateTypeSelector } from '@/components/certificate/CertificateTypeSelector';
+import { Callout } from '@/components/form/Callout';
+import { ChoiceChips, type ChoiceOption } from '@/components/form/ChoiceChips';
+import { NumberField } from '@/components/form/NumberField';
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { SectionCard } from '@/components/ui/Card';
+import { Screen } from '@/components/ui/Screen';
+import WizardProgressRail from '@/components/wizard/WizardProgressRail';
+import { WizardStepCard } from '@/components/wizard/WizardStepCard';
 import { inferCertificateTypeFromJob } from '@/services/certificates/types';
+import { useTheme } from '@/theme/useTheme';
 
 type StepItem = {
   key: string;
@@ -16,6 +26,25 @@ type StepItem = {
   actionLabel?: string;
   onPress?: () => void;
 };
+
+type BooleanWizardKey =
+  | 'hasRcdProtection'
+  | 'hasRcboProtection'
+  | 'hasSurgeProtectionDevice'
+  | 'hasEvCharger'
+  | 'hasSolarPv'
+  | 'hasAfddProtection'
+  | 'hasCommunalOrLandlordSupplies';
+
+const PROTECTION_QUESTIONS: { key: BooleanWizardKey; title: string }[] = [
+  { key: 'hasRcdProtection', title: 'RCD protection present?' },
+  { key: 'hasRcboProtection', title: 'RCBO protection present?' },
+  { key: 'hasSurgeProtectionDevice', title: 'Surge protection device (SPD) present?' },
+  { key: 'hasEvCharger', title: 'EV charger present?' },
+  { key: 'hasSolarPv', title: 'Solar PV present?' },
+  { key: 'hasAfddProtection', title: 'AFDD protection present?' },
+  { key: 'hasCommunalOrLandlordSupplies', title: 'Communal / landlord supplies present?' },
+];
 
 const requiredElectricalPhotos: {
   type: WizardPhotoType;
@@ -37,82 +66,59 @@ const LANDLORD_GUIDANCE_SMOKE =
 const LANDLORD_GUIDANCE_CO =
   'A carbon monoxide alarm should be installed in any room used as living accommodation which contains a fixed combustion appliance, excluding a gas cooker.';
 
-const reportPurposeOptions = [
-  { label: 'Private rented sector EICR (5 yearly)', value: 'private_rented_sector_eicr' as const },
-  { label: 'Change of tenancy', value: 'change_of_tenancy' as const },
-  { label: 'Homebuyer / vendor report', value: 'homebuyer_vendor' as const },
-  { label: 'Periodic inspection / maintenance', value: 'periodic_inspection_maintenance' as const },
-  { label: 'Insurance', value: 'insurance' as const },
-  { label: 'Pre-purchase', value: 'pre_purchase' as const },
-  { label: 'Other', value: 'other' as const },
+const reportPurposeOptions: ChoiceOption<string>[] = [
+  { label: 'Private rented sector EICR (5 yearly)', value: 'private_rented_sector_eicr' },
+  { label: 'Change of tenancy', value: 'change_of_tenancy' },
+  { label: 'Homebuyer / vendor report', value: 'homebuyer_vendor' },
+  { label: 'Periodic inspection / maintenance', value: 'periodic_inspection_maintenance' },
+  { label: 'Insurance', value: 'insurance' },
+  { label: 'Pre-purchase', value: 'pre_purchase' },
+  { label: 'Other', value: 'other' },
 ];
 
-const installationTypeOptions = [
-  { label: 'Domestic', value: 'domestic' as const },
-  { label: 'Commercial', value: 'commercial' as const },
-  { label: 'Industrial', value: 'industrial' as const },
-  { label: 'Caravan', value: 'caravan' as const },
-  { label: 'Boat', value: 'boat' as const },
-  { label: 'Mixed use', value: 'mixed_use' as const },
-  { label: 'Other', value: 'other' as const },
+const installationTypeOptions: ChoiceOption<string>[] = [
+  { label: 'Domestic', value: 'domestic' },
+  { label: 'Commercial', value: 'commercial' },
+  { label: 'Industrial', value: 'industrial' },
+  { label: 'Caravan', value: 'caravan' },
+  { label: 'Boat', value: 'boat' },
+  { label: 'Mixed use', value: 'mixed_use' },
+  { label: 'Other', value: 'other' },
 ];
 
-const occupancyTypeOptions = [
-  { label: 'Tenanted', value: 'tenanted' as const },
-  { label: 'Owner occupied', value: 'owner_occupied' as const },
-  { label: 'Void property', value: 'void' as const },
-  { label: 'Managed block / communal', value: 'managed_block' as const },
-  { label: 'Other', value: 'other' as const },
+const occupancyTypeOptions: ChoiceOption<string>[] = [
+  { label: 'Tenanted', value: 'tenanted' },
+  { label: 'Owner occupied', value: 'owner_occupied' },
+  { label: 'Void property', value: 'void' },
+  { label: 'Managed block / communal', value: 'managed_block' },
+  { label: 'Other', value: 'other' },
 ];
 
-const supplyPhaseOptions = [
-  { label: 'Single phase', value: 'single_phase' as const },
-  { label: 'Three phase', value: 'three_phase' as const },
-  { label: 'Unknown', value: 'unknown' as const },
+const supplyPhaseOptions: ChoiceOption<string>[] = [
+  { label: 'Single phase', value: 'single_phase' },
+  { label: 'Three phase', value: 'three_phase' },
+  { label: 'Unknown', value: 'unknown' },
 ];
 
-const dataEntryModeOptions = [
-  { label: 'Guided photo workflow', value: 'guided_photo' as const },
-  { label: 'Manual entry only', value: 'manual_only' as const },
-  { label: 'Hybrid: photos + manual', value: 'hybrid' as const },
+const dataEntryModeOptions: ChoiceOption<string>[] = [
+  { label: 'Guided photo workflow', value: 'guided_photo' },
+  { label: 'Manual entry only', value: 'manual_only' },
+  { label: 'Hybrid: photos + manual', value: 'hybrid' },
 ];
 
-const yesNoOptions = [
+const consumerUnitMaterialOptions: ChoiceOption<string>[] = [
+  { label: 'Metal', value: 'metal' },
+  { label: 'Plastic', value: 'plastic' },
+  { label: 'Not sure', value: 'not_sure' },
+];
+
+const YES_NO: ChoiceOption<boolean>[] = [
   { label: 'Yes', value: true },
   { label: 'No', value: false },
 ];
 
-function StepCard({ title, detail, done, locked, actionLabel, onPress }: StepItem) {
-  return (
-    <View className={`mb-3 rounded-2xl border p-4 ${locked ? 'border-gray-200 bg-gray-100' : 'border-gray-200 bg-white'}`}>
-      <View className="flex-row items-start">
-        <View className={`mr-3 h-9 w-9 items-center justify-center rounded-full ${done ? 'bg-green-100' : locked ? 'bg-gray-200' : 'bg-brand/10'}`}>
-          <Ionicons
-            name={done ? 'checkmark' : locked ? 'lock-closed-outline' : 'ellipse-outline'}
-            size={18}
-            color={done ? '#16a34a' : locked ? '#9ca3af' : '#0D47A1'}
-          />
-        </View>
-        <View className="flex-1">
-          <Text className={`font-semibold ${locked ? 'text-gray-500' : 'text-gray-900'}`}>{title}</Text>
-          <Text className={`mt-1 text-sm ${locked ? 'text-gray-400' : 'text-gray-500'}`}>{detail}</Text>
-
-          {actionLabel && onPress ? (
-            <TouchableOpacity
-              className={`mt-3 self-start rounded-xl px-4 py-2 ${locked ? 'bg-gray-300' : 'bg-brand'}`}
-              onPress={onPress}
-              disabled={locked}
-            >
-              <Text className="text-sm font-semibold text-white">{actionLabel}</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-      </View>
-    </View>
-  );
-}
-
 export default function WizardScreen() {
+  const { palette } = useTheme();
   const { state, dispatch } = useJob();
   const params = useLocalSearchParams<{ entryMode?: string | string[] }>();
 
@@ -183,6 +189,7 @@ export default function WizardScreen() {
       type: 'damaged_accessory' as const,
       question: 'Any damaged sockets, switches, or accessories found?',
       label: 'Take a photo of the damaged socket, switch, or accessory',
+      flagKey: 'hasDamagedAccessory' as const,
       required: state.wizard.hasDamagedAccessory === true,
       answered: state.wizard.hasDamagedAccessory !== null,
       image: getImageFor('damaged_accessory'),
@@ -191,6 +198,7 @@ export default function WizardScreen() {
       type: 'damaged_luminaire' as const,
       question: 'Any damaged luminaires found?',
       label: 'Take a photo of the damaged luminaire',
+      flagKey: 'hasDamagedLuminaire' as const,
       required: state.wizard.hasDamagedLuminaire === true,
       answered: state.wizard.hasDamagedLuminaire !== null,
       image: getImageFor('damaged_luminaire'),
@@ -202,11 +210,9 @@ export default function WizardScreen() {
   }));
 
   const usesPhotoEvidence =
-    state.wizard.dataEntryMode === 'guided_photo' ||
-    state.wizard.dataEntryMode === 'hybrid';
+    state.wizard.dataEntryMode === 'guided_photo' || state.wizard.dataEntryMode === 'hybrid';
 
   const mandatoryRequiredPhotosDone = requiredPhotoStatus.every((item) => item.captured);
-
   const damageQuestionsAnswered = damagePhotoStatus.every((item) => item.answered);
   const requiredDamagePhotosDone = damagePhotoStatus.every(
     (item) => !item.required || item.captured,
@@ -265,11 +271,9 @@ export default function WizardScreen() {
       !isDomesticStyleInstallation || state.wizard.consumerUnitMaterial !== null,
     infrastructureQuestions: infrastructureQuestionsComplete,
     smokeCount:
-      !requiresSmokeAndCoFlow ||
-      (state.wizard.storeyCount >= 1 && smokeAlarmCountMeetsGuidance),
+      !requiresSmokeAndCoFlow || (state.wizard.storeyCount >= 1 && smokeAlarmCountMeetsGuidance),
     smokePhotos: !requiresSmokeAndCoFlow || smokePhotosDone,
-    solidFuelQuestion:
-      !requiresSmokeAndCoFlow || state.wizard.hasSolidFuelAppliance !== null,
+    solidFuelQuestion: !requiresSmokeAndCoFlow || state.wizard.hasSolidFuelAppliance !== null,
     coBranch: !requiresSmokeAndCoFlow || coBranchDone,
   };
 
@@ -346,7 +350,9 @@ export default function WizardScreen() {
     },
   ];
 
-  const outstandingRequiredPhotos = requiredPhotoPlan.filter((item) => item.required && !item.complete);
+  const outstandingRequiredPhotos = requiredPhotoPlan.filter(
+    (item) => item.required && !item.complete,
+  );
   const nextOutstandingPhoto = outstandingRequiredPhotos.find((item) => !item.blocked) ?? null;
 
   function openCapture(
@@ -357,12 +363,7 @@ export default function WizardScreen() {
   ) {
     dispatch({
       type: 'SET_ACTIVE_CAPTURE',
-      payload: {
-        type,
-        label,
-        mode,
-        slotIndex: slotIndex ?? null,
-      },
+      payload: { type, label, mode, slotIndex: slotIndex ?? null },
     });
     router.push('/(tabs)/capture');
   }
@@ -374,10 +375,17 @@ export default function WizardScreen() {
     });
   }
 
+  function setField(key: keyof typeof state.wizard, value: unknown) {
+    dispatch({
+      type: 'SET_WIZARD_FIELD',
+      payload: { key, value } as never,
+    });
+  }
+
   const steps: StepItem[] = [
     {
       key: 'customer',
-      title: '1. Enter customer name',
+      title: 'Enter customer name',
       detail: state.selectedCustomer?.name
         ? `Selected customer: ${state.selectedCustomer.name}`
         : 'Select an existing customer or create a new one.',
@@ -388,9 +396,8 @@ export default function WizardScreen() {
     },
     {
       key: 'address',
-      title: '2. Confirm address using GPS or manual entry',
-      detail:
-        state.gpsAddress || 'Capture the site address from GPS or type it manually.',
+      title: 'Confirm address using GPS or manual entry',
+      detail: state.gpsAddress || 'Capture the site address from GPS or type it manually.',
       done: stepFlags.address,
       locked: !stepFlags.customer,
       actionLabel: 'Open Address Step',
@@ -398,21 +405,21 @@ export default function WizardScreen() {
     },
     {
       key: 'date',
-      title: '3. Inspection date',
+      title: 'Inspection date',
       detail: `Auto-set to today: ${displayDate}`,
       done: stepFlags.inspectionDate,
       locked: !stepFlags.address,
     },
     {
       key: 'data-entry-mode',
-      title: '4. Data entry mode',
+      title: 'Data entry mode',
       detail: state.wizard.dataEntryMode.replaceAll('_', ' '),
       done: stepFlags.dataEntryMode,
       locked: !stepFlags.inspectionDate,
     },
     {
       key: 'report-purpose',
-      title: '5. Report purpose',
+      title: 'Report purpose',
       detail: state.wizard.reportPurpose
         ? state.wizard.reportPurpose.replaceAll('_', ' ')
         : 'Select why this report is being created.',
@@ -421,7 +428,7 @@ export default function WizardScreen() {
     },
     {
       key: 'installation-type',
-      title: '6. Installation type',
+      title: 'Installation type',
       detail: state.wizard.installationType
         ? state.wizard.installationType.replaceAll('_', ' ')
         : 'Select the installation type so the wizard asks appropriate questions.',
@@ -430,7 +437,7 @@ export default function WizardScreen() {
     },
     {
       key: 'occupancy-type',
-      title: '7. Occupancy profile',
+      title: 'Occupancy profile',
       detail: state.wizard.occupancyType
         ? state.wizard.occupancyType.replaceAll('_', ' ')
         : 'Select whether the premises are tenanted, owner occupied, void, or similar.',
@@ -439,18 +446,19 @@ export default function WizardScreen() {
     },
     {
       key: 'supply-phase',
-      title: '8. Supply characteristics',
+      title: 'Supply characteristics',
       detail:
-        state.wizard.supplyPhase &&
-        state.wizard.hasOutbuildingsOrAncillarySupplies !== null
-          ? `${state.wizard.supplyPhase.replaceAll('_', ' ')} supply • ancillary supplies ${state.wizard.hasOutbuildingsOrAncillarySupplies ? 'present' : 'not present'}`
+        state.wizard.supplyPhase && state.wizard.hasOutbuildingsOrAncillarySupplies !== null
+          ? `${state.wizard.supplyPhase.replaceAll('_', ' ')} supply • ancillary supplies ${
+              state.wizard.hasOutbuildingsOrAncillarySupplies ? 'present' : 'not present'
+            }`
           : 'Confirm phase arrangement and whether there are outbuildings or ancillary supplies.',
       done: stepFlags.supplyPhase && stepFlags.ancillarySupplies,
       locked: !stepFlags.occupancyType,
     },
     {
       key: 'required-photos',
-      title: '9. Guided evidence photos',
+      title: 'Guided evidence photos',
       detail: !usesPhotoEvidence
         ? 'Skipped because this job is using manual certificate entry.'
         : mandatoryRequiredPhotosDone && damageQuestionsAnswered && requiredDamagePhotosDone
@@ -461,7 +469,7 @@ export default function WizardScreen() {
     },
     {
       key: 'consumer-unit-material',
-      title: '10. Consumer unit material',
+      title: 'Consumer unit material',
       detail: !isDomesticStyleInstallation
         ? 'Skipped for non-domestic style installations.'
         : state.wizard.consumerUnitMaterial
@@ -472,16 +480,20 @@ export default function WizardScreen() {
     },
     {
       key: 'infrastructure-questions',
-      title: '11. Installation protection and special equipment',
+      title: 'Installation protection and special equipment',
       detail: infrastructureQuestionsComplete
-        ? `Boards ${state.wizard.distributionBoardCount} • RCD ${state.wizard.hasRcdProtection ? 'yes' : 'no'} • RCBO ${state.wizard.hasRcboProtection ? 'yes' : 'no'} • SPD ${state.wizard.hasSurgeProtectionDevice ? 'yes' : 'no'}`
+        ? `Boards ${state.wizard.distributionBoardCount} • RCD ${
+            state.wizard.hasRcdProtection ? 'yes' : 'no'
+          } • RCBO ${state.wizard.hasRcboProtection ? 'yes' : 'no'} • SPD ${
+            state.wizard.hasSurgeProtectionDevice ? 'yes' : 'no'
+          }`
         : 'Confirm boards, protective devices, and whether EV, PV, battery, AFDD, or landlord supplies are present.',
       done: stepFlags.infrastructureQuestions,
       locked: !stepFlags.consumerUnitMaterial,
     },
     {
       key: 'smoke-count',
-      title: '12. Storeys and smoke alarm quantity',
+      title: 'Storeys and smoke alarm quantity',
       detail: !requiresSmokeAndCoFlow
         ? 'Skipped because this workflow is not using the landlord smoke alarm branch.'
         : smokeAlarmCountMeetsGuidance
@@ -492,18 +504,23 @@ export default function WizardScreen() {
     },
     {
       key: 'smoke-photos',
-      title: '13. Smoke detector photos',
+      title: 'Smoke detector photos',
       detail: !requiresSmokeAndCoFlow
         ? 'Skipped because this workflow is not using the landlord smoke alarm branch.'
         : state.wizard.smokeDetectorCount === 0
           ? 'No smoke detector photos required.'
-          : `${state.capturedImages.filter((image) => image.type === 'smoke_detector' && image.qualityAssessment?.isSufficient).length}/${state.wizard.smokeDetectorCount} smoke detector photo(s) accepted.`,
+          : `${
+              state.capturedImages.filter(
+                (image) =>
+                  image.type === 'smoke_detector' && image.qualityAssessment?.isSufficient,
+              ).length
+            }/${state.wizard.smokeDetectorCount} smoke detector photo(s) accepted.`,
       done: stepFlags.smokePhotos,
       locked: !stepFlags.smokeCount,
     },
     {
       key: 'solid-fuel',
-      title: '14. Solid fuel appliance question',
+      title: 'Solid fuel appliance question',
       detail: !requiresSmokeAndCoFlow
         ? 'Skipped because this workflow is not using the landlord CO alarm branch.'
         : state.wizard.hasSolidFuelAppliance === null
@@ -516,7 +533,7 @@ export default function WizardScreen() {
     },
     {
       key: 'co-branch',
-      title: '15. CO detector branch',
+      title: 'CO detector branch',
       detail: !requiresSmokeAndCoFlow
         ? 'Skipped because this workflow is not using the landlord CO alarm branch.'
         : state.wizard.hasSolidFuelAppliance === true
@@ -532,333 +549,175 @@ export default function WizardScreen() {
   const reviewUnlocked = Object.values(stepFlags).every(Boolean);
 
   return (
-    <KeyboardAwareScreen
-      className="bg-gray-50 px-4 pt-6"
-      contentBottomPadding={TAB_BAR_CLEARANCE}
-    >
-      <View className="mb-5 rounded-3xl bg-brand px-5 py-5">
-        <Text className="mb-2 text-2xl font-bold text-white">
-          {isManualEntryRoute ? 'New certificate — manual entry' : 'New certificate — AI / guided'}
-        </Text>
-        <Text className="text-white/90">
-          {isManualEntryRoute
-            ? 'This certificate route is focused on manual data entry, with certificate steps managed inside this workflow instead of from the top-level task menu.'
-            : 'This certificate route is focused on guided capture and AI-assisted workflow steps, all managed inside this workflow instead of from the top-level task menu.'}
-        </Text>
+    <Screen bottomGap={TAB_BAR_CLEARANCE}>
+      <SectionCard
+        title="Certificate workflow"
+        hint={
+          isManualEntryRoute
+            ? 'Ordered steps for a manual certificate draft. Customer, address, capture and review stay inside this workflow.'
+            : 'Ordered steps for a guided certificate draft. Customer, address, capture and review stay inside this workflow.'
+        }
+      >
+        <CertificateTypeSelector
+          value={state.wizard.certificateType}
+          onChange={(value) => setField('certificateType', value)}
+          inferredFrom={
+            appliedInferenceRef.current === (state.selectedServiceM8Job?.uuid ?? null)
+              ? inference.matchedKeyword
+              : null
+          }
+        />
 
-        <TouchableOpacity
-          className="mt-4 self-start rounded-full bg-white/15 px-4 py-2"
-          onPress={() => router.push('/(tabs)')}
-          activeOpacity={0.85}
-        >
-          <View className="flex-row items-center">
-            <Ionicons name="arrow-back" size={16} color="#ffffff" />
-            <Text className="ml-2 font-semibold text-white">Back to task selection</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={{ marginTop: 4 }}>
+          <Button
+            label="Back to task selection"
+            icon="arrow-back"
+            variant="ghost"
+            size="small"
+            onPress={() => router.push('/(tabs)')}
+          />
+        </View>
+      </SectionCard>
+
+      <View style={{ marginBottom: 14 }}>
+        <AppText variant="subheading" style={{ marginBottom: 8 }}>
+          Workflow progress
+        </AppText>
+        <WizardProgressRail steps={steps.map(({ key, done, locked }) => ({ key, done, locked }))} />
       </View>
 
-      <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-        <Text className="mb-2 font-semibold text-gray-900">Certificate workflow</Text>
-        <Text className="text-sm text-gray-500">
-          {isManualEntryRoute
-            ? 'Follow the ordered steps below to build a certificate draft through the manual route. Customer, address, capture, and review remain inside this certificate workflow.'
-            : 'Follow the ordered steps below to build a certificate draft through the guided route. Customer, address, capture, and review remain inside this certificate workflow.'}
-        </Text>
-      </View>
-
-      <CertificateTypeSelector
-        value={state.wizard.certificateType}
-        onChange={(value) =>
-          dispatch({ type: 'SET_WIZARD_FIELD', payload: { key: 'certificateType', value } })
-        }
-        inferredFrom={
-          appliedInferenceRef.current === (state.selectedServiceM8Job?.uuid ?? null)
-            ? inference.matchedKeyword
-            : null
-        }
-      />
-
-      <Text className="mb-3 text-lg font-bold text-gray-900">Workflow progress</Text>
-      {steps.map(({ key, ...step }, index) => (
-        <StepCard key={`${key}-${index}`} {...step} />
+      {steps.map((step, index) => (
+        <WizardStepCard
+          key={step.key}
+          index={index + 1}
+          title={step.title}
+          detail={step.detail}
+          done={step.done}
+          locked={step.locked}
+          actionLabel={step.actionLabel}
+          onPress={step.onPress}
+        />
       ))}
 
-      <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-        <Text className="mb-3 font-semibold text-gray-900">Data entry mode</Text>
-        <Text className="mb-3 text-sm text-gray-500">
-          The home screen chooses the starting certificate route. You can still switch this draft between guided, manual-only, or hybrid entry here if the job changes on site.
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {dataEntryModeOptions.map((option) => {
-            const selected = state.wizard.dataEntryMode === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                className={`rounded-xl border px-4 py-3 ${selected ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.inspectionDate ? 'opacity-50' : ''}`}
-                disabled={!stepFlags.inspectionDate}
-                onPress={() =>
-                  dispatch({
-                    type: 'SET_WIZARD_FIELD',
-                    payload: { key: 'dataEntryMode', value: option.value },
-                  })
-                }
-              >
-                <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700'}`}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+      <SectionCard title="Data entry mode" hint="Switch this draft between guided, manual-only or hybrid entry if the job changes on site.">
+        <ChoiceChips
+          options={dataEntryModeOptions}
+          value={state.wizard.dataEntryMode}
+          onChange={(value) => setField('dataEntryMode', value)}
+          disabled={!stepFlags.inspectionDate}
+        />
+      </SectionCard>
 
-      <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-        <Text className="mb-3 font-semibold text-gray-900">Report purpose</Text>
-        <Text className="mb-3 text-sm text-gray-500">
-          This helps the app adapt the evidence flow and suggested certificate wording.
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {reportPurposeOptions.map((option) => {
-            const selected = state.wizard.reportPurpose === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                className={`rounded-xl border px-4 py-3 ${selected ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.inspectionDate ? 'opacity-50' : ''}`}
-                disabled={!stepFlags.dataEntryMode}
-                onPress={() =>
-                  dispatch({
-                    type: 'SET_WIZARD_FIELD',
-                    payload: { key: 'reportPurpose', value: option.value },
-                  })
-                }
-              >
-                <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700'}`}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+      <SectionCard title="Report purpose" hint="Adapts the evidence flow and suggested certificate wording.">
+        <ChoiceChips
+          options={reportPurposeOptions}
+          value={state.wizard.reportPurpose}
+          onChange={(value) => setField('reportPurpose', value)}
+          disabled={!stepFlags.dataEntryMode}
+        />
+      </SectionCard>
 
-      <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-        <Text className="mb-3 font-semibold text-gray-900">Installation type</Text>
-        <Text className="mb-3 text-sm text-gray-500">
-          The installation type controls which downstream questions are relevant.
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {installationTypeOptions.map((option) => {
-            const selected = state.wizard.installationType === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                className={`rounded-xl border px-4 py-3 ${selected ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.reportPurpose ? 'opacity-50' : ''}`}
-                disabled={!stepFlags.reportPurpose}
-                onPress={() =>
-                  dispatch({
-                    type: 'SET_WIZARD_FIELD',
-                    payload: { key: 'installationType', value: option.value },
-                  })
-                }
-              >
-                <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700'}`}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+      <SectionCard title="Installation type" hint="Controls which downstream questions are relevant.">
+        <ChoiceChips
+          options={installationTypeOptions}
+          value={state.wizard.installationType}
+          onChange={(value) => setField('installationType', value)}
+          disabled={!stepFlags.reportPurpose}
+        />
+      </SectionCard>
 
-      <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-        <Text className="mb-3 font-semibold text-gray-900">Occupancy profile</Text>
-        <Text className="mb-3 text-sm text-gray-500">
-          Tenanted properties enable landlord-oriented smoke and CO alarm checks.
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
-          {occupancyTypeOptions.map((option) => {
-            const selected = state.wizard.occupancyType === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                className={`rounded-xl border px-4 py-3 ${selected ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.installationType ? 'opacity-50' : ''}`}
-                disabled={!stepFlags.installationType}
-                onPress={() =>
-                  dispatch({
-                    type: 'SET_WIZARD_FIELD',
-                    payload: { key: 'occupancyType', value: option.value },
-                  })
-                }
-              >
-                <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700'}`}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
+      <SectionCard title="Occupancy profile" hint="Tenanted properties enable the landlord smoke and CO alarm checks.">
+        <ChoiceChips
+          options={occupancyTypeOptions}
+          value={state.wizard.occupancyType}
+          onChange={(value) => setField('occupancyType', value)}
+          disabled={!stepFlags.installationType}
+        />
+      </SectionCard>
 
-      <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-        <Text className="mb-3 font-semibold text-gray-900">Supply characteristics</Text>
-        <Text className="mb-2 text-sm font-medium text-gray-800">Supply phase</Text>
-        <View className="mb-3 flex-row flex-wrap gap-2">
-          {supplyPhaseOptions.map((option) => {
-            const selected = state.wizard.supplyPhase === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                className={`rounded-xl border px-4 py-3 ${selected ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.occupancyType ? 'opacity-50' : ''}`}
-                disabled={!stepFlags.occupancyType}
-                onPress={() =>
-                  dispatch({
-                    type: 'SET_WIZARD_FIELD',
-                    payload: { key: 'supplyPhase', value: option.value },
-                  })
-                }
-              >
-                <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700'}`}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+      <SectionCard title="Supply characteristics" hint="Phase arrangement and any ancillary supplies on site.">
+        <ChoiceChips
+          label="Supply phase"
+          options={supplyPhaseOptions}
+          value={state.wizard.supplyPhase}
+          onChange={(value) => setField('supplyPhase', value)}
+          disabled={!stepFlags.occupancyType}
+        />
 
-        <Text className="mb-2 text-sm font-medium text-gray-800">
-          Outbuildings or ancillary supplies present?
-        </Text>
-        <View className="flex-row gap-2">
-          <TouchableOpacity
-            className={`flex-1 items-center rounded-xl border py-3 ${state.wizard.hasOutbuildingsOrAncillarySupplies === true ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.occupancyType ? 'opacity-50' : ''}`}
-            disabled={!stepFlags.occupancyType}
-            onPress={() =>
-              dispatch({
-                type: 'SET_WIZARD_FIELD',
-                payload: { key: 'hasOutbuildingsOrAncillarySupplies', value: true },
-              })
-            }
-          >
-            <Text
-              className={`font-medium ${state.wizard.hasOutbuildingsOrAncillarySupplies === true ? 'text-white' : 'text-gray-700'}`}
-            >
-              Yes
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className={`flex-1 items-center rounded-xl border py-3 ${state.wizard.hasOutbuildingsOrAncillarySupplies === false ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.occupancyType ? 'opacity-50' : ''}`}
-            disabled={!stepFlags.occupancyType}
-            onPress={() =>
-              dispatch({
-                type: 'SET_WIZARD_FIELD',
-                payload: { key: 'hasOutbuildingsOrAncillarySupplies', value: false },
-              })
-            }
-          >
-            <Text
-              className={`font-medium ${state.wizard.hasOutbuildingsOrAncillarySupplies === false ? 'text-white' : 'text-gray-700'}`}
-            >
-              No
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        <ChoiceChips
+          label="Outbuildings or ancillary supplies present?"
+          options={YES_NO}
+          value={state.wizard.hasOutbuildingsOrAncillarySupplies}
+          onChange={(value) => setField('hasOutbuildingsOrAncillarySupplies', value)}
+          disabled={!stepFlags.occupancyType}
+          layout="row"
+        />
+      </SectionCard>
 
       {usesPhotoEvidence ? (
-        <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-          <Text className="mb-1 font-semibold text-gray-900">Guided evidence photos</Text>
-          <Text className="mb-3 text-sm text-gray-500">
-            Mandatory: consumer unit, consumer unit with front removed, and bonding.
-            The app will also ask whether damaged sockets, switches, accessories, or luminaires are present and require photos when they are confirmed.
-          </Text>
+        <SectionCard
+          title="Guided evidence photos"
+          hint="Consumer unit, consumer unit with the front removed, and main protective bonding are mandatory."
+        >
+          <Callout tone={outstandingRequiredPhotos.length === 0 ? 'success' : 'warning'}>
+            {outstandingRequiredPhotos.length === 0
+              ? 'All currently required photos have been accepted.'
+              : `${outstandingRequiredPhotos.length} required photo step(s) still need attention.`}
+          </Callout>
 
-          <View className={`mb-4 rounded-2xl border px-4 py-4 ${outstandingRequiredPhotos.length === 0 ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
-            <Text className={`font-semibold ${outstandingRequiredPhotos.length === 0 ? 'text-green-800' : 'text-amber-800'}`}>
-              {outstandingRequiredPhotos.length === 0
-                ? 'All currently required photos have been accepted'
-                : `${outstandingRequiredPhotos.length} required photo step(s) still need attention`}
-            </Text>
-            <Text className={`mt-1 text-sm ${outstandingRequiredPhotos.length === 0 ? 'text-green-700' : 'text-amber-700'}`}>
-              Required evidence can include the consumer unit, consumer unit with front removed, bonding, any damaged sockets or switches, damaged luminaires, smoke detectors, and a CO detector where applicable.
-            </Text>
-
-            {nextOutstandingPhoto ? (
-              <TouchableOpacity
-                className="mt-3 self-start rounded-xl bg-brand px-4 py-3"
+          {nextOutstandingPhoto ? (
+            <View style={{ marginBottom: 14 }}>
+              <Button
+                label={`Next required photo: ${nextOutstandingPhoto.label}`}
+                icon="camera"
                 onPress={nextOutstandingPhoto.action}
-              >
-                <Text className="font-semibold text-white">{`Next required photo: ${nextOutstandingPhoto.label}`}</Text>
-              </TouchableOpacity>
-            ) : null}
-
-            <View className="mt-4 gap-2">
-              {requiredPhotoPlan.filter((item) => item.required).map((item) => (
-                <View key={item.id} className="flex-row items-start justify-between rounded-xl bg-white/80 px-3 py-3">
-                  <View className="mr-3 flex-1">
-                    <Text className="font-medium text-gray-900">{item.label}</Text>
-                    <Text className={`mt-1 text-xs ${item.complete ? 'text-green-700' : item.blocked ? 'text-amber-700' : 'text-red-600'}`}>
-                      {item.helper}
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name={item.complete ? 'checkmark-circle' : item.blocked ? 'alert-circle-outline' : 'camera-outline'}
-                    size={20}
-                    color={item.complete ? '#16a34a' : item.blocked ? '#b45309' : '#0D47A1'}
-                  />
-                </View>
-              ))}
+                block
+              />
             </View>
-          </View>
-          {requiredPhotoStatus.map((photo) => {
-            const existing = getImageFor(photo.type);
-            const locked = !stepFlags.supplyPhase || !stepFlags.ancillarySupplies;
-            const statusText = existing
-              ? existing.qualityAssessment?.isSufficient
-                ? `Accepted${photo.qualityScore ? ` • score ${photo.qualityScore}` : ''}`
-                : 'Retake required'
-              : 'Not captured';
+          ) : null}
 
-            return (
+          {requiredPhotoPlan
+            .filter((item) => item.required)
+            .map((item) => (
               <View
-                key={photo.type}
-                className="flex-row items-center justify-between border-b border-gray-100 py-2 last:border-b-0"
+                key={item.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  paddingVertical: 9,
+                  borderBottomWidth: 1,
+                  borderBottomColor: palette.line,
+                }}
               >
-                <View className="flex-1 pr-3">
-                  <Text className={`font-medium ${locked ? 'text-gray-400' : 'text-gray-800'}`}>
-                    {photo.label}
-                  </Text>
-                  <Text
-                    className={`mt-1 text-xs ${
-                      existing
-                        ? existing.qualityAssessment?.isSufficient
-                          ? 'text-green-700'
-                          : 'text-red-500'
-                        : 'text-gray-400'
-                    }`}
+                <View style={{ flex: 1 }}>
+                  <AppText variant="bodyStrong">{item.label}</AppText>
+                  <AppText
+                    variant="caption"
+                    tone={item.complete ? 'success' : item.blocked ? 'warning' : 'danger'}
+                    style={{ marginTop: 2 }}
                   >
-                    {statusText}
-                  </Text>
+                    {item.helper}
+                  </AppText>
                 </View>
-                <View className="items-end gap-2">
-                  <TouchableOpacity
-                    className={`rounded-xl px-3 py-2 ${locked ? 'bg-gray-300' : 'bg-brand'}`}
-                    disabled={locked}
-                    onPress={() => openCapture(photo.type, photo.label, photo.mode)}
-                  >
-                    <Text className="text-sm font-semibold text-white">
-                      {existing ? 'Retake' : 'Capture'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+
+                <Button
+                  label={item.complete ? 'Retake' : 'Capture'}
+                  size="small"
+                  variant="soft"
+                  onPress={item.action}
+                />
               </View>
-            );
-          })}
-          <View className="mt-4 rounded-2xl border border-gray-100 bg-gray-50 p-4">
-            <Text className="mb-3 font-semibold text-gray-900">Damage prompts</Text>
-            <Text className="mb-3 text-sm text-gray-500">
-              Confirm whether any damaged sockets, switches, accessories, or luminaires are present. If yes, a clear photo becomes mandatory for that defect.
-            </Text>
+            ))}
+
+          <View style={{ marginTop: 16 }}>
+            <AppText variant="subheading" style={{ marginBottom: 4 }}>
+              Damage prompts
+            </AppText>
+            <AppText variant="caption" tone="muted" style={{ marginBottom: 12 }}>
+              Confirm whether damaged sockets, switches, accessories or luminaires are present. If
+              yes, a clear photo becomes mandatory for that defect.
+            </AppText>
 
             {damagePhotoStatus.map((item) => {
               const locked = !stepFlags.supplyPhase || !stepFlags.ancillarySupplies;
@@ -873,364 +732,203 @@ export default function WizardScreen() {
                   : 'No defect reported';
 
               return (
-                <View key={item.type} className="mb-4 rounded-xl border border-gray-200 bg-white p-3 last:mb-0">
-                  <Text className={`font-medium ${locked ? 'text-gray-400' : 'text-gray-800'}`}>{item.question}</Text>
-                  <View className="mt-3 flex-row gap-2">
-                    <TouchableOpacity
-                      className={`flex-1 items-center rounded-xl border py-3 ${state.wizard[item.type === 'damaged_accessory' ? 'hasDamagedAccessory' : 'hasDamagedLuminaire'] === true ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${locked ? 'opacity-50' : ''}`}
-                      disabled={locked}
-                      onPress={() =>
-                        dispatch({
-                          type: 'SET_WIZARD_FIELD',
-                          payload: {
-                            key: item.type === 'damaged_accessory' ? 'hasDamagedAccessory' : 'hasDamagedLuminaire',
-                            value: true,
-                          },
-                        })
-                      }
-                    >
-                      <Text
-                        className={`font-medium ${state.wizard[item.type === 'damaged_accessory' ? 'hasDamagedAccessory' : 'hasDamagedLuminaire'] === true ? 'text-white' : 'text-gray-700'}`}
-                      >
-                        Yes
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      className={`flex-1 items-center rounded-xl border py-3 ${state.wizard[item.type === 'damaged_accessory' ? 'hasDamagedAccessory' : 'hasDamagedLuminaire'] === false ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${locked ? 'opacity-50' : ''}`}
-                      disabled={locked}
-                      onPress={() =>
-                        dispatch({
-                          type: 'SET_WIZARD_FIELD',
-                          payload: {
-                            key: item.type === 'damaged_accessory' ? 'hasDamagedAccessory' : 'hasDamagedLuminaire',
-                            value: false,
-                          },
-                        })
-                      }
-                    >
-                      <Text
-                        className={`font-medium ${state.wizard[item.type === 'damaged_accessory' ? 'hasDamagedAccessory' : 'hasDamagedLuminaire'] === false ? 'text-white' : 'text-gray-700'}`}
-                      >
-                        No
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                <View
+                  key={item.type}
+                  style={{
+                    backgroundColor: palette.surfaceAlt,
+                    borderRadius: 14,
+                    padding: 12,
+                    marginBottom: 10,
+                  }}
+                >
+                  <ChoiceChips
+                    label={item.question}
+                    options={YES_NO}
+                    value={state.wizard[item.flagKey]}
+                    onChange={(value) => setField(item.flagKey, value)}
+                    disabled={locked}
+                    layout="row"
+                  />
 
-                  <Text
-                    className={`mt-3 text-xs ${
+                  <AppText
+                    variant="caption"
+                    tone={
                       !item.answered
-                        ? 'text-amber-700'
+                        ? 'warning'
                         : item.required
                           ? item.captured
-                            ? 'text-green-700'
-                            : 'text-red-500'
-                          : 'text-gray-500'
-                    }`}
+                            ? 'success'
+                            : 'danger'
+                          : 'muted'
+                    }
+                    style={{ marginBottom: item.required ? 10 : 0 }}
                   >
                     {statusText}
-                  </Text>
+                  </AppText>
 
                   {item.required ? (
-                    <View className="mt-3 flex-row gap-2">
-                      <TouchableOpacity
-                        className={`flex-1 items-center rounded-xl px-3 py-3 ${locked ? 'bg-gray-300' : 'bg-brand'}`}
-                        disabled={locked}
-                        onPress={() => openCapture(item.type, item.label, 'consumer_unit')}
-                      >
-                        <Text className="text-sm font-semibold text-white">
-                          {item.image ? 'Retake photo' : 'Capture photo'}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        className={`items-center rounded-xl border px-3 py-3 ${locked ? 'border-gray-200 bg-gray-100' : 'border-gray-300 bg-white'}`}
-                        disabled={locked}
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <View style={{ flex: 1 }}>
+                        <Button
+                          label={item.image ? 'Retake photo' : 'Capture photo'}
+                          size="small"
+                          onPress={() => openCapture(item.type, item.label, 'consumer_unit')}
+                          disabled={locked}
+                          block
+                        />
+                      </View>
+                      <Button
+                        label="Clear photo"
+                        size="small"
+                        variant="outline"
                         onPress={() => skipOptionalPhoto(item.type)}
-                      >
-                        <Text className={`text-sm font-semibold ${locked ? 'text-gray-400' : 'text-gray-700'}`}>
-                          Clear photo
-                        </Text>
-                      </TouchableOpacity>
+                        disabled={locked}
+                      />
                     </View>
                   ) : null}
                 </View>
               );
             })}
           </View>
-        </View>
+        </SectionCard>
       ) : (
-        <View className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <Text className="font-semibold text-blue-900">Manual certificate route</Text>
-          <Text className="mt-1 text-sm text-blue-800">
-            Guided evidence photos are skipped for this manual entry route. The certificate can be completed from manual interrogation and direct test result entry on the certificate screen.
-          </Text>
-        </View>
+        <Callout tone="info" title="Manual certificate route">
+          Guided evidence photos are skipped for this route. The certificate is completed from
+          manual interrogation and direct test results on the certificate screen.
+        </Callout>
       )}
 
       {isDomesticStyleInstallation ? (
-        <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-          <Text className="mb-3 font-semibold text-gray-900">Consumer unit material</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {[
-              { label: 'Metal', value: 'metal' as const },
-              { label: 'Plastic', value: 'plastic' as const },
-              { label: 'Not sure', value: 'not_sure' as const },
-            ].map((materialOption) => {
-              const selected = state.wizard.consumerUnitMaterial === materialOption.value;
-              return (
-                <TouchableOpacity
-                  key={materialOption.value}
-                  className={`rounded-xl border px-4 py-3 ${selected ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.requiredPhotos ? 'opacity-50' : ''}`}
-                  disabled={!stepFlags.requiredPhotos}
-                  onPress={() =>
-                    dispatch({
-                      type: 'SET_WIZARD_FIELD',
-                      payload: { key: 'consumerUnitMaterial', value: materialOption.value },
-                    })
-                  }
-                >
-                  <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700'}`}>
-                    {materialOption.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+        <SectionCard title="Consumer unit material" hint="Drives the coding guidance for the board.">
+          <ChoiceChips
+            options={consumerUnitMaterialOptions}
+            value={state.wizard.consumerUnitMaterial}
+            onChange={(value) => setField('consumerUnitMaterial', value)}
+            disabled={!stepFlags.requiredPhotos}
+          />
+        </SectionCard>
       ) : (
-        <View className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <Text className="font-semibold text-blue-900">Installation-specific branching</Text>
-          <Text className="mt-1 text-sm text-blue-800">
-            Consumer unit material has been skipped because this installation type is not
-            domestic-style. This is where further commercial / industrial / marine
-            question branches can be added next.
-          </Text>
-        </View>
+        <Callout tone="info" title="Installation-specific branching">
+          Consumer unit material is skipped because this installation type is not domestic-style.
+          Commercial, industrial and marine question branches come next.
+        </Callout>
       )}
 
-      <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-        <Text className="mb-3 font-semibold text-gray-900">
-          Installation protection and special equipment
-        </Text>
-        <Text className="mb-3 text-sm text-gray-500">
-          Capture the core certificate branching answers that affect downstream coding,
-          observations, and certificate completion.
-        </Text>
-
-        <Text className="mb-2 text-sm font-medium text-gray-800">
-          Number of distribution boards / consumer units
-        </Text>
-        <TextInput
-          className={`mb-4 rounded-xl border border-gray-300 px-4 py-3 text-base ${!stepFlags.consumerUnitMaterial ? 'opacity-50' : ''}`}
-          value={String(state.wizard.distributionBoardCount)}
-          onChangeText={(value) =>
-            dispatch({
-              type: 'SET_WIZARD_FIELD',
-              payload: {
-                key: 'distributionBoardCount',
-                value: Math.max(1, parseInt(value || '1', 10) || 1),
-              },
-            })
-          }
-          keyboardType="number-pad"
-          placeholder="1"
-          editable={stepFlags.consumerUnitMaterial}
+      <SectionCard
+        title="Installation protection and special equipment"
+        hint="Core branching answers that affect coding, observations and certificate completion."
+      >
+        <NumberField
+          label="Distribution boards / consumer units"
+          value={state.wizard.distributionBoardCount}
+          onChange={(value) => setField('distributionBoardCount', value)}
+          min={1}
+          disabled={!stepFlags.consumerUnitMaterial}
         />
 
-        {[
-          {
-            key: 'hasRcdProtection',
-            title: 'RCD protection present?',
-          },
-          {
-            key: 'hasRcboProtection',
-            title: 'RCBO protection present?',
-          },
-          {
-            key: 'hasSurgeProtectionDevice',
-            title: 'Surge protection device (SPD) present?',
-          },
-          {
-            key: 'hasEvCharger',
-            title: 'EV charger present?',
-          },
-          {
-            key: 'hasSolarPv',
-            title: 'Solar PV present?',
-          },
-          {
-            key: 'hasAfddProtection',
-            title: 'AFDD protection present?',
-          },
-          {
-            key: 'hasCommunalOrLandlordSupplies',
-            title: 'Communal / landlord supplies present?',
-          },
-        ].map((question) => (
-          <View key={question.key} className="mb-4">
-            <Text className="mb-2 text-sm font-medium text-gray-800">{question.title}</Text>
-            <View className="flex-row gap-2">
-              {yesNoOptions.map((option) => {
-                const selected =
-                  state.wizard[question.key as keyof typeof state.wizard] === option.value;
-
-                return (
-                  <TouchableOpacity
-                    key={option.label}
-                    className={`flex-1 items-center rounded-xl border py-3 ${selected ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.consumerUnitMaterial ? 'opacity-50' : ''}`}
-                    disabled={!stepFlags.consumerUnitMaterial}
-                    onPress={() =>
-                      dispatch({
-                        type: 'SET_WIZARD_FIELD',
-                        payload: {
-                          key: question.key as keyof typeof state.wizard,
-                          value: option.value,
-                        },
-                      })
-                    }
-                  >
-                    <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700'}`}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
+        {PROTECTION_QUESTIONS.map((question) => (
+          <ChoiceChips
+            key={question.key}
+            label={question.title}
+            options={YES_NO}
+            value={state.wizard[question.key]}
+            onChange={(value) => setField(question.key, value)}
+            disabled={!stepFlags.consumerUnitMaterial}
+            layout="row"
+          />
         ))}
 
         {state.wizard.hasSolarPv === true ? (
-          <View>
-            <Text className="mb-2 text-sm font-medium text-gray-800">Battery storage present?</Text>
-            <View className="flex-row gap-2">
-              {yesNoOptions.map((option) => {
-                const selected = state.wizard.hasBatteryStorage === option.value;
-
-                return (
-                  <TouchableOpacity
-                    key={option.label}
-                    className={`flex-1 items-center rounded-xl border py-3 ${selected ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.consumerUnitMaterial ? 'opacity-50' : ''}`}
-                    disabled={!stepFlags.consumerUnitMaterial}
-                    onPress={() =>
-                      dispatch({
-                        type: 'SET_WIZARD_FIELD',
-                        payload: {
-                          key: 'hasBatteryStorage',
-                          value: option.value,
-                        },
-                      })
-                    }
-                  >
-                    <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700'}`}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
+          <ChoiceChips
+            label="Battery storage present?"
+            options={YES_NO}
+            value={state.wizard.hasBatteryStorage}
+            onChange={(value) => setField('hasBatteryStorage', value)}
+            disabled={!stepFlags.consumerUnitMaterial}
+            layout="row"
+          />
         ) : state.wizard.hasSolarPv === false ? (
-          <View className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-3">
-            <Text className="text-sm text-blue-800">
-              Battery storage question skipped because solar PV is not present.
-            </Text>
-          </View>
+          <Callout tone="info" inset>
+            Battery storage is skipped because solar PV is not present.
+          </Callout>
         ) : null}
-      </View>
+      </SectionCard>
 
       {requiresSmokeAndCoFlow ? (
         <>
-          <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-            <Text className="mb-2 font-semibold text-gray-900">
-              Landlord smoke alarm requirement
-            </Text>
-            <Text className="mb-2 text-sm text-gray-500">{LANDLORD_GUIDANCE_SMOKE}</Text>
-            <Text className="mb-3 text-sm text-gray-500">
-              Enter the number of storeys used as living accommodation, then confirm at
-              least one working smoke alarm on each floor and capture a photo of each alarm.
-            </Text>
-
-            <Text className="mb-2 text-sm font-medium text-gray-800">
-              Number of storeys used as living accommodation
-            </Text>
-            <TextInput
-              className={`mb-3 rounded-xl border border-gray-300 px-4 py-3 text-base ${!stepFlags.consumerUnitMaterial ? 'opacity-50' : ''}`}
-              value={String(state.wizard.storeyCount)}
-              onChangeText={(value) =>
-                dispatch({
-                  type: 'SET_WIZARD_FIELD',
-                  payload: {
-                    key: 'storeyCount',
-                    value: Math.max(1, parseInt(value || '1', 10) || 1),
-                  },
-                })
-              }
-              keyboardType="number-pad"
-              placeholder="1"
-              editable={stepFlags.consumerUnitMaterial}
+          <SectionCard title="Landlord smoke alarm requirement" hint={LANDLORD_GUIDANCE_SMOKE}>
+            <NumberField
+              label="Storeys used as living accommodation"
+              value={state.wizard.storeyCount}
+              onChange={(value) => setField('storeyCount', value)}
+              min={1}
+              disabled={!stepFlags.consumerUnitMaterial}
             />
 
-            <Text className="mb-2 text-sm font-medium text-gray-800">
-              Number of working smoke alarms found
-            </Text>
-            <TextInput
-              className={`rounded-xl border border-gray-300 px-4 py-3 text-base ${!stepFlags.consumerUnitMaterial ? 'opacity-50' : ''}`}
-              value={String(state.wizard.smokeDetectorCount)}
-              onChangeText={(value) =>
-                dispatch({
-                  type: 'SET_WIZARD_FIELD',
-                  payload: {
-                    key: 'smokeDetectorCount',
-                    value: Math.max(0, parseInt(value || '0', 10) || 0),
-                  },
-                })
-              }
-              keyboardType="number-pad"
-              placeholder="0"
-              editable={stepFlags.consumerUnitMaterial}
+            <NumberField
+              label="Working smoke alarms found"
+              value={state.wizard.smokeDetectorCount}
+              onChange={(value) => setField('smokeDetectorCount', value)}
+              min={0}
+              disabled={!stepFlags.consumerUnitMaterial}
             />
 
-            <View
-              className={`mt-3 rounded-xl border px-3 py-3 ${smokeAlarmCountMeetsGuidance ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}
-            >
-              <Text
-                className={`text-sm font-medium ${smokeAlarmCountMeetsGuidance ? 'text-green-700' : 'text-amber-700'}`}
-              >
-                {smokeAlarmCountMeetsGuidance
-                  ? `Smoke alarm count meets the minimum storey-based guidance (${minimumRecommendedSmokeAlarms} required).`
-                  : `Record at least ${minimumRecommendedSmokeAlarms} working smoke alarm(s) for the ${state.wizard.storeyCount} storey/storeys used as living accommodation.`}
-              </Text>
-            </View>
-          </View>
+            <Callout tone={smokeAlarmCountMeetsGuidance ? 'success' : 'warning'} inset>
+              {smokeAlarmCountMeetsGuidance
+                ? `Smoke alarm count meets the minimum storey-based guidance (${minimumRecommendedSmokeAlarms} required).`
+                : `Record at least ${minimumRecommendedSmokeAlarms} working smoke alarm(s) for the ${state.wizard.storeyCount} storey/storeys used as living accommodation.`}
+            </Callout>
+          </SectionCard>
 
-          <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-            <Text className="mb-2 font-semibold text-gray-900">Smoke detector evidence</Text>
+          <SectionCard title="Smoke detector evidence" hint="One clear photo per alarm recorded above.">
             {state.wizard.smokeDetectorCount === 0 ? (
-              <Text className="text-sm text-gray-500">No smoke detector photos required.</Text>
+              <AppText variant="caption" tone="muted">
+                No smoke detector photos required.
+              </AppText>
             ) : (
               Array.from({ length: state.wizard.smokeDetectorCount }, (_, index) => {
                 const existing = getImageFor('smoke_detector', index);
                 const locked = !stepFlags.smokeCount;
+
                 return (
                   <View
                     key={index}
-                    className="flex-row items-center justify-between border-b border-gray-100 py-2 last:border-b-0"
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      paddingVertical: 9,
+                      borderBottomWidth: 1,
+                      borderBottomColor: palette.line,
+                    }}
                   >
-                    <View className="flex-1 pr-3">
-                      <Text className={`${locked ? 'text-gray-400' : 'text-gray-800'} font-medium`}>
-                        Take photo of smoke detector {index + 1}
-                      </Text>
-                      <Text
-                        className={`mt-1 text-xs ${existing?.qualityAssessment?.isSufficient ? 'text-green-700' : existing ? 'text-red-500' : 'text-gray-400'}`}
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="bodyStrong" tone={locked ? 'soft' : 'default'}>
+                        {`Take photo of smoke detector ${index + 1}`}
+                      </AppText>
+                      <AppText
+                        variant="caption"
+                        tone={
+                          existing?.qualityAssessment?.isSufficient
+                            ? 'success'
+                            : existing
+                              ? 'danger'
+                              : 'soft'
+                        }
+                        style={{ marginTop: 2 }}
                       >
                         {existing
                           ? existing.qualityAssessment?.isSufficient
                             ? `Accepted${existing.qualityAssessment?.score ? ` • score ${existing.qualityAssessment.score}` : ''}`
                             : 'Retake required'
                           : 'Not captured'}
-                      </Text>
+                      </AppText>
                     </View>
-                    <TouchableOpacity
-                      className={`rounded-xl px-3 py-2 ${locked ? 'bg-gray-300' : 'bg-brand'}`}
+
+                    <Button
+                      label={existing ? 'Retake' : 'Capture'}
+                      size="small"
+                      variant="soft"
                       disabled={locked}
                       onPress={() =>
                         openCapture(
@@ -1240,141 +938,83 @@ export default function WizardScreen() {
                           index,
                         )
                       }
-                    >
-                      <Text className="text-sm font-semibold text-white">
-                        {existing ? 'Retake' : 'Capture'}
-                      </Text>
-                    </TouchableOpacity>
+                    />
                   </View>
                 );
               })
             )}
-          </View>
+          </SectionCard>
 
-          <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-            <Text className="mb-3 font-semibold text-gray-900">
-              Solid fuel burning appliance
-            </Text>
-            <Text className="mb-2 text-sm text-gray-500">{LANDLORD_GUIDANCE_CO}</Text>
-            <Text className="mb-3 text-sm text-gray-500">
-              If one is present, confirm a CO alarm is provided, test it where appropriate,
-              and capture a clear photo.
-            </Text>
+          <SectionCard title="Solid fuel burning appliance" hint={LANDLORD_GUIDANCE_CO}>
+            <ChoiceChips
+              label="Is a solid fuel burning appliance present?"
+              options={YES_NO}
+              value={state.wizard.hasSolidFuelAppliance}
+              onChange={(value) => setField('hasSolidFuelAppliance', value)}
+              disabled={!stepFlags.smokePhotos}
+              layout="row"
+            />
 
-            <View className="mb-3 flex-row gap-2">
-              <TouchableOpacity
-                className={`flex-1 items-center rounded-xl border py-3 ${state.wizard.hasSolidFuelAppliance === true ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.smokePhotos ? 'opacity-50' : ''}`}
-                disabled={!stepFlags.smokePhotos}
-                onPress={() =>
-                  dispatch({
-                    type: 'SET_WIZARD_FIELD',
-                    payload: { key: 'hasSolidFuelAppliance', value: true },
-                  })
-                }
-              >
-                <Text
-                  className={`font-medium ${state.wizard.hasSolidFuelAppliance === true ? 'text-white' : 'text-gray-700'}`}
-                >
-                  Yes
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className={`flex-1 items-center rounded-xl border py-3 ${state.wizard.hasSolidFuelAppliance === false ? 'border-brand bg-brand' : 'border-gray-300 bg-white'} ${!stepFlags.smokePhotos ? 'opacity-50' : ''}`}
-                disabled={!stepFlags.smokePhotos}
-                onPress={() =>
-                  dispatch({
-                    type: 'SET_WIZARD_FIELD',
-                    payload: { key: 'hasSolidFuelAppliance', value: false },
-                  })
-                }
-              >
-                <Text
-                  className={`font-medium ${state.wizard.hasSolidFuelAppliance === false ? 'text-white' : 'text-gray-700'}`}
-                >
-                  No
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {state.wizard.hasSolidFuelAppliance === true && (
-              <View className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <TouchableOpacity
-                  className={`mb-3 items-center rounded-xl py-3 ${stepFlags.solidFuelQuestion ? 'bg-brand' : 'bg-gray-300'}`}
-                  disabled={!stepFlags.solidFuelQuestion}
-                  onPress={() =>
-                    dispatch({
-                      type: 'SET_WIZARD_FIELD',
-                      payload: {
-                        key: 'coDetectorTested',
-                        value: !state.wizard.coDetectorTested,
-                      },
-                    })
+            {state.wizard.hasSolidFuelAppliance === true ? (
+              <View style={{ gap: 8 }}>
+                <Button
+                  label={
+                    state.wizard.coDetectorTested
+                      ? 'CO detector marked as tested'
+                      : 'Mark CO detector as tested'
                   }
-                >
-                  <Text className="font-semibold text-white">
-                    {state.wizard.coDetectorTested
-                      ? 'CO Detector Tested ✓'
-                      : 'Mark CO Detector as Tested'}
-                  </Text>
-                </TouchableOpacity>
+                  icon={state.wizard.coDetectorTested ? 'checkmark-circle' : 'flask-outline'}
+                  variant={state.wizard.coDetectorTested ? 'soft' : 'solid'}
+                  disabled={!stepFlags.solidFuelQuestion}
+                  onPress={() => setField('coDetectorTested', !state.wizard.coDetectorTested)}
+                  block
+                />
 
-                <TouchableOpacity
-                  className={`items-center rounded-xl py-3 ${state.wizard.coDetectorTested ? 'bg-brand' : 'bg-gray-300'}`}
+                <Button
+                  label={coDetectorPhotoDone ? 'Retake CO detector photo' : 'Capture CO detector photo'}
+                  icon="camera"
+                  variant="outline"
                   disabled={!state.wizard.coDetectorTested}
                   onPress={() =>
-                    openCapture(
-                      'co_detector',
-                      'Take a photo of the CO detector',
-                      'consumer_unit',
-                    )
+                    openCapture('co_detector', 'Take a photo of the CO detector', 'consumer_unit')
                   }
-                >
-                  <Text className="font-semibold text-white">
-                    {coDetectorPhotoDone
-                      ? 'Retake CO Detector Photo'
-                      : 'Capture CO Detector Photo'}
-                  </Text>
-                </TouchableOpacity>
+                  block
+                />
               </View>
-            )}
-
-            {state.wizard.hasSolidFuelAppliance === false ? (
-              <Text className="text-sm text-green-700">CO detector branch skipped.</Text>
+            ) : state.wizard.hasSolidFuelAppliance === false ? (
+              <AppText variant="caption" tone="success">
+                CO detector branch skipped.
+              </AppText>
             ) : null}
-          </View>
+          </SectionCard>
         </>
       ) : (
-        <View className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <Text className="font-semibold text-blue-900">Conditional question branch</Text>
-          <Text className="mt-1 text-sm text-blue-800">
-            Smoke and CO alarm questions are currently skipped because the selected report
-            purpose and occupancy profile do not indicate a tenancy-focused workflow.
-          </Text>
-        </View>
+        <Callout tone="info" title="Conditional question branch">
+          Smoke and CO alarm questions are skipped because the selected report purpose and
+          occupancy profile do not indicate a tenancy-focused workflow.
+        </Callout>
       )}
 
-      <View className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-        <Text className="mb-2 font-semibold text-blue-900">Planned next branching questions</Text>
-        <Text className="text-sm text-blue-800">
-          Still to add next: PME / TN-S / TT earthing branch, Ze / PFC capture, main switch
-          rating confirmation, bonding conductor sizes, and a fuller non-domestic branch for
-          commercial / industrial / marine installations.
-        </Text>
+      <Callout tone="info" title="Planned next branching questions">
+        Still to add: PME / TN-S / TT earthing branch, Ze / PFC capture, main switch rating
+        confirmation, bonding conductor sizes, and a fuller non-domestic branch for commercial,
+        industrial and marine installations.
+      </Callout>
+
+      <View style={{ marginTop: 4 }}>
+        <Button
+          label="Continue to Review"
+          icon="arrow-forward"
+          size="large"
+          disabled={!reviewUnlocked}
+          onPress={() => router.push('/(tabs)/review')}
+          block
+        />
       </View>
 
-      <TouchableOpacity
-        className={`mb-3 items-center rounded-2xl py-4 ${reviewUnlocked ? 'bg-brand' : 'bg-gray-300'}`}
-        disabled={!reviewUnlocked}
-        onPress={() => router.push('/(tabs)/review')}
-      >
-        <Text className={`text-base font-bold ${reviewUnlocked ? 'text-white' : 'text-gray-500'}`}>
-          Continue to Review
-        </Text>
-      </TouchableOpacity>
-
-      <Text className="mb-10 text-center text-sm text-gray-400">
-        Workflow reference: `mobile/MOBILE_WIZARD_WORKFLOW.md`
-      </Text>
-    </KeyboardAwareScreen>
+      <AppText variant="caption" tone="soft" style={{ textAlign: 'center', marginTop: 12 }}>
+        Workflow reference: mobile/MOBILE_WIZARD_WORKFLOW.md
+      </AppText>
+    </Screen>
   );
 }

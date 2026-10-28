@@ -1,9 +1,10 @@
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Pressable, View } from 'react-native';
 
 import type { Plan3DColourScheme } from '@/modules/fire-alarm-roomplan';
-
-import Plan3DChip from './Plan3DChip';
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { useTheme } from '@/theme/useTheme';
 
 interface Plan3DDisplayControlsProps {
   colourScheme: Plan3DColourScheme;
@@ -38,22 +39,50 @@ function ToggleRow({
   value: boolean;
   onPress: () => void;
 }) {
+  const { palette } = useTheme();
+
   return (
     <Pressable
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       accessibilityLabel={label}
       onPress={onPress}
-      className="mb-2 flex-row items-center justify-between rounded-2xl border border-[#E0E6ED] bg-white px-4 py-3"
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: palette.line,
+        backgroundColor: palette.surface,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+      }}
     >
-      <View className="flex-1 pr-3">
-        <Text className="text-sm font-semibold text-[#1A202C]">{label}</Text>
-        <Text className="mt-0.5 text-xs leading-5 text-[#718096]">{description}</Text>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <AppText variant="bodyStrong">{label}</AppText>
+        <AppText variant="caption" tone="muted" numberOfLines={2}>
+          {description}
+        </AppText>
       </View>
-      <View className={`h-6 w-11 justify-center rounded-full ${value ? 'bg-[#15803D]' : 'bg-[#CBD5E1]'}`}>
+
+      <View
+        style={{
+          width: 40,
+          height: 23,
+          borderRadius: 12,
+          justifyContent: 'center',
+          backgroundColor: value ? palette.success : palette.lineStrong,
+        }}
+      >
         <View
-          className="h-5 w-5 rounded-full bg-white"
-          style={{ marginLeft: value ? 22 : 2 }}
+          style={{
+            width: 19,
+            height: 19,
+            borderRadius: 10,
+            backgroundColor: '#FFFFFF',
+            marginLeft: value ? 19 : 2,
+          }}
         />
       </View>
     </Pressable>
@@ -71,63 +100,46 @@ export default function Plan3DDisplayControls({
   onShareSvg,
 }: Plan3DDisplayControlsProps) {
   return (
-    <View>
-      <Text className="text-xs font-semibold uppercase tracking-[0.8px] text-[#64748B]">
-        Colour scheme
-      </Text>
-      <View className="mb-4 mt-2 flex-row flex-wrap gap-2">
-        {COLOUR_SCHEMES.map((option) => (
-          <Plan3DChip
-            key={option.value}
-            label={option.label}
-            selected={colourScheme === option.value}
-            onPress={() => onChange({ colourScheme: option.value })}
-          />
-        ))}
-      </View>
+    <View style={{ gap: 10 }}>
+      <SegmentedControl
+        options={COLOUR_SCHEMES}
+        value={colourScheme}
+        onChange={(value) => onChange({ colourScheme: value })}
+      />
 
       <ToggleRow
         label="Show ceiling"
-        description="Closes the room geometry for a solid architectural look."
+        description="Closes the room geometry."
         value={showCeiling}
         onPress={() => onChange({ showCeiling: !showCeiling })}
       />
       <ToggleRow
         label="Floor grid"
-        description="Draws a 1 m survey grid across each captured room."
+        description="1 m survey grid per room."
         value={showFloorGrid}
         onPress={() => onChange({ showFloorGrid: !showFloorGrid })}
       />
       <ToggleRow
         label="Device markers"
-        description="Plots fire alarm devices at their captured mounting height."
+        description="Plot devices at their mounting height."
         value={showDevices}
         onPress={() => onChange({ showDevices: !showDevices })}
       />
       <ToggleRow
         label="Device labels"
-        description="Adds the device name under each marker."
+        description="Name under each marker."
         value={showLabels}
         onPress={() => onChange({ showLabels: !showLabels })}
       />
 
-      <Pressable
-        accessibilityRole="button"
+      <Button
+        label={isSharing ? 'Preparing plan…' : 'Share plan as SVG'}
+        icon={isSharing ? undefined : 'share-social-outline'}
+        accent="teal"
+        loading={isSharing}
         onPress={onShareSvg}
-        disabled={isSharing}
-        className={`mt-2 flex-row items-center justify-center rounded-2xl px-4 py-4 ${
-          isSharing ? 'bg-[#C6E8D5]' : 'bg-[#15803D]'
-        }`}
-      >
-        {isSharing ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <Ionicons name="share-social-outline" size={18} color="#FFFFFF" />
-        )}
-        <Text className="ml-2 text-sm font-semibold text-white">
-          {isSharing ? 'Preparing plan…' : 'Share plan as SVG'}
-        </Text>
-      </Pressable>
+        block
+      />
     </View>
   );
 }

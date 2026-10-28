@@ -1,27 +1,26 @@
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { AppText } from '@/components/ui/AppText';
+import { Pill, type PillTone } from '@/components/ui/Pill';
 import type { ServiceM8JobRecord } from '@/services/api';
 import {
   formatJobDate,
   getJobReference,
   type CustomerJobGroup,
 } from '@/services/servicem8/grouping';
+import { useTheme } from '@/theme/useTheme';
 
-const STATUS_TONES: Record<string, string> = {
-  quote: 'bg-[#FFF4E6] text-[#B45309]',
-  'work order': 'bg-[#E3F2FD] text-[#0D47A1]',
-  completed: 'bg-[#E8F5E9] text-[#15803D]',
-  unsuccessful: 'bg-[#FEE2E2] text-[#B91C1C]',
-  incomplete: 'bg-[#FEF3C7] text-[#92400E]',
+const STATUS_TONES: Record<string, PillTone> = {
+  quote: 'warning',
+  'work order': 'brand',
+  completed: 'success',
+  unsuccessful: 'danger',
+  incomplete: 'warning',
 };
 
-function getStatusTone(status: string | null): string {
-  if (!status) {
-    return 'bg-[#EEF2F7] text-[#475569]';
-  }
-
-  return STATUS_TONES[status.trim().toLowerCase()] ?? 'bg-[#EEF2F7] text-[#475569]';
+function getStatusTone(status: string): PillTone {
+  return STATUS_TONES[status.trim().toLowerCase()] ?? 'neutral';
 }
 
 function StatusPill({ status }: { status: string | null }) {
@@ -29,11 +28,7 @@ function StatusPill({ status }: { status: string | null }) {
     return null;
   }
 
-  return (
-    <View className={`rounded-full px-2 py-1 ${getStatusTone(status)}`}>
-      <Text className="text-[10px] font-bold uppercase tracking-[0.5px]">{status}</Text>
-    </View>
-  );
+  return <Pill label={status} tone={getStatusTone(status)} />;
 }
 
 function JobRow({
@@ -47,45 +42,56 @@ function JobRow({
   isLoading: boolean;
   onPress: () => void;
 }) {
+  const { palette } = useTheme();
   const date = formatJobDate(job);
 
   return (
     <TouchableOpacity
-      className={`mb-2 rounded-xl border p-3 ${
-        isSelected ? 'border-[#0D47A1] bg-[#EAF1FF]' : 'border-[#E0E6ED] bg-white'
-      }`}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isSelected, busy: isLoading }}
       onPress={onPress}
       disabled={isLoading}
-      accessibilityRole="button"
+      style={{
+        marginBottom: 8,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: isSelected ? palette.brand : palette.line,
+        backgroundColor: isSelected ? palette.brandSoft : palette.surface,
+        padding: 12,
+      }}
     >
-      <View className="flex-row items-start justify-between">
-        <View className="mr-3 flex-1">
-          <View className="flex-row flex-wrap items-center gap-2">
-            <Text className="text-sm font-semibold text-[#1A202C]">{getJobReference(job)}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+        <View style={{ flex: 1, marginRight: 12 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+            <AppText variant="bodyStrong">{getJobReference(job)}</AppText>
             <StatusPill status={job.status} />
           </View>
 
-          {date ? <Text className="mt-1 text-xs text-[#64748B]">{date}</Text> : null}
+          {date ? (
+            <AppText variant="caption" tone="soft" style={{ marginTop: 4 }}>
+              {date}
+            </AppText>
+          ) : null}
 
           {job.address ? (
-            <Text className="mt-1 text-sm text-[#475569]" numberOfLines={2}>
+            <AppText variant="caption" tone="muted" numberOfLines={2} style={{ marginTop: 4 }}>
               {job.address}
-            </Text>
+            </AppText>
           ) : null}
 
           {job.description ? (
-            <Text className="mt-1 text-xs text-[#718096]" numberOfLines={2}>
+            <AppText variant="caption" tone="soft" numberOfLines={2} style={{ marginTop: 4 }}>
               {job.description}
-            </Text>
+            </AppText>
           ) : null}
         </View>
 
         {isLoading ? (
-          <ActivityIndicator color="#0D47A1" />
+          <ActivityIndicator color={palette.brand} />
         ) : isSelected ? (
-          <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />
+          <Ionicons name="checkmark-circle" size={20} color={palette.brand} />
         ) : (
-          <Ionicons name="chevron-forward" size={16} color="#A0AEC0" />
+          <Ionicons name="chevron-forward" size={16} color={palette.inkSoft} />
         )}
       </View>
     </TouchableOpacity>
@@ -113,39 +119,67 @@ export function CustomerJobGroupCard({
   loadingJobUuid,
   onSelectJob,
 }: CustomerJobGroupCardProps) {
+  const { palette } = useTheme();
   const newest = group.jobs[0] ?? null;
   const jobCountLabel = `${group.jobs.length} job${group.jobs.length === 1 ? '' : 's'}`;
   const showContact = group.contactName && group.contactName !== group.customerName;
 
   return (
-    <View className="mb-3 overflow-hidden rounded-2xl border border-[#E0E6ED] bg-white">
+    <View
+      style={{
+        marginBottom: 12,
+        overflow: 'hidden',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: palette.line,
+        backgroundColor: palette.surface,
+      }}
+    >
       <TouchableOpacity
-        className="flex-row items-center px-4 py-3"
-        onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: isExpanded }}
+        onPress={onToggle}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+        }}
       >
-        <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-[#E3F2FD]">
-          <Text className="text-base font-bold text-[#0D47A1]">
+        <View
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 12,
+            backgroundColor: palette.brandSoft,
+          }}
+        >
+          <AppText variant="bodyStrong" tone="brand">
             {group.customerName.charAt(0).toUpperCase()}
-          </Text>
+          </AppText>
         </View>
 
-        <View className="flex-1">
-          <Text className="text-sm font-semibold text-[#1A202C]" numberOfLines={1}>
+        <View style={{ flex: 1 }}>
+          <AppText variant="bodyStrong" numberOfLines={1}>
             {group.customerName}
-          </Text>
-          <View className="mt-0.5 flex-row flex-wrap items-center">
-            <Text className="text-xs text-[#718096]">{jobCountLabel}</Text>
+          </AppText>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 2 }}>
+            <AppText variant="caption" tone="soft">
+              {jobCountLabel}
+            </AppText>
             {showContact ? (
-              <Text className="ml-2 text-xs text-[#718096]" numberOfLines={1}>
-                · {group.contactName}
-              </Text>
+              <AppText variant="caption" tone="soft" numberOfLines={1}>
+                {` · ${group.contactName}`}
+              </AppText>
             ) : null}
             {!isExpanded && newest ? (
-              <Text className="ml-2 text-xs text-[#718096]" numberOfLines={1}>
-                · {formatJobDate(newest) ?? 'No date'}
-              </Text>
+              <AppText variant="caption" tone="soft" numberOfLines={1}>
+                {` · ${formatJobDate(newest) ?? 'No date'}`}
+              </AppText>
             ) : null}
           </View>
         </View>
@@ -153,12 +187,20 @@ export function CustomerJobGroupCard({
         <Ionicons
           name={isExpanded ? 'chevron-up' : 'chevron-down'}
           size={18}
-          color="#64748B"
+          color={palette.inkSoft}
         />
       </TouchableOpacity>
 
       {isExpanded ? (
-        <View className="border-t border-[#EEF2F7] px-3 pt-3 pb-1">
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: palette.line,
+            paddingHorizontal: 12,
+            paddingTop: 12,
+            paddingBottom: 4,
+          }}
+        >
           {group.jobs.map((job) => (
             <JobRow
               key={job.uuid}
@@ -173,3 +215,5 @@ export function CustomerJobGroupCard({
     </View>
   );
 }
+
+export default CustomerJobGroupCard;

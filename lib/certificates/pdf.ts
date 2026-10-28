@@ -4,6 +4,7 @@ import { db } from '@/lib/db/drizzle';
 import { certificates, certificateItems, certificateTemplates, customers, teams, users, approvalSchemeTypes } from '@/lib/db/schema';
 import { generateCertificatePDF, type CertificateData, type TemplateConfig } from '@/lib/pdf/generator';
 import { getApprovalSchemeIds, normalizeApprovalSchemeInfo } from '@/lib/approval-schemes';
+import { resolveTeamLogoDataUri } from '@/lib/storage/team-logo';
 
 export async function getCertificatePdfData(
   certificateId: number,
@@ -23,6 +24,7 @@ export async function getCertificatePdfData(
       },
       team: {
         logoDataUri: teams.logoDataUri,
+        logoR2Key: teams.logoR2Key,
       },
     })
     .from(certificates)
@@ -136,7 +138,7 @@ export async function getCertificatePdfData(
       approvalSchemeDetails: selectedApprovalSchemeDetails,
     },
     templateConfig,
-    teamLogo: team?.logoDataUri ?? null,
+    teamLogo: await resolveTeamLogoDataUri(team),
     customer: {
       name: customer.name,
       email: customer.email,

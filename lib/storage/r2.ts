@@ -1,6 +1,18 @@
-import { DeleteObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 
-const ALLOWED_CONTENT_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'] as const;
+const ALLOWED_CONTENT_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'application/json',
+] as const;
 
 export type R2UploadResult = {
   key: string;
@@ -189,6 +201,8 @@ function getExtensionForContentType(contentType: AllowedContentType): string {
       return 'png';
     case 'image/webp':
       return 'webp';
+    case 'application/json':
+      return 'json';
     case 'image/jpg':
     case 'image/jpeg':
     default:
@@ -328,4 +342,65 @@ export async function uploadDataUrlToR2({ key, dataUrl }: UploadDataUrlInput): P
 
 export async function uploadBufferToR2(input: UploadBinaryInput): Promise<R2UploadResult> {
   return uploadToR2(input);
+}
+
+const DELETABLE_KEY_PREFIXES = ['teams/', 'users/', 'certificates/', 'ml/'] as const;
+
+/** Deletes any app-owned object. Refuses keys outside the app's own prefixes. */
+export async function deleteObjectFromR2(key: string): Promise<boolean> {
+  if (!DELETABLE_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+    throw new Error(`Refusing to delete object outside app prefixes: ${key}`);
+  }
+
+  const client = getR2Client();
+  const { bucket } = getR2Config();
+
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    }),
+  );
+
+  return true;
+}
+
+export type R2DownloadResult = {
+  body: Buffer;
+  contentType: string | null;
+};
+
+/**
+ * Reads an object back out of R2. Used where a consumer needs the bytes rather
+ * than a URL — embedding a stored logo into a generated PDF, for example.
+ */
+export async function downloadFromR2(key: string): Promise<R2DownloadResult | null> {
+  const client = getR2Client();
+  const { bucket } = getR2Config();
+
+  try {
+    const response = await client.send(
+      new GetObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      }),
+    );
+
+    const bytes = await response.Body?.transformToByteArray();
+
+    if (!bytes) {
+      return null;
+    }
+
+    return {
+      body: Buffer.from(bytes),
+      contentType: response.ContentType ?? null,
+    };
+  } catch (error) {
+    if (error instanceof Error && /NoSuchKey|not exist|NotFound/i.test(error.message)) {
+      return null;
+    }
+
+    throw error;
+  }
 }

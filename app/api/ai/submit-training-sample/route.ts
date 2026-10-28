@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+
+import { uploadBufferToR2 } from '@/lib/storage/r2';
 
 type TrainingSampleRequest = {
   imageBase64: string;
@@ -16,6 +16,12 @@ type TrainingSampleRequest = {
   analysis?: unknown;
 };
 
+/**
+ * Training samples used to be written into `ml/datasets/collected` on the local
+ * filesystem. That only works on a long-lived server — the deployed runtime has
+ * a read-only bundle, so samples were lost. They now go to R2 alongside the
+ * other captured media.
+ */
 export async function POST(request: Request) {
   let body: unknown;
 
@@ -45,31 +51,35 @@ export async function POST(request: Request) {
   }
 
   try {
-    const datasetDir = path.resolve(process.cwd(), 'ml/datasets/collected');
-    await fs.mkdir(datasetDir, { recursive: true });
-
     const sampleId = `training-sample-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    const samplePath = path.join(datasetDir, `${sampleId}.json`);
+    const now = new Date();
+    const key = [
+      'ml',
+      'training-samples',
+      String(now.getUTCFullYear()),
+      String(now.getUTCMonth() + 1).padStart(2, '0'),
+      `${sampleId}.json`,
+    ].join('/');
 
-    await fs.writeFile(
-      samplePath,
-      JSON.stringify(
-        {
-          id: sampleId,
-          createdAt: new Date().toISOString(),
-          labels: payload.labels,
-          notes: payload.notes || null,
-          clarification: payload.clarification || null,
-          metadata: payload.metadata || null,
-          analysis: payload.analysis || null,
-        },
-        null,
-        2,
-      ),
-      'utf8',
-    );
+    const document = {
+      id: sampleId,
+      createdAt: now.toISOString(),
+      labels: payload.labels,
+      notes: payload.notes || null,
+      clarification: payload.clarification || null,
+      metadata: payload.metadata || null,
+      analysis: payload.analysis || null,
+      // Kept with the sample so the image always travels with its labels.
+      imageBase64: payload.imageBase64,
+    };
 
-    return NextResponse.json({ success: true, sampleId, samplePath }, { status: 200 });
+    const upload = await uploadBufferToR2({
+      key,
+      body: Buffer.from(JSON.stringify(document), 'utf8'),
+      contentType: 'application/json',
+    });
+
+    return NextResponse.json({ success: true, sampleId, storageKey: upload.key }, { status: 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to save training sample';
     return NextResponse.json({ success: false, error: message }, { status: 500 });

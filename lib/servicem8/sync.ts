@@ -10,6 +10,7 @@ import {
   teams,
 } from '@/lib/db/schema';
 import { generateCertificatePDF, type CertificateData } from '@/lib/pdf/generator';
+import { resolveTeamLogoDataUri } from '@/lib/storage/team-logo';
 
 import { ServiceM8Client_API, type ServiceM8Job } from './client';
 import { SERVICEM8_CONFIG } from './config';
@@ -89,7 +90,7 @@ async function getCertificateForPDF(certificateId: number): Promise<CertificateD
       inspectorName: certificate.inspectorName,
       status: certificate.status,
       formData: certificate.formData as Record<string, any> | undefined,
-      teamLogo: team?.logoDataUri || null,
+      teamLogo: await resolveTeamLogoDataUri(team),
       customer: {
         name: customer.name,
         email: customer.email,

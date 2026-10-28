@@ -1,117 +1,101 @@
+/**
+ * Mobile room capture endpoint.
+ *
+ * POST saves (or re-saves) the survey for a capture session.
+ *
+ * Two things matter here now that surveys are first-class records:
+ *
+ * 1. Every device the engineer gave a type is stored, not only the ones flagged
+ *    as user-identified — the review step is part of the survey.
+ * 2. The body may carry a survey name, a status and a ServiceM8 job. Passing a
+ *    job uuid resolves its client, mirrors that client into `customers`, and
+ *    files the survey against the job's diary entry, so the engineer never types
+ *    the client's details on site.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { and, eq } from 'drizzle-orm';
 
 import { getMobileUser } from '@/lib/auth/mobile';
-import { db } from '@/lib/db/drizzle';
+import { normalizeServiceM8Link } from '@/lib/fire-alarm/format';
+import { resolveSurveyJobLink } from '@/lib/fire-alarm/servicem8-link';
+import { readSurveySummary } from '@/lib/fire-alarm/survey-repository';
 import {
-  fireAlarmCaptureDevices,
-  fireAlarmRoomCaptures,
-  type NewFireAlarmCaptureDevice,
-} from '@/lib/db/schema';
+  saveFireAlarmSurvey,
+  type SurveySessionInput,
+} from '@/lib/fire-alarm/survey-writer';
+import type {
+  FireAlarmSurveyDeviceInput,
+  FireAlarmSurveyServiceM8Link,
+  FireAlarmSurveyStatus,
+} from '@/lib/fire-alarm/types';
 
-type CaptureDeviceInput = {
-  id?: string;
-  type?: string;
-  label?: string | null;
-  manufacturer?: string | { name?: string | null; confidence?: number | null } | null;
-  confidence?: number | null;
-  location?: {
-    x?: number | null;
-    y?: number | null;
-    z?: number | null;
-  } | null;
-  boundingBox?: Record<string, unknown> | null;
-  notes?: string | null;
-  source?: string | null;
-  roomId?: string | null;
-  wallSegmentId?: string | null;
+interface RoomCaptureBody {
+  session?: SurveySessionInput | null;
+  devices?: FireAlarmSurveyDeviceInput[] | null;
   metadata?: Record<string, unknown> | null;
-  identifiedByUser?: boolean;
-};
-
-type CaptureSessionInput = {
-  id?: string;
-  status?: string;
-  metadata?: {
-    sessionName?: string | null;
-    startedAt?: string | null;
-    endedAt?: string | null;
-    [key: string]: unknown;
-  } | null;
-  floorplan?: {
-    units?: string | null;
-    rooms?: unknown[];
-    deviceCount?: number | null;
-    wallCount?: number | null;
-  } | null;
-};
-
-function toNullableTimestamp(value: unknown) {
-  if (typeof value !== 'string' || !value.trim()) {
-    return null;
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  /** Optional survey name; falls back to the capture's session name. */
+  name?: string | null;
+  status?: FireAlarmSurveyStatus | null;
+  /** A full link, when the caller already knows the job detail. */
+  serviceM8?: unknown;
+  /** A job uuid alone, resolved server-side into a link and a customer. */
+  serviceM8JobUuid?: string | null;
+  customerId?: number | null;
 }
 
-function normalizeManufacturer(
-  value: CaptureDeviceInput['manufacturer'],
-): { name: string | null; confidence: number | null } {
-  if (!value) {
-    return { name: null, confidence: null };
-  }
+/**
+ * Resolves the ServiceM8 half of the request into a storable link.
+ *
+ * A bare job uuid is preferred from the app because resolving it here also
+ * mirrors the client and returns the job's address — the app never has to send
+ * client details it does not have.
+ */
+async function resolveServiceM8Input(input: {
+  teamId: number;
+  userId: number;
+  body: RoomCaptureBody;
+}): Promise<{
+  link: FireAlarmSurveyServiceM8Link | null;
+  customerId: number | null;
+  warning: string | null;
+}> {
+  const jobUuid =
+    typeof input.body.serviceM8JobUuid === 'string' ? input.body.serviceM8JobUuid.trim() : '';
 
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
+  if (jobUuid) {
+    const resolved = await resolveSurveyJobLink({
+      teamId: input.teamId,
+      connectionUserId: input.userId,
+      jobUuid,
+    }).catch((error) => {
+      console.warn('[room-captures] ServiceM8 job link failed:', error);
+      return null;
+    });
+
+    if (resolved) {
+      return {
+        link: resolved.link.serviceM8,
+        customerId: resolved.link.customerId,
+        warning: resolved.link.clientResolved
+          ? null
+          : 'The ServiceM8 job was linked but its client could not be read.',
+      };
+    }
+
     return {
-      name: trimmed.length > 0 ? trimmed : null,
-      confidence: null,
+      link: null,
+      customerId: null,
+      warning: 'The ServiceM8 job could not be linked; the survey was saved without it.',
     };
   }
 
   return {
-    name: typeof value.name === 'string' && value.name.trim() ? value.name.trim() : null,
-    confidence: typeof value.confidence === 'number' ? value.confidence : null,
-  };
-}
-
-function normalizeDevice(device: CaptureDeviceInput): NewFireAlarmCaptureDevice | null {
-  const type = typeof device.type === 'string' ? device.type.trim() : '';
-
-  const explicitlyIdentified =
-    device.identifiedByUser === true || device.metadata?.identifiedByUser === true;
-
-  if (!explicitlyIdentified || !type || type === 'unknown') {
-    return null;
-  }
-
-  const manufacturer = normalizeManufacturer(device.manufacturer);
-
-  return {
-    captureId: 0,
-    externalDeviceId: typeof device.id === 'string' && device.id.trim() ? device.id.trim() : null,
-    deviceType: type,
-    label: typeof device.label === 'string' && device.label.trim() ? device.label.trim() : null,
-    manufacturerName: manufacturer.name,
-    manufacturerConfidence: manufacturer.confidence,
-    confidence: typeof device.confidence === 'number' ? device.confidence : null,
-    locationX: typeof device.location?.x === 'number' ? device.location.x : null,
-    locationY: typeof device.location?.y === 'number' ? device.location.y : null,
-    locationZ: typeof device.location?.z === 'number' ? device.location.z : null,
-    boundingBox: device.boundingBox ?? null,
-    notes: typeof device.notes === 'string' && device.notes.trim() ? device.notes.trim() : null,
-    source: typeof device.source === 'string' && device.source.trim() ? device.source.trim() : null,
-    roomId: typeof device.roomId === 'string' && device.roomId.trim() ? device.roomId.trim() : null,
-    wallSegmentId:
-      typeof device.wallSegmentId === 'string' && device.wallSegmentId.trim()
-        ? device.wallSegmentId.trim()
+    link: normalizeServiceM8Link(input.body.serviceM8),
+    customerId:
+      typeof input.body.customerId === 'number' && Number.isFinite(input.body.customerId)
+        ? input.body.customerId
         : null,
-    identifiedByUser: true,
-    metadata: {
-      ...(device.metadata ?? {}),
-      savedFromMobileCapture: true,
-    },
+    warning: null,
   };
 }
 
@@ -127,113 +111,55 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No team found' }, { status: 403 });
     }
 
-    const body = (await request.json()) as {
-      session?: CaptureSessionInput | null;
-      devices?: CaptureDeviceInput[] | null;
-      metadata?: Record<string, unknown> | null;
-    };
-
-    const session = body?.session;
-    const sessionId = typeof session?.id === 'string' ? session.id.trim() : '';
+    const body = (await request.json()) as RoomCaptureBody;
+    const rawSession = body?.session ?? {};
+    const sessionId = typeof rawSession.id === 'string' ? rawSession.id.trim() : '';
+    const session: SurveySessionInput = { ...rawSession, id: sessionId };
 
     if (!sessionId) {
       return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
     }
 
-    const normalizedDevices = Array.isArray(body?.devices)
-      ? body.devices.map(normalizeDevice).filter((device): device is NewFireAlarmCaptureDevice => Boolean(device))
-      : [];
-
-    const savedCapture = await db.transaction(async (tx) => {
-      const [existingCapture] = await tx
-        .select({ id: fireAlarmRoomCaptures.id })
-        .from(fireAlarmRoomCaptures)
-        .where(
-          and(
-            eq(fireAlarmRoomCaptures.teamId, mobileUser.team!.id),
-            eq(fireAlarmRoomCaptures.externalSessionId, sessionId),
-          ),
-        )
-        .limit(1);
-
-      const captureValues = {
-        teamId: mobileUser.team!.id,
-        createdBy: mobileUser.user.id,
-        externalSessionId: sessionId,
-        sessionName:
-          typeof session?.metadata?.sessionName === 'string' && session.metadata.sessionName.trim()
-            ? session.metadata.sessionName.trim()
-            : null,
-        captureStatus:
-          typeof session?.status === 'string' && session.status.trim() ? session.status.trim() : 'completed',
-        units:
-          typeof session?.floorplan?.units === 'string' && session.floorplan.units.trim()
-            ? session.floorplan.units.trim()
-            : null,
-        startedAt: toNullableTimestamp(session?.metadata?.startedAt),
-        endedAt: toNullableTimestamp(session?.metadata?.endedAt),
-        deviceCount: normalizedDevices.length,
-        metadata: {
-          ...(body?.metadata ?? {}),
-          captureState: session?.metadata?.sessionName ?? null,
-          roomCount: Array.isArray(session?.floorplan?.rooms) ? session?.floorplan?.rooms.length : 0,
-          floorplanDeviceCount:
-            typeof session?.floorplan?.deviceCount === 'number' ? session.floorplan.deviceCount : null,
-          wallCount:
-            typeof session?.floorplan?.wallCount === 'number' ? session.floorplan.wallCount : null,
-          sessionMetadata: session?.metadata ?? null,
-          savedDeviceCount: normalizedDevices.length,
-          source: 'expo-mobile-roomplan',
-        },
-        updatedAt: new Date(),
-      };
-
-      let captureId = existingCapture?.id ?? null;
-
-      if (captureId) {
-        await tx
-          .update(fireAlarmRoomCaptures)
-          .set(captureValues)
-          .where(eq(fireAlarmRoomCaptures.id, captureId));
-
-        await tx
-          .delete(fireAlarmCaptureDevices)
-          .where(eq(fireAlarmCaptureDevices.captureId, captureId));
-      } else {
-        const [createdCapture] = await tx
-          .insert(fireAlarmRoomCaptures)
-          .values(captureValues)
-          .returning({ id: fireAlarmRoomCaptures.id });
-
-        captureId = createdCapture.id;
-      }
-
-      if (normalizedDevices.length > 0) {
-        await tx.insert(fireAlarmCaptureDevices).values(
-          normalizedDevices.map((device) => ({
-            ...device,
-            captureId: captureId!,
-            updatedAt: new Date(),
-          })),
-        );
-      }
-
-      const [captureRecord] = await tx
-        .select()
-        .from(fireAlarmRoomCaptures)
-        .where(eq(fireAlarmRoomCaptures.id, captureId!))
-        .limit(1);
-
-      return captureRecord;
+    const { link, customerId, warning } = await resolveServiceM8Input({
+      teamId: mobileUser.team.id,
+      userId: mobileUser.user.id,
+      body,
     });
 
-    return NextResponse.json(
-      {
-        capture: savedCapture,
-        savedDeviceCount: normalizedDevices.length,
-      },
-      { status: 201 },
-    );
+    const hasSurveyFields =
+      body.serviceM8 !== undefined ||
+      typeof body.serviceM8JobUuid === 'string' ||
+      typeof body.customerId === 'number' ||
+      typeof body.name === 'string' ||
+      body.status !== undefined;
+
+    const saved = await saveFireAlarmSurvey({
+      teamId: mobileUser.team.id,
+      userId: mobileUser.user.id,
+      session,
+      devices: body.devices ?? [],
+      metadata: body.metadata ?? {},
+      update: hasSurveyFields
+        ? {
+            ...(typeof body.name === 'string' ? { name: body.name } : {}),
+            ...(body.status ? { status: body.status } : {}),
+            ...(link ? { serviceM8: link } : {}),
+            ...(customerId !== null ? { customerId } : {}),
+          }
+        : undefined,
+    });
+
+    const survey = await readSurveySummary(mobileUser.team.id, saved.surveyId);
+
+    return NextResponse.json({
+      capture: survey,
+      survey,
+      surveyId: saved.surveyId,
+      savedDeviceCount: saved.deviceCount,
+      status: saved.status,
+      linkedToServiceM8: Boolean(link),
+      warning,
+    });
   } catch (error) {
     console.error('Save room capture error:', error);
     return NextResponse.json({ error: 'Failed to save room capture' }, { status: 500 });

@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { Alert, TextInput, View } from 'react-native';
 import * as Location from 'expo-location';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+
+import { Screen } from '@/components/ui/Screen';
+import { SectionCard } from '@/components/ui/Card';
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
 import { useJob } from '@/components/JobStateContext';
-import { KeyboardAwareScreen, TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
+import { useTheme } from '@/theme/useTheme';
 
 export default function LocationScreen() {
-  const [loading, setLoading] = useState(false);
-  const [manualAddress, setManualAddress] = useState('');
+  const { palette } = useTheme();
   const { state, dispatch } = useJob();
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
 
   const syncManualAddressFromGps = useCallback(() => {
     if (state.gpsAddress && !manualAddress.trim()) {
@@ -22,42 +27,50 @@ export default function LocationScreen() {
   }, [syncManualAddressFromGps]);
 
   async function detectLocation() {
-    setLoading(true);
+    setIsDetecting(true);
+
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
+
       if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is needed to auto-fill the address.');
+        Alert.alert('Permission denied', 'Location access is needed to fill the address.');
         return;
       }
 
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const [place] = await Location.reverseGeocodeAsync(loc.coords);
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const [place] = await Location.reverseGeocodeAsync(position.coords);
 
-      const parts = [
+      const address = [
         place.streetNumber,
         place.street,
         place.city,
         place.region,
         place.postalCode,
-      ].filter(Boolean);
-      const address = parts.join(', ');
+      ]
+        .filter(Boolean)
+        .join(', ');
 
       dispatch({
         type: 'SET_GPS',
-        payload: { address, coords: { latitude: loc.coords.latitude, longitude: loc.coords.longitude } },
+        payload: {
+          address,
+          coords: { latitude: position.coords.latitude, longitude: position.coords.longitude },
+        },
       });
     } catch {
-      Alert.alert('Location Error', 'Could not determine location. Please enter manually.');
+      Alert.alert('Location error', 'Could not read the location. Enter it manually.');
     } finally {
-      setLoading(false);
+      setIsDetecting(false);
     }
   }
 
-  function saveManual() {
+  function saveManualAddress() {
     const address = manualAddress.trim() || state.gpsAddress?.trim() || '';
 
     if (!address) {
-      Alert.alert('Required', 'Please enter a site address.');
+      Alert.alert('Address required', 'Enter the site address to continue.');
       return;
     }
 
@@ -69,66 +82,75 @@ export default function LocationScreen() {
   }
 
   return (
-    <KeyboardAwareScreen
-      className="bg-white"
-      contentContainerClassName="px-6 pt-8"
-      contentBottomPadding={TAB_BAR_CLEARANCE}
-    >
-      <Text className="text-2xl font-bold text-gray-900 mb-2">Site Address</Text>
-      <Text className="text-gray-500 mb-6">Confirm the inspection address for the certificate.</Text>
+    <Screen bottomGap={28}>
+      <SectionCard title="Site address" hint="Used on the certificate.">
+        <Button
+          label={isDetecting ? 'Detecting…' : 'Use GPS location'}
+          icon="locate-outline"
+          accent="indigo"
+          variant="soft"
+          loading={isDetecting}
+          onPress={() => void detectLocation()}
+          block
+        />
 
-      {/* GPS detect */}
-      <TouchableOpacity
-        className="flex-row items-center bg-brand/10 border border-brand rounded-xl px-4 py-4 mb-6"
-        onPress={detectLocation}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#0D47A1" className="mr-3" />
-        ) : (
-          <Ionicons name="locate" size={24} color="#0D47A1" style={{ marginRight: 12 }} />
-        )}
-        <View>
-          <Text className="font-semibold text-brand">Use GPS Location</Text>
-          <Text className="text-gray-500 text-sm">Automatically detect address</Text>
+        {state.gpsAddress ? (
+          <View
+            style={{
+              marginTop: 12,
+              padding: 12,
+              borderRadius: 12,
+              backgroundColor: palette.successSoft,
+            }}
+          >
+            <AppText variant="label" tone="success">
+              CURRENT ADDRESS
+            </AppText>
+            <AppText variant="body" style={{ marginTop: 4 }}>
+              {state.gpsAddress}
+            </AppText>
+          </View>
+        ) : null}
+      </SectionCard>
+
+      <View style={{ height: 13 }} />
+
+      <SectionCard title="Or type it" hint="Street, town, postcode.">
+        <TextInput
+          value={manualAddress}
+          onChangeText={setManualAddress}
+          placeholder="123 High Street, London, SW1A 1AA"
+          placeholderTextColor={palette.inkSoft}
+          multiline
+          textAlignVertical="top"
+          style={{
+            borderWidth: 1,
+            borderColor: palette.line,
+            backgroundColor: palette.surface,
+            borderRadius: 12,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            color: palette.ink,
+            fontSize: 14,
+            minHeight: 76,
+          }}
+        />
+
+        <View style={{ marginTop: 12, gap: 10 }}>
+          <Button label="Use this address" icon="checkmark" accent="indigo" onPress={saveManualAddress} block />
+
+          {state.gpsAddress ? (
+            <Button
+              label="Next: customer"
+              icon="arrow-forward"
+              accent="indigo"
+              variant="outline"
+              onPress={() => router.push('/(tabs)/customer')}
+              block
+            />
+          ) : null}
         </View>
-      </TouchableOpacity>
-
-      {/* Current value */}
-      {state.gpsAddress ? (
-        <View className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
-          <Text className="text-green-700 font-semibold mb-1">Current Address</Text>
-          <Text className="text-green-900">{state.gpsAddress}</Text>
-        </View>
-      ) : null}
-
-      {/* Manual entry */}
-      <Text className="text-gray-700 font-medium mb-2">Or enter manually</Text>
-      <TextInput
-        className="border border-gray-300 rounded-xl px-4 py-3 mb-3 text-base"
-        placeholder="123 High Street, London, SW1A 1AA"
-        value={manualAddress}
-        onChangeText={setManualAddress}
-        multiline
-        returnKeyType="done"
-        submitBehavior="blurAndSubmit"
-        textAlignVertical="top"
-      />
-      <TouchableOpacity
-        className="bg-gray-800 rounded-xl py-3 items-center mb-8"
-        onPress={saveManual}
-      >
-        <Text className="text-white font-semibold">Use This Address</Text>
-      </TouchableOpacity>
-
-      {state.gpsAddress ? (
-        <TouchableOpacity
-          className="bg-brand rounded-xl py-4 items-center"
-          onPress={() => router.push('/(tabs)/customer')}
-        >
-          <Text className="text-white font-bold text-base">Next: Select Customer</Text>
-        </TouchableOpacity>
-      ) : null}
-    </KeyboardAwareScreen>
+      </SectionCard>
+    </Screen>
   );
 }

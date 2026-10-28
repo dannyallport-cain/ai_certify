@@ -120,6 +120,20 @@
       "when": 1791000000000,
       "tag": "20260428120000_add_fire_alarm_zone_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793178000000,
+      "tag": "20261028120000_add_team_logo_r2_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793264400000,
+      "tag": "20261029120000_add_fire_alarm_survey_links",
+      "breakpoints": true
     }
   ]
 }

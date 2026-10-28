@@ -9,6 +9,7 @@ import {
   type ServiceM8CompanyContact,
   type ServiceM8AttachmentDownloadInfo,
 } from '@/lib/servicem8/client';
+import { storeTeamLogoFromDataUri } from '@/lib/storage/team-logo';
 
 type EicrField =
   | 'tradingTitle'
@@ -489,11 +490,24 @@ export async function POST(request: NextRequest) {
     }
 
     if (currentTeam && (Object.keys(teamToApply).length > 0 || teamLogoToApply)) {
+      // An imported logo is stored in R2 like any other team logo, so the row
+      // keeps only the object key instead of an inline base64 image.
+      let importedLogoKey: string | null = null;
+
+      if (teamLogoToApply) {
+        try {
+          const storedLogo = await storeTeamLogoFromDataUri(currentTeam.id, teamLogoToApply);
+          importedLogoKey = storedLogo.key;
+        } catch (error) {
+          console.warn('Unable to store imported ServiceM8 logo in R2:', error);
+        }
+      }
+
       await db
         .update(teams)
         .set({
           ...teamToApply,
-          ...(teamLogoToApply ? { logoDataUri: teamLogoToApply } : {}),
+          ...(importedLogoKey ? { logoR2Key: importedLogoKey, logoDataUri: null } : {}),
           updatedAt: new Date(),
         })
         .where(eq(teams.id, currentTeam.id));

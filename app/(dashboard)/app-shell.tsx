@@ -187,6 +187,12 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
             Certificates
           </Link>
           <Link
+            href="/fire-alarm-surveys"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            Fire alarm surveys
+          </Link>
+          <Link
             href="/customers"
             className="text-sm font-medium text-gray-700 hover:text-gray-900"
           >

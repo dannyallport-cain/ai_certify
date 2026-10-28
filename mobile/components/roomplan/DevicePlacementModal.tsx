@@ -5,7 +5,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Text,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -23,6 +22,10 @@ import {
   type Plan3DMounting,
   type Plan3DVertex,
 } from '@/modules/fire-alarm-roomplan';
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { accentTokens } from '@/theme/accents';
+import { useTheme } from '@/theme/useTheme';
 
 import DeviceTypePicker from './DeviceTypePicker';
 import Plan3DPlacementView from './Plan3DPlacementView';
@@ -60,28 +63,9 @@ function canvasSize(windowWidth: number, windowHeight: number) {
   return { width, height };
 }
 
-function StepPill({ active, label, index }: { active: boolean; label: string; index: number }) {
-  return (
-    <View
-      className={`flex-row items-center rounded-full px-3 py-1 ${
-        active ? 'bg-[#0D47A1]' : 'bg-[#E2E8F0]'
-      }`}
-    >
-      <Text className={`text-[11px] font-semibold ${active ? 'text-white' : 'text-[#64748B]'}`}>
-        {index}. {label}
-      </Text>
-    </View>
-  );
-}
-
 /**
- * Manual device entry, in the order an inspector actually works: say what the device is, answer
- * where it is fixed, then tap the plan. The mounting answer is what makes the placement reliable —
- * a detector is asked for as a ceiling device, which puts the view in plan and stops the tap from
- * landing on the floor instead.
- *
- * Mount it only while it is open: the state below is the draft being edited, so a fresh mount per
- * open is what keeps an abandoned draft from leaking into the next device.
+ * Manual device entry, in the order an inspector actually works: say what the
+ * device is, answer where it is fixed, then tap the plan.
  */
 export default function DevicePlacementModal({
   session,
@@ -92,15 +76,16 @@ export default function DevicePlacementModal({
   onCancel,
   onSubmit,
 }: DevicePlacementModalProps) {
+  const { palette, scheme } = useTheme();
+  const violet = accentTokens('violet', scheme);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
   const [step, setStep] = useState<Step>('type');
   const [type, setType] = useState<FireAlarmDeviceType>(initialType);
   const [mounting, setMounting] = useState<Plan3DMounting>(
     initialPlacement?.mounting ?? getDefaultMounting(initialType),
   );
   const [placement, setPlacement] = useState<ManualDevicePlacement | null>(initialPlacement);
-  // The cross is drawn on the surface hit, not on the stored position, so it sits exactly under
-  // the spot that was tapped while the device itself keeps its stand-off from the face.
   const [surfacePoint, setSurfacePoint] = useState<Plan3DVertex | null>(
     initialPlacement ? { ...initialPlacement.position } : null,
   );
@@ -118,8 +103,6 @@ export default function DevicePlacementModal({
       return;
     }
 
-    // The stored position belongs to the previous surface, so it is dropped rather than dragged
-    // across to a surface the device is no longer mounted to.
     setMounting(next);
     setPlacement(null);
     setSurfacePoint(null);
@@ -136,21 +119,39 @@ export default function DevicePlacementModal({
 
   return (
     <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onCancel}>
-      <SafeAreaView className="flex-1 bg-[#F5F7FA]" edges={['top', 'bottom']}>
-        <View className="flex-row items-center border-b border-[#E0E6ED] bg-white px-4 py-3">
+      <SafeAreaView style={{ flex: 1, backgroundColor: palette.canvas }} edges={['top', 'bottom']}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            borderBottomWidth: 1,
+            borderBottomColor: palette.line,
+            backgroundColor: palette.surface,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+          }}
+        >
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close without saving"
             onPress={onCancel}
             hitSlop={8}
-            className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-[#F1F5F9]"
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 17,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: palette.surfaceAlt,
+            }}
           >
-            <Ionicons name="close" size={18} color="#1A202C" />
+            <Ionicons name="close" size={18} color={palette.ink} />
           </Pressable>
 
-          <View className="flex-1">
-            <Text className="text-base font-bold text-[#1A202C]">{title}</Text>
-            <View className="mt-1 flex-row gap-2">
+          <View style={{ flex: 1 }}>
+            <AppText variant="heading">{title}</AppText>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
               <StepPill index={1} label="Type" active={step === 'type'} />
               <StepPill index={2} label="Fix" active={step === 'mount'} />
             </View>
@@ -158,7 +159,7 @@ export default function DevicePlacementModal({
         </View>
 
         <KeyboardAvoidingView
-          className="flex-1"
+          style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView
@@ -172,8 +173,6 @@ export default function DevicePlacementModal({
                 onTypeChange={(next) => {
                   setType(next);
 
-                  // Keep the mounting valid for the new type. A panel has no ceiling option, so a
-                  // mounting inherited from a detector must not survive the change.
                   const allowed = getMountingOptions(next).map((option) => option.mounting);
 
                   if (!allowed.includes(mounting)) {
@@ -186,54 +185,56 @@ export default function DevicePlacementModal({
               />
             ) : (
               <View>
-                <View className="rounded-2xl border border-[#E0E6ED] bg-white p-4">
-                  <Text className="text-sm font-semibold text-[#1A202C]">
-                    How is this {typeLabel.toLowerCase()} fixed?
-                  </Text>
-                  <Text className="mt-1 text-xs text-[#718096]">
+                <View style={{ gap: 10 }}>
+                  <AppText variant="subheading">
+                    {`How is this ${typeLabel.toLowerCase()} fixed?`}
+                  </AppText>
+                  <AppText variant="caption" tone="muted">
                     This decides which surface the plan lets you tap.
-                  </Text>
+                  </AppText>
 
-                  <View className="mt-3 gap-2">
-                    {mountingOptions.map((option) => {
-                      const selected = option.mounting === mounting;
+                  {mountingOptions.map((option) => {
+                    const selected = option.mounting === mounting;
 
-                      return (
-                        <Pressable
-                          key={option.mounting}
-                          accessibilityRole="radio"
-                          accessibilityState={{ selected }}
-                          accessibilityLabel={option.label}
-                          onPress={() => handleChooseMounting(option.mounting)}
-                          className={`flex-row items-center rounded-xl border px-3 py-3 ${
-                            selected
-                              ? 'border-[#0D47A1] bg-[#E8F0FE]'
-                              : 'border-[#E0E6ED] bg-white'
-                          }`}
-                        >
-                          <Ionicons
-                            name={selected ? 'radio-button-on' : 'radio-button-off'}
-                            size={18}
-                            color={selected ? '#0D47A1' : '#94A3B8'}
-                          />
-                          <View className="ml-3 flex-1">
-                            <Text className="text-sm font-semibold text-[#1A202C]">
-                              {option.label}
-                            </Text>
-                            <Text className="text-[11px] text-[#718096]">
-                              {option.description}
-                            </Text>
-                          </View>
-                          {isCeilingVoidMounting(option.mounting) ? (
-                            <Ionicons name="layers-outline" size={16} color="#64748B" />
-                          ) : null}
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+                    return (
+                      <Pressable
+                        key={option.mounting}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={option.label}
+                        onPress={() => handleChooseMounting(option.mounting)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 10,
+                          borderRadius: 12,
+                          borderWidth: 1.5,
+                          borderColor: selected ? violet.solid : palette.line,
+                          backgroundColor: selected ? violet.soft : palette.surface,
+                          paddingVertical: 10,
+                          paddingHorizontal: 12,
+                        }}
+                      >
+                        <Ionicons
+                          name={selected ? 'radio-button-on' : 'radio-button-off'}
+                          size={18}
+                          color={selected ? violet.ink : palette.inkSoft}
+                        />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <AppText variant="bodyStrong">{option.label}</AppText>
+                          <AppText variant="caption" tone="muted">
+                            {option.description}
+                          </AppText>
+                        </View>
+                        {isCeilingVoidMounting(option.mounting) ? (
+                          <Ionicons name="layers-outline" size={16} color={palette.inkMuted} />
+                        ) : null}
+                      </Pressable>
+                    );
+                  })}
                 </View>
 
-                <View className="mt-3">
+                <View style={{ marginTop: 12 }}>
                   <Plan3DPlacementView
                     key={mounting}
                     session={session}
@@ -256,80 +257,124 @@ export default function DevicePlacementModal({
                   />
                 </View>
 
-                <View className="mt-3 rounded-2xl border border-[#E0E6ED] bg-white p-4">
+                <View
+                  style={{
+                    marginTop: 12,
+                    borderWidth: 1,
+                    borderColor: palette.line,
+                    backgroundColor: palette.surface,
+                    borderRadius: 12,
+                    padding: 12,
+                  }}
+                >
                   {placement ? (
                     <View>
-                      <View className="flex-row items-center">
-                        <Ionicons name="locate" size={16} color="#F97316" />
-                        <Text className="ml-2 text-sm font-semibold text-[#1A202C]">
-                          {getMountingDescription(placement.mounting)}
-                          {placement.roomName ? ` · ${placement.roomName}` : ''}
-                        </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="locate" size={15} color={palette.warning} />
+                        <AppText variant="bodyStrong" numberOfLines={1} style={{ flex: 1 }}>
+                          {`${getMountingDescription(placement.mounting)}${placement.roomName ? ` · ${placement.roomName}` : ''}`}
+                        </AppText>
                       </View>
-                      <Text className="mt-1 text-xs text-[#718096]">
-                        {placement.position.z.toFixed(2)} m above the floor ·{' '}
-                        {placement.position.x.toFixed(2)}, {placement.position.y.toFixed(2)}
-                      </Text>
-                      <Text className="mt-1 text-xs text-[#718096]">
-                        Tap somewhere else on the plan to move it.
-                      </Text>
+                      <AppText variant="caption" tone="muted" style={{ marginTop: 4 }}>
+                        {`${placement.position.z.toFixed(2)} m above the floor · ${placement.position.x.toFixed(2)}, ${placement.position.y.toFixed(2)}`}
+                      </AppText>
                     </View>
                   ) : (
-                    <View className="flex-row items-start">
-                      <Ionicons name="hand-left-outline" size={16} color="#64748B" />
-                      <Text className="ml-2 flex-1 text-sm leading-5 text-[#475569]">
-                        {getMountingDescription(mounting)}. Tap the plan where the device sits —
-                        drag to spin the room, pinch to zoom.
-                      </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                      <Ionicons name="hand-left-outline" size={15} color={palette.inkMuted} />
+                      <AppText variant="body" tone="muted" style={{ flex: 1 }}>
+                        {`${getMountingDescription(mounting)}. Tap the plan where the device sits.`}
+                      </AppText>
                     </View>
                   )}
 
                   {missed ? (
-                    <Text className="mt-2 text-xs font-medium text-[#B91C1C]">
-                      That tap missed the room. Aim inside the room outline.
-                    </Text>
+                    <AppText variant="caption" tone="danger" style={{ marginTop: 6 }}>
+                      That tap missed the room — aim inside the outline.
+                    </AppText>
                   ) : null}
                 </View>
               </View>
             )}
           </ScrollView>
 
-          <View className="flex-row gap-3 border-t border-[#E0E6ED] bg-white px-4 py-3">
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: 10,
+              borderTopWidth: 1,
+              borderTopColor: palette.line,
+              backgroundColor: palette.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+            }}
+          >
             {step === 'mount' ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Back to choosing the device type"
-                onPress={() => setStep('type')}
-                className="flex-row items-center justify-center rounded-xl border border-[#CBD5E1] bg-white px-5 py-4"
-              >
-                <Ionicons name="chevron-back" size={16} color="#334155" />
-                <Text className="ml-1 text-sm font-semibold text-[#334155]">Back</Text>
-              </Pressable>
+              <View style={{ flex: 1 }}>
+                <Button
+                  label="Back"
+                  icon="chevron-back"
+                  accent="violet"
+                  variant="outline"
+                  onPress={() => setStep('type')}
+                  block
+                />
+              </View>
             ) : null}
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: step === 'mount' && !placement }}
-              disabled={step === 'mount' && !placement}
-              onPress={() => {
-                if (step === 'type') {
-                  setStep('mount');
-                  return;
-                }
+            <View style={{ flex: 1.4 }}>
+              <Button
+                label={step === 'type' ? 'Continue' : mode === 'create' ? 'Add device' : 'Save device'}
+                icon={step === 'type' ? 'arrow-forward' : 'checkmark'}
+                accent="violet"
+                disabled={step === 'mount' && !placement}
+                onPress={() => {
+                  if (step === 'type') {
+                    setStep('mount');
+                    return;
+                  }
 
-                handleSubmit();
-              }}
-              className={`flex-1 items-center justify-center rounded-xl px-4 py-4 ${
-                step === 'type' || placement ? 'bg-[#0D47A1]' : 'bg-[#CBD5E1]'
-              }`}
-            >
-              <Text className="text-sm font-semibold text-white">
-                {step === 'type' ? 'Continue' : mode === 'create' ? 'Add device' : 'Save device'}
-              </Text>
-            </Pressable>
+                  handleSubmit();
+                }}
+                block
+              />
+            </View>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
+  );
+}
+
+function StepPill({
+  active,
+  label,
+  index,
+}: {
+  active: boolean;
+  label: string;
+  index: number;
+}) {
+  const { palette, scheme } = useTheme();
+  const violet = accentTokens('violet', scheme);
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 999,
+        paddingHorizontal: 9,
+        paddingVertical: 3,
+        backgroundColor: active ? violet.solid : palette.surfaceAlt,
+      }}
+    >
+      <AppText
+        variant="caption"
+        style={{ color: active ? '#FFFFFF' : palette.inkMuted, fontWeight: '700' }}
+      >
+        {`${index}. ${label}`}
+      </AppText>
+    </View>
   );
 }

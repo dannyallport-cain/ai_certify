@@ -1,61 +1,27 @@
 import { useEffect, useState } from 'react';
-import { Alert, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Text, TouchableOpacity, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+import { Screen } from '@/components/ui/Screen';
+import { AppText } from '@/components/ui/AppText';
+import { Card } from '@/components/ui/Card';
+import { NavRow } from '@/components/ui/NavRow';
+import { Button } from '@/components/ui/Button';
 import { useJob } from '@/components/JobStateContext';
 import { useAuthLock } from '@/components/auth/useAuthLock';
+import { useTheme } from '@/theme/useTheme';
 import { getServiceM8ConnectionStatus, startServiceM8Connection } from '@/services/api';
+import { hasMeaningfulDraft } from '@/services/draft-storage';
 
 type ServiceM8State =
   | { status: 'checking' }
   | { status: 'connected'; companyName: string | null }
   | { status: 'disconnected' };
 
-type MenuActionProps = {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-  accent: string;
-  onPress: () => void;
-};
-
-function MenuAction({ icon, title, subtitle, accent, onPress }: MenuActionProps) {
-  return (
-    <TouchableOpacity
-      className="mb-3 rounded-[24px] border border-[#E0E6ED] bg-[#FFFFFF] px-4 py-4"
-      onPress={onPress}
-      activeOpacity={0.85}
-    >
-      <View className="flex-row items-center">
-        <View className={`mr-4 h-12 w-12 items-center justify-center rounded-2xl ${accent}`}>
-          <Ionicons name={icon} size={22} color="#0D47A1" />
-        </View>
-
-        <View className="flex-1 pr-3">
-          <Text className="mb-1 text-base font-semibold text-[#1A202C]">{title}</Text>
-          <Text className="text-sm leading-5 text-[#718096]">{subtitle}</Text>
-        </View>
-
-        <View className="h-10 w-10 items-center justify-center rounded-full bg-[#F5F7FA]">
-          <Ionicons name="chevron-forward" size={18} color="#A0AEC0" />
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-/**
- * Starts ServiceM8 OAuth using the app's own session.
- *
- * Opening the dashboard page in a browser would just show the web sign-in
- * screen, because the mobile bearer token is not a web session cookie. The API
- * hands back a ServiceM8 authorization URL instead, already carrying a signed
- * state so the callback can store the connection for this user.
- */
-async function connectServiceM8() {
+async function connectServiceM8(): Promise<void> {
   try {
     const authorizeUrl = await startServiceM8Connection();
-
     const supported = await Linking.canOpenURL(authorizeUrl);
 
     if (!supported) {
@@ -65,7 +31,6 @@ async function connectServiceM8() {
 
     await Linking.openURL(authorizeUrl);
   } catch (error) {
-    console.error('Failed to start ServiceM8 sign-in:', error);
     Alert.alert(
       'ServiceM8 sign-in failed',
       error instanceof Error ? error.message : 'Please try again in a moment.',
@@ -74,8 +39,9 @@ async function connectServiceM8() {
 }
 
 export default function HomeScreen() {
+  const { palette } = useTheme();
   const { state, dispatch } = useJob();
-  const { signOut, capability, isBiometricEnabled } = useAuthLock();
+  const { signOut } = useAuthLock();
   const [serviceM8, setServiceM8] = useState<ServiceM8State>({ status: 'checking' });
 
   useEffect(() => {
@@ -94,8 +60,6 @@ export default function HomeScreen() {
         );
       })
       .catch(() => {
-        // A missing connection is the common case, so a failed probe is not an
-        // error worth interrupting the menu for.
         if (isMounted) {
           setServiceM8({ status: 'disconnected' });
         }
@@ -106,215 +70,245 @@ export default function HomeScreen() {
     };
   }, []);
 
-  function confirmSignOut() {
-    Alert.alert('Log out', 'Do you want to log out of the mobile app?', [
+  const confirmSignOut = () => {
+    Alert.alert('Log out', 'Log out of the mobile app?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Log out',
         style: 'destructive',
         onPress: () => {
-          // Clearing the token also removes the face/fingerprint unlock
-          // preference, so the next user has to sign in with a password.
           void signOut().then(() => router.replace('/(auth)/login'));
         },
       },
     ]);
-  }
+  };
 
   const hasDraftCertificate = !!state.createdCertificate;
-  const hasWorkflowProgress =
-    !!state.selectedCustomer || !!state.gpsAddress || state.capturedImages.length > 0;
+  const hasUnfinishedDraft = hasMeaningfulDraft(state);
 
-  function startCertificateRoute(mode: 'guided_photo' | 'manual_only') {
-    router.push({
-      pathname: '/(tabs)/wizard',
-      params: { entryMode: mode },
-    });
-  }
+  const unfinishedDraftSummary = (() => {
+    if (!hasUnfinishedDraft) {
+      return '';
+    }
+
+    const parts: string[] = [];
+
+    if (state.selectedCustomer?.name) {
+      parts.push(state.selectedCustomer.name);
+    }
+
+    parts.push(`${state.capturedImages.length} photo${state.capturedImages.length === 1 ? '' : 's'}`);
+
+    if (state.wizard.reportPurpose) {
+      parts.push(state.wizard.reportPurpose.replaceAll('_', ' '));
+    }
+
+    return parts.join(' · ');
+  })();
 
   return (
-    <ScrollView
-      className="flex-1 bg-[#F5F7FA]"
-      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 132 }}
-    >
-      <View className="mb-5 rounded-[30px] border border-[#E0E6ED] bg-[#FFFFFF] px-5 py-5">
-        <View className="mb-4 flex-row items-start justify-between">
-          <View className="mr-4 flex-1">
-            <View className="mb-3 self-start rounded-full bg-[#E3F2FD] px-3 py-1.5">
-              <Text className="text-xs font-semibold uppercase tracking-[1px] text-[#718096]">
-                Mobile menu
-              </Text>
-            </View>
-            <Text className="mb-2 text-[28px] font-bold leading-8 text-[#1A202C]">
-              What do you need to do today?
+    <Screen bottomGap={28}>
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 14,
+              backgroundColor: palette.dangerSoft,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="flame" size={23} color={palette.danger} />
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <AppText variant="title">Fire alarm survey</AppText>
+            <AppText variant="caption" tone="muted">
+              Five ordered steps, colour coded
+            </AppText>
+          </View>
+        </View>
+
+        {/* The primary action of the whole app: deliberately the largest,
+            highest-contrast control on the screen. */}
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Start fire alarm capture"
+          onPress={() => router.push('/fire-alarm/scan' as never)}
+          activeOpacity={0.85}
+          style={{
+            marginTop: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderRadius: 18,
+            backgroundColor: palette.danger,
+            paddingHorizontal: 18,
+            paddingVertical: 20,
+            shadowColor: palette.danger,
+            shadowOpacity: 0.35,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 6,
+          }}
+        >
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(255,255,255,0.22)',
+            }}
+          >
+            <Ionicons name="camera" size={24} color="#ffffff" />
+          </View>
+
+          <View style={{ flex: 1, marginLeft: 14, minWidth: 0 }}>
+            <Text style={{ fontSize: 19, fontWeight: '800', color: '#ffffff' }}>
+              Start capture
             </Text>
-            <Text className="text-sm leading-6 text-[#718096]">
-              Start a certificate, open the certificate list, review your account, or connect
-              ServiceM8 from one clear place.
+            <Text style={{ fontSize: 13, marginTop: 2, color: 'rgba(255,255,255,0.88)' }}>
+              Scan a room and start the fire alarm survey
             </Text>
           </View>
 
-          <View className="h-14 w-14 items-center justify-center rounded-[20px] bg-[#E3F2FD]">
-            <Ionicons
-              name={hasDraftCertificate ? 'document-text-outline' : 'grid-outline'}
-              size={26}
-              color="#0D47A1"
-            />
-          </View>
+          <Ionicons name="arrow-forward" size={22} color="#ffffff" />
+        </TouchableOpacity>
+
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          {['Scan', 'Identify', 'Review', 'Plan', 'Export'].map((label, index) => (
+            <AppText key={label} variant="caption" tone="soft">
+              {`${index + 1}. ${label}`}
+            </AppText>
+          ))}
         </View>
+      </Card>
+
+      <View style={{ height: 13 }} />
+
+      <AppText variant="label" tone="soft" style={{ marginLeft: 4, marginBottom: 8 }}>
+        MORE
+      </AppText>
+
+      <View style={{ gap: 8 }}>
+        <NavRow
+          icon="albums-outline"
+          title="Saved surveys"
+          subtitle="Fire alarm surveys saved to your dashboard"
+          accent="rose"
+          onPress={() => router.push('/fire-alarm-surveys' as never)}
+        />
+
+        <NavRow
+          icon="pulse-outline"
+          title="Fault diagnostics"
+          subtitle="Triage a fault, get the checks"
+          accent="amber"
+          onPress={() => router.push('/(tabs)/fire-alarm-diagnostics' as never)}
+        />
 
         {hasDraftCertificate ? (
-          <View className="rounded-[22px] bg-[#FAFBFC] px-4 py-4">
-            <Text className="text-sm font-semibold text-[#5E5148]">Current certificate</Text>
-            <Text className="mt-2 text-sm leading-5 text-[#718096]">
-              A draft certificate already exists for this job. Open it directly or jump back into
-              the guided workflow if you want to finish the remaining steps in order.
-            </Text>
-          </View>
-        ) : hasWorkflowProgress ? (
-          <View className="rounded-[22px] bg-[#FAFBFC] px-4 py-4">
-            <Text className="text-sm font-semibold text-[#5E5148]">Workflow in progress</Text>
-            <Text className="mt-2 text-sm leading-5 text-[#718096]">
-              You have started capturing certificate information. Continue the guided wizard or
-              switch to a manual certificate route.
-            </Text>
-          </View>
+          <NavRow
+            icon="document-text-outline"
+            title="Continue certificate"
+            subtitle={state.createdCertificate?.certificateNumber ?? 'Draft in progress'}
+            accent="indigo"
+            onPress={() => router.push('/(tabs)/certificate' as never)}
+          />
+        ) : hasUnfinishedDraft ? (
+          <NavRow
+            icon="time-outline"
+            title="Continue certificate draft"
+            subtitle={unfinishedDraftSummary}
+            accent="indigo"
+            onPress={() => router.push('/(tabs)/wizard' as never)}
+          />
         ) : (
-          <View className="rounded-[22px] bg-[#FAFBFC] px-4 py-4">
-            <Text className="text-sm font-semibold text-[#5E5148]">Choose a starting point</Text>
-            <Text className="mt-2 text-sm leading-5 text-[#718096]">
-              Select one of the actions below. Certificate creation now starts in either a guided
-              or manual route, while account and certificate records live in their own screens.
-            </Text>
-          </View>
+          <NavRow
+            icon="document-text-outline"
+            title="Certificate wizard"
+            subtitle="Guided EICR evidence capture"
+            accent="indigo"
+            onPress={() =>
+              router.push({
+                pathname: '/(tabs)/wizard',
+                params: { entryMode: 'guided_photo' },
+              } as never)
+            }
+          />
         )}
-      </View>
 
-      <View className="mb-3 flex-row items-center justify-between">
-        <View>
-          <Text className="text-lg font-semibold text-[#1A202C]">Actions</Text>
-          <Text className="text-sm text-[#8B7F75]">Common menu items</Text>
-        </View>
-
-        <View className="rounded-full bg-[#EEE5DC] px-3 py-1.5">
-          <Text className="text-xs font-semibold uppercase tracking-[0.8px] text-[#718096]">
-            Menu
-          </Text>
-        </View>
-      </View>
-
-      {hasDraftCertificate ? (
-        <MenuAction
-          icon="document-text-outline"
-          title="Continue current certificate"
-          subtitle="Open the draft certificate already created for this job."
-          accent="bg-[#E8F5E9]"
-          onPress={() => router.push('/(tabs)/certificate' as never)}
+        <NavRow
+          icon="create-outline"
+          title="Manual certificate"
+          subtitle="Type the details straight in"
+          accent="teal"
+          onPress={() =>
+            router.push({
+              pathname: '/(tabs)/wizard',
+              params: { entryMode: 'manual_only' },
+            } as never)
+          }
         />
-      ) : (
-        <>
-          <MenuAction
-            icon="sparkles-outline"
-            title="Create new cert"
-            subtitle="Start the guided certificate route with customer, site, evidence capture, and review."
-            accent="bg-[#E3F2FD]"
-            onPress={() => startCertificateRoute('guided_photo')}
-          />
 
-          <MenuAction
-            icon="create-outline"
-            title="Manual new cert"
-            subtitle="Start the manual-first certificate route for faster direct data entry."
-            accent="bg-[#FFF4E6]"
-            onPress={() => startCertificateRoute('manual_only')}
-          />
-        </>
-      )}
+        <NavRow
+          icon="albums-outline"
+          title="Certificates"
+          subtitle="Saved records"
+          accent="emerald"
+          onPress={() => router.push('/certificates' as never)}
+        />
 
-      <MenuAction
-        icon="map-outline"
-        title="Fire plan capture"
-        subtitle="Use the room plan workflow to capture or build a fire alarm layout plan."
-        accent="bg-[#E3F2FD]"
-        onPress={() => router.push('/(tabs)/room-plan' as never)}
-      />
+        <NavRow
+          icon="link-outline"
+          title={serviceM8.status === 'connected' ? 'ServiceM8 connected' : 'ServiceM8 login'}
+          subtitle={
+            serviceM8.status === 'connected'
+              ? serviceM8.companyName ?? 'Tap to re-authorise'
+              : serviceM8.status === 'checking'
+                ? 'Checking connection…'
+                : 'Import jobs, clients and photos'
+          }
+          accent="violet"
+          onPress={() => void connectServiceM8()}
+        />
 
-      <MenuAction
-        icon="link-outline"
-        title={serviceM8.status === 'connected' ? 'ServiceM8 connected' : 'ServiceM8 login'}
-        subtitle={
-          serviceM8.status === 'connected'
-            ? `Signed in${serviceM8.companyName ? ` as ${serviceM8.companyName}` : ''}. Tap to re-authorise.`
-            : serviceM8.status === 'checking'
-              ? 'Checking your ServiceM8 connection…'
-              : 'Sign in to ServiceM8 to import jobs, clients and site photos.'
-        }
-        accent="bg-[#E8F5E9]"
-        onPress={() => void connectServiceM8()}
-      />
-
-      <MenuAction
-        icon="person-circle-outline"
-        title="Account"
-        subtitle="Review your team, subscription status, and billing details."
-        accent="bg-[#F0E8FF]"
-        onPress={() => router.push('/account' as never)}
-      />
-
-      <MenuAction
-        icon="documents-outline"
-        title="Certificates"
-        subtitle="Browse saved certificates and open any record for review or editing."
-        accent="bg-[#FFF4E6]"
-        onPress={() => router.push('/certificates' as never)}
-      />
-
-      {hasDraftCertificate && hasWorkflowProgress ? (
-        <TouchableOpacity
-          className="mb-4 mt-1 rounded-[24px] border border-[#EADFD5] bg-[#FFFAF5] px-5 py-5"
-          onPress={() => router.push('/(tabs)/wizard' as never)}
-          activeOpacity={0.85}
-        >
-          <View className="flex-row items-center justify-between">
-            <View className="mr-4 flex-1">
-              <Text className="mb-1 text-lg font-semibold text-[#1A202C]">Resume certificate workflow</Text>
-              <Text className="text-sm leading-5 text-[#718096]">
-                Continue the in-progress certificate from inside the guided workflow.
-              </Text>
-            </View>
-            <View className="h-11 w-11 items-center justify-center rounded-full bg-[#E3F2FD]">
-              <Ionicons name="arrow-forward" size={20} color="#0D47A1" />
-            </View>
-          </View>
-        </TouchableOpacity>
-      ) : null}
-
-      <View className="mt-2 mb-4 flex-row items-center justify-between rounded-[24px] border border-[#E0E6ED] bg-[#FFFFFF] px-4 py-4">
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            className="h-12 w-12 items-center justify-center rounded-full bg-[#E3F2FD]"
-            onPress={confirmSignOut}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="person-circle-outline" size={28} color="#0D47A1" />
-          </TouchableOpacity>
-
-          <View className="ml-3">
-            <Text className="text-sm font-semibold text-[#1A202C]">Signed in</Text>
-            <Text className="text-xs text-[#718096]">
-              {isBiometricEnabled ? `${capability.label} unlock on` : 'Tap the avatar to log out'}
-            </Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          className="rounded-full bg-[#F5F7FA] px-4 py-2"
-          onPress={() => dispatch({ type: 'RESET' })}
-          activeOpacity={0.85}
-        >
-          <Text className="text-sm font-medium text-[#718096]">Reset job</Text>
-        </TouchableOpacity>
+        <NavRow
+          icon="settings-outline"
+          title="Settings"
+          subtitle="Appearance and text size"
+          accent="sky"
+          onPress={() => router.push('/settings' as never)}
+        />
       </View>
-    </ScrollView>
+
+      <View style={{ height: 13 }} />
+
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Button
+            label="Log out"
+            icon="log-out-outline"
+            accent="rose"
+            variant="outline"
+            size="small"
+            onPress={confirmSignOut}
+          />
+
+          <View style={{ flex: 1 }} />
+
+          <Button
+            label="Reset job"
+            icon="refresh-outline"
+            variant="ghost"
+            size="small"
+            onPress={() => dispatch({ type: 'RESET' })}
+          />
+        </View>
+      </Card>
+    </Screen>
   );
 }

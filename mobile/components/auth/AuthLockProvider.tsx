@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { deleteToken } from '@/services/api';
+import { clearDraft } from '@/services/draft-storage';
+import { clearFireAlarmFlow } from '@/services/fire-alarm-flow-storage';
 import {
   authenticateWithBiometrics,
   clearBiometricUnlock,
@@ -146,6 +148,11 @@ export function AuthLockProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await deleteToken();
+    // The certificate draft and fire alarm flow hold this user's site data, so
+    // they go with the session rather than waiting for the next person to
+    // unlock the device.
+    await clearDraft();
+    await clearFireAlarmFlow();
     await clearBiometricUnlock();
     setIsBiometricEnabled(false);
     setEnrolledEmail(null);

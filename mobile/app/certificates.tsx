@@ -1,110 +1,68 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
-import { listCertificates, type MobileCertificateListRecord } from '@/services/api';
 
-function formatDate(value: string | null | undefined) {
+import { AppText } from '@/components/ui/AppText';
+import { Card } from '@/components/ui/Card';
+import { NavRow } from '@/components/ui/NavRow';
+import { StatTile } from '@/components/ui/StatTile';
+import { listCertificates, type MobileCertificateListRecord } from '@/services/api';
+import { useTheme } from '@/theme/useTheme';
+
+function formatDate(value: string | null | undefined): string {
   if (!value) {
     return 'Not set';
   }
 
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
 
-  return parsed.toLocaleDateString();
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString();
 }
 
-function statusTone(status: string | null | undefined) {
-  const normalized = (status ?? '').toLowerCase();
+type StatusTone = 'warning' | 'success' | 'danger' | 'info';
 
-  if (normalized.includes('draft')) {
-    return 'bg-[#FFF4E6] text-[#C56E00]';
+/** One status → one colour, so the list reads at a glance. */
+function statusTone(status: string | null | undefined): {
+  tone: StatusTone;
+  label: string;
+} {
+  const normalised = (status ?? '').toLowerCase();
+
+  if (normalised.includes('draft')) {
+    return { tone: 'warning', label: status ?? 'Draft' };
   }
 
-  if (normalized.includes('complete') || normalized.includes('issued') || normalized.includes('sent')) {
-    return 'bg-[#E8F5E9] text-[#2E7D32]';
+  if (
+    normalised.includes('complete') ||
+    normalised.includes('issued') ||
+    normalised.includes('sent')
+  ) {
+    return { tone: 'success', label: status ?? 'Complete' };
   }
 
-  if (normalized.includes('void') || normalized.includes('cancel')) {
-    return 'bg-[#FCE8E8] text-[#C62828]';
+  if (normalised.includes('void') || normalised.includes('cancel')) {
+    return { tone: 'danger', label: status ?? 'Void' };
   }
 
-  return 'bg-[#E3F2FD] text-[#0D47A1]';
-}
-
-function CertificateCard({
-  item,
-  onPress,
-}: {
-  item: MobileCertificateListRecord;
-  onPress: () => void;
-}) {
-  const title = item.certificateNumber || `Certificate ${item.id}`;
-  const customerName = item.customer?.name ?? 'No customer linked';
-
-  return (
-    <TouchableOpacity
-      className="mb-3 rounded-[24px] border border-[#E0E6ED] bg-[#FFFFFF] px-4 py-4"
-      activeOpacity={0.85}
-      onPress={onPress}
-    >
-      <View className="flex-row items-start justify-between">
-        <View className="mr-3 flex-1">
-          <Text className="text-base font-semibold text-[#1A202C]">{title}</Text>
-          <Text className="mt-1 text-sm text-[#718096]">{customerName}</Text>
-        </View>
-
-        <View className={`rounded-full px-3 py-1.5 ${statusTone(item.status)}`}>
-          <Text className="text-xs font-semibold uppercase tracking-[0.8px]">{item.status ?? 'Unknown'}</Text>
-        </View>
-      </View>
-
-      <View className="mt-4 flex-row flex-wrap">
-        <View className="mr-4 mb-2">
-          <Text className="text-[11px] font-semibold uppercase tracking-[0.8px] text-[#8FA3B8]">Site address</Text>
-          <Text className="mt-1 text-sm text-[#374151]">{item.siteAddress ?? 'Not set'}</Text>
-        </View>
-        <View className="mr-4 mb-2">
-          <Text className="text-[11px] font-semibold uppercase tracking-[0.8px] text-[#8FA3B8]">Inspection date</Text>
-          <Text className="mt-1 text-sm text-[#374151]">{formatDate(item.inspectionDate)}</Text>
-        </View>
-        <View className="mb-2">
-          <Text className="text-[11px] font-semibold uppercase tracking-[0.8px] text-[#8FA3B8]">Created</Text>
-          <Text className="mt-1 text-sm text-[#374151]">{formatDate(item.inspectionDate)}</Text>
-        </View>
-      </View>
-
-      <View className="mt-4 flex-row items-center justify-between rounded-[18px] bg-[#F5F7FA] px-3 py-3">
-        <View className="flex-row items-center">
-          <Ionicons name="document-text-outline" size={18} color="#0D47A1" />
-          <Text className="ml-2 text-sm font-semibold text-[#1A202C]">Open certificate</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
-      </View>
-    </TouchableOpacity>
-  );
+  return { tone: 'info', label: status ?? 'Unknown' };
 }
 
 export default function CertificatesScreen() {
+  const { palette } = useTheme();
   const [items, setItems] = useState<MobileCertificateListRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadCertificates = useCallback(async () => {
     try {
       setError(null);
-      const data = await listCertificates();
-      setItems(data);
+      setItems(await listCertificates());
     } catch (fetchError) {
-      console.error('Failed to load certificates:', fetchError);
-      setError(fetchError instanceof Error ? fetchError.message : 'Failed to load certificates');
+      setError(fetchError instanceof Error ? fetchError.message : 'Could not load certificates');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -112,84 +70,74 @@ export default function CertificatesScreen() {
     void loadCertificates();
   }, [loadCertificates]);
 
+  const openCertificate = (item: MobileCertificateListRecord) => {
+    router.push({
+      pathname: '/(tabs)/certificate',
+      params: { certificateId: String(item.id) },
+    } as never);
+  };
+
+  const drafts = items.filter((item) => (item.status ?? '').toLowerCase().includes('draft')).length;
+
   return (
     <ScrollView
-      className="flex-1 bg-[#F5F7FA]"
-      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120 }}
+      style={{ flex: 1, backgroundColor: palette.canvas }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
+          refreshing={isRefreshing}
+          tintColor={palette.brand}
           onRefresh={() => {
-            setRefreshing(true);
+            setIsRefreshing(true);
             void loadCertificates();
           }}
         />
       }
     >
-      <View className="mb-4 rounded-[30px] border border-[#E0E6ED] bg-[#FFFFFF] px-5 py-5">
-        <View className="mb-4 flex-row items-start justify-between">
-          <View className="mr-4 flex-1">
-            <View className="mb-3 self-start rounded-full bg-[#E3F2FD] px-3 py-1.5">
-              <Text className="text-xs font-semibold uppercase tracking-[1px] text-[#718096]">Certificates</Text>
-            </View>
-            <Text className="text-[28px] font-bold leading-8 text-[#1A202C]">Certificate list</Text>
-            <Text className="mt-2 text-sm leading-6 text-[#718096]">
-              Open any existing certificate to review or continue editing it.
-            </Text>
-          </View>
-          <View className="h-14 w-14 items-center justify-center rounded-[20px] bg-[#E3F2FD]">
-            <Ionicons name="documents-outline" size={26} color="#0D47A1" />
-          </View>
-        </View>
-
-        {loading ? (
-          <View className="py-8">
-            <ActivityIndicator color="#0D47A1" />
-          </View>
-        ) : error ? (
-          <View className="rounded-[22px] bg-[#FFF4E6] px-4 py-4">
-            <Text className="text-sm font-semibold text-[#C56E00]">Could not load certificates</Text>
-            <Text className="mt-2 text-sm leading-5 text-[#8A6A3A]">{error}</Text>
-          </View>
-        ) : (
-          <View className="rounded-[22px] bg-[#FAFBFC] px-4 py-4">
-            <Text className="text-sm font-semibold text-[#5E5148]">Saved certificates</Text>
-            <Text className="mt-2 text-base font-semibold text-[#1A202C]">{items.length} total</Text>
-            <Text className="mt-1 text-sm leading-5 text-[#718096]">
-              Pull to refresh the latest certificates from the mobile API.
-            </Text>
-          </View>
-        )}
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 13 }}>
+        <StatTile label="Total" value={items.length} accent="teal" />
+        <StatTile label="Drafts" value={drafts} accent="amber" />
       </View>
 
-      <View className="mb-3 flex-row items-center justify-between">
-        <View>
-          <Text className="text-lg font-semibold text-[#1A202C]">Recent records</Text>
-          <Text className="text-sm text-[#8B7F75]">Tap a certificate to continue editing</Text>
-        </View>
-      </View>
+      {isLoading ? (
+        <Card>
+          <ActivityIndicator color={palette.brand} />
+        </Card>
+      ) : error ? (
+        <Card>
+          <AppText variant="bodyStrong" tone="danger">
+            Could not load certificates
+          </AppText>
+          <AppText variant="caption" tone="muted" style={{ marginTop: 4 }}>
+            {error}
+          </AppText>
+        </Card>
+      ) : items.length === 0 ? (
+        <Card>
+          <AppText variant="bodyStrong">No certificates yet</AppText>
+          <AppText variant="body" tone="muted" style={{ marginTop: 4 }}>
+            Records appear here once a certificate is created.
+          </AppText>
+        </Card>
+      ) : (
+        <View style={{ gap: 8 }}>
+          {items.map((item) => {
+            const status = statusTone(item.status);
 
-      {items.length === 0 && !loading && !error ? (
-        <View className="rounded-[24px] border border-dashed border-[#CBD5E1] bg-[#FFFFFF] px-5 py-8">
-          <Text className="text-base font-semibold text-[#1A202C]">No certificates found</Text>
-          <Text className="mt-2 text-sm leading-6 text-[#718096]">
-            Certificates will appear here after they are created in the mobile workflow.
-          </Text>
+            return (
+              <NavRow
+                key={item.id}
+                icon="document-text-outline"
+                title={item.certificateNumber || `Certificate ${item.id}`}
+                subtitle={`${item.customer?.name ?? 'No customer'} · ${formatDate(item.inspectionDate)}`}
+                accent="teal"
+                trailingLabel={status.label}
+                onPress={() => openCertificate(item)}
+              />
+            );
+          })}
         </View>
-      ) : null}
-
-      {items.map((item) => (
-        <CertificateCard
-          key={item.id}
-          item={item}
-          onPress={() =>
-            router.push({
-              pathname: '/(tabs)/certificate',
-              params: { certificateId: String(item.id) },
-            } as never)
-          }
-        />
-      ))}
+      )}
     </ScrollView>
   );
 }

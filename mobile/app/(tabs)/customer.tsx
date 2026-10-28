@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
@@ -12,10 +11,18 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
 import { useJob } from '@/components/JobStateContext';
-import { KeyboardAwareScreen, TAB_BAR_CLEARANCE } from '@/components/keyboard/KeyboardAwareScreen';
+import {
+  KeyboardAwareScreen,
+  TAB_BAR_CLEARANCE,
+} from '@/components/keyboard/KeyboardAwareScreen';
 import { CustomerJobGroupCard } from '@/components/servicem8/CustomerJobGroups';
 import { StatusFilterChips } from '@/components/servicem8/StatusFilterChips';
+import { Callout } from '@/components/form/Callout';
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import {
   collectStatusOptions,
   countGroupedJobs,
@@ -34,6 +41,7 @@ import {
   type ServiceM8ClientRecord,
   type ServiceM8JobRecord,
 } from '@/services/api';
+import { useTheme } from '@/theme/useTheme';
 
 /** Jobs rendered before the user asks for more — keeps the list cheap to draw. */
 const JOBS_PAGE_SIZE = 10;
@@ -41,7 +49,10 @@ const JOBS_PAGE_SIZE = 10;
 function buildImportedCustomerFromServiceM8Client(client: ServiceM8ClientRecord): Customer {
   return {
     id: -1,
-    name: client.name || [client.firstName, client.lastName].filter(Boolean).join(' ') || 'ServiceM8 Customer',
+    name:
+      client.name ||
+      [client.firstName, client.lastName].filter(Boolean).join(' ') ||
+      'ServiceM8 Customer',
     email: client.email,
     phone: client.phone,
     address: client.address,
@@ -67,6 +78,7 @@ function buildImportedCustomerFromJob(job: ServiceM8JobRecord): Customer {
 }
 
 export default function CustomerScreen() {
+  const { palette } = useTheme();
   const { state, dispatch } = useJob();
   const [search, setSearch] = useState('');
   const [showNewModal, setShowNewModal] = useState(false);
@@ -105,20 +117,15 @@ export default function CustomerScreen() {
     enabled: !!state.selectedServiceM8Job?.uuid,
   });
 
-  const customers: Customer[] = (data ?? []).filter((customer: Customer) =>
-    customer.name.toLowerCase().includes(search.toLowerCase()) ||
-    (customer.email ?? '').toLowerCase().includes(search.toLowerCase()),
+  const customers: Customer[] = (data ?? []).filter(
+    (customer: Customer) =>
+      customer.name.toLowerCase().includes(search.toLowerCase()) ||
+      (customer.email ?? '').toLowerCase().includes(search.toLowerCase()),
   );
 
-  const allServiceM8Jobs = useMemo(
-    () => serviceM8JobsQuery.data ?? [],
-    [serviceM8JobsQuery.data],
-  );
+  const allServiceM8Jobs = useMemo(() => serviceM8JobsQuery.data ?? [], [serviceM8JobsQuery.data]);
 
-  const statusOptions = useMemo(
-    () => collectStatusOptions(allServiceM8Jobs),
-    [allServiceM8Jobs],
-  );
+  const statusOptions = useMemo(() => collectStatusOptions(allServiceM8Jobs), [allServiceM8Jobs]);
 
   const customerGroups = useMemo(
     () =>
@@ -166,14 +173,11 @@ export default function CustomerScreen() {
     setVisibleJobCount(JOBS_PAGE_SIZE);
   }, [serviceM8Search, selectedStatus]);
 
-  const totalMatchingJobs = useMemo(
-    () => countGroupedJobs(customerGroups),
-    [customerGroups]
-  );
+  const totalMatchingJobs = useMemo(() => countGroupedJobs(customerGroups), [customerGroups]);
 
   const visibleGroups = useMemo(
     () => limitGroupsToJobs(customerGroups, visibleJobCount),
-    [customerGroups, visibleJobCount]
+    [customerGroups, visibleJobCount],
   );
 
   const remainingJobCount = Math.max(0, totalMatchingJobs - visibleJobCount);
@@ -191,12 +195,15 @@ export default function CustomerScreen() {
 
   function toggleGroup(key: string) {
     setExpandedKeys((current) =>
-      current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key]
+      current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key],
     );
   }
 
   const serviceM8ImageAttachments = useMemo(
-    () => (serviceM8AttachmentsQuery.data ?? []).filter((attachment) => attachment.isImage && !!attachment.url),
+    () =>
+      (serviceM8AttachmentsQuery.data ?? []).filter(
+        (attachment) => attachment.isImage && !!attachment.url,
+      ),
     [serviceM8AttachmentsQuery.data],
   );
 
@@ -319,25 +326,60 @@ export default function CustomerScreen() {
   }
 
   const canContinue =
-    !!state.selectedCustomer &&
-    (!!state.selectedServiceM8Job || !!state.selectedCustomer?.id);
+    !!state.selectedCustomer && (!!state.selectedServiceM8Job || !!state.selectedCustomer?.id);
+
+  const inputStyle = {
+    flex: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: palette.ink,
+  } as const;
+
+  const modalInputStyle = {
+    marginBottom: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: palette.line,
+    backgroundColor: palette.surfaceAlt,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: palette.ink,
+  } as const;
 
   return (
-    <View className="flex-1 bg-white">
+    <View style={{ flex: 1, backgroundColor: palette.canvas }}>
       <KeyboardAwareScreen contentBottomPadding={TAB_BAR_CLEARANCE}>
-        <View className="px-4 pt-6 pb-3">
-          <Text className="mb-4 text-2xl font-bold text-gray-900">Select Customer</Text>
+        <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 }}>
+          <AppText variant="title" style={{ marginBottom: 16 }}>
+            Select Customer
+          </AppText>
 
-          <View className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-            <Text className="mb-2 font-semibold text-blue-900">ServiceM8</Text>
-            <Text className="mb-3 text-sm text-blue-800">
-              Search ServiceM8 jobs or customers, load the linked job detail, and choose image attachments to include as evidence later in the certificate flow.
-            </Text>
-            <View className="mb-3 flex-row items-center rounded-xl border border-blue-200 bg-white px-3">
-              <Ionicons name="cloud-outline" size={18} color="#1d4ed8" />
+          <Card style={{ marginBottom: 16 }}>
+            <AppText variant="heading">ServiceM8</AppText>
+            <AppText variant="caption" tone="muted" style={{ marginTop: 2, marginBottom: 12 }}>
+              Search ServiceM8 jobs or customers, load the linked job detail, and choose image
+              attachments to include as evidence later in the certificate flow.
+            </AppText>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderRadius: 12,
+                borderWidth: 1.5,
+                borderColor: palette.line,
+                backgroundColor: palette.surfaceAlt,
+                paddingHorizontal: 10,
+                marginBottom: 12,
+              }}
+            >
+              <Ionicons name="cloud-outline" size={18} color={palette.info} />
               <TextInput
-                className="flex-1 px-2 py-3 text-base"
+                style={inputStyle}
                 placeholder="Search ServiceM8 jobs or customers..."
+                placeholderTextColor={palette.inkSoft}
                 value={serviceM8Search}
                 onChangeText={setServiceM8Search}
               />
@@ -351,25 +393,26 @@ export default function CustomerScreen() {
             />
 
             {serviceM8JobsQuery.isLoading ? (
-              <ActivityIndicator color="#1d4ed8" />
+              <ActivityIndicator color={palette.brand} />
             ) : serviceM8JobsQuery.isError ? (
-              <Text className="text-sm text-[#B91C1C]">
+              <Callout tone="danger" inset>
                 {serviceM8JobsQuery.error instanceof Error
                   ? serviceM8JobsQuery.error.message
                   : 'Unable to load ServiceM8 jobs.'}
-              </Text>
+              </Callout>
             ) : customerGroups.length === 0 ? (
-              <Text className="text-sm text-[#475569]">
+              <AppText variant="caption" tone="muted">
                 {serviceM8Search.trim() || selectedStatus
                   ? 'No jobs match that search and status.'
                   : 'No active ServiceM8 jobs were found for this account.'}
-              </Text>
+              </AppText>
             ) : (
               <View>
-                <Text className="mb-2 text-xs font-semibold uppercase tracking-[0.7px] text-[#64748B]">
-                  Showing {Math.min(visibleJobCount, totalMatchingJobs)} of {totalMatchingJobs} job
-                  {totalMatchingJobs === 1 ? '' : 's'} · newest first
-                </Text>
+                <AppText variant="label" tone="muted" style={{ marginBottom: 8 }}>
+                  {`Showing ${Math.min(visibleJobCount, totalMatchingJobs)} of ${totalMatchingJobs} job${
+                    totalMatchingJobs === 1 ? '' : 's'
+                  } · newest first`}
+                </AppText>
 
                 {visibleGroups.map((group) => (
                   <CustomerJobGroupCard
@@ -384,24 +427,26 @@ export default function CustomerScreen() {
                 ))}
 
                 {remainingJobCount > 0 ? (
-                  <TouchableOpacity
-                    className="mb-3 items-center rounded-xl border border-[#0D47A1] bg-[#EAF1FF] py-3"
-                    onPress={() => setVisibleJobCount((current) => current + JOBS_PAGE_SIZE)}
-                    accessibilityRole="button"
-                  >
-                    <Text className="text-sm font-semibold text-[#0D47A1]">
-                      View more ({remainingJobCount} more job{remainingJobCount === 1 ? '' : 's'})
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={{ marginBottom: 12 }}>
+                    <Button
+                      label={`View more (${remainingJobCount} more job${
+                        remainingJobCount === 1 ? '' : 's'
+                      })`}
+                      variant="soft"
+                      size="small"
+                      onPress={() => setVisibleJobCount((current) => current + JOBS_PAGE_SIZE)}
+                      block
+                    />
+                  </View>
                 ) : null}
               </View>
             )}
 
             {clientsWithoutJobs.length > 0 ? (
-              <View className="mt-2">
-                <Text className="mb-2 text-xs font-semibold uppercase tracking-[0.7px] text-[#64748B]">
+              <View style={{ marginTop: 8 }}>
+                <AppText variant="label" tone="muted" style={{ marginBottom: 8 }}>
                   Customers without matching jobs
-                </Text>
+                </AppText>
 
                 {clientsWithoutJobs.map((client) => {
                   const selected = state.selectedServiceM8Client?.uuid === client.uuid;
@@ -414,29 +459,35 @@ export default function CustomerScreen() {
                   return (
                     <TouchableOpacity
                       key={client.uuid}
-                      className={`mb-2 rounded-xl border p-3 ${
-                        selected ? 'border-[#0D47A1] bg-[#EAF1FF]' : 'border-[#E0E6ED] bg-white'
-                      }`}
+                      accessibilityRole="button"
                       onPress={() => selectServiceM8Client(client)}
+                      style={{
+                        marginBottom: 8,
+                        borderRadius: 12,
+                        borderWidth: 1.5,
+                        borderColor: selected ? palette.brand : palette.line,
+                        backgroundColor: selected ? palette.brandSoft : palette.surfaceAlt,
+                        padding: 12,
+                      }}
                     >
-                      <View className="flex-row items-start justify-between">
-                        <View className="mr-3 flex-1">
-                          <Text className="text-sm font-semibold text-[#1A202C]" numberOfLines={1}>
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                        <View style={{ flex: 1, marginRight: 12 }}>
+                          <AppText variant="bodyStrong" numberOfLines={1}>
                             {displayName}
-                          </Text>
+                          </AppText>
                           {client.address ? (
-                            <Text className="mt-1 text-xs text-[#718096]" numberOfLines={2}>
+                            <AppText variant="caption" tone="muted" numberOfLines={2} style={{ marginTop: 2 }}>
                               {client.address}
-                            </Text>
+                            </AppText>
                           ) : null}
                           {client.email ? (
-                            <Text className="mt-1 text-xs text-[#718096]" numberOfLines={1}>
+                            <AppText variant="caption" tone="muted" numberOfLines={1} style={{ marginTop: 2 }}>
                               {client.email}
-                            </Text>
+                            </AppText>
                           ) : null}
                         </View>
                         {selected ? (
-                          <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />
+                          <Ionicons name="checkmark-circle" size={20} color={palette.brand} />
                         ) : null}
                       </View>
                     </TouchableOpacity>
@@ -444,58 +495,78 @@ export default function CustomerScreen() {
                 })}
               </View>
             ) : null}
-          </View>
+          </Card>
 
           {state.selectedServiceM8Job ? (
-            <View className="mb-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-              <View className="mb-2 flex-row items-center justify-between">
-                <Text className="font-semibold text-gray-900">Selected ServiceM8 job</Text>
-                <TouchableOpacity onPress={() => router.push('/(tabs)/review')}>
-                  <Text className="text-sm font-medium text-brand">Review</Text>
-                </TouchableOpacity>
+            <Card inset style={{ marginBottom: 16 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 8,
+                }}
+              >
+                <AppText variant="bodyStrong">Selected ServiceM8 job</AppText>
+                <Button
+                  label="Review"
+                  variant="ghost"
+                  size="small"
+                  onPress={() => router.push('/(tabs)/review')}
+                />
               </View>
 
-              <Text className="font-semibold text-gray-800">
+              <AppText variant="bodyStrong">
                 {state.selectedServiceM8Job.generatedJobId
                   ? `Job ${state.selectedServiceM8Job.generatedJobId}`
                   : 'ServiceM8 job selected'}
-              </Text>
+              </AppText>
+
               {state.selectedServiceM8JobDetail?.customer?.name ? (
-                <Text className="mt-1 text-sm text-gray-600">
-                  Customer: {state.selectedServiceM8JobDetail.customer.name}
-                </Text>
+                <AppText variant="caption" tone="muted" style={{ marginTop: 4 }}>
+                  {`Customer: ${state.selectedServiceM8JobDetail.customer.name}`}
+                </AppText>
               ) : null}
+
               {state.selectedServiceM8JobDetail?.address || state.selectedServiceM8Job.address ? (
-                <Text className="mt-1 text-sm text-gray-600">
+                <AppText variant="caption" tone="muted" style={{ marginTop: 4 }}>
                   {state.selectedServiceM8JobDetail?.address || state.selectedServiceM8Job.address}
-                </Text>
+                </AppText>
               ) : null}
-              <Text className="mt-2 text-xs text-gray-500">
+
+              <AppText variant="caption" tone="soft" style={{ marginTop: 8 }}>
                 Load any useful job photos below to include as supporting evidence.
-              </Text>
-            </View>
+              </AppText>
+            </Card>
           ) : null}
 
           {state.selectedServiceM8Job ? (
-            <View className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
-              <View className="mb-3 flex-row items-center justify-between">
-                <View>
-                  <Text className="font-semibold text-gray-900">ServiceM8 Job Images</Text>
-                  <Text className="text-sm text-gray-500">
+            <Card style={{ marginBottom: 16 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 12,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <AppText variant="heading">ServiceM8 job images</AppText>
+                  <AppText variant="caption" tone="muted" style={{ marginTop: 2 }}>
                     Select image attachments to keep with this draft.
-                  </Text>
+                  </AppText>
                 </View>
                 {serviceM8AttachmentsQuery.isFetching ? (
-                  <ActivityIndicator color="#111827" />
+                  <ActivityIndicator color={palette.brand} />
                 ) : null}
               </View>
 
               {serviceM8AttachmentsQuery.isLoading ? (
-                <ActivityIndicator color="#111827" />
+                <ActivityIndicator color={palette.brand} />
               ) : serviceM8ImageAttachments.length === 0 ? (
-                <Text className="text-sm text-gray-500">
+                <AppText variant="caption" tone="muted">
                   No image attachments were found for this ServiceM8 job.
-                </Text>
+                </AppText>
               ) : (
                 <>
                   {serviceM8ImageAttachments.map((attachment) => {
@@ -506,8 +577,16 @@ export default function CustomerScreen() {
                     return (
                       <TouchableOpacity
                         key={attachment.uuid}
-                        className={`mb-3 overflow-hidden rounded-2xl border ${selected ? 'border-brand bg-red-50' : 'border-gray-200 bg-white'}`}
+                        accessibilityRole="button"
                         onPress={() => toggleImportedServiceM8Image(attachment)}
+                        style={{
+                          marginBottom: 12,
+                          overflow: 'hidden',
+                          borderRadius: 16,
+                          borderWidth: 1.5,
+                          borderColor: selected ? palette.brand : palette.line,
+                          backgroundColor: selected ? palette.brandSoft : palette.surface,
+                        }}
                       >
                         {attachment.thumbnailUrl || attachment.url ? (
                           <Image
@@ -517,65 +596,83 @@ export default function CustomerScreen() {
                           />
                         ) : null}
 
-                        <View className="p-3">
-                          <View className="flex-row items-start justify-between">
-                            <View className="mr-3 flex-1">
-                              <Text className="font-medium text-gray-900">
+                        <View style={{ padding: 12 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                            <View style={{ flex: 1, marginRight: 12 }}>
+                              <AppText variant="bodyStrong">
                                 {attachment.fileName || 'ServiceM8 image'}
-                              </Text>
+                              </AppText>
                               {attachment.editDate ? (
-                                <Text className="mt-1 text-xs text-gray-500">
-                                  Updated {new Date(attachment.editDate).toLocaleString('en-GB')}
-                                </Text>
+                                <AppText variant="caption" tone="soft" style={{ marginTop: 2 }}>
+                                  {`Updated ${new Date(attachment.editDate).toLocaleString('en-GB')}`}
+                                </AppText>
                               ) : null}
                             </View>
                             <Ionicons
                               name={selected ? 'checkbox' : 'square-outline'}
                               size={22}
-                              color={selected ? '#0D47A1' : '#718096'}
+                              color={selected ? palette.brand : palette.inkSoft}
                             />
                           </View>
-                          <Text className="mt-2 text-sm text-gray-600">
+
+                          <AppText
+                            variant="caption"
+                            tone={selected ? 'brand' : 'muted'}
+                            style={{ marginTop: 6 }}
+                          >
                             {selected ? 'Included for draft evidence' : 'Tap to include this image'}
-                          </Text>
+                          </AppText>
                         </View>
                       </TouchableOpacity>
                     );
                   })}
 
-                  <Text className="text-xs text-gray-500">
-                    {state.importedServiceM8Images.length} image(s) selected for import.
-                  </Text>
+                  <AppText variant="caption" tone="soft">
+                    {`${state.importedServiceM8Images.length} image(s) selected for import.`}
+                  </AppText>
                 </>
               )}
-            </View>
+            </Card>
           ) : null}
 
-          <View className="mb-3 flex-row items-center rounded-xl border border-gray-300 px-3">
-            <Ionicons name="search" size={18} color="#9ca3af" />
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              borderRadius: 12,
+              borderWidth: 1.5,
+              borderColor: palette.line,
+              backgroundColor: palette.surfaceAlt,
+              paddingHorizontal: 10,
+              marginBottom: 12,
+            }}
+          >
+            <Ionicons name="search" size={18} color={palette.inkSoft} />
             <TextInput
-              className="flex-1 px-2 py-3 text-base"
+              style={inputStyle}
               placeholder="Search customers..."
+              placeholderTextColor={palette.inkSoft}
               value={search}
               onChangeText={setSearch}
             />
           </View>
 
-          <TouchableOpacity
-            className="flex-row items-center rounded-xl border border-brand bg-brand/10 px-4 py-3"
+          <Button
+            label="New customer"
+            icon="add-circle-outline"
+            variant="soft"
             onPress={() => setShowNewModal(true)}
-          >
-            <Ionicons name="add-circle-outline" size={22} color="#0D47A1" style={{ marginRight: 8 }} />
-            <Text className="font-semibold text-brand">New Customer</Text>
-          </TouchableOpacity>
+          />
         </View>
 
         {isLoading ? (
-          <ActivityIndicator className="mt-8" color="#0D47A1" />
+          <ActivityIndicator style={{ marginTop: 32 }} color={palette.brand} />
         ) : (
           <View style={{ paddingHorizontal: 16 }}>
             {customers.length === 0 ? (
-              <Text className="mt-8 text-center text-gray-400">No customers found.</Text>
+              <AppText variant="caption" tone="soft" style={{ marginTop: 32, textAlign: 'center' }}>
+                No customers found.
+              </AppText>
             ) : (
               customers.map((customer: Customer) => {
                 const selected = state.selectedCustomer?.id === customer.id;
@@ -583,21 +680,47 @@ export default function CustomerScreen() {
                 return (
                   <TouchableOpacity
                     key={customer.id}
-                    className={`flex-row items-center border-b border-gray-100 py-4 ${selected ? 'opacity-100' : ''}`}
+                    accessibilityRole="button"
                     onPress={() => selectCustomer(customer)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 14,
+                      borderBottomWidth: 1,
+                      borderBottomColor: palette.line,
+                    }}
                   >
                     <View
-                      className={`mr-3 h-9 w-9 items-center justify-center rounded-full ${selected ? 'bg-brand' : 'bg-gray-100'}`}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 12,
+                        backgroundColor: selected ? palette.brand : palette.surfaceAlt,
+                      }}
                     >
-                      <Text className={`font-bold ${selected ? 'text-white' : 'text-gray-500'}`}>
+                      <AppText
+                        variant="bodyStrong"
+                        style={{ color: selected ? palette.onBrand : palette.inkMuted }}
+                      >
                         {customer.name[0].toUpperCase()}
-                      </Text>
+                      </AppText>
                     </View>
-                    <View className="flex-1">
-                      <Text className="font-semibold text-gray-900">{customer.name}</Text>
-                      {customer.email ? <Text className="text-sm text-gray-400">{customer.email}</Text> : null}
+
+                    <View style={{ flex: 1 }}>
+                      <AppText variant="bodyStrong">{customer.name}</AppText>
+                      {customer.email ? (
+                        <AppText variant="caption" tone="soft">
+                          {customer.email}
+                        </AppText>
+                      ) : null}
                     </View>
-                    {selected && <Ionicons name="checkmark-circle" size={22} color="#0D47A1" />}
+
+                    {selected ? (
+                      <Ionicons name="checkmark-circle" size={22} color={palette.brand} />
+                    ) : null}
                   </TouchableOpacity>
                 );
               })
@@ -605,16 +728,15 @@ export default function CustomerScreen() {
           </View>
         )}
 
-        <View className="px-4 pt-5">
-          <TouchableOpacity
-            className={`items-center rounded-xl py-4 ${canContinue ? 'bg-brand' : 'bg-gray-300'}`}
-            onPress={() => router.push('/(tabs)/review')}
+        <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+          <Button
+            label="Next: Review"
+            icon="arrow-forward"
+            size="large"
             disabled={!canContinue}
-          >
-            <Text className={`text-base font-bold ${canContinue ? 'text-white' : 'text-gray-500'}`}>
-              Next: Review
-            </Text>
-          </TouchableOpacity>
+            onPress={() => router.push('/(tabs)/review')}
+            block
+          />
         </View>
       </KeyboardAwareScreen>
 
@@ -624,66 +746,96 @@ export default function CustomerScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowNewModal(false)}
       >
-        <View className="flex-1 bg-white">
-          <View className="flex-row items-center justify-between px-6 pt-6 pb-2">
-            <Text className="text-xl font-bold text-gray-900">New Customer</Text>
+        <View style={{ flex: 1, backgroundColor: palette.canvas }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 24,
+              paddingTop: 24,
+              paddingBottom: 8,
+            }}
+          >
+            <AppText variant="title">New customer</AppText>
             <TouchableOpacity
-              className="h-9 w-9 items-center justify-center rounded-full bg-gray-100"
-              onPress={() => setShowNewModal(false)}
+              accessibilityRole="button"
               accessibilityLabel="Close new customer form"
+              onPress={() => setShowNewModal(false)}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: palette.surfaceAlt,
+              }}
             >
-              <Ionicons name="close" size={20} color="#374151" />
+              <Ionicons name="close" size={20} color={palette.inkMuted} />
             </TouchableOpacity>
           </View>
 
-          <KeyboardAwareScreen contentContainerClassName="px-6 pt-4" contentBottomPadding={48}>
-            <Text className="mb-1 font-medium text-gray-700">Name *</Text>
-            <TextInput
-              className="mb-4 rounded-xl border border-gray-300 px-4 py-3 text-base"
-              placeholder="Acme Ltd"
-              value={newName}
-              onChangeText={setNewName}
-              returnKeyType="next"
-            />
+          <KeyboardAwareScreen contentBottomPadding={48}>
+            <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
+              <AppText variant="bodyStrong" style={{ marginBottom: 6 }}>
+                Name *
+              </AppText>
+              <TextInput
+                style={modalInputStyle}
+                placeholder="Acme Ltd"
+                placeholderTextColor={palette.inkSoft}
+                value={newName}
+                onChangeText={setNewName}
+                returnKeyType="next"
+              />
 
-            <Text className="mb-1 font-medium text-gray-700">Email</Text>
-            <TextInput
-              className="mb-4 rounded-xl border border-gray-300 px-4 py-3 text-base"
-              placeholder="contact@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              value={newEmail}
-              onChangeText={setNewEmail}
-              returnKeyType="next"
-            />
+              <AppText variant="bodyStrong" style={{ marginBottom: 6 }}>
+                Email
+              </AppText>
+              <TextInput
+                style={modalInputStyle}
+                placeholder="contact@example.com"
+                placeholderTextColor={palette.inkSoft}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                value={newEmail}
+                onChangeText={setNewEmail}
+                returnKeyType="next"
+              />
 
-            <Text className="mb-1 font-medium text-gray-700">Phone</Text>
-            <TextInput
-              className="mb-8 rounded-xl border border-gray-300 px-4 py-3 text-base"
-              placeholder="07700 000000"
-              keyboardType="phone-pad"
-              value={newPhone}
-              onChangeText={setNewPhone}
-              returnKeyType="done"
-              onSubmitEditing={handleCreate}
-            />
+              <AppText variant="bodyStrong" style={{ marginBottom: 6 }}>
+                Phone
+              </AppText>
+              <TextInput
+                style={modalInputStyle}
+                placeholder="07700 000000"
+                placeholderTextColor={palette.inkSoft}
+                keyboardType="phone-pad"
+                value={newPhone}
+                onChangeText={setNewPhone}
+                returnKeyType="done"
+                onSubmitEditing={handleCreate}
+              />
 
-            <TouchableOpacity
-              className="mb-3 items-center rounded-xl bg-brand py-4"
-              onPress={handleCreate}
-              disabled={creating}
-            >
-              {creating ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-base font-bold text-white">Create Customer</Text>
-              )}
-            </TouchableOpacity>
+              <View style={{ marginBottom: 12 }}>
+                <Button
+                  label={creating ? 'Creating…' : 'Create customer'}
+                  size="large"
+                  loading={creating}
+                  disabled={creating}
+                  onPress={handleCreate}
+                  block
+                />
+              </View>
 
-            <TouchableOpacity className="items-center py-3" onPress={() => setShowNewModal(false)}>
-              <Text className="text-gray-500">Cancel</Text>
-            </TouchableOpacity>
+              <Button
+                label="Cancel"
+                variant="ghost"
+                onPress={() => setShowNewModal(false)}
+                block
+              />
+            </View>
           </KeyboardAwareScreen>
         </View>
       </Modal>

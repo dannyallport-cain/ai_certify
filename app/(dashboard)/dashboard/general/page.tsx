@@ -26,6 +26,8 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 type TeamProfile = {
   name?: string;
   logoDataUri: string | null;
+  /** URL for a logo stored in R2; preferred over the legacy inline value. */
+  logoUrl?: string | null;
 };
 
 
@@ -191,11 +193,11 @@ export default function GeneralPage() {
             <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
               Loading company logo...
             </div>
-          ) : team?.logoDataUri ? (
+          ) : team?.logoUrl || team?.logoDataUri ? (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <img
-                  src={team.logoDataUri}
+                  src={team.logoUrl ?? team.logoDataUri ?? undefined}
                   alt={`${team.name || 'Team'} logo`}
                   className="h-16 w-auto max-w-[240px] object-contain"
                 />

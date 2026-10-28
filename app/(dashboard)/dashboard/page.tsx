@@ -178,6 +178,15 @@ export default async function DashboardPage() {
                 </Button>
               </div>
             )}
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button asChild variant="outline" className="border-orange-300 bg-white">
+                <Link href="/fire-alarm-surveys">
+                  <Flame className="mr-2 h-4 w-4" />
+                  View all fire alarm surveys
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

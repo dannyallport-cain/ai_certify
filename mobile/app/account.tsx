@@ -1,52 +1,60 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, Linking, RefreshControl, ScrollView, View } from 'react-native';
+
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Pill } from '@/components/ui/Pill';
+import { StatTile } from '@/components/ui/StatTile';
 import { BiometricSecurityCard } from '@/components/auth/BiometricSecurityCard';
-import { getApiBaseUrl, getMobileAccountOverview, type MobileAccountOverview } from '@/services/api';
+import {
+  getApiBaseUrl,
+  getMobileAccountOverview,
+  type MobileAccountOverview,
+} from '@/services/api';
+import { useTheme } from '@/theme/useTheme';
 
+function DetailRow({ label, value }: { label: string; value: string }) {
+  const { palette } = useTheme();
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
   return (
-    <View className="mb-3 rounded-[20px] border border-[#E0E6ED] bg-[#FFFFFF] px-4 py-4">
-      <Text className="text-xs font-semibold uppercase tracking-[0.8px] text-[#8FA3B8]">{label}</Text>
-      <Text className="mt-2 text-base font-semibold text-[#1A202C]">{value}</Text>
-    </View>
-  );
-}
-
-function StatusPill({ label, active }: { label: string; active: boolean }) {
-  return (
-    <View className={`self-start rounded-full px-3 py-1.5 ${active ? 'bg-[#E8F5E9]' : 'bg-[#FFF4E6]'}`}>
-      <Text className={`text-xs font-semibold uppercase tracking-[0.8px] ${active ? 'text-[#2E7D32]' : 'text-[#C56E00]'}`}>
-        {label}
-      </Text>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: palette.line,
+      }}
+    >
+      <AppText variant="caption" tone="muted">
+        {label.toUpperCase()}
+      </AppText>
+      <AppText variant="bodyStrong" numberOfLines={1} style={{ flex: 1, textAlign: 'right' }}>
+        {value}
+      </AppText>
     </View>
   );
 }
 
 export default function AccountScreen() {
+  const { palette } = useTheme();
   const [overview, setOverview] = useState<MobileAccountOverview | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadOverview = useCallback(async () => {
     try {
       setError(null);
-      const data = await getMobileAccountOverview();
-      setOverview(data);
+      setOverview(await getMobileAccountOverview());
     } catch (fetchError) {
-      console.error('Failed to load account overview:', fetchError);
-      setError(fetchError instanceof Error ? fetchError.message : 'Failed to load account details');
+      setError(fetchError instanceof Error ? fetchError.message : 'Could not load account details');
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
@@ -59,7 +67,7 @@ export default function AccountScreen() {
     const supported = await Linking.canOpenURL(billingUrl);
 
     if (!supported) {
-      setError('Unable to open the billing page on this device.');
+      setError('This device cannot open the billing page.');
       return;
     }
 
@@ -69,108 +77,86 @@ export default function AccountScreen() {
   const teamName = overview?.team?.companyName ?? overview?.team?.name ?? 'Your team';
   const planName = overview?.subscription?.planName ?? 'No active plan';
   const subscriptionStatus = overview?.subscription?.subscriptionStatus ?? 'unknown';
-  const subscriptionDiscount =
+  const isActive = ['active', 'trialing', 'trial'].includes(subscriptionStatus);
+  const discount =
     overview?.subscription?.discountPercentage != null
-      ? `${overview.subscription.discountPercentage}% discount`
-      : 'No discount';
+      ? `${overview.subscription.discountPercentage}%`
+      : 'None';
 
   return (
     <ScrollView
-      className="flex-1 bg-[#F5F7FA]"
-      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 120 }}
+      style={{ flex: 1, backgroundColor: palette.canvas }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
       refreshControl={
         <RefreshControl
-          refreshing={refreshing}
+          refreshing={isRefreshing}
+          tintColor={palette.brand}
           onRefresh={() => {
-            setRefreshing(true);
+            setIsRefreshing(true);
             void loadOverview();
           }}
         />
       }
     >
-      <View className="mb-4 rounded-[30px] border border-[#E0E6ED] bg-[#FFFFFF] px-5 py-5">
-        <View className="mb-4 flex-row items-start justify-between">
-          <View className="mr-4 flex-1">
-            <View className="mb-3 self-start rounded-full bg-[#E3F2FD] px-3 py-1.5">
-              <Text className="text-xs font-semibold uppercase tracking-[1px] text-[#718096]">
-                Account
-              </Text>
-            </View>
-            <Text className="text-[28px] font-bold leading-8 text-[#1A202C]">Subscription details</Text>
-            <Text className="mt-2 text-sm leading-6 text-[#718096]">
-              Review your team, plan and billing status from the mobile app.
-            </Text>
-          </View>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 13 }}>
+        <StatTile label="Plan" value={planName} accent="emerald" />
+        <StatTile label="Discount" value={discount} accent="teal" />
+      </View>
 
-          <View className="h-14 w-14 items-center justify-center rounded-[20px] bg-[#E3F2FD]">
-            <Ionicons name="person-circle-outline" size={26} color="#0D47A1" />
-          </View>
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <AppText variant="heading" style={{ flex: 1 }}>
+            {teamName}
+          </AppText>
+          <Pill
+            label={subscriptionStatus}
+            tone={isActive ? 'success' : 'warning'}
+            icon={isActive ? 'checkmark-circle' : 'alert-circle'}
+          />
         </View>
 
-        {loading ? (
-          <View className="py-8">
-            <ActivityIndicator color="#0D47A1" />
+        {isLoading ? (
+          <View style={{ paddingVertical: 24 }}>
+            <ActivityIndicator color={palette.brand} />
           </View>
         ) : error ? (
-          <View className="rounded-[22px] bg-[#FFF4E6] px-4 py-4">
-            <Text className="text-sm font-semibold text-[#C56E00]">Could not load account</Text>
-            <Text className="mt-2 text-sm leading-5 text-[#8A6A3A]">{error}</Text>
-          </View>
+          <AppText variant="body" tone="danger" style={{ marginTop: 10 }}>
+            {error}
+          </AppText>
         ) : (
-          <View className="rounded-[22px] bg-[#FAFBFC] px-4 py-4">
-            <Text className="text-sm font-semibold text-[#5E5148]">Current plan</Text>
-            <Text className="mt-2 text-base font-semibold text-[#1A202C]">{planName}</Text>
-            <Text className="mt-1 text-sm leading-5 text-[#718096]">
-              {teamName} • {subscriptionStatus}
-            </Text>
+          <View style={{ marginTop: 6 }}>
+            <DetailRow
+              label="User"
+              value={
+                overview?.user?.name
+                  ? `${overview.user.name}${overview.user.email ? ` · ${overview.user.email}` : ''}`
+                  : 'Unavailable'
+              }
+            />
+            <DetailRow label="Team" value={teamName} />
+            <DetailRow label="Plan" value={planName} />
+            <DetailRow
+              label="Billing bypass"
+              value={overview?.subscription?.subscriptionBypass ? 'Enabled' : 'Disabled'}
+            />
           </View>
         )}
-      </View>
+      </Card>
 
-      <View className="mb-3 flex-row items-center justify-between">
-        <View>
-          <Text className="text-lg font-semibold text-[#1A202C]">Profile</Text>
-          <Text className="text-sm text-[#8B7F75]">Your account and subscription data</Text>
-        </View>
-        <StatusPill label={subscriptionStatus} active={subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || subscriptionStatus === 'trial'} />
-      </View>
-
-      <DetailRow
-        label="User"
-        value={overview?.user?.name ? `${overview.user.name}${overview.user.email ? ` • ${overview.user.email}` : ''}` : 'User details unavailable'}
-      />
-      <DetailRow label="Team" value={teamName} />
-      <DetailRow label="Plan" value={planName} />
-      <DetailRow label="Discount" value={subscriptionDiscount} />
-      <DetailRow
-        label="Billing bypass"
-        value={overview?.subscription?.subscriptionBypass ? 'Enabled' : 'Disabled'}
-      />
-
-      <View className="mb-3 mt-2 flex-row items-center justify-between">
-        <View>
-          <Text className="text-lg font-semibold text-[#1A202C]">Security</Text>
-          <Text className="text-sm text-[#8B7F75]">How this device signs you in</Text>
-        </View>
-      </View>
+      <View style={{ height: 13 }} />
 
       <BiometricSecurityCard accountEmail={overview?.user?.email ?? null} />
 
-      <TouchableOpacity
-        className="mt-2 rounded-[24px] bg-[#0D47A1] px-5 py-4"
+      <View style={{ height: 13 }} />
+
+      <Button
+        label="Manage billing"
+        icon="open-outline"
+        accent="emerald"
+        variant="outline"
         onPress={() => void handleOpenBilling()}
-        activeOpacity={0.85}
-      >
-        <View className="flex-row items-center justify-between">
-          <View className="mr-4 flex-1">
-            <Text className="text-base font-semibold text-[#FFFFFF]">Manage billing</Text>
-            <Text className="mt-1 text-sm leading-5 text-[#D8E6FB]">
-              Open the subscription page in the web app to update billing or plans.
-            </Text>
-          </View>
-          <Ionicons name="open-outline" size={20} color="#FFFFFF" />
-        </View>
-      </TouchableOpacity>
+        block
+      />
     </ScrollView>
   );
 }

@@ -205,22 +205,22 @@ export default function CertificateScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center px-6">
+      <View className="flex-1 bg-gray-50 dark:bg-[#0A1120] items-center justify-center px-6">
         <ActivityIndicator color="#0D47A1" />
-        <Text className="text-gray-500 mt-3 text-center">Loading draft certificate…</Text>
+        <Text className="text-gray-500 dark:text-[#A3B4CC] mt-3 text-center">Loading draft certificate…</Text>
       </View>
     );
   }
 
   if (loadError || !record) {
     return (
-      <View className="flex-1 bg-gray-50 px-5 pt-8">
-        <View className="bg-white rounded-2xl border border-gray-200 p-5">
+      <View className="flex-1 bg-gray-50 dark:bg-[#0A1120] px-5 pt-8">
+        <View className="bg-white dark:bg-[#131D31] rounded-2xl border border-gray-200 dark:border-[#28374F] p-5">
           <View className="w-12 h-12 rounded-full bg-red-50 items-center justify-center mb-3">
             <Ionicons name="document-text-outline" size={22} color="#dc2626" />
           </View>
-          <Text className="text-lg font-bold text-gray-900 mb-2">Certificate unavailable</Text>
-          <Text className="text-gray-500 mb-5">{loadError ?? 'Unable to load the draft certificate.'}</Text>
+          <Text className="text-lg font-bold text-gray-900 dark:text-[#EAF1FB] mb-2">Certificate unavailable</Text>
+          <Text className="text-gray-500 dark:text-[#A3B4CC] mb-5">{loadError ?? 'Unable to load the draft certificate.'}</Text>
           <TouchableOpacity className="bg-brand rounded-xl py-3 items-center" onPress={() => router.back()}>
             <Text className="text-white font-semibold">Go back</Text>
           </TouchableOpacity>
@@ -233,25 +233,25 @@ export default function CertificateScreen() {
   const circuits = record.formData.circuits ?? [];
 
   return (
-    <KeyboardAwareScreen className="bg-gray-50" contentBottomPadding={TAB_BAR_CLEARANCE}>
+    <KeyboardAwareScreen className="bg-gray-50 dark:bg-[#0A1120]" contentBottomPadding={TAB_BAR_CLEARANCE}>
       <View className="px-5 pt-6 pb-10">
         <View className="flex-row items-start justify-between mb-5">
           <View className="flex-1 pr-4">
-            <Text className="text-2xl font-bold text-gray-900">Edit Draft Certificate</Text>
-            <Text className="text-gray-500 mt-1">
+            <Text className="text-2xl font-bold text-gray-900 dark:text-[#EAF1FB]">Edit Draft Certificate</Text>
+            <Text className="text-gray-500 dark:text-[#A3B4CC] mt-1">
               {record.certificateNumber} • {record.status}
             </Text>
           </View>
           <TouchableOpacity
-            className="w-10 h-10 rounded-full bg-white border border-gray-200 items-center justify-center"
+            className="w-10 h-10 rounded-full bg-white dark:bg-[#1A2740] border border-gray-200 dark:border-[#28374F] items-center justify-center"
             onPress={() => router.back()}
           >
             <Ionicons name="close-outline" size={22} color="#374151" />
           </TouchableOpacity>
         </View>
 
-        <View className={`rounded-xl border p-4 mb-4 ${isDirty ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
-          <Text className={`text-sm font-medium ${isDirty ? 'text-amber-700' : 'text-green-700'}`}>
+        <View className={`rounded-xl border p-4 mb-4 ${isDirty ? 'bg-amber-50 dark:bg-[#3A2A0B] border-amber-200 dark:border-[#6B4E12]' : 'bg-green-50 dark:bg-[#123121] border-green-200 dark:border-[#1D5A34]'}`}>
+          <Text className={`text-sm font-medium ${isDirty ? 'text-amber-700 dark:text-[#FBBF24]' : 'text-green-700 dark:text-[#4ADE80]'}`}>
             {isDirty ? 'You have unsaved changes.' : 'All changes saved.'}
           </Text>
         </View>
@@ -259,20 +259,20 @@ export default function CertificateScreen() {
         <SectionCard title="Customer" icon="person-outline">
           {record.customer ? (
             <>
-              <Text className="text-base font-semibold text-gray-900">{record.customer.name}</Text>
-              {record.customer.email ? <Text className="text-sm text-gray-500 mt-1">{record.customer.email}</Text> : null}
-              {record.customer.phone ? <Text className="text-sm text-gray-500 mt-1">{record.customer.phone}</Text> : null}
-              {record.customer.address ? <Text className="text-sm text-gray-600 mt-2">{record.customer.address}</Text> : null}
+              <Text className="text-base font-semibold text-gray-900 dark:text-[#EAF1FB]">{record.customer.name}</Text>
+              {record.customer.email ? <Text className="text-sm text-gray-500 dark:text-[#A3B4CC] mt-1">{record.customer.email}</Text> : null}
+              {record.customer.phone ? <Text className="text-sm text-gray-500 dark:text-[#A3B4CC] mt-1">{record.customer.phone}</Text> : null}
+              {record.customer.address ? <Text className="text-sm text-gray-600 dark:text-[#A3B4CC] mt-2">{record.customer.address}</Text> : null}
             </>
           ) : (
-            <Text className="text-sm text-gray-500">No customer linked to this draft.</Text>
+            <Text className="text-sm text-gray-500 dark:text-[#A3B4CC]">No customer linked to this draft.</Text>
           )}
         </SectionCard>
 
         <SectionCard title="Inspection Details" icon="document-text-outline">
           <FieldLabel label="Site address" />
           <TextInput
-            className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 min-h-[92px]"
+            className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB] min-h-[92px]"
             value={record.siteAddress ?? ''}
             onChangeText={(value) => setTopLevelField('siteAddress', value)}
             multiline
@@ -283,7 +283,7 @@ export default function CertificateScreen() {
           <View className="mt-4">
             <FieldLabel label="Inspection date" hint="Use YYYY-MM-DD" />
             <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+              className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
               value={record.inspectionDate ?? ''}
               onChangeText={(value) => setTopLevelField('inspectionDate', value)}
               autoCapitalize="none"
@@ -294,7 +294,7 @@ export default function CertificateScreen() {
           <View className="mt-4">
             <FieldLabel label="Inspector name" />
             <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+              className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
               value={record.inspectorName ?? ''}
               onChangeText={(value) => setTopLevelField('inspectorName', value)}
               placeholder="Inspector name"
@@ -313,7 +313,7 @@ export default function CertificateScreen() {
             value={record.formData.dataEntryMode ?? 'guided_photo'}
             onChange={(value) => setFormField('dataEntryMode', value as MobileCertificateEditorRecord['formData']['dataEntryMode'])}
           />
-          <Text className="mt-3 text-sm text-gray-500">
+          <Text className="mt-3 text-sm text-gray-500 dark:text-[#A3B4CC]">
             {manualOnly
               ? 'This draft can be completed fully from manual interrogation and direct test result entry.'
               : hybridMode
@@ -327,7 +327,7 @@ export default function CertificateScreen() {
             <View className="flex-1">
               <FieldLabel label="Installation type" />
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                 value={record.formData.installationType ?? ''}
                 onChangeText={(value) => setFormField('installationType', value)}
                 placeholder="Domestic / commercial / industrial"
@@ -336,7 +336,7 @@ export default function CertificateScreen() {
             <View className="flex-1">
               <FieldLabel label="Occupancy type" />
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                 value={record.formData.occupancyType ?? ''}
                 onChangeText={(value) => setFormField('occupancyType', value)}
                 placeholder="Tenanted / owner occupied"
@@ -348,7 +348,7 @@ export default function CertificateScreen() {
             <View className="flex-1">
               <FieldLabel label="Supply phase" />
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                 value={record.formData.supplyPhase ?? ''}
                 onChangeText={(value) => setFormField('supplyPhase', value)}
                 placeholder="Single phase / three phase"
@@ -357,7 +357,7 @@ export default function CertificateScreen() {
             <View className="flex-1">
               <FieldLabel label="Earthing arrangement" />
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                 value={record.formData.earthingArrangement ?? ''}
                 onChangeText={(value) => setFormField('earthingArrangement', value)}
                 placeholder="TN-C-S / TN-S / TT"
@@ -369,7 +369,7 @@ export default function CertificateScreen() {
             <View className="flex-1">
               <FieldLabel label="Main switch rating" />
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                 value={record.formData.mainSwitchRating ?? ''}
                 onChangeText={(value) => setFormField('mainSwitchRating', value)}
                 placeholder="e.g. 100A"
@@ -378,7 +378,7 @@ export default function CertificateScreen() {
             <View className="flex-1">
               <FieldLabel label="Supply voltage" />
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                 value={record.formData.supplyVoltage ?? ''}
                 onChangeText={(value) => setFormField('supplyVoltage', value)}
                 placeholder="e.g. 230V"
@@ -390,7 +390,7 @@ export default function CertificateScreen() {
             <View className="flex-1">
               <FieldLabel label="Distribution boards" />
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                 value={record.formData.numberOfDistributionBoards ?? ''}
                 onChangeText={(value) => setFormField('numberOfDistributionBoards', value)}
                 keyboardType="number-pad"
@@ -400,7 +400,7 @@ export default function CertificateScreen() {
             <View className="flex-1">
               <FieldLabel label="No. of circuits" />
               <TextInput
-                className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                 value={record.formData.numberOfCircuits ?? ''}
                 onChangeText={(value) => setFormField('numberOfCircuits', value)}
                 keyboardType="number-pad"
@@ -411,7 +411,7 @@ export default function CertificateScreen() {
 
           <View className="mt-4">
             <FieldLabel label="Protective device questions" />
-            <Text className="text-xs text-gray-400 mb-2">Use this interrogation block when no photo is available or to confirm what was found on site.</Text>
+            <Text className="text-xs text-gray-400 dark:text-[#7688A3] mb-2">Use this interrogation block when no photo is available or to confirm what was found on site.</Text>
             <PillRow
               options={yesNoUnknownOptions.map((value) => ({ label: `RCD: ${value}`, value }))}
               value={record.formData.hasRcdProtection ?? ''}
@@ -449,10 +449,10 @@ export default function CertificateScreen() {
               return (
                 <TouchableOpacity
                   key={option}
-                  className={`flex-1 rounded-xl border px-4 py-3 items-center ${selected ? 'bg-brand border-brand' : 'bg-white border-gray-200'}`}
+                  className={`flex-1 rounded-xl border px-4 py-3 items-center ${selected ? 'bg-brand border-brand' : 'bg-white dark:bg-[#1A2740] border-gray-200 dark:border-[#28374F]'}`}
                   onPress={() => setFormField('overallAssessment', option)}
                 >
-                  <Text className={`font-semibold ${selected ? 'text-white' : 'text-gray-700'}`}>
+                  <Text className={`font-semibold ${selected ? 'text-white' : 'text-gray-700 dark:text-[#EAF1FB]'}`}>
                     {option === 'SATISFACTORY' ? 'Satisfactory' : 'Unsatisfactory'}
                   </Text>
                 </TouchableOpacity>
@@ -516,9 +516,9 @@ export default function CertificateScreen() {
             <EmptyState text="No observations added yet." />
           ) : (
             observations.map((observation, index) => (
-              <View key={observation.id} className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-3">
+              <View key={observation.id} className="bg-gray-50 dark:bg-[#1A2740] border border-gray-200 dark:border-[#28374F] rounded-xl p-4 mb-3">
                 <View className="flex-row items-center justify-between mb-3">
-                  <Text className="font-semibold text-gray-800">Observation {index + 1}</Text>
+                  <Text className="font-semibold text-gray-800 dark:text-[#EAF1FB]">Observation {index + 1}</Text>
                   <TouchableOpacity onPress={() => removeObservation(index)}>
                     <Ionicons name="trash-outline" size={18} color="#dc2626" />
                   </TouchableOpacity>
@@ -526,7 +526,7 @@ export default function CertificateScreen() {
 
                 <FieldLabel label="Description" />
                 <TextInput
-                  className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 min-h-[92px]"
+                  className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB] min-h-[92px]"
                   value={observation.description}
                   onChangeText={(value) => updateObservation(index, { description: value })}
                   multiline
@@ -541,10 +541,10 @@ export default function CertificateScreen() {
                     return (
                       <TouchableOpacity
                         key={code}
-                        className={`rounded-xl border px-4 py-2 ${selected ? 'bg-brand border-brand' : 'bg-white border-gray-200'}`}
+                        className={`rounded-xl border px-4 py-2 ${selected ? 'bg-brand border-brand' : 'bg-white dark:bg-[#1A2740] border-gray-200 dark:border-[#28374F]'}`}
                         onPress={() => updateObservation(index, { code })}
                       >
-                        <Text className={`font-semibold ${selected ? 'text-white' : 'text-gray-700'}`}>{code}</Text>
+                        <Text className={`font-semibold ${selected ? 'text-white' : 'text-gray-700 dark:text-[#EAF1FB]'}`}>{code}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -564,9 +564,9 @@ export default function CertificateScreen() {
             <EmptyState text="No circuits added yet." />
           ) : (
             circuits.map((circuit, index) => (
-              <View key={`circuit-${index}`} className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-3">
+              <View key={`circuit-${index}`} className="bg-gray-50 dark:bg-[#1A2740] border border-gray-200 dark:border-[#28374F] rounded-xl p-4 mb-3">
                 <View className="flex-row items-center justify-between mb-3">
-                  <Text className="font-semibold text-gray-800">Circuit {index + 1}</Text>
+                  <Text className="font-semibold text-gray-800 dark:text-[#EAF1FB]">Circuit {index + 1}</Text>
                   <TouchableOpacity onPress={() => removeCircuit(index)}>
                     <Ionicons name="trash-outline" size={18} color="#dc2626" />
                   </TouchableOpacity>
@@ -576,7 +576,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Circuit number" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.circuitNumber ?? ''}
                       onChangeText={(value) => updateCircuit(index, { circuitNumber: value })}
                       placeholder="1"
@@ -585,7 +585,7 @@ export default function CertificateScreen() {
                   <View className="flex-[2]">
                     <FieldLabel label="Designation" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.designation ?? ''}
                       onChangeText={(value) => updateCircuit(index, { designation: value })}
                       placeholder="e.g. Ring final"
@@ -597,7 +597,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Rating" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.rating ?? ''}
                       onChangeText={(value) => updateCircuit(index, { rating: value })}
                       placeholder="32A"
@@ -606,7 +606,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Device type" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.deviceType ?? ''}
                       onChangeText={(value) => updateCircuit(index, { deviceType: value })}
                       placeholder="RCBO / MCB"
@@ -618,7 +618,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Device make" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.deviceMake ?? ''}
                       onChangeText={(value) => updateCircuit(index, { deviceMake: value })}
                       placeholder="Make"
@@ -627,7 +627,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Cable type" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.cableType ?? ''}
                       onChangeText={(value) => updateCircuit(index, { cableType: value })}
                       placeholder="Twin & earth"
@@ -639,7 +639,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="CSA line" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.csaLine ?? ''}
                       onChangeText={(value) => updateCircuit(index, { csaLine: value })}
                       placeholder="mm²"
@@ -648,7 +648,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="CSA CPC" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.csaCpc ?? ''}
                       onChangeText={(value) => updateCircuit(index, { csaCpc: value })}
                       placeholder="mm²"
@@ -659,7 +659,7 @@ export default function CertificateScreen() {
                 <View className="mt-3">
                   <FieldLabel label="Wiring method" />
                   <TextInput
-                    className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                    className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                     value={circuit.wiringMethod ?? ''}
                     onChangeText={(value) => updateCircuit(index, { wiringMethod: value })}
                     placeholder="Clipped direct / concealed / trunking"
@@ -691,7 +691,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="R1+R2" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.continuityR1R2 ?? ''}
                       onChangeText={(value) => updateCircuit(index, { continuityR1R2: value })}
                       placeholder="Ω"
@@ -700,7 +700,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Rn" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.continuityRn ?? ''}
                       onChangeText={(value) => updateCircuit(index, { continuityRn: value })}
                       placeholder="Ω"
@@ -712,7 +712,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Insulation resistance" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.insulationResistance ?? ''}
                       onChangeText={(value) => updateCircuit(index, { insulationResistance: value })}
                       placeholder="MΩ"
@@ -721,7 +721,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Polarity" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.polarity ?? ''}
                       onChangeText={(value) => updateCircuit(index, { polarity: value })}
                       placeholder="Correct / issue"
@@ -733,7 +733,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Measured Zs" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.measuredZs ?? ''}
                       onChangeText={(value) => updateCircuit(index, { measuredZs: value })}
                       placeholder="Ω"
@@ -742,7 +742,7 @@ export default function CertificateScreen() {
                   <View className="flex-1">
                     <FieldLabel label="Max Zs" />
                     <TextInput
-                      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                       value={circuit.maxZs ?? ''}
                       onChangeText={(value) => updateCircuit(index, { maxZs: value })}
                       placeholder="Ω"
@@ -753,7 +753,7 @@ export default function CertificateScreen() {
                 <View className="mt-3">
                   <FieldLabel label="RCD trip time" />
                   <TextInput
-                    className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900"
+                    className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB]"
                     value={circuit.rcdTripTime ?? ''}
                     onChangeText={(value) => updateCircuit(index, { rcdTripTime: value })}
                     placeholder="ms"
@@ -783,14 +783,14 @@ export default function CertificateScreen() {
         </SectionCard>
 
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center mt-2 ${isDirty ? 'bg-brand' : 'bg-gray-300'}`}
+          className={`rounded-xl py-4 items-center mt-2 ${isDirty ? 'bg-brand' : 'bg-gray-300 dark:bg-[#28374F]'}`}
           onPress={handleSave}
           disabled={!isDirty || saving}
         >
           {saving ? (
             <ActivityIndicator color="white" />
           ) : (
-            <Text className={`font-bold text-base ${isDirty ? 'text-white' : 'text-gray-500'}`}>
+            <Text className={`font-bold text-base ${isDirty ? 'text-white' : 'text-gray-500 dark:text-[#A3B4CC]'}`}>
               Save Changes
             </Text>
           )}
@@ -814,13 +814,13 @@ function SectionCard({
   onAction?: () => void;
 }) {
   return (
-    <View className="bg-white rounded-2xl border border-gray-200 p-4 mb-4">
+    <View className="bg-white dark:bg-[#131D31] rounded-2xl border border-gray-200 dark:border-[#28374F] p-4 mb-4">
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center">
-          <View className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center mr-3">
-            <Ionicons name={icon} size={18} color="#4b5563" />
+          <View className="w-9 h-9 rounded-full bg-gray-100 dark:bg-[#1A2740] items-center justify-center mr-3">
+            <Ionicons name={icon} size={18} color="#94A3B8" />
           </View>
-          <Text className="text-base font-semibold text-gray-900">{title}</Text>
+          <Text className="text-base font-semibold text-gray-900 dark:text-[#EAF1FB]">{title}</Text>
         </View>
         {actionLabel && onAction ? (
           <TouchableOpacity className="rounded-xl bg-brand px-3 py-2" onPress={onAction}>
@@ -844,8 +844,8 @@ function FieldLabel({
 }) {
   return (
     <View className={className}>
-      <Text className="text-sm font-medium text-gray-700 mb-2">{label}</Text>
-      {hint ? <Text className="text-xs text-gray-400 mb-2 -mt-1">{hint}</Text> : null}
+      <Text className="text-sm font-medium text-gray-700 dark:text-[#A3B4CC] mb-2">{label}</Text>
+      {hint ? <Text className="text-xs text-gray-400 dark:text-[#7688A3] mb-2 -mt-1">{hint}</Text> : null}
     </View>
   );
 }
@@ -861,7 +861,7 @@ function MultilineField({
 }) {
   return (
     <TextInput
-      className="bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 min-h-[92px]"
+      className="bg-white dark:bg-[#131D31] border border-gray-200 dark:border-[#28374F] rounded-xl px-4 py-3 text-gray-900 dark:text-[#EAF1FB] min-h-[92px]"
       value={value}
       onChangeText={onChangeText}
       multiline
@@ -889,10 +889,10 @@ function PillRow({
         return (
           <TouchableOpacity
             key={`${option.label}-${option.value}`}
-            className={`rounded-xl border px-3 py-2 ${selected ? 'bg-brand border-brand' : 'bg-white border-gray-200'}`}
+            className={`rounded-xl border px-3 py-2 ${selected ? 'bg-brand border-brand' : 'bg-white dark:bg-[#1A2740] border-gray-200 dark:border-[#28374F]'}`}
             onPress={() => onChange(option.value)}
           >
-            <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700'}`}>{option.label}</Text>
+            <Text className={`font-medium ${selected ? 'text-white' : 'text-gray-700 dark:text-[#EAF1FB]'}`}>{option.label}</Text>
           </TouchableOpacity>
         );
       })}
@@ -902,8 +902,8 @@ function PillRow({
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <View className="rounded-xl border border-dashed border-gray-300 bg-gray-50 px-4 py-5">
-      <Text className="text-sm text-gray-500">{text}</Text>
+    <View className="rounded-xl border border-dashed border-gray-300 dark:border-[#3A4C6B] bg-gray-50 dark:bg-[#1A2740] px-4 py-5">
+      <Text className="text-sm text-gray-500 dark:text-[#A3B4CC]">{text}</Text>
     </View>
   );
 }

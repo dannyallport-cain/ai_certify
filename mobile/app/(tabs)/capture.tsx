@@ -19,6 +19,9 @@ import {
 } from "@/services/api";
 import { buildAnalysisMessage, buildAnalysisSummary } from "@/lib/analysis-summary";
 import { buildQualityAssessment } from "@/lib/photo-quality";
+import { AppText } from "@/components/ui/AppText";
+import { Button } from "@/components/ui/Button";
+import { useTheme } from "@/theme/useTheme";
 
 type CapturedPreview = {
   uri: string;
@@ -105,6 +108,7 @@ export default function CaptureScreen() {
   const [analysing, setAnalysing] = useState(false);
   const [capturedPreview, setCapturedPreview] = useState<CapturedPreview | null>(null);
   const { state, dispatch } = useJob();
+  const { palette } = useTheme();
 
   const activeCaptureMode: CaptureMode = state.wizard.activeCaptureType
     ? wizardPhotoModeMap[state.wizard.activeCaptureType]
@@ -284,17 +288,42 @@ export default function CaptureScreen() {
 
   if (!permission.granted) {
     return (
-      <View className="flex-1 items-center justify-center bg-[#F5F7FA] px-8">
-        <View className="mb-5 h-20 w-20 items-center justify-center rounded-[28px] bg-[#E3F2FD]">
-          <Ionicons name="camera-outline" size={36} color="#0D47A1" />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: palette.canvas,
+          paddingHorizontal: 32,
+        }}
+      >
+        <View
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: 28,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: palette.brandSoft,
+            marginBottom: 20,
+          }}
+        >
+          <Ionicons name="camera-outline" size={36} color={palette.brand} />
         </View>
-        <Text className="mb-2 text-center text-2xl font-bold text-[#1A202C]">Camera access required</Text>
-        <Text className="mb-6 text-center text-base leading-6 text-[#718096]">
+
+        <AppText variant="title" style={{ textAlign: 'center', marginBottom: 8 }}>
+          Camera access required
+        </AppText>
+
+        <AppText
+          variant="body"
+          tone="muted"
+          style={{ textAlign: 'center', marginBottom: 24 }}
+        >
           Enable camera access to capture inspection evidence in the mobile workflow.
-        </Text>
-        <TouchableOpacity className="rounded-[20px] bg-[#0D47A1] px-8 py-4" onPress={requestPermission}>
-          <Text className="font-semibold text-[#FFFFFF]">Grant Access</Text>
-        </TouchableOpacity>
+        </AppText>
+
+        <Button label="Grant access" icon="lock-open-outline" onPress={requestPermission} />
       </View>
     );
   }

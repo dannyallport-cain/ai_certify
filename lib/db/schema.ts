@@ -77,7 +77,10 @@ export const teams = pgTable('teams', {
   subscriptionBypassSetAt: timestamp('subscription_bypass_set_at'),
   subscriptionBypassSetBy: integer('subscription_bypass_set_by'),
   trialEndDate: timestamp('trial_end_date'),
+  /** Legacy inline base64 logo. Superseded by `logoR2Key`; kept for old rows. */
   logoDataUri: text('logo_data_uri'),
+  /** R2 object key for the team logo, e.g. `teams/12/logo/logo.png`. */
+  logoR2Key: text('logo_r2_key'),
 });
 
 export const teamRuntimeSafeColumns = {
@@ -98,6 +101,7 @@ export const teamRuntimeSafeColumns = {
   subscriptionBypassSetBy: teams.subscriptionBypassSetBy,
   trialEndDate: teams.trialEndDate,
   logoDataUri: teams.logoDataUri,
+  logoR2Key: teams.logoR2Key,
 };
 
 export const teamMembers = pgTable('team_members', {
@@ -458,6 +462,26 @@ export const fireAlarmRoomCaptures = pgTable(
     endedAt: timestamp('ended_at'),
     deviceCount: integer('device_count').notNull().default(0),
     metadata: json('metadata'),
+    /**
+     * The customer the survey belongs to. Null until a survey is linked, either
+     * by hand in the dashboard or by picking a ServiceM8 job in either app.
+     */
+    customerId: integer('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+    /** `draft` while capture is in progress, `completed` once exported. */
+    surveyStatus: varchar('survey_status', { length: 32 }).notNull().default('draft'),
+    completedAt: timestamp('completed_at'),
+    /** ServiceM8 client ("company") the survey was filed against. */
+    servicem8CompanyUuid: varchar('servicem8_company_uuid', { length: 255 }),
+    servicem8CompanyName: varchar('servicem8_company_name', { length: 255 }),
+    /**
+     * ServiceM8 job the survey was filed against. The job is the diary entry,
+     * so carrying its uuid is what lets the office find the survey from the job
+     * instead of re-typing the client's details.
+     */
+    servicem8JobUuid: varchar('servicem8_job_uuid', { length: 255 }),
+    servicem8JobNumber: varchar('servicem8_job_number', { length: 100 }),
+    servicem8JobDate: varchar('servicem8_job_date', { length: 40 }),
+    servicem8JobAddress: text('servicem8_job_address'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },
@@ -469,6 +493,13 @@ export const fireAlarmRoomCaptures = pgTable(
       table.externalSessionId
     ),
     createdAtIdx: index('fire_alarm_room_captures_created_at_idx').on(table.createdAt),
+    teamUpdatedIdx: index('fire_alarm_room_captures_team_updated_idx').on(
+      table.teamId,
+      table.updatedAt
+    ),
+    servicem8JobIdx: index('fire_alarm_room_captures_servicem8_job_idx').on(
+      table.servicem8JobUuid
+    ),
   })
 );
 
@@ -789,6 +820,7 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
     references: [teams.id],
   }),
   certificates: many(certificates),
+  fireAlarmRoomCaptures: many(fireAlarmRoomCaptures),
 }));
 
 export const certificatesRelations = relations(certificates, ({ one, many }) => ({
@@ -829,6 +861,10 @@ export const fireAlarmRoomCapturesRelations = relations(fireAlarmRoomCaptures, (
   createdByUser: one(users, {
     fields: [fireAlarmRoomCaptures.createdBy],
     references: [users.id],
+  }),
+  customer: one(customers, {
+    fields: [fireAlarmRoomCaptures.customerId],
+    references: [customers.id],
   }),
   devices: many(fireAlarmCaptureDevices),
 }));

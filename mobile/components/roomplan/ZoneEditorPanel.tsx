@@ -1,7 +1,9 @@
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { Plan3DZone } from '@/modules/fire-alarm-roomplan/plan3d/plan3d-types';
+import { AppText } from '@/components/ui/AppText';
+import { useTheme } from '@/theme/useTheme';
 
 interface ZoneEditorPanelProps {
   zones: Plan3DZone[];
@@ -13,8 +15,8 @@ interface ZoneEditorPanelProps {
 }
 
 /**
- * The zone list under the plan. Renaming uses the iOS prompt because the plan screen already has a
- * scroll view and a keyboard here would hide the drawing the user is working on.
+ * The zone list under the plan. Renaming uses the iOS prompt because the plan
+ * screen already scrolls and a keyboard here would hide the drawing.
  */
 export default function ZoneEditorPanel({
   zones,
@@ -24,18 +26,30 @@ export default function ZoneEditorPanel({
   onCycleColour,
   onRemove,
 }: ZoneEditorPanelProps) {
+  const { palette } = useTheme();
+
   if (zones.length === 0) {
     return (
-      <View className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-3 py-4">
-        <Text className="text-center text-xs leading-5 text-[#64748B]">
-          Drag on the plan to draw a zone. Each zone gets its own colour and reference.
-        </Text>
+      <View
+        style={{
+          borderWidth: 1,
+          borderStyle: 'dashed',
+          borderColor: palette.lineStrong,
+          backgroundColor: palette.surfaceAlt,
+          borderRadius: 12,
+          paddingVertical: 16,
+          paddingHorizontal: 12,
+        }}
+      >
+        <AppText variant="caption" tone="muted" style={{ textAlign: 'center' }}>
+          Tap Zones above, then drag on the plan to draw one.
+        </AppText>
       </View>
     );
   }
 
   return (
-    <View className="gap-2">
+    <View style={{ gap: 8 }}>
       {zones.map((zone, index) => {
         const selected = zone.id === selectedZoneId;
 
@@ -46,57 +60,99 @@ export default function ZoneEditorPanel({
             accessibilityState={{ selected }}
             accessibilityLabel={`Zone ${zone.reference} ${zone.name}`}
             onPress={() => onSelect(zone.id)}
-            className={`flex-row items-center rounded-xl border px-3 py-3 ${
-              selected ? 'border-[#0D47A1] bg-[#E8F0FE]' : 'border-[#E0E6ED] bg-white'
-            }`}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              borderRadius: 12,
+              borderWidth: 1.5,
+              borderColor: selected ? palette.brand : palette.line,
+              backgroundColor: selected ? palette.brandSoft : palette.surface,
+              paddingVertical: 10,
+              paddingHorizontal: 10,
+            }}
           >
             <View
-              style={{ backgroundColor: zone.colour }}
-              className="h-5 w-5 items-center justify-center rounded-full"
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                backgroundColor: zone.colour,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <Text className="text-[9px] font-bold text-white">{index + 1}</Text>
+              <AppText variant="caption" style={{ color: '#FFFFFF', fontWeight: '700' }}>
+                {index + 1}
+              </AppText>
             </View>
 
-            <View className="ml-3 flex-1">
-              <Text className="text-sm font-semibold text-[#1A202C]" numberOfLines={1}>
-                {zone.reference} · {zone.name}
-              </Text>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <AppText variant="bodyStrong" numberOfLines={1}>
+                {`${zone.reference} · ${zone.name}`}
+              </AppText>
             </View>
 
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Rename zone ${zone.reference}`}
-              hitSlop={6}
+            <IconAction
+              icon="create-outline"
+              label={`Rename zone ${zone.reference}`}
               onPress={() =>
-                Alert.prompt?.('Rename zone', undefined, (value) => onRename(zone.id, value), 'plain-text', zone.name)
+                Alert.prompt?.(
+                  'Rename zone',
+                  undefined,
+                  (value) => onRename(zone.id, value),
+                  'plain-text',
+                  zone.name,
+                )
               }
-              className="h-8 w-8 items-center justify-center rounded-full bg-white"
-            >
-              <Ionicons name="create-outline" size={15} color="#334155" />
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Change colour of zone ${zone.reference}`}
-              hitSlop={6}
+            />
+            <IconAction
+              icon="color-palette-outline"
+              label={`Change colour of zone ${zone.reference}`}
               onPress={() => onCycleColour(zone.id)}
-              className="ml-1 h-8 w-8 items-center justify-center rounded-full bg-white"
-            >
-              <Ionicons name="color-palette-outline" size={15} color="#334155" />
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Remove zone ${zone.reference}`}
-              hitSlop={6}
+            />
+            <IconAction
+              icon="trash-outline"
+              label={`Remove zone ${zone.reference}`}
+              tint={palette.danger}
               onPress={() => onRemove(zone.id)}
-              className="ml-1 h-8 w-8 items-center justify-center rounded-full bg-white"
-            >
-              <Ionicons name="trash-outline" size={15} color="#B91C1C" />
-            </Pressable>
+            />
           </Pressable>
         );
       })}
     </View>
+  );
+}
+
+function IconAction({
+  icon,
+  label,
+  onPress,
+  tint,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  tint?: string;
+}) {
+  const { palette } = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={6}
+      onPress={onPress}
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: palette.surfaceAlt,
+      }}
+    >
+      <Ionicons name={icon} size={15} color={tint ?? palette.ink} />
+    </Pressable>
   );
 }

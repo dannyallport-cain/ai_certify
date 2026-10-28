@@ -20,6 +20,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { generateCertificatePDF, CertificateData } from '@/lib/pdf/generator';
 import { ServiceM8Client_API, type ServiceM8Job } from '@/lib/servicem8/client';
 import { processServiceM8JobMapping } from '@/lib/servicem8/sync';
+import { resolveTeamLogoDataUri } from '@/lib/storage/team-logo';
 
 // Customer schemas and actions
 const createCustomerSchema = z.object({
@@ -774,7 +775,7 @@ async function getCertificateForPDF(certificateId: number): Promise<CertificateD
       inspectorName: certificate.inspectorName,
       status: certificate.status,
       formData: certificate.formData as Record<string, any> | undefined,
-      teamLogo: team?.logoDataUri || null,
+      teamLogo: await resolveTeamLogoDataUri(team),
       customer: {
         name: customer.name,
         email: customer.email,

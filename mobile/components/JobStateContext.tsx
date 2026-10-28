@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useReducer, useRef } from 'react';
+import { AppState } from 'react-native';
+
+import { loadDraft, onDraftCleared, saveDraft } from '@/services/draft-storage';
 import type {
   AnalysisResult,
   CaptureMode,
@@ -123,7 +126,7 @@ export interface JobState {
   wizard: WizardState;
 }
 
-type JobAction =
+export type JobAction =
   | { type: 'SET_CUSTOMER'; payload: Customer | null }
   | { type: 'SET_GPS'; payload: { address: string; coords: { latitude: number; longitude: number } } }
   | { type: 'ADD_IMAGE'; payload: CapturedImage }
@@ -147,7 +150,9 @@ type JobAction =
         slotIndex?: number | null;
       };
     }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  /** Restores a draft written by a previous session of the app. */
+  | { type: 'HYDRATE'; payload: Partial<JobState> };
 
 function getTodayIsoDate() {
   return new Date().toISOString().slice(0, 10);
@@ -354,6 +359,19 @@ function reducer(state: JobState, action: JobAction): JobState {
           inspectionDate: getTodayIsoDate(),
         },
       };
+    case 'HYDRATE':
+      return {
+        ...initialState,
+        ...action.payload,
+        // A restored draft is never already submitted, and the expanded job
+        // detail is deliberately not persisted.
+        createdCertificate: null,
+        selectedServiceM8JobDetail: null,
+        wizard: {
+          ...initialState.wizard,
+          ...action.payload.wizard,
+        },
+      };
     default:
       return state;
   }
@@ -366,8 +384,135 @@ interface JobContextValue {
 
 const JobContext = createContext<JobContextValue | null>(null);
 
+/** Collapses bursts of edits (typing a count, tapping chips) into one write. */
+const DRAFT_SAVE_DEBOUNCE_MS = 700;
+
 export function JobStateProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, rawDispatch] = useReducer(reducer, initialState);
+
+  const stateRef = useRef(state);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Set once the restore attempt has finished, so the empty state is never saved over a draft. */
+  const restoredRef = useRef(false);
+  /** Set by any real user action, which must win over a slower restore. */
+  const userActedRef = useRef(false);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const dispatch = useCallback<React.Dispatch<JobAction>>((action) => {
+    if (action.type !== 'HYDRATE' && action.type !== 'RESET') {
+      userActedRef.current = true;
+    }
+    rawDispatch(action);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadDraft()
+      .then((draft) => {
+        if (cancelled) {
+          return;
+        }
+
+        if (draft && !userActedRef.current) {
+          rawDispatch({
+            type: 'HYDRATE',
+            payload: {
+              wizard: draft.wizard,
+              gpsAddress: draft.gpsAddress,
+              gpsCoords: draft.gpsCoords,
+              capturedImages: draft.capturedImages,
+              analysisResult: draft.analysisResult,
+              selectedServiceM8Job: draft.selectedServiceM8Job,
+              selectedServiceM8Client: draft.selectedServiceM8Client,
+              importedServiceM8Images: draft.importedServiceM8Images,
+              // Only the summary was persisted; the contact details are
+              // re-fetched when the draft is submitted.
+              selectedCustomer: draft.selectedCustomer
+                ? {
+                    id: draft.selectedCustomer.id,
+                    name: draft.selectedCustomer.name,
+                    email: null,
+                    phone: null,
+                    address: null,
+                    postcode: null,
+                    contactPerson: null,
+                  }
+                : null,
+            },
+          });
+        }
+      })
+      .catch((error) => {
+        console.warn('Draft restore skipped:', error);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          restoredRef.current = true;
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Signing out wipes the draft on disk; mirror that in memory so the next
+  // person to unlock the device starts clean.
+  useEffect(
+    () =>
+      onDraftCleared(() => {
+        restoredRef.current = false;
+        rawDispatch({ type: 'RESET' });
+        setTimeout(() => {
+          restoredRef.current = true;
+        }, 0);
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    if (!restoredRef.current) {
+      return;
+    }
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      void saveDraft(stateRef.current);
+    }, DRAFT_SAVE_DEBOUNCE_MS);
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [state]);
+
+  // Leaving the app is exactly when iOS may kill it, so the pending edit is
+  // flushed immediately rather than waiting for the debounce.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active' || !restoredRef.current) {
+        return;
+      }
+
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+
+      void saveDraft(stateRef.current);
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   return <JobContext.Provider value={{ state, dispatch }}>{children}</JobContext.Provider>;
 }
 

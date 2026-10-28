@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, ScrollView, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
 import { useJob, type ImportedServiceM8Image, type WizardPhotoType } from '@/components/JobStateContext';
+import { Callout } from '@/components/form/Callout';
+import { AppText } from '@/components/ui/AppText';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import {
   createDraftCertificate,
   mapImportedServiceM8ImagesToDraftPayload,
   uploadMobileImage,
 } from '@/services/api';
+import { useTheme } from '@/theme/useTheme';
 
 const guidedPhotoSummary: { type: WizardPhotoType; label: string }[] = [
   { type: 'consumer_unit_external', label: 'Consumer unit' },
@@ -30,6 +36,7 @@ function getImportedServiceM8ImageDisplayName(image: ImportedServiceM8Image) {
 }
 
 export default function ReviewScreen() {
+  const { palette } = useTheme();
   const { state, dispatch } = useJob();
   const [submitting, setSubmitting] = useState(false);
   const {
@@ -75,7 +82,9 @@ export default function ReviewScreen() {
 
   const damagePromptsComplete =
     !usesPhotoEvidence ||
-    damagePhotoSummary.every((item) => item.present !== null && (item.present === false || item.accepted));
+    damagePhotoSummary.every(
+      (item) => item.present !== null && (item.present === false || item.accepted),
+    );
 
   const isDomesticStyleInstallation =
     wizard.installationType === 'domestic' ||
@@ -222,6 +231,106 @@ export default function ReviewScreen() {
     }),
     [mappedImportedServiceM8Images],
   );
+
+  const yesNo = (value: boolean | null) => (value === null ? 'Not answered' : value ? 'Yes' : 'No');
+
+  // One row per wizard answer, so the review list stays a single map instead of
+  // a wall of near-identical label/value pairs.
+  const wizardAnswerRows: { label: string; value: string; tone?: 'success' | 'danger' }[] = [
+    { label: 'Certificate route', value: wizard.dataEntryMode.replaceAll('_', ' ') },
+    {
+      label: 'Report purpose',
+      value: wizard.reportPurpose ? wizard.reportPurpose.replaceAll('_', ' ') : 'Not set',
+    },
+    {
+      label: 'Installation type',
+      value: wizard.installationType ? wizard.installationType.replaceAll('_', ' ') : 'Not set',
+    },
+    {
+      label: 'Occupancy profile',
+      value: wizard.occupancyType ? wizard.occupancyType.replaceAll('_', ' ') : 'Not set',
+    },
+    {
+      label: 'Supply phase',
+      value: wizard.supplyPhase ? wizard.supplyPhase.replaceAll('_', ' ') : 'Not set',
+    },
+    {
+      label: 'Ancillary supplies',
+      value:
+        wizard.hasOutbuildingsOrAncillarySupplies === null
+          ? 'Not set'
+          : wizard.hasOutbuildingsOrAncillarySupplies
+            ? 'Yes'
+            : 'No',
+    },
+    {
+      label: 'Consumer unit material',
+      value: wizard.consumerUnitMaterial
+        ? wizard.consumerUnitMaterial.replaceAll('_', ' ')
+        : 'Not set / skipped',
+    },
+    {
+      label: 'Distribution boards / consumer units',
+      value: String(wizard.distributionBoardCount),
+    },
+    { label: 'RCD protection present', value: yesNo(wizard.hasRcdProtection) },
+    { label: 'RCBO protection present', value: yesNo(wizard.hasRcboProtection) },
+    { label: 'Surge protection device present', value: yesNo(wizard.hasSurgeProtectionDevice) },
+    { label: 'EV charger present', value: yesNo(wizard.hasEvCharger) },
+    { label: 'Solar PV present', value: yesNo(wizard.hasSolarPv) },
+    {
+      label: 'Battery storage present',
+      value:
+        wizard.hasSolarPv !== true
+          ? 'Skipped'
+          : wizard.hasBatteryStorage === null
+            ? 'Not answered'
+            : wizard.hasBatteryStorage
+              ? 'Yes'
+              : 'No',
+    },
+    { label: 'AFDD protection present', value: yesNo(wizard.hasAfddProtection) },
+    { label: 'Communal / landlord supplies present', value: yesNo(wizard.hasCommunalOrLandlordSupplies) },
+    { label: 'Damaged socket / switch / accessory present', value: yesNo(wizard.hasDamagedAccessory) },
+    { label: 'Damaged luminaire present', value: yesNo(wizard.hasDamagedLuminaire) },
+    { label: 'Storeys used as living accommodation', value: String(wizard.storeyCount) },
+    { label: 'Smoke alarms found', value: String(wizard.smokeDetectorCount) },
+    {
+      label: 'Storey-based smoke alarm guidance',
+      value: smokeAlarmCountMeetsGuidance
+        ? `Met (${wizard.smokeDetectorCount}/${minimumRecommendedSmokeAlarms})`
+        : `Not met (${wizard.smokeDetectorCount}/${minimumRecommendedSmokeAlarms})`,
+      tone: smokeAlarmCountMeetsGuidance ? 'success' : 'danger',
+    },
+    {
+      label: 'Smoke detector photos',
+      value: `${capturedImages.filter((image) => image.type === 'smoke_detector' && image.qualityAssessment?.isSufficient).length}/${wizard.smokeDetectorCount}`,
+      tone: smokePhotosComplete ? 'success' : 'danger',
+    },
+    {
+      label: 'Solid fuel appliance',
+      value:
+        wizard.hasSolidFuelAppliance === null
+          ? 'Not set'
+          : wizard.hasSolidFuelAppliance
+            ? 'Yes'
+            : 'No',
+    },
+    ...(wizard.hasSolidFuelAppliance === true
+      ? [
+          {
+            label: 'CO detector tested',
+            value: wizard.coDetectorTested ? 'Yes' : 'No',
+            tone: wizard.coDetectorTested ? ('success' as const) : ('danger' as const),
+          },
+          {
+            label: 'CO detector photo',
+            value: coDetectorPhotoComplete ? 'Accepted' : 'Missing or insufficient',
+            tone: coDetectorPhotoComplete ? ('success' as const) : ('danger' as const),
+          },
+        ]
+      : []),
+  ];
 
   async function handleSubmit() {
     if (!ready || !selectedCustomer || !gpsAddress) return;
@@ -370,407 +479,298 @@ export default function ReviewScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
-      <View className="px-5 pt-6 pb-8">
-        <TouchableOpacity
-          className="mb-4 flex-row items-center self-start rounded-full bg-white px-3 py-2"
+    <ScrollView
+      style={{ flex: 1, backgroundColor: palette.canvas }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 32 }}
+    >
+      <View style={{ alignSelf: 'flex-start', marginBottom: 16 }}>
+        <Button
+          label="Back"
+          icon="arrow-back"
+          variant="ghost"
+          size="small"
           onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={18} color="#111827" />
-          <Text className="ml-2 font-medium text-gray-900">Back</Text>
-        </TouchableOpacity>
+        />
+      </View>
 
-        <Text className="mb-1 text-2xl font-bold text-gray-900">Review Certificate Draft</Text>
-        <Text className="mb-6 text-gray-500">
-          Check the certificate route, captured evidence, and wizard answers before creating the draft EICR.
-        </Text>
+      <AppText variant="title">Review certificate draft</AppText>
+      <AppText variant="body" tone="muted" style={{ marginTop: 6, marginBottom: 24 }}>
+        Check the certificate route, captured evidence and wizard answers before creating the draft
+        EICR.
+      </AppText>
 
-        {selectedServiceM8Job ? (
-          <Section title="ServiceM8 Job" icon="briefcase-outline" done={true} onEdit={() => router.push('/(tabs)/customer')}>
-            <Text className="font-semibold text-gray-800">
-              {selectedServiceM8Job.generatedJobId
-                ? `Job ${selectedServiceM8Job.generatedJobId}`
-                : 'ServiceM8 job selected'}
-            </Text>
-            {selectedServiceM8Job.status ? (
-              <Text className="text-sm text-gray-500">Status: {selectedServiceM8Job.status}</Text>
-            ) : null}
-            {selectedServiceM8Job.address ? (
-              <Text className="text-sm text-gray-500">{selectedServiceM8Job.address}</Text>
-            ) : null}
-          </Section>
-        ) : null}
-
+      {selectedServiceM8Job ? (
         <Section
-          title="Customer"
-          icon="person-outline"
-          done={!!selectedCustomer}
+          title="ServiceM8 job"
+          icon="briefcase-outline"
+          done
           onEdit={() => router.push('/(tabs)/customer')}
         >
-          {selectedCustomer ? (
-            <View>
-              <Text className="font-semibold text-gray-800">{selectedCustomer.name}</Text>
-              {selectedCustomer.email ? (
-                <Text className="text-sm text-gray-500">{selectedCustomer.email}</Text>
-              ) : null}
-            </View>
-          ) : (
-            <Text className="text-sm text-red-500">Not selected</Text>
-          )}
+          <DetailRow
+            label="Job"
+            value={
+              selectedServiceM8Job.generatedJobId
+                ? `Job ${selectedServiceM8Job.generatedJobId}`
+                : 'ServiceM8 job selected'
+            }
+          />
+          {selectedServiceM8Job.status ? (
+            <DetailRow label="Status" value={selectedServiceM8Job.status} />
+          ) : null}
+          {selectedServiceM8Job.address ? (
+            <DetailRow label="Address" value={selectedServiceM8Job.address} />
+          ) : null}
         </Section>
+      ) : null}
 
-        <Section
-          title="Site Address"
-          icon="location-outline"
-          done={!!gpsAddress}
-          onEdit={() => router.push('/(tabs)/location')}
-        >
-          {gpsAddress ? (
-            <Text className="text-gray-800">{gpsAddress}</Text>
-          ) : (
-            <Text className="text-sm text-red-500">Not set</Text>
-          )}
-        </Section>
+      <Section
+        title="Customer"
+        icon="person-outline"
+        done={!!selectedCustomer}
+        onEdit={() => router.push('/(tabs)/customer')}
+      >
+        {selectedCustomer ? (
+          <>
+            <DetailRow label="Name" value={selectedCustomer.name} />
+            {selectedCustomer.email ? (
+              <DetailRow label="Email" value={selectedCustomer.email} />
+            ) : null}
+          </>
+        ) : (
+          <AppText variant="caption" tone="danger">
+            Not selected
+          </AppText>
+        )}
+      </Section>
 
-        <Section title="Inspection Date" icon="calendar-outline" done={true} onEdit={() => router.push('/(tabs)/wizard')}>
-          <Text className="text-gray-800">{inspectionDateDisplay}</Text>
-        </Section>
+      <Section
+        title="Site address"
+        icon="location-outline"
+        done={!!gpsAddress}
+        onEdit={() => router.push('/(tabs)/location')}
+      >
+        {gpsAddress ? (
+          <AppText variant="body">{gpsAddress}</AppText>
+        ) : (
+          <AppText variant="caption" tone="danger">
+            Not set
+          </AppText>
+        )}
+      </Section>
 
-        <Section
-          title="Guided Evidence Photos"
-          icon="camera-outline"
-          done={mandatoryGuidedPhotosComplete}
-          onEdit={() => router.push('/(tabs)/wizard')}
-        >
-          {!usesPhotoEvidence ? (
-            <Text className="text-sm text-blue-700">
-              Manual-only workflow selected. Guided photo evidence is optional for this draft.
-            </Text>
-          ) : (
-            <>
-              <View className={`mb-3 rounded-xl border px-3 py-3 ${outstandingRequiredPhotos.length === 0 ? 'border-green-200 bg-green-50' : 'border-amber-200 bg-amber-50'}`}>
-                <Text className={`font-medium ${outstandingRequiredPhotos.length === 0 ? 'text-green-800' : 'text-amber-800'}`}>
-                  {outstandingRequiredPhotos.length === 0
-                    ? 'All currently required evidence photos are accepted'
-                    : `${outstandingRequiredPhotos.length} required photo step(s) still need attention`}
-                </Text>
-                {outstandingRequiredPhotos.length > 0 ? (
-                  <View className="mt-2">
-                    {outstandingRequiredPhotos.map((item) => (
-                      <Text key={item.key} className="text-sm text-amber-800">
-                        • {item.label}: {item.status}
-                      </Text>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
+      <Section
+        title="Inspection date"
+        icon="calendar-outline"
+        done
+        onEdit={() => router.push('/(tabs)/wizard')}
+      >
+        <AppText variant="body">{inspectionDateDisplay}</AppText>
+      </Section>
+
+      <Section
+        title="Guided evidence photos"
+        icon="camera-outline"
+        done={mandatoryGuidedPhotosComplete}
+        onEdit={() => router.push('/(tabs)/wizard')}
+      >
+        {!usesPhotoEvidence ? (
+          <AppText variant="caption" tone="brand">
+            Manual-only workflow selected. Guided photo evidence is optional for this draft.
+          </AppText>
+        ) : (
+          <>
+            <Callout
+              tone={outstandingRequiredPhotos.length === 0 ? 'success' : 'warning'}
+              inset
+            >
+              {outstandingRequiredPhotos.length === 0
+                ? 'All currently required evidence photos are accepted.'
+                : `${outstandingRequiredPhotos.length} required photo step(s) still need attention: ${outstandingRequiredPhotos
+                    .map((item) => `${item.label} (${item.status})`)
+                    .join('; ')}`}
+            </Callout>
+
+            <View style={{ marginTop: 10 }}>
               {guidedPhotoSummary.map((item) => {
                 const image = getImageFor(item.type);
                 const accepted = !!image?.qualityAssessment?.isSufficient;
+
                 return (
-                  <Text key={item.type} className={`text-sm ${accepted ? 'text-green-700' : 'text-red-500'}`}>
-                    {accepted ? '✓' : '✗'} {item.label}
-                    {accepted
-                      ? (image?.qualityAssessment?.score ? ` (score ${image.qualityAssessment.score})` : '')
-                      : ' (retake required)'}
-                  </Text>
+                  <CheckLine
+                    key={item.type}
+                    ok={accepted}
+                    label={item.label}
+                    detail={
+                      accepted
+                        ? image?.qualityAssessment?.score
+                          ? `score ${image.qualityAssessment.score}`
+                          : 'accepted'
+                        : 'retake required'
+                    }
+                  />
                 );
               })}
-              {damagePhotoSummary.map((item) => (
-                <Text
-                  key={item.type}
-                  className={`text-sm ${
-                    item.present === null
-                      ? 'text-amber-700'
-                      : item.present === false
-                        ? 'text-gray-600'
-                        : item.accepted
-                          ? 'text-green-700'
-                          : 'text-red-500'
-                  }`}
-                >
-                  {item.present === null
-                    ? '•'
-                    : item.present === false
-                      ? '–'
-                      : item.accepted
-                        ? '✓'
-                        : '✗'}{' '}
-                  {item.label}
-                  {item.present === null
-                    ? ' (presence not answered)'
-                    : item.present === false
-                      ? ' (not present)'
-                      : item.accepted
-                        ? (item.image?.qualityAssessment?.score ? ` (score ${item.image.qualityAssessment.score})` : '')
-                        : item.image
-                          ? ' (retake required)'
-                          : ' (capture required)'}
-                </Text>
-              ))}
-            </>
-          )}
-        </Section>
 
+              {damagePhotoSummary.map((item) => {
+                const label = item.label;
+                if (item.present === null) {
+                  return (
+                    <CheckLine key={item.type} ok={false} label={label} detail="presence not answered" muted />
+                  );
+                }
+
+                if (item.present === false) {
+                  return <CheckLine key={item.type} ok label={label} detail="not present" muted />;
+                }
+
+                return (
+                  <CheckLine
+                    key={item.type}
+                    ok={item.accepted}
+                    label={label}
+                    detail={
+                      item.accepted
+                        ? item.image?.qualityAssessment?.score
+                          ? `score ${item.image.qualityAssessment.score}`
+                          : 'accepted'
+                        : item.image
+                          ? 'retake required'
+                          : 'capture required'
+                    }
+                  />
+                );
+              })}
+            </View>
+          </>
+        )}
+      </Section>
+
+      <Section
+        title="Wizard answers"
+        icon="list-outline"
+        done={wizardAnswersComplete}
+        onEdit={() => router.push('/(tabs)/wizard')}
+      >
+        {wizardAnswerRows.map((row) => (
+          <DetailRow key={row.label} label={row.label} value={row.value} tone={row.tone} />
+        ))}
+
+        <AppText variant="caption" tone="soft" style={{ marginTop: 8 }}>
+          {LANDLORD_GUIDANCE_SMOKE}
+        </AppText>
+        <AppText variant="caption" tone="soft" style={{ marginTop: 4 }}>
+          {LANDLORD_GUIDANCE_CO}
+        </AppText>
+      </Section>
+
+      {selectedServiceM8Job ? (
         <Section
-          title="Wizard Answers"
-          icon="list-outline"
-          done={wizardAnswersComplete}
-          onEdit={() => router.push('/(tabs)/wizard')}
+          title="Imported ServiceM8 images"
+          icon="cloud-download-outline"
+          done
+          onEdit={() => router.push('/(tabs)/customer')}
         >
-          <Text className="text-sm text-gray-600">
-            Certificate route:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.dataEntryMode.replaceAll('_', ' ')}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Report purpose:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.reportPurpose ? wizard.reportPurpose.replaceAll('_', ' ') : 'Not set'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Installation type:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.installationType ? wizard.installationType.replaceAll('_', ' ') : 'Not set'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Occupancy profile:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.occupancyType ? wizard.occupancyType.replaceAll('_', ' ') : 'Not set'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Supply phase:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.supplyPhase ? wizard.supplyPhase.replaceAll('_', ' ') : 'Not set'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Ancillary supplies:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasOutbuildingsOrAncillarySupplies === null
-                ? 'Not set'
-                : wizard.hasOutbuildingsOrAncillarySupplies
-                  ? 'Yes'
-                  : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Consumer unit material:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.consumerUnitMaterial ? wizard.consumerUnitMaterial.replaceAll('_', ' ') : 'Not set / skipped'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Distribution boards / consumer units:{' '}
-            <Text className="font-medium text-gray-800">{wizard.distributionBoardCount}</Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            RCD protection present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasRcdProtection === null ? 'Not answered' : wizard.hasRcdProtection ? 'Yes' : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            RCBO protection present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasRcboProtection === null ? 'Not answered' : wizard.hasRcboProtection ? 'Yes' : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Surge protection device present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasSurgeProtectionDevice === null
-                ? 'Not answered'
-                : wizard.hasSurgeProtectionDevice
-                  ? 'Yes'
-                  : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            EV charger present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasEvCharger === null ? 'Not answered' : wizard.hasEvCharger ? 'Yes' : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Solar PV present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasSolarPv === null ? 'Not answered' : wizard.hasSolarPv ? 'Yes' : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Battery storage present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasSolarPv !== true
-                ? 'Skipped'
-                : wizard.hasBatteryStorage === null
-                  ? 'Not answered'
-                  : wizard.hasBatteryStorage
-                    ? 'Yes'
-                    : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            AFDD protection present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasAfddProtection === null ? 'Not answered' : wizard.hasAfddProtection ? 'Yes' : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Communal / landlord supplies present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasCommunalOrLandlordSupplies === null
-                ? 'Not answered'
-                : wizard.hasCommunalOrLandlordSupplies
-                  ? 'Yes'
-                  : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Damaged socket / switch / accessory present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasDamagedAccessory === null ? 'Not answered' : wizard.hasDamagedAccessory ? 'Yes' : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Damaged luminaire present:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasDamagedLuminaire === null ? 'Not answered' : wizard.hasDamagedLuminaire ? 'Yes' : 'No'}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Storeys used as living accommodation:{' '}
-            <Text className="font-medium text-gray-800">{wizard.storeyCount}</Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Smoke alarms found: <Text className="font-medium text-gray-800">{wizard.smokeDetectorCount}</Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Storey-based smoke alarm guidance:{' '}
-            <Text className={`font-medium ${smokeAlarmCountMeetsGuidance ? 'text-green-700' : 'text-red-500'}`}>
-              {smokeAlarmCountMeetsGuidance
-                ? `Met (${wizard.smokeDetectorCount}/${minimumRecommendedSmokeAlarms})`
-                : `Not met (${wizard.smokeDetectorCount}/${minimumRecommendedSmokeAlarms})`}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Smoke detector photos:{' '}
-            <Text className={`font-medium ${smokePhotosComplete ? 'text-green-700' : 'text-red-500'}`}>
-              {capturedImages.filter((image) => image.type === 'smoke_detector' && image.qualityAssessment?.isSufficient).length}/{wizard.smokeDetectorCount}
-            </Text>
-          </Text>
-          <Text className="text-sm text-gray-600">
-            Solid fuel appliance:{' '}
-            <Text className="font-medium text-gray-800">
-              {wizard.hasSolidFuelAppliance === null ? 'Not set' : wizard.hasSolidFuelAppliance ? 'Yes' : 'No'}
-            </Text>
-          </Text>
-          <Text className="mt-2 text-xs text-gray-500">{LANDLORD_GUIDANCE_SMOKE}</Text>
-          <Text className="mt-1 text-xs text-gray-500">{LANDLORD_GUIDANCE_CO}</Text>
-          {wizard.hasSolidFuelAppliance === true ? (
-            <>
-              <Text className="text-sm text-gray-600">
-                CO detector tested:{' '}
-                <Text className={`font-medium ${wizard.coDetectorTested ? 'text-green-700' : 'text-red-500'}`}>
-                  {wizard.coDetectorTested ? 'Yes' : 'No'}
-                </Text>
-              </Text>
-              <Text className="text-sm text-gray-600">
-                CO detector photo:{' '}
-                <Text className={`font-medium ${coDetectorPhotoComplete ? 'text-green-700' : 'text-red-500'}`}>
-                  {coDetectorPhotoComplete ? 'Accepted' : 'Missing or insufficient'}
-                </Text>
-              </Text>
-            </>
+          <DetailRow
+            label="Images marked for inclusion"
+            value={String(importedServiceM8Images.length)}
+          />
+          <AppText variant="caption" tone="soft" style={{ marginTop: 4 }}>
+            Imported job photos are attached in the draft payload for consumer unit evidence and
+            audit history.
+          </AppText>
+
+          {importedServiceM8Images.length > 0 ? (
+            <View
+              style={{
+                marginTop: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: palette.line,
+                backgroundColor: palette.surfaceAlt,
+                padding: 12,
+              }}
+            >
+              <AppText variant="bodyStrong" style={{ marginBottom: 8 }}>
+                Included in draft payload
+              </AppText>
+
+              <DetailRow
+                label="Consumer unit evidence"
+                value={String(importedServiceM8EvidenceSummary.importedImageCountForConsumerUnit)}
+              />
+              <DetailRow
+                label="Audit evidence only"
+                value={String(importedServiceM8EvidenceSummary.importedImageCountForAuditEvidence)}
+              />
+
+              <View style={{ marginTop: 8 }}>
+                {importedServiceM8Images.map((image) => (
+                  <View
+                    key={image.attachment.uuid}
+                    style={{
+                      marginBottom: 8,
+                      borderRadius: 10,
+                      backgroundColor: palette.surface,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                    }}
+                  >
+                    <AppText variant="bodyStrong">
+                      {getImportedServiceM8ImageDisplayName(image)}
+                    </AppText>
+                    <AppText variant="caption" tone="soft">
+                      {`Attachment: ${image.attachment.uuid}`}
+                    </AppText>
+                    {image.attachment.mimeType ? (
+                      <AppText variant="caption" tone="soft">
+                        {`Type: ${image.attachment.mimeType}`}
+                      </AppText>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            </View>
           ) : null}
         </Section>
+      ) : null}
 
-        {selectedServiceM8Job ? (
-          <Section title="Imported ServiceM8 Images" icon="cloud-download-outline" done={true} onEdit={() => router.push('/(tabs)/customer')}>
-            <Text className="text-sm text-gray-600">
-              {importedServiceM8Images.length} ServiceM8 image(s) marked for inclusion
-            </Text>
-            <Text className="mt-1 text-xs text-gray-500">
-              Imported job photos are attached in the draft payload for consumer unit evidence and audit history.
-            </Text>
-            {importedServiceM8Images.length > 0 ? (
-              <View className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3">
-                <Text className="mb-2 text-sm font-medium text-blue-900">Included in draft payload</Text>
-                <Text className="text-xs text-blue-800">
-                  Consumer unit evidence: {importedServiceM8EvidenceSummary.importedImageCountForConsumerUnit}
-                </Text>
-                <Text className="text-xs text-blue-800">
-                  Audit evidence only: {importedServiceM8EvidenceSummary.importedImageCountForAuditEvidence}
-                </Text>
-                <View className="mt-2">
-                  {importedServiceM8Images.map((image) => (
-                    <View key={image.attachment.uuid} className="mb-2 rounded-lg bg-white px-3 py-2">
-                      <Text className="text-sm font-medium text-gray-800">
-                        {getImportedServiceM8ImageDisplayName(image)}
-                      </Text>
-                      <Text className="text-xs text-gray-500">Attachment: {image.attachment.uuid}</Text>
-                      {image.attachment.mimeType ? (
-                        <Text className="text-xs text-gray-500">Type: {image.attachment.mimeType}</Text>
-                      ) : null}
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-          </Section>
-        ) : null}
+      <Section
+        title="All captured photos"
+        icon="images-outline"
+        done={capturedImages.length > 0}
+        onEdit={() => router.push('/(tabs)/capture')}
+      >
+        <DetailRow label="Images captured" value={String(capturedImages.length)} />
+        <AppText variant="caption" tone="soft" style={{ marginTop: 4 }}>
+          Only photos that pass the in-app quality check count toward required evidence.
+        </AppText>
+      </Section>
 
-        <Section
-          title="All Captured Photos"
-          icon="images-outline"
-          done={capturedImages.length > 0}
-          onEdit={() => router.push('/(tabs)/capture')}
-        >
-          <Text className="text-sm text-gray-600">{capturedImages.length} image(s) captured</Text>
-          <Text className="mt-1 text-xs text-gray-500">
-            Only photos that pass the in-app quality check count toward required evidence.
-          </Text>
+      {analysisResult ? (
+        <Section title="AI analysis" icon="analytics-outline" done>
+          <DetailRow label="Main switch" value={String(analysisResult.mainSwitchRating)} />
+          <DetailRow label="Circuits" value={String(analysisResult.numberOfCircuits)} />
+          <DetailRow label="Earthing" value={String(analysisResult.earthingArrangement)} />
         </Section>
+      ) : null}
 
-        {analysisResult && (
-          <Section title="AI Analysis" icon="analytics-outline" done={true}>
-            <Text className="text-sm text-gray-600">
-              Main switch: <Text className="font-medium text-gray-800">{analysisResult.mainSwitchRating}</Text>
-            </Text>
-            <Text className="text-sm text-gray-600">
-              Circuits: <Text className="font-medium text-gray-800">{analysisResult.numberOfCircuits}</Text>
-            </Text>
-            <Text className="text-sm text-gray-600">
-              Earthing: <Text className="font-medium text-gray-800">{analysisResult.earthingArrangement}</Text>
-            </Text>
-          </Section>
-        )}
+      {!ready ? (
+        <Callout tone="warning">
+          Complete every mandatory wizard answer and, when using guided or hybrid capture, retake
+          any insufficient required photos before submitting the draft certificate.
+        </Callout>
+      ) : null}
 
-        {!ready && (
-          <View className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <Text className="text-sm font-medium text-amber-700">
-              Complete every mandatory wizard answer and, when using guided or hybrid capture, retake any insufficient required photos before submitting the draft certificate.
-            </Text>
-          </View>
-        )}
-
-        <TouchableOpacity
-          className={`mt-2 items-center rounded-xl py-4 ${ready ? 'bg-brand' : 'bg-gray-300'}`}
-          onPress={handleSubmit}
+      <View style={{ marginTop: 8 }}>
+        <Button
+          label={submitting ? 'Creating draft…' : 'Create draft certificate'}
+          icon="checkmark-circle-outline"
+          size="large"
+          loading={submitting}
           disabled={!ready || submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text className={`text-base font-bold ${ready ? 'text-white' : 'text-gray-500'}`}>
-              Create Draft Certificate
-            </Text>
-          )}
-        </TouchableOpacity>
+          onPress={handleSubmit}
+          block
+        />
       </View>
     </ScrollView>
   );
@@ -778,27 +778,94 @@ export default function ReviewScreen() {
 
 interface SectionProps {
   title: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   done: boolean;
   onEdit?: () => void;
   children: React.ReactNode;
 }
 
+/** Review block: status icon, title, and a single Edit affordance. */
 function Section({ title, icon, done, onEdit, children }: SectionProps) {
+  const { palette } = useTheme();
+
   return (
-    <View className="mb-4 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-      <View className="mb-2 flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2">
-          <Ionicons name={icon as never} size={18} color={done ? '#16a34a' : '#9ca3af'} />
-          <Text className="font-semibold text-gray-700">{title}</Text>
+    <Card style={{ marginBottom: 14 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 10,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+          <Ionicons name={icon} size={18} color={done ? palette.success : palette.inkSoft} />
+          <AppText variant="bodyStrong">{title}</AppText>
         </View>
-        {onEdit && (
-          <TouchableOpacity onPress={onEdit}>
-            <Text className="text-sm font-medium text-brand">Edit</Text>
-          </TouchableOpacity>
-        )}
+
+        {onEdit ? (
+          <Button label="Edit" variant="ghost" size="small" onPress={onEdit} />
+        ) : null}
       </View>
+
       {children}
+    </Card>
+  );
+}
+
+interface DetailRowProps {
+  label: string;
+  value: string;
+  tone?: 'success' | 'danger';
+}
+
+/** Label/value pair used throughout the review checklist. */
+function DetailRow({ label, value, tone }: DetailRowProps) {
+  const { palette } = useTheme();
+  const valueColour =
+    tone === 'success' ? palette.success : tone === 'danger' ? palette.danger : palette.ink;
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: 12,
+        paddingVertical: 3,
+      }}
+    >
+      <AppText variant="caption" tone="muted" style={{ flex: 1 }}>
+        {label}
+      </AppText>
+      <AppText variant="caption" style={{ flex: 1, textAlign: 'right', color: valueColour }}>
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+interface CheckLineProps {
+  ok: boolean;
+  label: string;
+  detail: string;
+  muted?: boolean;
+}
+
+/** One evidence line: tick or cross, the requirement, and its state. */
+function CheckLine({ ok, label, detail, muted = false }: CheckLineProps) {
+  const { palette } = useTheme();
+  const colour = muted ? palette.inkSoft : ok ? palette.success : palette.danger;
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 3 }}>
+      <Ionicons name={ok ? 'checkmark-circle' : 'close-circle'} size={16} color={colour} />
+      <AppText variant="caption" style={{ flex: 1, color: palette.ink }}>
+        {label}
+      </AppText>
+      <AppText variant="caption" style={{ color: colour }}>
+        {detail}
+      </AppText>
     </View>
   );
 }
