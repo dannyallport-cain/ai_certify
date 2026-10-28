@@ -19,7 +19,7 @@ export type Plan3DSurfaceKind = 'floor' | 'ceiling' | 'wall' | 'opening';
  * Render order group. `base` is drawn first (floor and grid), `structure` is depth sorted
  * (walls, openings, ceiling) and `overlay` is drawn last (device markers, leaders, labels).
  */
-export type Plan3DLayer = 'base' | 'structure' | 'overlay';
+export type Plan3DLayer = 'base' | 'zone' | 'structure' | 'overlay';
 
 /**
  * Describes a projected surface as an affine image of the unit square.
@@ -167,6 +167,81 @@ export interface Plan3DStats {
 
 export type Plan3DColourScheme = 'blueprint' | 'schematic';
 
+/**
+ * A user-defined fire alarm zone. Zones are closed polygons on the floor plane in captured
+ * world metres, so the same definition renders identically in the plan view, the 3D view and
+ * the hosted viewer.
+ */
+export interface Plan3DZone {
+  id: string;
+  name: string;
+  /** Short code printed on the plan and read out in the legend, e.g. `Z1`. */
+  reference: string;
+  /** Hex colour used for the zone fill, its outline, its label and its legend entry. */
+  colour: string;
+  /** Closed outline in world metres on the x/y plane. */
+  polygon: Plan3DPoint[];
+  notes?: string | null;
+}
+
+/** A zone polygon projected into the viewport, ready to draw. */
+export interface Plan3DZonePolygon {
+  zoneId: string;
+  points: Plan3DPoint[];
+  fill: string;
+  fillOpacity: number;
+  stroke: string;
+  strokeWidth: number;
+  depth: number;
+}
+
+export interface Plan3DZoneDeviceCount {
+  deviceType: FireAlarmDeviceType;
+  label: string;
+  glyph: string;
+  colour: string;
+  count: number;
+}
+
+/**
+ * Per-zone roll-up used by the legend. `deviceCount` is the number of devices whose floor
+ * position falls inside the zone polygon, so overlapping zones are not double counted.
+ */
+export interface Plan3DZoneSummary {
+  zoneId: string;
+  name: string;
+  reference: string;
+  colour: string;
+  areaSquareMeters: number;
+  deviceCount: number;
+  devices: Plan3DZoneDeviceCount[];
+}
+
+/** Company and job details printed with a zone plan. */
+export interface Plan3DLegendCompany {
+  name: string;
+  addressLines: string[];
+  phone: string;
+  email: string;
+  website: string;
+  accreditation: string;
+}
+
+/** Everything a zone plan prints outside the drawing itself. */
+export interface Plan3DLegendConfig {
+  planTitle: string;
+  jobReference: string;
+  siteName: string;
+  siteAddress: string;
+  preparedBy: string;
+  preparedOn: string;
+  revision: string;
+  notes: string;
+  company: Plan3DLegendCompany;
+  showZoneLegend: boolean;
+  showDeviceLegend: boolean;
+}
+
 export interface FireAlarmPlan3D {
   id: string;
   sessionId: string;
@@ -181,6 +256,12 @@ export interface FireAlarmPlan3D {
   markers: Plan3DMarker[];
   texts: Plan3DText[];
   legend: Plan3DLegendEntry[];
+  /** Projected zone fills, drawn above the floor and below the walls. */
+  zones: Plan3DZonePolygon[];
+  /** One roll-up per zone, in the order the zones were defined. */
+  zoneSummary: Plan3DZoneSummary[];
+  /** Devices that fall outside every zone; the legend calls these out rather than hiding them. */
+  unassignedDeviceCount: number;
   stats: Plan3DStats;
   warnings: string[];
 }
@@ -192,6 +273,8 @@ export interface FireAlarmPlan3DOptions {
   selectedDeviceId?: string | null;
   /** Fallback ceiling height used when the capture does not report one. */
   wallHeightMeters?: number;
+  /** Colour coded zones to draw and summarise. Omit or pass an empty array for no zoning. */
+  zones?: Plan3DZone[];
 }
 
 export interface FireAlarmPlan3DInput {

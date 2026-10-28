@@ -472,6 +472,47 @@ export const fireAlarmRoomCaptures = pgTable(
   })
 );
 
+/**
+ * A published zone plan: the captured session plus the user's zones and legend, addressed by an
+ * unguessable public token. The row is self-contained so the hosted viewer never needs to read
+ * the capture tables, and the token can be revoked without touching anything else.
+ */
+export const fireAlarmZonePlans = pgTable(
+  'fire_alarm_zone_plans',
+  {
+    id: serial('id').primaryKey(),
+    teamId: integer('team_id')
+      .notNull()
+      .references(() => teams.id),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    captureId: integer('capture_id').references(() => fireAlarmRoomCaptures.id, {
+      onDelete: 'set null',
+    }),
+    externalSessionId: varchar('external_session_id', { length: 255 }).notNull(),
+    shareToken: varchar('share_token', { length: 64 }).notNull(),
+    title: varchar('title', { length: 255 }),
+    session: json('session').notNull(),
+    zones: json('zones').notNull(),
+    legend: json('legend').notNull(),
+    editEnabled: boolean('edit_enabled').notNull().default(true),
+    emailedTo: varchar('emailed_to', { length: 320 }),
+    emailedAt: timestamp('emailed_at'),
+    lastViewedAt: timestamp('last_viewed_at'),
+    revokedAt: timestamp('revoked_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    shareTokenIdx: uniqueIndex('fire_alarm_zone_plans_share_token_idx').on(table.shareToken),
+    teamIdIdx: index('fire_alarm_zone_plans_team_id_idx').on(table.teamId),
+    sessionIdx: index('fire_alarm_zone_plans_team_session_idx').on(
+      table.teamId,
+      table.externalSessionId,
+    ),
+    createdAtIdx: index('fire_alarm_zone_plans_created_at_idx').on(table.createdAt),
+  })
+);
+
 export const fireAlarmCaptureDevices = pgTable(
   'fire_alarm_capture_devices',
   {
@@ -905,6 +946,8 @@ export type CertificateTemplate = typeof certificateTemplates.$inferSelect;
 export type NewCertificateTemplate = typeof certificateTemplates.$inferInsert;
 export type FireAlarmRoomCapture = typeof fireAlarmRoomCaptures.$inferSelect;
 export type NewFireAlarmRoomCapture = typeof fireAlarmRoomCaptures.$inferInsert;
+export type FireAlarmZonePlan = typeof fireAlarmZonePlans.$inferSelect;
+export type NewFireAlarmZonePlan = typeof fireAlarmZonePlans.$inferInsert;
 export type FireAlarmCaptureDevice = typeof fireAlarmCaptureDevices.$inferSelect;
 export type NewFireAlarmCaptureDevice = typeof fireAlarmCaptureDevices.$inferInsert;
 export type ReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferSelect;

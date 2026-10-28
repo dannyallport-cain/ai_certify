@@ -16,6 +16,7 @@ import Plan3DCanvas from '@/components/roomplan/Plan3DCanvas';
 import Plan3DDisplayControls from '@/components/roomplan/Plan3DDisplayControls';
 import Plan3DSummary from '@/components/roomplan/Plan3DSummary';
 import Plan3DViewControls from '@/components/roomplan/Plan3DViewControls';
+import SendZonePlanModal from '@/components/roomplan/SendZonePlanModal';
 import { usePlan3DOrbitCamera } from '@/components/roomplan/usePlan3DOrbitCamera';
 import {
   DEFAULT_PLAN3D_WALL_HEIGHT_METERS,
@@ -90,6 +91,7 @@ export default function RoomPlanPlanScreen() {
   const [view, setView] = useState<Plan3DViewState>(createInitialViewState);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [isSendOpen, setIsSendOpen] = useState(false);
 
   // The camera is the one piece of view state a gesture can change, so the hook owns it and the
   // projection chips and steppers write back through setCamera.
@@ -340,6 +342,22 @@ export default function RoomPlanPlanScreen() {
               onChange={(patch) => setView((current) => ({ ...current, ...patch }))}
               onShareSvg={() => void handleShareSvg()}
             />
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Send zone plan link"
+              onPress={() => setIsSendOpen(true)}
+              className="mt-4 flex-row items-center justify-center rounded-2xl bg-[#0D47A1] px-4 py-4"
+            >
+              <Ionicons name="paper-plane-outline" size={18} color="#FFFFFF" />
+              <Text className="ml-2 text-center text-sm font-semibold text-white">
+                Send zone plan link
+              </Text>
+            </Pressable>
+            <Text className="mt-2 text-center text-[11px] text-[#718096]">
+              Hosts the plan in a browser so a client can open it, draw colour coded zones and add
+              their company details to the legend.
+            </Text>
           </View>
 
           <View className="mt-4 rounded-[28px] border border-[#E0E6ED] bg-white p-5">
@@ -384,6 +402,12 @@ export default function RoomPlanPlanScreen() {
           </View>
         </>
       ) : null}
+
+      <SendZonePlanModal
+        session={session}
+        visible={isSendOpen}
+        onClose={() => setIsSendOpen(false)}
+      />
     </ScrollView>
   );
 }

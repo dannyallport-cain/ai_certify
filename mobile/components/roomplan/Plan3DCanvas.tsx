@@ -7,11 +7,14 @@ import Plan3DMarkerLayer from './Plan3DMarkerLayer';
 import Plan3DPolygonLayer from './Plan3DPolygonLayer';
 import Plan3DSegmentLayer from './Plan3DSegmentLayer';
 import Plan3DTextLayer from './Plan3DTextLayer';
+import Plan3DZoneLayer from './Plan3DZoneLayer';
 
 interface Plan3DCanvasProps {
   plan: FireAlarmPlan3D;
   onSelectDevice?: (deviceId: string) => void;
   selectedDeviceId?: string | null;
+  /** Highlights one zone with a solid outline, used by the zone editor. */
+  selectedZoneId?: string | null;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -26,6 +29,7 @@ export default function Plan3DCanvas({
   plan,
   onSelectDevice,
   selectedDeviceId,
+  selectedZoneId,
   style,
 }: Plan3DCanvasProps) {
   const palette = getPlan3DPalette(plan.colourScheme);
@@ -52,6 +56,7 @@ export default function Plan3DCanvas({
     >
       <Plan3DPolygonLayer polygons={basePolygons} />
       <Plan3DSegmentLayer segments={baseSegments} />
+      <Plan3DZoneLayer zones={plan.zones} selectedZoneId={selectedZoneId} />
       <Plan3DPolygonLayer polygons={structurePolygons} />
       <Plan3DSegmentLayer segments={structureSegments} />
       <Plan3DSegmentLayer segments={overlaySegments} />

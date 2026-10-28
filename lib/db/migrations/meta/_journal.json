@@ -113,6 +113,13 @@
       "when": 1790784000000,
       "tag": "0017_add_servicem8_client_detail",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791000000000,
+      "tag": "20260428120000_add_fire_alarm_zone_plans",
+      "breakpoints": true
     }
   ]
 }

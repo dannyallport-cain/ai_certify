@@ -6,6 +6,8 @@ export type {
   Plan3DCamera,
   Plan3DColourScheme,
   Plan3DLayer,
+  Plan3DLegendCompany,
+  Plan3DLegendConfig,
   Plan3DLegendEntry,
   Plan3DMarker,
   Plan3DMounting,
@@ -20,6 +22,10 @@ export type {
   Plan3DText,
   Plan3DVertex,
   Plan3DViewport,
+  Plan3DZone,
+  Plan3DZoneDeviceCount,
+  Plan3DZonePolygon,
+  Plan3DZoneSummary,
 } from './plan3d-types';
 
 export type {
@@ -33,7 +39,7 @@ export type {
 
 export type { Plan3DPalette, Plan3DDeviceStyle } from './palette';
 
-export type { FireAlarmPlan3DSvgOptions } from './svg';
+export type { FireAlarmPlan3DSvgOptions } from './plan-svg';
 
 export {
   generateFireAlarmPlan3D,
@@ -43,7 +49,47 @@ export {
 export {
   renderFireAlarmPlan3DSvg,
   renderFireAlarmPlan3DSvgDataUri,
-} from './svg';
+} from './plan-svg';
+
+export {
+  MIN_ZONE_AREA_SQUARE_METERS,
+  PLAN3D_ZONE_COLOURS,
+  createZoneId,
+  createZoneReference,
+  getZoneColour,
+  normaliseZonePolygon,
+  rectangleZonePolygon,
+  sanitiseZones,
+  zoneAreaSquareMeters,
+  zoneCentroid,
+} from './zone-model';
+
+export {
+  assignDevicesToZones,
+  buildZonePolygons,
+  buildZoneSummaries,
+  buildZoneTexts,
+  roomsBounds,
+  zoneBounds,
+} from './zone-scene';
+
+export type { WorldBounds2D } from './zone-scene';
+
+export {
+  createZoneFromRectangle,
+  createZoneFromRoom,
+  createZonesFromRooms,
+  findZoneAtPoint,
+  findZoneVertexIndex,
+  renameZone,
+  snapPointToGrid,
+} from './zone-presets';
+
+export {
+  DEFAULT_LEGEND_CONFIG,
+  isLegendCompanyEmpty,
+  normaliseLegendConfig,
+} from './legend-config';
 
 export {
   getPlan3DDeviceStyle,

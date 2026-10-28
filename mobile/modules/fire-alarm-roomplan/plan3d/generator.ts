@@ -6,7 +6,7 @@ import type {
   Plan3DStats,
   Plan3DVertex,
 } from './plan3d-types';
-import { boundsOfVertices, finaliseBounds } from './geometry';
+import { boundsOfVertices, createVertex, finaliseBounds } from './geometry';
 import { getPlan3DPalette } from './palette';
 import { resolvePlan3DRooms } from './rooms';
 import {
@@ -23,6 +23,12 @@ import {
   collectDeviceAnchorVertices,
 } from './annotations';
 import { buildPlan3DPolygons, buildPlan3DSegments } from './scene';
+import {
+  buildZonePolygons,
+  buildZoneSummaries,
+  buildZoneTexts,
+} from './zone-scene';
+import { sanitiseZones } from './zone-model';
 import {
   createPlan3DViewport,
   emptyProjectedBounds,
@@ -57,6 +63,7 @@ export function generateFireAlarmPlan3D(
   const camera = resolvePlan3DCamera(options.camera, options.wallHeightMeters);
   const resolution = resolvePlan3DRooms(session, camera.wallHeightMeters);
   const rooms = resolution.rooms;
+  const zones = sanitiseZones(options.zones);
 
   const footprintBounds = finaliseBounds(
     boundsOfVertices(rooms.reduce<Plan3DVertex[]>((all, room) => all.concat(room.footprint), [])),
@@ -100,6 +107,12 @@ export function generateFireAlarmPlan3D(
     collectDeviceAnchorVertices(rooms).forEach(consider);
   }
 
+  // Zones are user drawn, so nothing guarantees they stay inside the captured footprint. Fitting
+  // the viewport to them as well means a zone that overhangs a wall is still drawn in full.
+  zones.forEach((zone) => {
+    zone.polygon.forEach((point) => consider(createVertex(point.x, point.y, 0)));
+  });
+
   const viewport = createPlan3DViewport(
     { padding: DEFAULT_VIEWPORT_PADDING, ...options.viewport },
     rawBounds,
@@ -118,7 +131,18 @@ export function generateFireAlarmPlan3D(
       })
     : [];
 
-  const texts = buildPlan3DTexts({ rooms, markers, camera, viewport, palette });
+  const zonePolygons = buildZonePolygons({
+    zones,
+    camera,
+    viewport,
+    schematic: colourScheme === 'schematic',
+  });
+  const { summaries: zoneSummary, unassignedDeviceCount } = buildZoneSummaries(zones, rooms);
+
+  const texts = [
+    ...buildPlan3DTexts({ rooms, markers, camera, viewport, palette }),
+    ...buildZoneTexts({ zones, camera, viewport }),
+  ].sort((left, right) => right.depth - left.depth);
   const legend = buildPlan3DLegend(rooms);
 
   const drawnVertices = surfaces.reduce<Plan3DVertex[]>(
@@ -157,6 +181,12 @@ export function generateFireAlarmPlan3D(
     );
   }
 
+  if (zones.length > 0 && unassignedDeviceCount > 0) {
+    warnings.push(
+      `${unassignedDeviceCount} device(s) fall outside every zone. Resize the zones or check the device positions.`,
+    );
+  }
+
   return {
     id: createPlanId(session.id),
     sessionId: session.id,
@@ -171,6 +201,9 @@ export function generateFireAlarmPlan3D(
     markers,
     texts,
     legend,
+    zones: zonePolygons,
+    zoneSummary,
+    unassignedDeviceCount,
     stats,
     warnings: uniqueWarnings(warnings),
   };

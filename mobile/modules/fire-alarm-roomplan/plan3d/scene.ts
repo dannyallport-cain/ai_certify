@@ -15,8 +15,9 @@ import { mapProjectedPoint, projectVertex } from './projection';
 
 const LAYER_ORDER: Record<Plan3DLayer, number> = {
   base: 0,
-  structure: 1,
-  overlay: 2,
+  zone: 1,
+  structure: 2,
+  overlay: 3,
 };
 
 interface SurfaceStyle {

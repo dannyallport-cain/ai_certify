@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["modules/fire-alarm-roomplan/**/*.ts"],
+  "exclude": ["node_modules"]
+}

@@ -27,6 +27,8 @@ const MIN_WALL_HEIGHT_METERS = 1.8;
 const MAX_WALL_HEIGHT_METERS = 12;
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 4;
+/** Below this the floor plane is edge-on and cannot be unprojected. */
+const FLOOR_PROJECTION_MIN_SINE = 0.08;
 
 const PROJECTION_PRESETS: Record<Plan3DProjection, { yawDegrees: number; pitchDegrees: number }> = {
   isometric: { yawDegrees: 45, pitchDegrees: 30 },
@@ -180,5 +182,43 @@ export function mapProjectedPoint(point: ProjectedPoint, viewport: Plan3DViewpor
   return {
     x: point.x * viewport.scale + viewport.offsetX,
     y: point.y * viewport.scale + viewport.offsetY,
+  };
+}
+
+/**
+ * Inverse of `mapProjectedPoint` for points on the floor plane (`z = 0`).
+ *
+ * Returns the world x/y position under a viewport pixel, which is what a zone editor needs in
+ * order to turn a drag gesture into metres. The mapping is only invertible when the camera sees
+ * the floor plane, so a view looking edge-on at the floor returns `null` and callers must fall
+ * back to the plan view.
+ */
+export function unprojectFloorPoint(
+  point: Plan3DPoint,
+  camera: Plan3DCamera,
+  viewport: Plan3DViewport,
+): Plan3DPoint | null {
+  const pitchRadians = degreesToRadians(camera.pitchDegrees);
+
+  if (Math.abs(Math.sin(pitchRadians)) < FLOOR_PROJECTION_MIN_SINE) {
+    return null;
+  }
+
+  const projected = {
+    x: (point.x - viewport.offsetX) / viewport.scale,
+    y: (point.y - viewport.offsetY) / viewport.scale,
+  };
+
+  // projectVertex maps (x, y, 0) to (rotatedX, sin(pitch) * rotatedY). Invert the two steps.
+  const rotatedX = projected.x;
+  const rotatedY = projected.y / Math.sin(pitchRadians);
+
+  const yawRadians = degreesToRadians(camera.yawDegrees);
+  const cosYaw = Math.cos(yawRadians);
+  const sinYaw = Math.sin(yawRadians);
+
+  return {
+    x: rotatedX * cosYaw + rotatedY * sinYaw,
+    y: -rotatedX * sinYaw + rotatedY * cosYaw,
   };
 }

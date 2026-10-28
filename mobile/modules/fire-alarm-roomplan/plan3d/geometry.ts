@@ -269,6 +269,67 @@ export function quadFromProjectedPoints(points: Plan3DPoint[]): Plan3DQuad | nul
   return { origin: { x: origin.x, y: origin.y }, u, v };
 }
 
+/** Axis-aligned bounds of a set of 2D points. Returns a zero box for an empty input. */
+export function boundsOfPoints2D(points: { x: number; y: number }[]): {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+} {
+  if (points.length === 0) {
+    return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+  }
+
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  points.forEach((point) => {
+    minX = Math.min(minX, point.x);
+    maxX = Math.max(maxX, point.x);
+    minY = Math.min(minY, point.y);
+    maxY = Math.max(maxY, point.y);
+  });
+
+  return { minX, maxX, minY, maxY };
+}
+
+/**
+ * Even-odd ray cast. Points exactly on an edge are not guaranteed either way, which is
+ * acceptable here: a device sitting precisely on a zone boundary is a drawing mistake, and
+ * the legend shows the zone totals so the omission is visible.
+ */
+export function pointInPolygon(
+  point: { x: number; y: number },
+  polygon: { x: number; y: number }[],
+): boolean {
+  if (polygon.length < 3) {
+    return false;
+  }
+
+  let inside = false;
+
+  for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index, index += 1) {
+    const current = polygon[index];
+    const prior = polygon[previous];
+    const straddles = current.y > point.y !== prior.y > point.y;
+
+    if (!straddles) {
+      continue;
+    }
+
+    const intersectionX =
+      ((prior.x - current.x) * (point.y - current.y)) / (prior.y - current.y) + current.x;
+
+    if (point.x < intersectionX) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
 export function projectPointOnSegment(
   point: { x: number; y: number },
   start: { x: number; y: number },
