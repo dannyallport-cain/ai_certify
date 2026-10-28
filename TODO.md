@@ -19,3 +19,25 @@
   - [ ] render selected approval schemes from provided metadata in all relevant outputs
   - [ ] ensure company logo is rendered universally in report/certificate headers
 - [ ] Run targeted validation and summarize changes
+## Zone plans — hosted viewer (shipped)
+
+- [x] Colour coded zones drawn on the plan (drag to create, rename, recolour, duplicate, delete)
+- [x] Editable legend: plan title, site, job reference, revision, prepared by/on, notes
+- [x] Company block (name, address, phone, email, website, accreditation) printed with the drawing
+- [x] Separate zone key and device key in the exported SVG
+- [x] Hosted viewer at `/plan/[token]`, noindex, token is the credential
+- [x] Public read endpoint `GET /api/zone-plans/[token]` and save endpoint `PATCH` (403 when the link is view only)
+- [x] Publish from the mobile plan screen ("Send zone plan link"), optional recipient email, editable toggle
+- [x] Email delivery via Brevo with the viewer link
+- [x] `fire_alarm_zone_plans` table and `20260428120000_add_fire_alarm_zone_plans` migration
+
+## Zone plans — next
+
+- [ ] GLB/glTF export of the completed plan
+  - [ ] Extrude room footprints into wall solids (openings cut in), device primitives on their mountings
+  - [ ] Build the scene from `Plan3DRoom` / `Plan3DPlacedDevice` so the web and mobile drawings stay the single source of truth
+  - [ ] Emit GLB for viewing (`<model-viewer>` on a page, or a downloadable file) and pair with USDZ for AR Quick Look on iOS
+  - [ ] Include the zone fills as floor materials so compartments read in 3D
+  - [ ] Serve the artefact from the existing token route so a shared link can offer "download 3D model"
+- [ ] Mobile-side zone authoring (the hosted viewer already draws zones; the phone currently publishes with an empty zone set)
+- [ ] PDF export of the zone plan with the company block and both keys, for the certificate pack
