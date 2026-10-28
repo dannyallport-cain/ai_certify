@@ -10,8 +10,25 @@
 /.github
 
 # Native mobile app — built and shipped with Xcode/EAS, never part of the web app.
-# No web module imports from it (checked: app/, lib/, components/, types/).
-/mobile
+#
+# /mobile/modules is the exception: the web zone-plan viewer imports the plan
+# geometry from it, so the runtime-heavy directories are excluded individually
+# instead of the whole tree. Excluding the whole tree breaks the web build with
+# "Module not found: @/mobile/modules/fire-alarm-roomplan/...".
+/mobile/app
+/mobile/components
+/mobile/services
+/mobile/scripts
+/mobile/assets
+/mobile/ios
+/mobile/android
+/mobile/build
+/mobile/node_modules
+/mobile/plugins
+/mobile/lib
+/mobile/.expo
+/mobile/dist
+/mobile/package-lock.json
 
 # Python ML pipeline and the Railway workers run as separate services.
 /ml
