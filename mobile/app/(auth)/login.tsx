@@ -8,11 +8,11 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { KeyboardAwareScreen } from '@/components/keyboard/KeyboardAwareScreen';
 import { BiometricGlyph } from '@/components/auth/BiometricGlyph';
 import { useAuthLock } from '@/components/auth/useAuthLock';
+import { describeBuild } from '@/lib/build-info';
 import { login, saveToken } from '@/services/api';
 
 const BRAND_BLUE = '#0D47A1';
@@ -35,7 +35,9 @@ export default function LoginScreen() {
     returnToBiometricUnlock,
   } = useAuthLock();
 
-  const buildLabel = Constants.expoConfig?.ios?.buildNumber;
+  // Shown on both the sign-in and the unlock view, so whoever is holding the phone can say
+  // exactly which build they are running.
+  const buildLine = describeBuild();
 
   function offerBiometricUnlock(accountEmail: string) {
     if (isBiometricEnabled || !capability.isSupported || !capability.isEnrolled) {
@@ -113,9 +115,7 @@ export default function LoginScreen() {
         </TouchableOpacity>
       ) : null}
 
-      {buildLabel ? (
-        <Text className="mt-2 text-center text-[11px] text-[#A0AEC0]">Build {buildLabel}</Text>
-      ) : null}
+      <Text className="mt-2 text-center text-[11px] text-[#A0AEC0]">{buildLine}</Text>
     </View>
   );
 

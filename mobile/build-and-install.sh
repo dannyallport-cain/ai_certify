@@ -364,7 +364,23 @@ build_and_install() {
 
     rm -rf "$DERIVED_DATA_DIR"
 
-    NODE_BINARY="$(command -v node)" xcodebuild \
+    # Stamp the bundle so the login screen can state which build is installed. EXPO_PUBLIC_*
+    # values are inlined by Metro at bundle time, so this is the time the app was built rather
+    # than the time it was launched. The number is read from the native Info.plist because that
+    # is what devicectl and the App Store report, and the label must not disagree with them.
+    BUILD_NUMBER_VALUE="$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$IOS_DIR/$WORKSPACE_NAME/Info.plist" 2>/dev/null || true)"
+
+    if [ -z "$BUILD_NUMBER_VALUE" ]; then
+        BUILD_NUMBER_VALUE="$("$(command -v node)" -p "require('$PROJECT_ROOT/app.json').expo.ios.buildNumber" 2>/dev/null || true)"
+    fi
+
+    BUILD_TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    log_info "Stamping build ${BUILD_NUMBER_VALUE:-unknown} at $BUILD_TIMESTAMP"
+
+    NODE_BINARY="$(command -v node)" \
+        EXPO_PUBLIC_BUILD_NUMBER="$BUILD_NUMBER_VALUE" \
+        EXPO_PUBLIC_BUILD_AT="$BUILD_TIMESTAMP" \
+        xcodebuild \
         -workspace "$WORKSPACE" \
         -scheme "$SCHEME_NAME" \
         -configuration "$CONFIGURATION" \

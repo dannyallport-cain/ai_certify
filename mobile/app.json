@@ -51,7 +51,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aicertify.field",
-      "buildNumber": "10",
+      "buildNumber": "11",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocalNetworkUsageDescription": "AI Certify connects to a local development server on your network while testing.",
