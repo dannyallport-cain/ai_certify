@@ -15,8 +15,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import Plan3DCanvas from '@/components/roomplan/Plan3DCanvas';
 import Plan3DDisplayControls from '@/components/roomplan/Plan3DDisplayControls';
-import Plan3DSummary from '@/components/roomplan/Plan3DSummary';
-import Plan3DViewControls from '@/components/roomplan/Plan3DViewControls';
 import SendZonePlanModal from '@/components/roomplan/SendZonePlanModal';
 import ZoneEditorPanel from '@/components/roomplan/ZoneEditorPanel';
 import { usePlan3DOrbitCamera } from '@/components/roomplan/usePlan3DOrbitCamera';
@@ -50,7 +48,7 @@ const CANVAS_ASPECT_RATIO = 0.82;
 const CANVAS_PADDING = 26;
 const SVG_EXPORT_SCALE = 3;
 const INITIAL_PROJECTION: Plan3DProjection = 'isometric';
-/** Matches Plan3DViewControls so its stepper range is not silently clamped. */
+/** Keeps the gesture from flipping past level or dropping to a flat, unreadable elevation. */
 const MIN_CAMERA_PITCH_DEGREES = 5;
 const MAX_CAMERA_PITCH_DEGREES = 89;
 
@@ -225,6 +223,17 @@ export default function RoomPlanPlanScreen() {
         setView((state) => ({ ...state, projection: 'top-down' }));
         orbit.setCamera({ yawDegrees: 0, pitchDegrees: 90, zoom: 1 });
         zonesEditor.selectZone(null);
+      } else {
+        // There are no projection chips, so leaving zone mode has to put the 3D view back or the
+        // screen would stay stuck in plan view.
+        const preset = getPlan3DProjectionPreset(INITIAL_PROJECTION);
+
+        setView((state) => ({ ...state, projection: INITIAL_PROJECTION }));
+        orbit.setCamera({
+          yawDegrees: preset.yawDegrees,
+          pitchDegrees: preset.pitchDegrees,
+          zoom: 1,
+        });
       }
 
       return next;
@@ -366,21 +375,15 @@ export default function RoomPlanPlanScreen() {
               <Text className="text-[11px] text-[#718096]">
                 {plan.stats.roomCount} room(s) · {plan.stats.deviceCount} device(s)
               </Text>
-              <View className="flex-row items-center gap-2">
-                <Text className="text-[11px] text-[#718096]">
-                  yaw {Math.round(orbit.camera.yawDegrees)}° · tilt{' '}
-                  {Math.round(orbit.camera.pitchDegrees)}° · zoom {orbit.camera.zoom.toFixed(1)}×
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Reset the 3D view"
-                  onPress={resetView}
-                  hitSlop={8}
-                  className="h-7 w-7 items-center justify-center rounded-full border border-[#E0E6ED] bg-white"
-                >
-                  <Ionicons name="refresh" size={13} color="#334155" />
-                </Pressable>
-              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Reset the 3D view"
+                onPress={resetView}
+                hitSlop={8}
+                className="h-7 w-7 items-center justify-center rounded-full border border-[#E0E6ED] bg-white"
+              >
+                <Ionicons name="refresh" size={13} color="#334155" />
+              </Pressable>
             </View>
             <Text className="w-full px-2 pb-1 text-[11px] text-[#94A3B8]">
               {zoneMode
@@ -419,29 +422,6 @@ export default function RoomPlanPlanScreen() {
               onRename={zonesEditor.renameZone}
               onCycleColour={zonesEditor.cycleColour}
               onRemove={zonesEditor.removeZone}
-            />
-          </View>
-
-          <View className="mt-4 rounded-[28px] border border-[#E0E6ED] bg-white p-5">
-            <Text className="mb-4 text-lg font-semibold text-[#1A202C]">Plan summary</Text>
-            <Plan3DSummary plan={plan} />
-          </View>
-
-          <View className="mt-4 rounded-[28px] border border-[#E0E6ED] bg-white p-5">
-            <Text className="mb-4 text-lg font-semibold text-[#1A202C]">View</Text>
-            <Plan3DViewControls
-              projection={view.projection}
-              yawDegrees={orbit.camera.yawDegrees}
-              pitchDegrees={orbit.camera.pitchDegrees}
-              wallHeightMeters={view.wallHeightMeters}
-              onProjectionChange={(projection) =>
-                setView((current) => ({ ...current, projection }))
-              }
-              onYawChange={(yawDegrees) => orbit.setCamera({ yawDegrees })}
-              onPitchChange={(pitchDegrees) => orbit.setCamera({ pitchDegrees })}
-              onWallHeightChange={(wallHeightMeters) =>
-                setView((current) => ({ ...current, wallHeightMeters }))
-              }
             />
           </View>
 

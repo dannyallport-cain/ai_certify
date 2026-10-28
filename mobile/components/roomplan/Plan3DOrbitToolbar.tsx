@@ -1,10 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Plan3DOrbitToolbarProps {
-  yawDegrees: number;
-  pitchDegrees: number;
-  zoom: number;
   onRotateLeft: () => void;
   onRotateRight: () => void;
   onTiltUp: () => void;
@@ -49,9 +46,6 @@ function ToolButton({
  * gloves or with one hand still needs a way to aim without a two-finger gesture.
  */
 export default function Plan3DOrbitToolbar({
-  yawDegrees,
-  pitchDegrees,
-  zoom,
   onRotateLeft,
   onRotateRight,
   onTiltUp,
@@ -76,11 +70,6 @@ export default function Plan3DOrbitToolbar({
           <ToolButton icon="refresh" label="Reset the view" onPress={onReset} tone="accent" />
         </View>
       </View>
-
-      <Text className="mt-2 text-[11px] text-[#64748B]">
-        Rotation {Math.round(yawDegrees)}° · tilt {Math.round(pitchDegrees)}° · zoom{' '}
-        {zoom.toFixed(1)}×
-      </Text>
     </View>
   );
 }

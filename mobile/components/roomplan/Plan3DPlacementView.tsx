@@ -191,9 +191,6 @@ export default function Plan3DPlacementView({
 
       <View style={{ marginTop: 12 }}>
         <Plan3DOrbitToolbar
-          yawDegrees={orbit.camera.yawDegrees}
-          pitchDegrees={orbit.camera.pitchDegrees}
-          zoom={orbit.camera.zoom}
           onRotateLeft={() => orbit.rotateBy(-ROTATE_STEP_DEGREES, 0)}
           onRotateRight={() => orbit.rotateBy(ROTATE_STEP_DEGREES, 0)}
           onTiltUp={() => orbit.rotateBy(0, TILT_STEP_DEGREES)}
