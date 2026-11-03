@@ -1,0 +1,10 @@
+{
+  "//": "Smoke tests and tooling. Checked separately from the Next.js app because the app build runs type-check against the root tsconfig, which cannot see mobile/ source (it is not uploaded to Vercel).",
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "plugins": []
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["../node_modules"]
+}

@@ -13,6 +13,8 @@
     "start": "cross-env BROWSERSLIST_IGNORE_OLD_DATA=true PORT=4000 next start -H 0.0.0.0",
     "menu": "pnpm exec tsx scripts/cli-menu.ts",
     "ios:build-and-install": "bash ./mobile/build-and-install.sh",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p scripts/tsconfig.json",
+    "typecheck:scripts": "tsc --noEmit -p scripts/tsconfig.json",
     "verify:detector": "tsx scripts/verify-detector-analysis.ts && tsx --tsconfig mobile/tsconfig.json mobile/scripts/verify-photo-quality.ts",
     "verify:design": "tsx scripts/smoke-design.ts",
     "verify:demo": "tsx scripts/smoke-demo-plan.ts",
