@@ -139,6 +139,11 @@ export function sanitiseZones(zones: Plan3DZone[] | null | undefined): Plan3DZon
         typeof zone.reference === 'string' && zone.reference.trim()
           ? zone.reference.trim()
           : `Z${index + 1}`,
+      // A zone drawn before multi-floor support has no level and belongs to every storey.
+      level:
+        typeof zone.level === 'number' && Number.isFinite(zone.level)
+          ? Math.round(zone.level)
+          : null,
       colour: HEX_COLOUR_PATTERN.test(zone.colour ?? '') ? zone.colour : getZoneColour(index),
       polygon,
       notes: typeof zone.notes === 'string' && zone.notes.trim() ? zone.notes.trim() : null,

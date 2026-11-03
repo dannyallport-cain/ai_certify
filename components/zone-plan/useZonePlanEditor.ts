@@ -60,10 +60,17 @@ export interface ZonePlanEditorInput {
   initialZones: Plan3DZone[];
   initialLegend: Plan3DLegendConfig;
   canEdit: boolean;
+  /** Storey being edited; zones drawn here are tagged with it so they print on that floor only. */
+  level: number | null;
 }
 
-function buildPlan(session: FireAlarmScanSession, zones: Plan3DZone[]): FireAlarmPlan3D {
+function buildPlan(
+  session: FireAlarmScanSession,
+  zones: Plan3DZone[],
+  level: number | null,
+): FireAlarmPlan3D {
   return generateFireAlarmPlan3D(session, {
+    level,
     camera: {
       projection: 'top-down',
       yawDegrees: 0,
@@ -99,7 +106,20 @@ export function useZonePlanEditor(input: ZonePlanEditorInput): ZonePlanEditor {
     JSON.stringify({ zones: input.initialZones, legend: input.initialLegend }),
   );
 
-  const plan = useMemo(() => buildPlan(input.session, zones), [input.session, zones]);
+  const plan = useMemo(
+    () => buildPlan(input.session, zones, input.level),
+    [input.session, input.level, zones],
+  );
+
+  // Only the zones belonging to the storey on screen are listed; zones saved before multi-floor
+  // support have no level and are shown on every storey.
+  const visibleZones = useMemo(
+    () =>
+      input.level === null
+        ? zones
+        : zones.filter((zone) => zone.level === null || zone.level === input.level),
+    [input.level, zones],
+  );
 
   const toWorld = useCallback(
     (point: Plan3DPoint): Plan3DPoint | null =>
@@ -149,15 +169,16 @@ export function useZonePlanEditor(input: ZonePlanEditorInput): ZonePlanEditor {
         const zone = createZoneFromRectangle(startWorld, endWorld, zones);
 
         if (zone) {
-          setZones((existing) => [...existing, zone]);
-          setSelectedZoneId(zone.id);
+          const tagged: Plan3DZone = { ...zone, level: input.level };
+          setZones((existing) => [...existing, tagged]);
+          setSelectedZoneId(tagged.id);
           setSaveState('idle');
         }
 
         return null;
       });
     },
-    [toWorld, zones],
+    [input.level, toWorld, zones],
   );
 
   const updateZone = useCallback((zoneId: string, patch: Partial<Plan3DZone>) => {
@@ -262,7 +283,7 @@ export function useZonePlanEditor(input: ZonePlanEditorInput): ZonePlanEditor {
 
   return {
     plan,
-    zones,
+    zones: visibleZones,
     legend,
     selectedZoneId,
     draft,

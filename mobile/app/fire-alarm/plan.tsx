@@ -12,6 +12,7 @@ import { useLocalSearchParams } from 'expo-router';
 
 import Plan3DCanvas from '@/components/roomplan/Plan3DCanvas';
 import Plan3DDisplayControls from '@/components/roomplan/Plan3DDisplayControls';
+import SendDesignModal from '@/components/roomplan/SendDesignModal';
 import SendZonePlanModal from '@/components/roomplan/SendZonePlanModal';
 import ZoneEditorPanel from '@/components/roomplan/ZoneEditorPanel';
 import { usePlan3DOrbitCamera } from '@/components/roomplan/usePlan3DOrbitCamera';
@@ -82,6 +83,7 @@ export default function FireAlarmPlanScreen() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
+  const [isDesignOpen, setIsDesignOpen] = useState(false);
   const [zoneMode, setZoneMode] = useState(false);
 
   const initialPreset = getPlan3DProjectionPreset(INITIAL_PROJECTION);
@@ -410,6 +412,19 @@ return (
           <AppText variant="caption" tone="soft">
             Opens the plan in a browser so the client can add their details to the legend.
           </AppText>
+
+          <Button
+            label="Design it on the web"
+            icon="arrow-forward-outline"
+            accent="teal"
+            variant="outline"
+            onPress={() => setIsDesignOpen(true)}
+            block
+          />
+          <AppText variant="caption" tone="soft">
+            Opens this capture in the design studio to place detectors, draw zones and add car
+            parks against the measured plan.
+          </AppText>
         </View>
       </SectionCard>
 
@@ -418,6 +433,13 @@ return (
         zones={zonesEditor.zones}
         visible={isSendOpen}
         onClose={() => setIsSendOpen(false)}
+      />
+
+      <SendDesignModal
+        session={session}
+        zones={zonesEditor.zones}
+        visible={isDesignOpen}
+        onClose={() => setIsDesignOpen(false)}
       />
     </FlowScreen>
   );

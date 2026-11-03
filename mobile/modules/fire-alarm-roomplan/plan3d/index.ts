@@ -127,6 +127,17 @@ export {
 
 export { resolvePlan3DRooms } from './rooms';
 
+export type { Plan3DFloorOptions, Plan3DSessionFloor } from './floors';
+
+export {
+  describeLevel,
+  filterSessionForLevel,
+  hasMultipleFloors,
+  readRoomLevel,
+  resolveSessionFloors,
+  resolveSessionLevels,
+} from './floors';
+
 export type { Plan3DMountingCamera, Plan3DMountingOption } from './mounting-rules';
 
 export {

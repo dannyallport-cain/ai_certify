@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import Plan3DCanvas from '@/components/roomplan/Plan3DCanvas';
 import Plan3DDisplayControls from '@/components/roomplan/Plan3DDisplayControls';
+import SendDesignModal from '@/components/roomplan/SendDesignModal';
 import SendZonePlanModal from '@/components/roomplan/SendZonePlanModal';
 import ZoneEditorPanel from '@/components/roomplan/ZoneEditorPanel';
 import { usePlan3DOrbitCamera } from '@/components/roomplan/usePlan3DOrbitCamera';
@@ -93,6 +94,7 @@ export default function RoomPlanPlanScreen() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
+  const [isDesignOpen, setIsDesignOpen] = useState(false);
   const [zoneMode, setZoneMode] = useState(false);
 
   // The camera is the one piece of view state a gesture can change, so the hook owns it and the
@@ -457,6 +459,22 @@ export default function RoomPlanPlanScreen() {
 
           <View className="mt-4 rounded-[28px] border border-[#E0E6ED] bg-white p-5">
             <Text className="mb-4 text-lg font-semibold text-[#1A202C]">Continue the workflow</Text>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open in design studio"
+              onPress={() => setIsDesignOpen(true)}
+              className="rounded-2xl bg-[#0D47A1] px-4 py-4"
+            >
+              <Text className="text-center text-sm font-semibold text-white">
+                Design it on the web
+              </Text>
+            </Pressable>
+            <Text className="mb-3 mt-2 text-center text-[11px] text-[#718096]">
+              Opens this capture in the design studio to place detectors, draw zones and add car
+              parks against the measured plan.
+            </Text>
+
             <Pressable
               className="rounded-2xl bg-[#15803D] px-4 py-4"
               onPress={() =>
@@ -503,6 +521,13 @@ export default function RoomPlanPlanScreen() {
         zones={zonesEditor.zones}
         visible={isSendOpen}
         onClose={() => setIsSendOpen(false)}
+      />
+
+      <SendDesignModal
+        session={session}
+        zones={zonesEditor.zones}
+        visible={isDesignOpen}
+        onClose={() => setIsDesignOpen(false)}
       />
     </ScrollView>
   );

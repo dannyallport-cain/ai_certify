@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
+import { getApiCaller } from '@/lib/auth/api-caller';
 import { performOCR } from '@/lib/ocr';
 import { createOpenRouterClient } from '@/lib/openrouter';
 import { evaluateRules } from '@/lib/rules-engine';
@@ -142,7 +143,19 @@ function mergeReportPrefill(
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request);
+
+  if (!caller) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Unauthorized',
+      },
+      { status: 401 },
+    );
+  }
+
   let body: unknown;
 
   try {

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
+import { getApiCaller } from '@/lib/auth/api-caller';
 import { analyseDetectorImage } from '@/lib/ai/detector-analysis';
 import { resolveDetectorKind, type DetectorAnalysisResponse } from '@/lib/ai/detector-types';
 
@@ -14,6 +15,9 @@ import { resolveDetectorKind, type DetectorAnalysisResponse } from '@/lib/ai/det
  * gateway is not configured or the call fails, the photo is still accepted and
  * the inspector confirms the device by hand — the endpoint never invents
  * details it did not read.
+ *
+ * Every call bills the AI gateway, so the caller must be a signed-in web
+ * session or a signed-in mobile app before any image is sent upstream.
  */
 
 /** Roughly 15 MB of base64 payload, which covers a full-resolution phone photo. */
@@ -30,7 +34,13 @@ function buildErrorResponse(message: string, status: number) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const caller = await getApiCaller(request);
+
+  if (!caller) {
+    return buildErrorResponse('Unauthorized', 401);
+  }
+
   let body: unknown;
 
   try {

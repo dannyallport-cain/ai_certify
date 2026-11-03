@@ -29,6 +29,7 @@ import {
   buildZoneTexts,
 } from './zone-scene';
 import { sanitiseZones } from './zone-model';
+import { filterSessionForLevel } from './floors';
 import {
   createPlan3DViewport,
   emptyProjectedBounds,
@@ -61,9 +62,16 @@ export function generateFireAlarmPlan3D(
   const colourScheme: Plan3DColourScheme = options.colourScheme ?? 'blueprint';
   const palette = getPlan3DPalette(colourScheme);
   const camera = resolvePlan3DCamera(options.camera, options.wallHeightMeters);
-  const resolution = resolvePlan3DRooms(session, camera.wallHeightMeters);
+
+  // Selecting a storey narrows the session before anything else runs, so the viewport, the
+  // bounds, the legend and the zone roll-up are all computed from that storey alone.
+  const scopedSession =
+    typeof options.level === 'number' ? filterSessionForLevel(session, options.level) : session;
+  const resolution = resolvePlan3DRooms(scopedSession, camera.wallHeightMeters);
   const rooms = resolution.rooms;
-  const zones = sanitiseZones(options.zones);
+  const zones = sanitiseZones(options.zones).filter(
+    (zone) => typeof options.level !== 'number' || zone.level === null || zone.level === options.level,
+  );
 
   const footprintBounds = finaliseBounds(
     boundsOfVertices(rooms.reduce<Plan3DVertex[]>((all, room) => all.concat(room.footprint), [])),
@@ -188,8 +196,8 @@ export function generateFireAlarmPlan3D(
   }
 
   return {
-    id: createPlanId(session.id),
-    sessionId: session.id,
+    id: createPlanId(scopedSession.id),
+    sessionId: scopedSession.id,
     generatedAt: new Date().toISOString(),
     units: 'meters',
     colourScheme,

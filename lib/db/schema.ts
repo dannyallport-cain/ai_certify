@@ -544,6 +544,54 @@ export const fireAlarmZonePlans = pgTable(
   })
 );
 
+/**
+ * A worked-up building design: the multi-floor plan-view drawing with its devices, zones and
+ * external areas. One row per building, updated in place as the surveyor edits it.
+ *
+ * `design` holds the whole document so the editor can save atomically; the count columns exist
+ * only so the designs list can be rendered without parsing every JSON blob.
+ */
+export const fireAlarmBuildingDesigns = pgTable(
+  'fire_alarm_building_designs',
+  {
+    id: serial('id').primaryKey(),
+    teamId: integer('team_id')
+      .notNull()
+      .references(() => teams.id),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    /** Capture the design was started from, when it began as a scan. */
+    captureId: integer('capture_id').references(() => fireAlarmRoomCaptures.id, {
+      onDelete: 'set null',
+    }),
+    externalSessionId: varchar('external_session_id', { length: 255 }),
+    name: varchar('name', { length: 255 }).notNull(),
+    siteName: varchar('site_name', { length: 255 }),
+    design: json('design').notNull(),
+    floorCount: integer('floor_count').notNull().default(0),
+    deviceCount: integer('device_count').notNull().default(0),
+    zoneCount: integer('zone_count').notNull().default(0),
+    /** `draft` while being edited, `issued` once shared. */
+    status: varchar('status', { length: 32 }).notNull().default('draft'),
+    /** Public token for the read-only shared view, issued on demand. */
+    shareToken: varchar('share_token', { length: 64 }),
+    editEnabled: boolean('edit_enabled').notNull().default(false),
+    publishedAt: timestamp('published_at'),
+    lastViewedAt: timestamp('last_viewed_at'),
+    revokedAt: timestamp('revoked_at'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    teamIdIdx: index('fire_alarm_building_designs_team_id_idx').on(table.teamId),
+    shareTokenIdx: uniqueIndex('fire_alarm_building_designs_share_token_idx').on(table.shareToken),
+    sessionIdx: index('fire_alarm_building_designs_team_session_idx').on(
+      table.teamId,
+      table.externalSessionId,
+    ),
+    updatedAtIdx: index('fire_alarm_building_designs_updated_at_idx').on(table.updatedAt),
+  }),
+);
+
 export const fireAlarmCaptureDevices = pgTable(
   'fire_alarm_capture_devices',
   {
@@ -721,6 +769,7 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   certificates: many(certificates),
   certificateTemplates: many(certificateTemplates),
   fireAlarmRoomCaptures: many(fireAlarmRoomCaptures),
+  fireAlarmBuildingDesigns: many(fireAlarmBuildingDesigns),
   reportDisseminatorTemplates: many(reportDisseminatorTemplates),
   reportDisseminatorReports: many(reportDisseminatorReports),
   servicem8Connections: many(servicem8Connections),
@@ -984,6 +1033,8 @@ export type FireAlarmRoomCapture = typeof fireAlarmRoomCaptures.$inferSelect;
 export type NewFireAlarmRoomCapture = typeof fireAlarmRoomCaptures.$inferInsert;
 export type FireAlarmZonePlan = typeof fireAlarmZonePlans.$inferSelect;
 export type NewFireAlarmZonePlan = typeof fireAlarmZonePlans.$inferInsert;
+export type FireAlarmBuildingDesign = typeof fireAlarmBuildingDesigns.$inferSelect;
+export type NewFireAlarmBuildingDesign = typeof fireAlarmBuildingDesigns.$inferInsert;
 export type FireAlarmCaptureDevice = typeof fireAlarmCaptureDevices.$inferSelect;
 export type NewFireAlarmCaptureDevice = typeof fireAlarmCaptureDevices.$inferInsert;
 export type ReportDisseminatorTemplate = typeof reportDisseminatorTemplates.$inferSelect;

@@ -134,6 +134,13 @@
       "when": 1793264400000,
       "tag": "20261029120000_add_fire_alarm_survey_links",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793341800000,
+      "tag": "20261029130000_add_fire_alarm_building_designs",
+      "breakpoints": true
     }
   ]
 }

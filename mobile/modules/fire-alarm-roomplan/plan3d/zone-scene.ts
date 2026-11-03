@@ -175,8 +175,9 @@ export function buildZonePolygons(input: {
 }
 
 /**
- * Zone reference labels. Each label sits at the centre of its zone and is tinted with the zone
- * colour, so the fill and the label read as one object on either colour scheme.
+ * Zone reference labels. Each label sits just inside the zone's lowest corner rather than at its
+ * centre, where devices are drawn, and is tinted with the zone colour so the fill and the label
+ * read as one object on either colour scheme.
  */
 export function buildZoneTexts(input: {
   zones: Plan3DZone[];
@@ -191,8 +192,18 @@ export function buildZoneTexts(input: {
     }
 
     const centre = zoneCentroid(zone.polygon);
+    // Devices are usually drawn in the middle of a compartment, so a centroid label sits on top of
+    // them. Anchoring a little way in from the zone's lowest corner keeps the reference inside the
+    // outline and clear of the markers.
+    const corner = zone.polygon.reduce((lowest, point) =>
+      point.x + point.y < lowest.x + lowest.y ? point : lowest,
+    );
+    const anchor = {
+      x: corner.x + (centre.x - corner.x) * 0.18,
+      y: corner.y + (centre.y - corner.y) * 0.18,
+    };
     const projected = projectVertex(
-      createVertex(centre.x, centre.y, ZONE_LABEL_HEIGHT_METERS),
+      createVertex(anchor.x, anchor.y, ZONE_LABEL_HEIGHT_METERS),
       camera,
     );
 

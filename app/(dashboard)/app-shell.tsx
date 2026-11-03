@@ -193,6 +193,12 @@ function Header({ adminViewMode }: { adminViewMode: AdminViewMode }) {
             Fire alarm surveys
           </Link>
           <Link
+            href="/designs"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            Designs
+          </Link>
+          <Link
             href="/customers"
             className="text-sm font-medium text-gray-700 hover:text-gray-900"
           >

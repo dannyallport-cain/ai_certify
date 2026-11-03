@@ -177,6 +177,11 @@ export interface Plan3DZone {
   name: string;
   /** Short code printed on the plan and read out in the legend, e.g. `Z1`. */
   reference: string;
+  /**
+   * Storey the zone belongs to, as captured. Null or absent means the zone applies to every
+   * storey, which is how zones drawn before multi-floor support keep working.
+   */
+  level?: number | null;
   /** Hex colour used for the zone fill, its outline, its label and its legend entry. */
   colour: string;
   /** Closed outline in world metres on the x/y plane. */
@@ -275,6 +280,11 @@ export interface FireAlarmPlan3DOptions {
   wallHeightMeters?: number;
   /** Colour coded zones to draw and summarise. Omit or pass an empty array for no zoning. */
   zones?: Plan3DZone[];
+  /**
+   * Draw a single captured storey. Omitted draws every storey in one plan, which is the old
+   * behaviour and is still what a single-floor capture produces.
+   */
+  level?: number | null;
 }
 
 export interface FireAlarmPlan3DInput {

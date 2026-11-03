@@ -74,3 +74,6 @@ tmp_*
 tenv*
 *.backup.env
 .vercel.backup.env
+# Android release bundles are build artifacts, not source.
+*.aab
+*.aab.sha256

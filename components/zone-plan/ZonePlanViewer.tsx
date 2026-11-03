@@ -8,6 +8,12 @@ import type {
 } from '@/mobile/modules/fire-alarm-roomplan/plan3d/plan3d-types';
 import type { FireAlarmScanSession } from '@/mobile/modules/fire-alarm-roomplan/types';
 
+import FloorTabs from '@/components/fire-alarm/floor-tabs';
+import {
+  hasMultipleFloors,
+  resolveSessionFloors,
+} from '@/mobile/modules/fire-alarm-roomplan/plan3d/floors';
+
 import LegendPanel from './LegendPanel';
 import PlanDrawing from './PlanDrawing';
 import ZoneListPanel from './ZoneListPanel';
@@ -37,12 +43,19 @@ export default function ZonePlanViewer({
   editEnabled,
   updatedAt,
 }: ZonePlanViewerProps) {
+  const floors = useMemo(() => resolveSessionFloors(session), [session]);
+  const multipleFloors = useMemo(() => hasMultipleFloors(session), [session]);
+  const [level, setLevel] = useState<number | null>(
+    multipleFloors ? floors[0]?.level ?? null : null,
+  );
+
   const editor = useZonePlanEditor({
     token,
     session,
     initialZones: Array.isArray(initialZones) ? (initialZones as never) : [],
     initialLegend: (initialLegend ?? null) as Plan3DLegendConfig,
     canEdit: editEnabled,
+    level,
   });
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -134,6 +147,8 @@ export default function ZonePlanViewer({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] print:block">
         <div className="rounded-xl border border-border bg-card p-2 print:border-0 print:p-0">
+          <FloorTabs floors={floors} activeLevel={level} onSelect={setLevel} />
+
           <PlanDrawing
             plan={editor.plan}
             zones={editor.plan.zones}
